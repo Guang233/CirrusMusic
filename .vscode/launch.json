@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "inputs": [
+        {
+            "id": "cirrusExecutable",
+            "type": "command",
+            "command": "cmake.launchTargetPath",
+            "args": {
+                "targetName": "appCirrusMusic"
+            }
+        }
+    ],
+    "configurations": [
+        {
+            "name": "Cirrus: Debug (GDB)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${input:cirrusExecutable}",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "Cirrus: build",
+            "setupCommands": [
+                {
+                    "description": "Enable GDB pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

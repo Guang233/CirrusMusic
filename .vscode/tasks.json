@@ -1,0 +1,42 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Cirrus: configure",
+            "type": "cmake",
+            "command": "configure",
+            "problemMatcher": [],
+            "detail": "Configure the selected CMake preset."
+        },
+        {
+            "label": "Cirrus: build",
+            "type": "cmake",
+            "command": "build",
+            "targets": ["appCirrusMusic"],
+            "dependsOn": ["Cirrus: configure"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Build Cirrus with the selected preset (Ctrl+Shift+B)."
+        },
+        {
+            "label": "Cirrus: qmllint",
+            "type": "cmake",
+            "command": "build",
+            "targets": ["all_qmllint"],
+            "dependsOn": ["Cirrus: configure"],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "detail": "Run the Qt-generated QML lint target with module import paths."
+        },
+        {
+            "label": "Cirrus: clean",
+            "type": "cmake",
+            "command": "clean",
+            "problemMatcher": []
+        }
+    ]
+}

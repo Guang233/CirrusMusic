@@ -1,0 +1,31 @@
+{
+    "version": 5,
+    "configurePresets": [
+        {
+            "name": "linux-dev-local",
+            "displayName": "Linux Debug (local Qt)",
+            "inherits": "linux-dev",
+            "cacheVariables": {
+                "CMAKE_PREFIX_PATH": "/absolute/path/to/Qt/gcc_64"
+            }
+        },
+        {
+            "name": "linux-release-local",
+            "displayName": "Linux Release (local Qt)",
+            "inherits": "linux-release",
+            "cacheVariables": {
+                "CMAKE_PREFIX_PATH": "/absolute/path/to/Qt/gcc_64"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-dev-local",
+            "configurePreset": "linux-dev-local"
+        },
+        {
+            "name": "linux-release-local",
+            "configurePreset": "linux-release-local"
+        }
+    ]
+}
