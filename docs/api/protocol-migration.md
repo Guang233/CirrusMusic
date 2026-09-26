@@ -22,7 +22,7 @@
 
 ## 2. C++ 技术边界
 
-已引入 Qt Network 与 OpenSSL 3 EVP，实现 weapi/eapi 编码和有界异步传输，详见[实现记录](native-foundation.md)。Cookie 会话、XEAPI 和 gzip 尚未实现；后续解压需使用适当的流式解压库。
+已引入 Qt Network 与 OpenSSL 3 EVP，实现 weapi/eapi 编码和有界异步传输，详见[实现记录](native-foundation.md)。已有 zlib 有界 gzip 解码及内存会话／Cookie 隔离基础，见[分层说明](session-isolation.md)；完整登录链路和 XEAPI 尚未实现。
 
 - 使用系统安全随机源；不要迁移 weapi 的 Math.random 随机实现。
 - 精确固定 UTF-8、JSON 字段形态、form 转义、PKCS#7、hex 大小写、Base64 和 RSA raw padding，禁止以“同样是 AES/RSA”代替字节一致性。

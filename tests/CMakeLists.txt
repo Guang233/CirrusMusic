@@ -16,3 +16,19 @@ qt_add_executable(tst_http_transport unit/http_transport_test.cpp)
 target_link_libraries(tst_http_transport PRIVATE cirrus_netease_network Qt6::Test)
 add_test(NAME http_transport COMMAND tst_http_transport)
 set_tests_properties(http_transport PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_response_decoder unit/response_decoder_test.cpp)
+target_link_libraries(tst_response_decoder PRIVATE cirrus_netease_protocol Qt6::Test)
+add_test(NAME response_decoder COMMAND tst_response_decoder)
+set_tests_properties(response_decoder PROPERTIES TIMEOUT 15)
+
+# Application test deliberately links no Network, OpenSSL or infrastructure target.
+qt_add_executable(tst_session_coordinator unit/session_coordinator_test.cpp)
+target_link_libraries(tst_session_coordinator PRIVATE cirrus_application Qt6::Test)
+add_test(NAME session_coordinator COMMAND tst_session_coordinator)
+set_tests_properties(session_coordinator PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_session_cookie_store unit/session_cookie_store_test.cpp)
+target_link_libraries(tst_session_cookie_store PRIVATE cirrus_application cirrus_netease_session Qt6::Test)
+add_test(NAME session_cookie_store COMMAND tst_session_cookie_store)
+set_tests_properties(session_cookie_store PROPERTIES TIMEOUT 15)

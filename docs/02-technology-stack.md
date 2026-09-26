@@ -13,7 +13,8 @@
 | UI | Qt Quick、Qt Quick Controls 的 **Templates/Basic 基础**、Qt Quick Layouts | 重写外观，复用成熟交互语义；见 ADR-0005 |
 | 客户端后端 | 模块化单体 C++，应用服务 + 领域对象 + 适配器 | 无独立业务服务器，无微服务；见 ADR-0002 |
 | 官方 API | Qt Network；内置 NetEaseGateway 与协议签名适配器 | 客户端直连官方接口，用户无 API 配置；见 ADR-0003 |
-| 密码学 | 需要协议算法时使用维护中的 OpenSSL 3.x `libcrypto`，以 M0 契约确认 | 使用 EVP 等公开高层接口；不手写 AES/RSA，不调用 Qt 私有 API，不启动外部脚本 |
+| 密码学 | 已引入 OpenSSL 3.x `libcrypto`，本机验证 3.6.4 | 使用 EVP；weapi/eapi 离线向量已通过，真实协议仍待验证，不启动外部脚本 |
+| 压缩响应 | 已引入 zlib，当前本机 1.3.2 | gzip 流式解压／CRC／输出限额；系统开发包，发布时锁定版本与许可，未 vendoring 源码 |
 | 音频 | **Qt Multimedia / QMediaPlayer + QAudioOutput**，封装可替换接口 | 首版适配成本低；gapless/DSP/复杂鉴权必须先做 PoC；见 ADR-0004 |
 | 持久化 | Qt SQL + SQLite；QSettings 保存非敏感偏好 | 可迁移、可事务、可测试；见 ADR-0006 |
 | 凭据 | QtKeychain 封装系统密钥环 | 访问 Secret Service/KWallet 等实际后端；不可用时仅内存会话，不回退明文 |

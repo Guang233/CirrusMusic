@@ -27,7 +27,8 @@
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
-| [native-foundation.md](native-foundation.md) | 已实现的 C++ 表单编码、默认路由与离线 Qt Test |
+| [native-foundation.md](native-foundation.md) | 已实现的 C++ 协议、传输、解码和离线 Qt Test |
+| [session-isolation.md](session-isolation.md) | 实际编译依赖、epoch／Cookie 隔离和仍待连接的登录边界 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围
@@ -86,4 +87,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 表单／路由、weapi/eapi 编码、异步传输与 Qt Test，见[实现记录](native-foundation.md)。下一步补响应解码、会话与 XEAPI，再按 [migration-plan.md](migration-plan.md)实现。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 表单／路由、weapi/eapi 编码、异步传输与 Qt Test，见[实现记录](native-foundation.md)。下一步连接登录网关与请求上下文，并补 XEAPI，再按 [migration-plan.md](migration-plan.md)实现。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

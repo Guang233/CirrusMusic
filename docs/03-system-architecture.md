@@ -74,7 +74,7 @@ tools/                 # 开发与质量工具
 packaging/             # Flatpak、AppImage、桌面元数据
 ```
 
-以上是目标结构，当前仍是根目录中的 Qt 模板。优先建立清晰边界，再按实际规模拆文件，不为尚未开发功能创建大量空类。
+以上是目标结构。已按需建立 domain/account、application/account，以及 infrastructure/netease 下的 protocol、network、session；应用层仅依赖领域值类型和 Qt Core，基础设施不反向控制应用协调器。具体已实现边界见[会话隔离说明](api/session-isolation.md)。根窗口仍是 Qt 模板，composition root／登录网关尚未装配；不为未开发功能创建大量空类。
 
 ## 4. 核心服务及契约
 

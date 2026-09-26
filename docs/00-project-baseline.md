@@ -19,14 +19,15 @@
 
 | 文件／配置 | 已观察事实 | 对实施的影响 |
 | --- | --- | --- |
-| `CMakeLists.txt` | CMake 最低 3.24；显式 C++20；Core/Quick，测试开启时查找 Test | src 中新增 OpenSSL 3 Crypto／Qt Network 和静态基础库；Multimedia、Sql 等尚未接入 |
+| `CMakeLists.txt` | CMake 最低 3.24；显式 C++20；Core/Quick，测试开启时查找 Test | src 中新增 OpenSSL 3 Crypto／zlib／Qt Network 及分层基础库；Multimedia、Sql 等尚未接入 |
 | Qt 工程初始化 | `qt_standard_project_setup(REQUIRES 6.10)` | 模板以 6.10 为最低 Qt 设置要求，不证明各平台兼容性 |
 | `main.cpp` | 创建 `QGuiApplication`、`QQmlApplicationEngine`；从 `CirrusMusic/Main` 加载 | 可作为 composition root 起点，目前没有依赖注入和服务生命周期管理 |
 | `Main.qml` | 640×480 示例窗口、Hello World、明暗切换；导入 Basic 控件 | 不是产品 UI，后续替换而非逐层堆叠业务 |
 | QML 模块 | URI 为 `CirrusMusic`，挂在 `appCirrusMusic` target | 初期保留作为根模块，拆出 `Cirrus.Controls` 等独立模块 |
 | `importedcontent/` | Figma-to-Qt 占位说明 | 不是正式设计源；若不使用设计导入工作流可在实施期移除 |
 | 构建配置 | Qt Creator 缓存及 VS Code 的 Debug/Release 私有 presets 使用本机 Qt 6.11.2 | 共享 presets 不含个人路径；私有 CMakeUserPresets.json 和构建产物不入库 |
-| `src/infrastructure/netease/protocol/` | C++ 表单／路由、weapi/eapi 编码和响应解密，另有异步 HttpTransport | 尚无 XEAPI、Cookie 会话或具体业务调用 |
+| `src/infrastructure/netease/` | C++ 编码／解密／有界响应解码、HttpTransport、epoch 绑定的内存 Cookie | 尚无 XEAPI、登录网关或真实请求与会话的编排 |
+| `src/domain/account/`、`src/application/account/` | 会话值类型与 SessionCoordinator；应用层不依赖网络／加密 | 只处理生命周期，不验证真实身份；未接入应用窗口 |
 | 测试与发布 | Qt Test 基础单测通过 Debug/Release CTest；另有离线清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
 | `docs/api/` | 440 个模块：164 采用候选、40 待定、236 排除 | 静态观察不是已实现能力；v2 SDK 与一起听有门禁 |
 | Git | 首个提交为 `4a211a1`；审计和原生后端按可验证增量提交 | 不包含 Qt Creator 私有配置、个人 Qt 路径或构建产物 |

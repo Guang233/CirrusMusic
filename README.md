@@ -19,7 +19,7 @@
 
 ## VS Code 与当前骨架构建
 
-完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3 开发包及 Qt 开发 Kit（含 Network，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
+完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib 开发包及 Qt 开发 Kit（含 Network，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
 
 首次克隆时复制 `CMakeUserPresets.json.example` 为 `CMakeUserPresets.json`，填写其中两处 Qt Kit 路径。本次已为当前机器配置好私有文件，不必重复覆盖；个人路径不会提交。
 
@@ -32,7 +32,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 构建，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 表单／路由、weapi/eapi 加密和异步 HTTP 传输的 3 个测试套件已通过 Debug/Release CTest；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议、网络、响应解码和会话隔离的 6 个测试套件已通过 Debug/Release CTest；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

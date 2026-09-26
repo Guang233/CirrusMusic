@@ -65,7 +65,8 @@ class HttpTransport : public QObject
     void finish(quint64 requestId);
     static bool drain(const std::shared_ptr<Pending>& pending);
 
-    std::unique_ptr<QNetworkAccessManager> m_manager;
+    // QObject parent owns the manager after constructor injection transfers it.
+    QNetworkAccessManager* m_manager = nullptr;
     QHash<quint64, std::shared_ptr<Pending>> m_pending;
     quint64 m_nextId = 0;
 };

@@ -1,5 +1,18 @@
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
+find_package(ZLIB REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Network)
+
+add_library(cirrus_domain INTERFACE)
+target_sources(cirrus_domain INTERFACE domain/account/session_types.h)
+target_compile_features(cirrus_domain INTERFACE cxx_std_20)
+target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
+
+add_library(cirrus_application STATIC
+    application/account/session_coordinator.cpp
+    application/account/session_coordinator.h
+)
+target_link_libraries(cirrus_application PUBLIC cirrus_domain)
 
 add_library(cirrus_netease_protocol STATIC
     infrastructure/netease/protocol/form_encoding.cpp
@@ -8,11 +21,13 @@ add_library(cirrus_netease_protocol STATIC
     infrastructure/netease/protocol/official_route.h
     infrastructure/netease/protocol/protocol_crypto.cpp
     infrastructure/netease/protocol/protocol_crypto.h
+    infrastructure/netease/protocol/response_decoder.cpp
+    infrastructure/netease/protocol/response_decoder.h
 )
 
 target_compile_features(cirrus_netease_protocol PUBLIC cxx_std_20)
 target_include_directories(cirrus_netease_protocol PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core PRIVATE OpenSSL::Crypto)
+target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core PRIVATE OpenSSL::Crypto ZLIB::ZLIB)
 
 add_library(cirrus_netease_network STATIC
     infrastructure/netease/network/http_transport.cpp
@@ -21,3 +36,9 @@ add_library(cirrus_netease_network STATIC
 target_compile_features(cirrus_netease_network PUBLIC cxx_std_20)
 target_include_directories(cirrus_netease_network PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(cirrus_netease_network PUBLIC cirrus_netease_protocol Qt6::Network)
+
+add_library(cirrus_netease_session STATIC
+    infrastructure/netease/session/session_cookie_store.cpp
+    infrastructure/netease/session/session_cookie_store.h
+)
+target_link_libraries(cirrus_netease_session PUBLIC cirrus_domain Qt6::Network)

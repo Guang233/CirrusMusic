@@ -25,11 +25,12 @@ HttpTransport::HttpTransport(QObject* parent)
 }
 
 HttpTransport::HttpTransport(std::unique_ptr<QNetworkAccessManager> manager, QObject* parent)
-    : QObject(parent), m_manager(std::move(manager))
+    : QObject(parent), m_manager(manager.get())
 {
     Q_ASSERT(m_manager && !m_manager->parent() && m_manager->thread() == thread());
-    // Track a later moveToThread of the transport, while unique_ptr keeps ownership.
+    // One owner: QObject parenting also tracks a later moveToThread.
     m_manager->setParent(this);
+    m_manager = manager.release();
 }
 
 HttpTransport::~HttpTransport()
