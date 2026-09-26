@@ -1,6 +1,6 @@
 # 00 · 项目现状与文档约定
 
-> 基线 0.1 · 2026-09-26 · 状态：提案。本文记录本次检查到的事实，未来应随代码更新。
+> 基线 0.2 · 2026-09-26。当前事实含固定版本 API 审计和首批 C++ 协议基础；架构目标仍是提案。
 
 ## 1. 目标与已知输入
 
@@ -9,24 +9,27 @@
 已知约束：
 
 1. 采用 Qt Quick/QML，C++ 承担客户端业务和基础设施。
-2. 维护者已拥有网易云官方 API 接口资料。Cirrus 直接调用官方 API，端点与协议适配内置于客户端，用户无需配置 API、部署服务或安装代理。具体规范、样例和版本尚未放入此仓库。
+2. Cirrus 内置直连官方 API，用户无需配置 API 或部署服务。已按指定 api-enhanced 固定版本完成静态审计；源码作为协议参考，不运行其 Node 服务，真实契约样本尚待验证。
 3. 不使用 Qt 默认控件外观作为成品设计；构建自有控件体系。
 4. 全屏／沉浸播放页以 Apple Music 的信息层级、封面与歌词体验为参考。当前阶段只制定 UI 工程规范，不制作视觉稿，不复制 Apple 商标和素材。
 5. 首要平台为 Linux 桌面；Windows/macOS 可保留编译边界，不列入首版验收。
+6. 后端先行、UI 最后；包含日推、私人 FM、一起听；排除视频、电台／播客、云贝、动态、云小编。
 
 ## 2. 当前代码审计
 
 | 文件／配置 | 已观察事实 | 对实施的影响 |
 | --- | --- | --- |
-| `CMakeLists.txt` | CMake 最低 3.16；`project(CirrusMusic VERSION 0.1)`；仅查找 `Qt6::Quick` | CMakeLists 尚未显式设置 C++ 标准；当前开发 presets 设置 C++20。Network、Multimedia、Sql 等业务模块未接入 |
+| `CMakeLists.txt` | CMake 最低 3.24；显式 C++20；Core/Quick，测试开启时查找 Test | src 中新增 OpenSSL 3 Crypto／Qt Network 和静态基础库；Multimedia、Sql 等尚未接入 |
 | Qt 工程初始化 | `qt_standard_project_setup(REQUIRES 6.10)` | 模板以 6.10 为最低 Qt 设置要求，不证明各平台兼容性 |
 | `main.cpp` | 创建 `QGuiApplication`、`QQmlApplicationEngine`；从 `CirrusMusic/Main` 加载 | 可作为 composition root 起点，目前没有依赖注入和服务生命周期管理 |
 | `Main.qml` | 640×480 示例窗口、Hello World、明暗切换；导入 Basic 控件 | 不是产品 UI，后续替换而非逐层堆叠业务 |
 | QML 模块 | URI 为 `CirrusMusic`，挂在 `appCirrusMusic` target | 初期保留作为根模块，拆出 `Cirrus.Controls` 等独立模块 |
 | `importedcontent/` | Figma-to-Qt 占位说明 | 不是正式设计源；若不使用设计导入工作流可在实施期移除 |
 | 构建配置 | Qt Creator 缓存及 VS Code 的 Debug/Release 私有 presets 使用本机 Qt 6.11.2 | 共享 presets 不含个人路径；私有 CMakeUserPresets.json 和构建产物不入库 |
-| 测试与发布 | 无测试、CI、数据库、播放器、API 客户端及安装包 | 后文所有这些能力均为待实施 |
-| Git | 最初审计时无提交，模板为 intent-to-add；维护者随后要求将模板、文档与 VS Code 配置纳入首个提交 | 不包含 Qt Creator 私有配置、个人 Qt 路径或构建产物 |
+| `src/infrastructure/netease/protocol/` | C++ 表单／路由、weapi/eapi 编码和响应解密，另有异步 HttpTransport | 尚无 XEAPI、Cookie 会话或具体业务调用 |
+| 测试与发布 | Qt Test 基础单测通过 Debug/Release CTest；另有离线清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
+| `docs/api/` | 440 个模块：164 采用候选、40 待定、236 排除 | 静态观察不是已实现能力；v2 SDK 与一起听有门禁 |
+| Git | 首个提交为 `4a211a1`；审计和原生后端按可验证增量提交 | 不包含 Qt Creator 私有配置、个人 Qt 路径或构建产物 |
 
 音乐客户端功能仍未实施。后续 VS Code 配置阶段已验证模板 Debug/Release 构建、QML lint、clangd、GDB 断点和 offscreen 冒烟；具体环境与验证边界见[17](17-vscode-development.md)，不等于通过产品功能测试。
 

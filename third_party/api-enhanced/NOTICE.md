@@ -1,0 +1,15 @@
+# api-enhanced 来源与许可
+
+Cirrus 的接口审计参考：
+
+- 项目：NeteaseCloudMusicApiEnhanced/api-enhanced
+- 仓库：https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced
+- 固定 commit：`a8c781fd64faab17fedfd46e0615a2609307f163`
+- 许可：MIT，原文见 [LICENSE](LICENSE)
+- 原版权声明：Copyright (c) 2013-2022 Binaryify
+
+当前使用范围：接口名称、协议和请求结构的静态分析，`docs/api/inventory.json` 中的源码表达式片段，以及 `src/infrastructure/netease/protocol/protocol_crypto.cpp` 中 weapi/eapi 协议常量与流程的 C++ 改写；不包含上游服务或其 Node.js 运行依赖。未来原生实现若复制／改写上游受保护表达，须保留必要版权与许可通知，并在分发材料中包含此通知和 MIT 原文。
+
+这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。
+
+特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

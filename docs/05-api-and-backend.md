@@ -4,7 +4,7 @@
 
 ## 1. 责任边界
 
-维护者已有完整接口资料；本仓库目前尚未收到方法、路径、签名规则和样例。开发任务是将这些资料实现为可靠的 C++ 后端，而不是寻找替代 API 服务或让用户填写 Base URL。
+已按维护者指定的 api-enhanced 完成[固定版本静态审计](api/README.md)，记录 440 个模块的范围决定和协议依赖。它是第三方源码参考，不是官方契约证明；真实响应样本、加密向量和账号验证尚待完成。开发任务是原生 C++ 适配，不运行 Node 服务、不让用户填写 Base URL；UI 最后实施。
 
 ```text
 应用用例
@@ -35,7 +35,7 @@ HTTP 200 不一定业务成功；HTTP 4xx/5xx 也可能有有用业务原因。�
 
 ## 3. 操作覆盖表
 
-所有条目初始为**待映射**。不要求官方存在同名或一一对应接口，可由多个调用组合，但必须说明额外成本和部分失败语义。
+业务到上游源码的候选映射见[接口表](api/selected-endpoints.md)，当前全部为 static-only、not-implemented；参数／返回的完整契约仍待逐项验证。不要求官方存在同名或一一对应接口，可由多个调用组合，但必须说明额外成本和部分失败语义。
 
 | 内部逻辑操作组 | 用途 | 关联需求 |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ HTTP 200 不一定业务成功；HTTP 4xx/5xx 也可能有有用业务原因。�
 | cloud.list / resolve | 云盘查询与播放 | FR-028 |
 | cloud.prepareUpload / upload / finalize / remove / match | 上传与管理，依真实多阶段协议映射 | FR-029 |
 | comments.list / like / create / reply / remove | 评论与互动 | FR-030、FR-031 |
-| video.related / details / resolve | 关联 MV | FR-032 |
+| together.create / join / leave / heartbeat / command / syncQueue | 一起听；接收通道和同步协议尚待补证 | FR-043 |
 
 如果某一能力无需远程操作（例如本地取消轮询），登记为 `local-only`，不要为了表格整齐发出不存在的请求。
 
@@ -66,7 +66,7 @@ HTTP 200 不一定业务成功；HTTP 4xx/5xx 也可能有有用业务原因。�
 
 `ProtocolSigner` 接收规范化参数、端点描述、只读会话材料、时间／随机源，输出可发送的请求；它不访问 QML、不写数据库、不自行重试。
 
-- 以维护者资料和验证向量为准，不在本阶段猜测协议家族、算法参数或端点。
+- 已观察到 weapi/eapi/XEAPI 等协议，详见[原生迁移边界](api/protocol-migration.md)；以固定源码和验证向量为准，不把静态观察当实测。v2 浏览器 SDK 不自动纳入原生依赖。
 - Canonicalization、字段顺序、编码、填充、Base64／十六进制大小写都属于契约，必须有固定向量测试。
 - 生产使用密码学安全随机源；测试可注入确定性随机源，不能通过配置在正式构建启用固定 nonce。
 - 重试前重新生成协议要求更新的时间戳／nonce／签名，不能盲目重发过期签名。
@@ -153,4 +153,4 @@ API 请求和媒体 CDN 请求分开。不得将官方登录 Cookie／Authorizat
 
 ## 11. 契约验收
 
-一个 operation 合入真实实现前必须具备：登记项、脱敏 fixture、签名向量（如适用）、DTO/mapper 测试、错误映射、取消／超时用例及最少一次受控真实服务验证。没有真实资料的 operation 可提供 fake 实现供 UI 开发，但必须标为 mock，不能构造看似真实的路径或返回字段混进生产。
+一个 operation 合入真实实现前必须具备：登记项、脱敏 fixture、签名向量（如适用）、DTO/mapper 测试、错误映射、取消／超时用例及最少一次受控真实服务验证。没有真实资料的 operation 可提供 fake 实现供后端单测／CLI harness 使用，但必须标为 mock，不能构造看似真实的路径或返回字段混进生产；UI 最后才接入。

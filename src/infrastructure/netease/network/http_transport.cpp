@@ -1,0 +1,186 @@
+#include "http_transport.h"
+
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPointer>
+#include <QThread>
+#include <QTimer>
+
+#include <utility>
+
+namespace cirrus::netease
+{
+
+struct HttpTransport::Pending {
+    QPointer<QNetworkReply> reply;
+    QPointer<QTimer> timer;
+    QByteArray body;
+    qsizetype limit = 0;
+    TransportError forcedError = TransportError::None;
+};
+
+HttpTransport::HttpTransport(QObject* parent)
+    : HttpTransport(std::make_unique<QNetworkAccessManager>(), parent)
+{
+}
+
+HttpTransport::HttpTransport(std::unique_ptr<QNetworkAccessManager> manager, QObject* parent)
+    : QObject(parent), m_manager(std::move(manager))
+{
+    Q_ASSERT(m_manager && !m_manager->parent() && m_manager->thread() == thread());
+    // Track a later moveToThread of the transport, while unique_ptr keeps ownership.
+    m_manager->setParent(this);
+}
+
+HttpTransport::~HttpTransport()
+{
+    // Abort without emitting results into objects being torn down.
+    for (const auto& pending : std::as_const(m_pending)) {
+        if (pending->reply) {
+            pending->reply->disconnect(this);
+            if (pending->timer) {
+                pending->timer->stop();
+                pending->timer->disconnect(this);
+            }
+            pending->reply->abort();
+        }
+    }
+}
+
+quint64 HttpTransport::post(TransportRequest request)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const quint64 id = ++m_nextId;
+    auto pending = std::make_shared<Pending>();
+    pending->limit = request.responseLimit;
+    m_pending.insert(id, pending);
+    // Always deferred: even validation failure/cancel-before-start can be observed
+    // after post() returns. Callers must keep a receiver connected until completion.
+    QTimer::singleShot(0, this, [this, id, request = std::move(request)] { start(id, request); });
+    return id;
+}
+
+void HttpTransport::start(quint64 id, const TransportRequest& request)
+{
+    const auto pending = m_pending.value(id);
+    if (!pending) {
+        return;
+    }
+    if (pending->forcedError != TransportError::None) {
+        finish(id);
+        return;
+    }
+    const auto url = officialRequestUrl(request.protocol, request.logicalPath);
+    if (!url || request.logicalPath.size() > 2048 || request.timeoutMs <= 0 ||
+        request.timeoutMs > 120000 || request.responseLimit <= 0 ||
+        request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024) {
+        pending->forcedError = TransportError::InvalidRequest;
+        finish(id);
+        return;
+    }
+    QNetworkRequest wire(*url);
+    wire.setHeader(QNetworkRequest::ContentTypeHeader,
+                   QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
+    wire.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                      QNetworkRequest::ManualRedirectPolicy);
+    wire.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
+    wire.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
+    wire.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
+    wire.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
+    wire.setAttribute(QNetworkRequest::CacheSaveControlAttribute, false);
+
+    auto* reply = m_manager->post(wire, request.formBody);
+    pending->reply = reply;
+    reply->setReadBufferSize(64 * 1024);
+    pending->timer = new QTimer(reply);
+    pending->timer->setSingleShot(true);
+    connect(pending->timer, &QTimer::timeout, this,
+            [this, id] { terminate(id, TransportError::Timeout); });
+    connect(reply, &QNetworkReply::readyRead, this, [this, id] { consume(id); });
+    connect(reply, &QNetworkReply::finished, this, [this, id] { finish(id); });
+    pending->timer->start(request.timeoutMs);
+    // Also support injected replies which have already finished synchronously.
+    if (reply->isFinished()) {
+        finish(id);
+    }
+}
+
+bool HttpTransport::drain(const std::shared_ptr<Pending>& pending)
+{
+    if (!pending->reply || pending->forcedError != TransportError::None) {
+        return true;
+    }
+    const qsizetype remaining = pending->limit - pending->body.size();
+    const auto bytes = pending->reply->read(remaining + 1);
+    if (bytes.size() > remaining) {
+        pending->body.clear();
+        pending->forcedError = TransportError::ResponseTooLarge;
+        return false;
+    }
+    pending->body.append(bytes);
+    return true;
+}
+
+void HttpTransport::consume(quint64 id)
+{
+    const auto pending = m_pending.value(id);
+    if (pending && !drain(pending)) {
+        // abort may synchronously emit finished; do not use map references here.
+        pending->reply->abort();
+    }
+}
+
+void HttpTransport::terminate(quint64 id, TransportError error)
+{
+    const auto pending = m_pending.value(id);
+    if (!pending || pending->forcedError != TransportError::None) {
+        return;
+    }
+    pending->forcedError = error;
+    if (pending->reply) {
+        pending->reply->abort();
+    }
+    // A pre-start cancellation is completed by the queued start callback.
+}
+
+void HttpTransport::cancel(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    terminate(id, TransportError::Canceled);
+}
+
+void HttpTransport::finish(quint64 id)
+{
+    const auto pending = m_pending.take(id);
+    if (!pending) {
+        return; // terminal callback is delivered at most once
+    }
+    if (pending->timer) {
+        pending->timer->stop();
+    }
+    drain(pending);
+    TransportResult result;
+    result.error = pending->forcedError;
+    result.body = std::move(pending->body);
+    if (pending->reply) {
+        result.httpStatus =
+            pending->reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        result.networkError = pending->reply->error();
+        result.retryAfter = pending->reply->rawHeader("Retry-After").left(256);
+        if (result.error == TransportError::None) {
+            if (result.httpStatus >= 300 && result.httpStatus < 400) {
+                result.error = TransportError::RedirectBlocked;
+            } else if (result.httpStatus >= 400) {
+                result.error = TransportError::HttpStatus;
+            } else if (result.networkError != QNetworkReply::NoError || result.httpStatus == 0) {
+                result.error = TransportError::Network;
+            } else if (result.httpStatus < 200 || result.httpStatus >= 300) {
+                result.error = TransportError::HttpStatus;
+            }
+        }
+        pending->reply->deleteLater();
+    }
+    emit completed(id, result);
+}
+
+} // namespace cirrus::netease

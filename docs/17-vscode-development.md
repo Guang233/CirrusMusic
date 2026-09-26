@@ -108,6 +108,7 @@ Qt 6.10+ 无需设置已弃用的 `QT_QML_GENERATE_QMLLS_INI`。不手写固定 
 cmake --preset linux-dev-local
 cmake --build --preset linux-dev-local --parallel
 cmake --build --preset linux-dev-local --target all_qmllint
+ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 ./build/linux-dev-local/appCirrusMusic
 
 cmake --preset linux-release-local
@@ -115,6 +116,8 @@ cmake --build --preset linux-release-local --parallel
 ```
 
 Release 这里只是本地优化构建，不代表已完成 Flatpak/AppImage 打包、依赖部署和发布验收。
+
+已新增原生协议基础 Qt Test，详见[实现记录](api/native-foundation.md)。`BUILD_TESTING` 默认开启；只构建应用时可在 configure 加 `-DBUILD_TESTING=OFF`。Python 的接口清单校验是可选开发工具，不参与客户端构建／运行。
 
 ## 7. 本次验证范围
 

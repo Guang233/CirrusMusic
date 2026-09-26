@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced",
+  "commit": "a8c781fd64faab17fedfd46e0615a2609307f163",
+  "upstreamCommitDate": "2026-09-12T00:46:53+08:00",
+  "auditedAt": "2026-09-26",
+  "packageVersion": "4.40.1",
+  "license": "MIT",
+  "licenseFile": "../../third_party/api-enhanced/LICENSE",
+  "moduleCount": 440,
+  "moduleTree": "4c34b3b8162b690e56ab7728c7306cedfd0aa791",
+  "referenceFiles": [
+    {
+      "path": "LICENSE",
+      "sha256": "e463bb821c363e6182f16ec1bf24405af3315b4adc72fc1402232fa98b9a0b12",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/LICENSE"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2d95e2cf1e2a98777e146b465e154a3b10065ded251b0451560e6ca7c0b47e7e",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/package.json"
+    },
+    {
+      "path": "server.js",
+      "sha256": "d755348d2bda076cb851a880e0c97adc0214b921af9ea56592f9c7d3e9581f28",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/server.js"
+    },
+    {
+      "path": "main.js",
+      "sha256": "b641be24299ffc5ac6b1b55dfbd6991f5574ed6b92d1699eb9b31549f0c4bc71",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/main.js"
+    },
+    {
+      "path": "util/request.js",
+      "sha256": "ca79eebcd75a9679fd0db62fb5fe248a7f989473fad1b83b7f35fe99324f394b",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/request.js"
+    },
+    {
+      "path": "util/option.js",
+      "sha256": "2bdd9827630ea91e5bdb008b1652126c5d29c3bab59dc4cf25a87f1a19208224",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/option.js"
+    },
+    {
+      "path": "util/crypto.js",
+      "sha256": "192556e34ed897e367be23349b633db245dd65751ac45a5c055f765bba62e462",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/crypto.js"
+    },
+    {
+      "path": "util/config.json",
+      "sha256": "f5716f2d2f1cc27925e731120439137356f2431df5b8244050e864e435fda88e",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/config.json"
+    },
+    {
+      "path": "util/index.js",
+      "sha256": "646f9efb73715193ae9b8fe34452555e260759b550783b1c8642ef627b1b7761",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/index.js"
+    },
+    {
+      "path": "util/xeapiKey.js",
+      "sha256": "84b2ea59c3e08d42e44a545938216bd7dbd85bf981749f2aa26bf114a12c1f09",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/xeapiKey.js"
+    },
+    {
+      "path": "util/client-sign.js",
+      "sha256": "655fd15a7391dd0af918dd17e6bcb8b590cc0c18a4f756a8294888b7d1c00e70",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/client-sign.js"
+    },
+    {
+      "path": "util/fileHelper.js",
+      "sha256": "891316940ab5992bf40703eb6a536053c60efb662efca23418c454c48f6f4c7e",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/fileHelper.js"
+    },
+    {
+      "path": "util/ncbl.js",
+      "sha256": "0decb8d8c1d06d649cd4c71e55d9aeced3853e2e9e65ddc26528ef3cad2dd0c0",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/util/ncbl.js"
+    },
+    {
+      "path": "plugins/songUpload.js",
+      "sha256": "9317487d565249b6ca7cb443a480df5d344e2b9564943d92541f37e279fd9e34",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/plugins/songUpload.js"
+    },
+    {
+      "path": "plugins/upload.js",
+      "sha256": "f22f317258023667fbd3759741a68be2bc6f7c10d5ccb405d6d262a62d3849c4",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/plugins/upload.js"
+    },
+    {
+      "path": "public/docs/home.md",
+      "sha256": "b50dfeec597d6d90f59a8e4cae4329925f27486225e8bc866e6e9ebe91ab2308",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/public/docs/home.md"
+    },
+    {
+      "path": "public/listen_together_host.html",
+      "sha256": "237e9b375d0c57994d650ff7918c077ed4925bef7222322be8f8fd696955bb1f",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/public/listen_together_host.html"
+    },
+    {
+      "path": "test/music_url.test.js",
+      "sha256": "7cc61be98dbcd0b469f23f61e79d13c84cf4c1169a208e13b6e6adef0731dc53",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/test/music_url.test.js"
+    },
+    {
+      "path": "test/comment.test.js",
+      "sha256": "ff370d196a4c429710002e21dc7017af7bd9a0c0a811e68d2c1f023bb56db9ac",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/test/comment.test.js"
+    },
+    {
+      "path": "test/search.test.js",
+      "sha256": "3a6129be95a3f45b2549ddccb45ad3ca6adb510cb76fe39dd57553d59d34b538",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/test/search.test.js"
+    },
+    {
+      "path": "test/lyric.test.js",
+      "sha256": "2a7e06851c4bda41c318ef3b3040a22e0129caf2fd681fb4710ebf7b36b68216",
+      "url": "https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/blob/a8c781fd64faab17fedfd46e0615a2609307f163/test/lyric.test.js"
+    }
+  ],
+  "notes": [
+    "Third-party implementation reference, not official API documentation.",
+    "No upstream JavaScript or Node.js service was executed. AST tools were used for static analysis only.",
+    "No live requests or authenticated fixture collection performed.",
+    "Module-level adoption does not authorize all branches, fields, or inherited transport behavior."
+  ]
+}

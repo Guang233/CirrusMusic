@@ -9,9 +9,9 @@
 1. 冻结 Qt／编译器／app ID；明确 C++20、CMake 最低版本、必要 Qt 模块。
 2. 建立基础库与 tests，保留现有根 QML URI `CirrusMusic`。
 3. 将启动装配迁移到 `src/app/`，建立 application/domain 边界。
-4. 创建 `Cirrus.Controls` 与 Gallery，以假数据替换 Hello World。
-5. 接入 fake ports + 本地样本播放，持续保持应用可运行。
-6. M0 契约完成后接入真实官方协议，逐功能替换 fake。
+4. 用 C++ 单测／CLI 验证协议、会话、目录和播放后端，持续保留空窗口可启动。
+5. 按契约和门禁逐项接入真实接口，再完成写操作和文件相关后端。
+6. 后端验收后才创建 `Cirrus.Controls`、Gallery 和全部 UI；以最新路线图为准。
 
 `importedcontent/` 仅是模板占位，若不采用 Figma-to-Qt 导入可在独立清理任务移除。不要把设计工具生成代码作为业务逻辑层长期维护。
 
@@ -49,7 +49,7 @@ Qt 6.11.2 是当前建议验证基线，若 M0 调整需同步改上例。Widget
 
 | 配置名 | 用途／当前状态 |
 | --- | --- |
-| linux-dev | 已提供：Debug、Ninja、C++20、compile_commands；尚无业务测试 |
+| linux-dev | 已提供：Debug、Ninja、C++20、compile_commands；已有协议基础 Qt Test |
 | linux-release | 已提供：本地 Release 构建；不是发行包 |
 | linux-dev-local / linux-release-local | 私有示例继承共享配置，指定本机 Qt Kit，实际私有文件不入库 |
 | linux-asan | 待 M1 实现：Debug/RelWithDebInfo、ASan/UBSan |
@@ -62,7 +62,7 @@ cmake --build --preset linux-dev
 cmake --build --preset linux-dev --target all_qmllint
 ```
 
-非系统 Qt 安装按[17](17-vscode-development.md)设置私有 preset。已有 configurePresets 和 buildPresets，但没有 testPresets／CTest 用例，不能声称测试工作流已完成。M1 建立测试后再添加 `ctest --preset linux-dev --output-on-failure --no-tests=error` 等测试命令。
+非系统 Qt 安装按[17](17-vscode-development.md)设置私有 preset。已有 configurePresets、buildPresets 和协议基础 CTest 用例，尚无 testPresets；当前用 `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error` 执行。`BUILD_TESTING=OFF` 不构建测试；业务／真实 API 测试仍未完成。
 
 构建目录、私有 preset、compile_commands 和本机缓存已加入忽略规则。Qt 6.11.2 下已验证聚合 target `all_qmllint`；未来新增模块应继续检查 QML 导入和生成类型。无测试时 CI 应失败，不能把 CTest 的“未发现测试”当成功。
 

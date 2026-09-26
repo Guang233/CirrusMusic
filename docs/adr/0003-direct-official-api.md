@@ -22,10 +22,12 @@ Cirrus C++ 后端直接调用官方 API，内置 EndpointRegistry、ProtocolSign
 
 ## 后果
 
-终端用户使用简单，客户端承担官方协议兼容和更新责任。接口资料尚未交接前可以做 fake 后端，但不能编造实际路径、密码学参数或服务能力。
+终端用户使用简单，客户端承担官方协议兼容和更新责任。已依据维护者指定的 api-enhanced 固定版本完成静态审计；它只作为协议参考，不作为 Node 运行依赖。无真实响应证据的部分可以做 fake 后端，但不能编造服务能力。v2 token 的浏览器 SDK 依赖需另行决策，不默认嵌入 WebEngine。
 
 ## 验证与复议
 
 M0 完成核心 operation 契约、签名向量和真实来源验证。官方协议变化只优先替换适配器，不修改用户部署模式。任何增加外部业务服务的方案都需维护者明确批准的新 ADR，不能以调试方便悄悄改变架构。
 
-详见[API 设计](../05-api-and-backend.md)与[交接清单](../checklists/api-handoff.md)。
+详见[API 设计](../05-api-and-backend.md)、[固定版本审计](../api/README.md)与[交接清单](../checklists/api-handoff.md)。
+
+补充：审计数据的离线 Python 校验器仅为开发工具；所有产品协议、网络、会话和业务逻辑使用 C++/Qt。
