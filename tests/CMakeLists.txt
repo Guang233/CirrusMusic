@@ -32,3 +32,13 @@ qt_add_executable(tst_session_cookie_store unit/session_cookie_store_test.cpp)
 target_link_libraries(tst_session_cookie_store PRIVATE cirrus_application cirrus_netease_session Qt6::Test)
 add_test(NAME session_cookie_store COMMAND tst_session_cookie_store)
 set_tests_properties(session_cookie_store PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_session_api_client unit/session_api_client_test.cpp)
+target_link_libraries(tst_session_api_client PRIVATE cirrus_netease_api Qt6::Test)
+add_test(NAME session_api_client COMMAND tst_session_api_client)
+set_tests_properties(session_api_client PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_qr_login_gateway unit/qr_login_gateway_test.cpp)
+target_link_libraries(tst_qr_login_gateway PRIVATE cirrus_netease_auth Qt6::Test)
+add_test(NAME qr_login_gateway COMMAND tst_qr_login_gateway)
+set_tests_properties(qr_login_gateway PROPERTIES TIMEOUT 15)

@@ -4,6 +4,7 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QList>
 #include <QNetworkAccessManager>
 #include <QObject>
 
@@ -18,6 +19,7 @@ enum class TransportError {
     Canceled,
     Timeout,
     ResponseTooLarge,
+    ResponseHeadersTooLarge,
     RedirectBlocked,
     Network,
     HttpStatus
@@ -29,6 +31,9 @@ struct TransportRequest {
     QByteArray formBody;
     int timeoutMs = 15000;
     qsizetype responseLimit = 4 * 1024 * 1024;
+    // Explicit, bounded profile fields; no arbitrary header/Host overrides.
+    QByteArray cookieHeader;
+    QByteArray userAgent;
 };
 
 struct TransportResult {
@@ -37,6 +42,7 @@ struct TransportResult {
     int networkError = 0;
     QByteArray body;
     QByteArray retryAfter;
+    QList<QByteArray> setCookieHeaders; // infrastructure-only, never log/broadcast to UI
 };
 
 // Thread-affine async POST transport. It does not sign, retry, decrypt, parse
@@ -46,7 +52,7 @@ class HttpTransport : public QObject
     Q_OBJECT
   public:
     explicit HttpTransport(QObject* parent = nullptr);
-    // Owned, same-thread, unparented manager injection for offline tests.
+    // Owned, same-thread, parentless manager injection for offline tests.
     explicit HttpTransport(std::unique_ptr<QNetworkAccessManager> manager,
                            QObject* parent = nullptr);
     ~HttpTransport() override;

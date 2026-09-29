@@ -13,6 +13,7 @@
 - [网易云 API 与客户端后端](docs/05-api-and-backend.md)
 - [API 审计与移植清单](docs/api/README.md)：440 个上游模块，164 个采用候选、40 个待定、236 个排除；尚未真实验证
 - [已实现的 C++ 协议基础与测试](docs/api/native-foundation.md)
+- [上下文请求链与扫码登录基础](docs/api/qr-auth-request-chain.md)：未完成身份确认／凭据提升，不代表已经能登录
 - [播放引擎](docs/06-playback-and-audio.md) · [自定义 QML 控件体系](docs/07-qml-and-design-system.md)
 - [实施路线与任务拆解](docs/14-roadmap-and-backlog.md)
 - [待确认问题](docs/15-risks-and-open-questions.md) · [API 交接清单](docs/checklists/api-handoff.md)
@@ -32,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 构建，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议、网络、响应解码和会话隔离的 6 个测试套件已通过 Debug/Release CTest；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议、网络、会话隔离和扫码请求链的 8 个测试套件（174 项 Qt Test pass，含数据行／初始化／清理）已通过 Debug/Release CTest；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

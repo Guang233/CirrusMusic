@@ -157,4 +157,23 @@ std::optional<QByteArray> SessionCookieStore::header(const domain::SessionToken&
     return result;
 }
 
+std::optional<QByteArray> SessionCookieStore::value(const domain::SessionToken& context,
+                                                    const QUrl& destination,
+                                                    const QByteArray& name) const
+{
+    if (!accepts(context) || !approvedOrigin(destination) || name.isEmpty()) {
+        return std::nullopt;
+    }
+    std::optional<QByteArray> result;
+    for (const auto& cookie : m_jar.cookiesForUrl(destination)) {
+        if (cookie.name() == name) {
+            if (result && *result != cookie.value()) {
+                return std::nullopt;
+            }
+            result = cookie.value();
+        }
+    }
+    return result.value_or(QByteArray{});
+}
+
 } // namespace cirrus::netease

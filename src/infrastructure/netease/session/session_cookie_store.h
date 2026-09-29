@@ -26,6 +26,11 @@ class SessionCookieStore final
     // nullopt means stale/invalid origin or >16 KiB; engaged empty means no cookies.
     [[nodiscard]] std::optional<QByteArray> header(const domain::SessionToken& context,
                                                    const QUrl& destination) const;
+    // Scoped lookup for encrypted protocol metadata. Empty = absent; nullopt =
+    // invalid/stale or conflicting same-name cookies (never guess a credential).
+    [[nodiscard]] std::optional<QByteArray> value(const domain::SessionToken& context,
+                                                  const QUrl& destination,
+                                                  const QByteArray& name) const;
 
   private:
     class Jar final : public QNetworkCookieJar

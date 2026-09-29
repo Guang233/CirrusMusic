@@ -3,7 +3,10 @@ find_package(ZLIB REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
 add_library(cirrus_domain INTERFACE)
-target_sources(cirrus_domain INTERFACE domain/account/session_types.h)
+target_sources(cirrus_domain INTERFACE
+    domain/account/session_types.h
+    domain/account/qr_login_types.h
+)
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
@@ -11,10 +14,13 @@ target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
 add_library(cirrus_application STATIC
     application/account/session_coordinator.cpp
     application/account/session_coordinator.h
+    application/ports/qr_login_gateway.h
 )
 target_link_libraries(cirrus_application PUBLIC cirrus_domain)
 
 add_library(cirrus_netease_protocol STATIC
+    infrastructure/netease/protocol/eapi_request_profile.cpp
+    infrastructure/netease/protocol/eapi_request_profile.h
     infrastructure/netease/protocol/form_encoding.cpp
     infrastructure/netease/protocol/form_encoding.h
     infrastructure/netease/protocol/official_route.cpp
@@ -42,3 +48,17 @@ add_library(cirrus_netease_session STATIC
     infrastructure/netease/session/session_cookie_store.h
 )
 target_link_libraries(cirrus_netease_session PUBLIC cirrus_domain Qt6::Network)
+
+add_library(cirrus_netease_api STATIC
+    infrastructure/netease/api/api_operation.cpp
+    infrastructure/netease/api/api_operation.h
+    infrastructure/netease/api/session_api_client.cpp
+    infrastructure/netease/api/session_api_client.h
+)
+target_link_libraries(cirrus_netease_api PUBLIC cirrus_netease_network cirrus_netease_session)
+
+add_library(cirrus_netease_auth STATIC
+    infrastructure/netease/auth/qr_login_gateway.cpp
+    infrastructure/netease/auth/qr_login_gateway.h
+)
+target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api)

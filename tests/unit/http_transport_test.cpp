@@ -1,95 +1,12 @@
 #include "infrastructure/netease/network/http_transport.h"
 
-#include <QNetworkReply>
+#include "../support/fake_http.h"
+
 #include <QSignalSpy>
-#include <QTimer>
 #include <QtTest>
 
-#include <cstring>
-
 using namespace cirrus::netease;
-
-struct Plan {
-    QByteArray body = "ok";
-    int status = 200;
-    int delayMs = 0; // negative means never completes without abort
-    QNetworkReply::NetworkError error = QNetworkReply::NoError;
-};
-
-class FakeReply : public QNetworkReply
-{
-  public:
-    FakeReply(const QNetworkRequest& request, Plan plan, QObject* parent) : QNetworkReply(parent)
-    {
-        setRequest(request);
-        setUrl(request.url());
-        open(QIODevice::ReadOnly);
-        if (plan.delayMs >= 0) {
-            QTimer::singleShot(plan.delayMs, this, [this, plan] {
-                if (isFinished()) {
-                    return;
-                }
-                m_body = plan.body;
-                setAttribute(QNetworkRequest::HttpStatusCodeAttribute, plan.status);
-                setRawHeader("Retry-After", "3");
-                if (plan.error != QNetworkReply::NoError) {
-                    setError(plan.error, QStringLiteral("synthetic failure"));
-                }
-                emit readyRead();
-                if (!isFinished()) {
-                    setFinished(true);
-                    emit finished();
-                }
-            });
-        }
-    }
-    void abort() override
-    {
-        if (!isFinished()) {
-            setError(OperationCanceledError, QStringLiteral("canceled"));
-            setFinished(true);
-            emit finished(); // deliberately synchronous to exercise reentrancy
-        }
-    }
-    qint64 bytesAvailable() const override
-    {
-        return m_body.size() - m_offset + QIODevice::bytesAvailable();
-    }
-
-  protected:
-    qint64 readData(char* buffer, qint64 maximum) override
-    {
-        const qint64 count = qMin(maximum, static_cast<qint64>(m_body.size() - m_offset));
-        if (count <= 0) {
-            return 0;
-        }
-        std::memcpy(buffer, m_body.constData() + m_offset, static_cast<size_t>(count));
-        m_offset += count;
-        return count;
-    }
-
-  private:
-    QByteArray m_body;
-    qint64 m_offset = 0;
-};
-
-class FakeManager : public QNetworkAccessManager
-{
-  public:
-    QList<Plan> plans;
-    QList<QNetworkRequest> requests;
-    QList<QByteArray> bodies;
-
-  protected:
-    QNetworkReply* createRequest(Operation operation, const QNetworkRequest& request,
-                                 QIODevice* outgoing) override
-    {
-        Q_ASSERT(operation == PostOperation);
-        requests.append(request);
-        bodies.append(outgoing ? outgoing->readAll() : QByteArray{});
-        return new FakeReply(request, plans.isEmpty() ? Plan{} : plans.takeFirst(), this);
-    }
-};
+using namespace cirrus::test;
 
 class HttpTransportTest : public QObject
 {
@@ -103,6 +20,11 @@ class HttpTransportTest : public QObject
     void invalidRequest();
     void outOfOrder();
     void destruction();
+    void explicitHeaders();
+    void invalidHeaders_data();
+    void invalidHeaders();
+    void responseCookieLimits_data();
+    void responseCookieLimits();
 };
 
 static TransportRequest request()
@@ -260,6 +182,88 @@ void HttpTransportTest::destruction()
     transport.reset();
     QCoreApplication::processEvents();
     QCOMPARE(completions, 0);
+}
+
+void HttpTransportTest::explicitHeaders()
+{
+    auto manager = std::make_unique<FakeManager>();
+    auto* fake = manager.get();
+    Plan plan;
+    plan.headers = {{"Set-Cookie", "one=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/"},
+                    {"set-cookie", "two=2; Path=/"}};
+    fake->plans.append(plan);
+    HttpTransport transport(std::move(manager));
+    QSignalSpy spy(&transport, &HttpTransport::completed);
+    auto req = request();
+    req.cookieHeader = "MUSIC_U=synthetic";
+    req.userAgent = "Cirrus-offline-test";
+    const auto id = transport.post(req);
+    QVERIFY(id > 0);
+    QTRY_COMPARE(spy.size(), 1);
+    QCOMPARE(fake->requests.first().rawHeader("Cookie"), req.cookieHeader);
+    QCOMPARE(fake->requests.first().rawHeader("User-Agent"), req.userAgent);
+    QCOMPARE(result(spy).setCookieHeaders,
+             QList<QByteArray>(
+                 {"one=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/", "two=2; Path=/"}));
+}
+
+void HttpTransportTest::invalidHeaders_data()
+{
+    QTest::addColumn<QByteArray>("cookie");
+    QTest::addColumn<QByteArray>("ua");
+    QTest::newRow("cookie-injection") << QByteArray("x=y\r\nHost: evil.example") << QByteArray{};
+    QTest::newRow("cookie-limit") << QByteArray(16 * 1024 + 1, 'a') << QByteArray{};
+    QTest::newRow("ua-injection") << QByteArray{} << QByteArray("test\nCookie: x=y");
+    QTest::newRow("ua-limit") << QByteArray{} << QByteArray(1025, 'a');
+    QTest::newRow("nul") << QByteArray("x=y\0z", 5) << QByteArray{};
+}
+
+void HttpTransportTest::invalidHeaders()
+{
+    QFETCH(QByteArray, cookie);
+    QFETCH(QByteArray, ua);
+    auto manager = std::make_unique<FakeManager>();
+    auto* fake = manager.get();
+    HttpTransport transport(std::move(manager));
+    QSignalSpy spy(&transport, &HttpTransport::completed);
+    auto req = request();
+    req.cookieHeader = cookie;
+    req.userAgent = ua;
+    const auto id = transport.post(req);
+    QVERIFY(id > 0);
+    QTRY_COMPARE(spy.size(), 1);
+    QCOMPARE(result(spy).error, TransportError::InvalidRequest);
+    QVERIFY(fake->requests.isEmpty());
+}
+
+void HttpTransportTest::responseCookieLimits_data()
+{
+    QTest::addColumn<int>("count");
+    QTest::addColumn<int>("size");
+    QTest::newRow("single") << 1 << 4097;
+    QTest::newRow("count") << 65 << 8;
+    QTest::newRow("total") << 17 << 4096;
+}
+
+void HttpTransportTest::responseCookieLimits()
+{
+    QFETCH(int, count);
+    QFETCH(int, size);
+    auto manager = std::make_unique<FakeManager>();
+    Plan plan;
+    plan.headers.clear();
+    for (int i = 0; i < count; ++i) {
+        plan.headers.append({"Set-Cookie", QByteArray("x=") + QByteArray(size - 2, 'a')});
+    }
+    manager->plans.append(plan);
+    HttpTransport transport(std::move(manager));
+    QSignalSpy spy(&transport, &HttpTransport::completed);
+    const auto id = transport.post(request());
+    QVERIFY(id > 0);
+    QTRY_COMPARE(spy.size(), 1);
+    QCOMPARE(result(spy).error, TransportError::ResponseHeadersTooLarge);
+    QVERIFY(result(spy).setCookieHeaders.isEmpty());
+    QVERIFY(result(spy).body.isEmpty());
 }
 
 QTEST_GUILESS_MAIN(HttpTransportTest)

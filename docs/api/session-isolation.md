@@ -6,11 +6,13 @@
 
 | Target | 已实现职责 | 依赖 |
 | --- | --- | --- |
-| cirrus_domain | SessionToken、SessionPhase、SessionSnapshot 值类型 | Qt Core |
-| cirrus_application | SessionCoordinator 生命周期与旧结果判定 | cirrus_domain；不依赖 Network／协议／加密库 |
+| cirrus_domain | 会话及扫码 challenge／status 值类型 | Qt Core |
+| cirrus_application | SessionCoordinator、IQrLoginGateway port 与脱敏结果 | cirrus_domain；不依赖 Network／协议／加密库 |
 | cirrus_netease_protocol | 编码、加解密、解压、JSON envelope 检查 | Qt Core、OpenSSL、zlib |
 | cirrus_netease_network | 有界异步 HTTP，不管理账号状态 | 协议路由工具、Qt Network |
 | cirrus_netease_session | 当前 epoch 的内存 Cookie 存储 | cirrus_domain、Qt Network；不反向控制应用协调器 |
+| cirrus_netease_api | operation 契约及捕获上下文的请求链 | protocol/network/session；不依赖 application |
+| cirrus_netease_auth | QR port 实现、业务映射、key 归属与单请求限制 | application、netease_api |
 
 应用层没有具体 NetEaseGateway、Cookie、QJsonObject、HTTP 状态或 QML 引用。基础设施可以依赖领域值类型，领域／应用不能反向依赖基础设施。暂不为没有实现的功能建立空 port 或通用 Manager。
 
@@ -25,7 +27,7 @@
 - 压缩输入、解密输入和展开后的 JSON 分别限额。默认输入约 1 MiB，JSON 4 MiB；可配置限额有 32 MiB 硬上限，eapi 密文仍受已有解密器约 1 MiB 的限制。
 - zlib 流式展开并检查 CRC；当前只接受一个完整 gzip member，拒绝截断、尾随数据和串接 member。若真实契约需要多 member，须显式修改并补总量测试。
 - 拒绝非法 UTF-8、坏 JSON、非 object 根；`code` 可缺失，存在时必须是有界整数或严格十进制整数字符串。
-- `DecodedResponse::ok()` 只表示解码和 envelope 检查通过。`code=429`、`803` 或缺 code 都不能被统一当业务成功；由将来的 operation mapper 判断。
+- `DecodedResponse::ok()` 只表示解码和 envelope 检查通过。`code=429`、`803` 或缺 code 都不能被统一当业务成功；由各 operation mapper 判断；当前 QR mapper 已明确区分这些情况。
 - 错误不携带半个 JSON 对象或原始失败正文。HTTP 状态仍独立存在，不能被业务 code 改写。
 
 大型解析以后在有界任务池执行；目前组件单测同步调用，不宣称已建网络 worker／任务池。
@@ -49,7 +51,7 @@
 
 - 初次绑定合法 token；此后只能推进同一 coordinator 的 epoch，不能回退或换成另一个 coordinator。
 - 推进时清空 Cookie；相同 token 的重复通知是无副作用的确认。
-- apply/header 都要求请求创建时捕获的 token，旧回包无法修改新 jar。
+- apply/header/value 都要求请求创建时捕获的 token，旧回包无法修改新 jar；value 仅按目标 origin 查询，适用同名值冲突时拒绝猜选凭据。
 - 只允许四个已登记官方 API 主机的 HTTPS 默认／443 端口；拒绝用户信息、fragment、CDN、上传节点、第三方域和 HTTP。
 - 保留 host-only、Domain、Path、Secure、HttpOnly 和过期／删除语义，不移除 Domain 或自动扩为全部域。
 - 当前仅接受官方 API 主机范围内的 Domain，拒绝 `.163.com` 等更宽的父域；这是保守策略，尚未用真实登录样本验证。
@@ -58,11 +60,11 @@
 
 Cookie 容器须在网络工作线程构造、使用和销毁；应用协调器保持自己的线程亲和性。通过值快照排队通知，不跨线程直接操作 QObject 或 jar。
 
-## 5. 必须在登录接入时完成的连接
+## 5. 已连接与仍待完成的登录边界
 
-目前 HttpTransport 仍关闭自动 Cookie，尚未发送 Cookie header 或返回 Set-Cookie 给这些组件。真实登录网关、请求上下文登记、跨线程失效屏障和安全存储均未实现。
+HttpTransport 仍关闭自动 Cookie，现已支持受限的显式头与原边界 Set-Cookie。SessionApiClient 已连接编码／传输／解码／Cookie，并捕获 token 和 registry origin；QrLoginGateway 已实现取 key、状态查询和领域映射。详细契约、Qt 重复头处理和证据见[扫码请求链路](qr-auth-request-chain.md)。
 
-后续连接必须遵循：
+身份确认、精确 token 凭据交接、跨线程 ready 屏障和安全存储尚未实现。完整登录仍必须遵循：
 
 1. 每个请求捕获确切 token 和可信 origin；完成时使用原 token，不拿“当前 epoch”给旧响应重新贴标签。
 2. 切号先使应用 token 失效，网络侧推进／清空 jar 后，才分发新账号的私有请求；取消只是优化，token 校验才是必需门禁。
@@ -70,4 +72,4 @@ Cookie 容器须在网络工作线程构造、使用和销毁；应用协调器�
 4. Cookie 和原始 JSON 不跨入应用层／QML。应用端只接收身份、能力、脱敏错误和原请求上下文。
 5. 退出先在本地失效，不依赖远程 logout 成功。持久化以后通过独立凭证 port；当前不会用普通配置文件保存 Cookie。
 
-现有组合测试证明这些组件在传入正确捕获 token 时的隔离不变量；它们不能代替尚未实现的完整请求链路和真实账号验证。
+现有组合测试已经过真实的原生编码／请求／解码代码和 fake QNetworkReply，覆盖 HTTP 成功之后切号、取消来不及、queued 值结果等边界；它们不能代替完整认证事务、真实 socket/TLS 和真实账号验证。

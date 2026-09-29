@@ -20,6 +20,8 @@ class SessionCookieStoreTest : public QObject
     void headerLimit();
     void lateResponseCannotCrossAccounts();
     void cannotRewindOrReplaceCoordinator();
+    void scopedValueLookup();
+    void conflictingCredentialsAreRejected();
 };
 
 static QUrl origin() { return QUrl(QStringLiteral("https://music.163.com/weapi/login")); }
@@ -194,6 +196,40 @@ void SessionCookieStoreTest::cannotRewindOrReplaceCoordinator()
     QVERIFY(store.advanceTo(newer));
     QVERIFY(!store.advanceTo(current));
     QCOMPARE(store.apply({}, origin(), {"x=y"}), CookieUpdate::StaleContext);
+}
+
+void SessionCookieStoreTest::scopedValueLookup()
+{
+    SessionCookieStore store;
+    const auto context = token();
+    QVERIFY(store.advanceTo(context));
+    QCOMPARE(store.apply(context, origin(), {"__csrf=synthetic; Path=/weapi; Secure"}),
+             CookieUpdate::Applied);
+    QCOMPARE(store.value(context, origin(), "__csrf"), std::optional<QByteArray>("synthetic"));
+    QCOMPARE(store.value(context, origin(), "MUSIC_U"), std::optional<QByteArray>(""));
+    QCOMPARE(store.value(context, QUrl(QStringLiteral("https://music.163.com/api/test")), "__csrf"),
+             std::optional<QByteArray>(""));
+    QCOMPARE(store.value(context,
+                         QUrl(QStringLiteral("https://interfacepc.music.163.com/weapi/login")),
+                         "__csrf"),
+             std::optional<QByteArray>(""));
+    QVERIFY(!store.value(context, QUrl(QStringLiteral("https://evil.example/")), "__csrf"));
+    QVERIFY(!store.value(context, origin(), ""));
+    QVERIFY(store.advanceTo({context.coordinatorId, context.epoch + 1}));
+    QVERIFY(!store.value(context, origin(), "__csrf"));
+}
+
+void SessionCookieStoreTest::conflictingCredentialsAreRejected()
+{
+    SessionCookieStore store;
+    const auto context = token();
+    QVERIFY(store.advanceTo(context));
+    QCOMPARE(store.apply(context, origin(), {"MUSIC_U=one; Path=/", "MUSIC_U=two; Path=/weapi"}),
+             CookieUpdate::Applied);
+    QVERIFY(!store.value(context, origin(), "MUSIC_U"));
+    // Identical applicable values are unambiguous; scope is still preserved.
+    QCOMPARE(store.apply(context, origin(), {"MUSIC_U=one; Path=/weapi"}), CookieUpdate::Applied);
+    QCOMPARE(store.value(context, origin(), "MUSIC_U"), std::optional<QByteArray>("one"));
 }
 
 QTEST_GUILESS_MAIN(SessionCookieStoreTest)

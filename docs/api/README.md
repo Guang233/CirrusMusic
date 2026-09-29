@@ -29,6 +29,7 @@
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
 | [native-foundation.md](native-foundation.md) | 已实现的 C++ 协议、传输、解码和离线 Qt Test |
 | [session-isolation.md](session-isolation.md) | 实际编译依赖、epoch／Cookie 隔离和仍待连接的登录边界 |
+| [qr-auth-request-chain.md](qr-auth-request-chain.md) | 已实现的上下文请求链／扫码 port，以及尚未完成的身份验证与凭据提升 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围
@@ -56,7 +57,7 @@
 - `imports`：上游依赖观察，不是允许引入 Cirrus 的包。例如音源模块中的解锁依赖必须删除。
 - `constraints`：业务类型／参数白名单；采用模块不等于采用所有分支。
 - `blockedBy`：需要额外证据或决策的依赖；例如浏览器 SDK token 与一起听接收协议。
-- `implementationStatus=not-implemented`、`verification=static-only`：本轮全部条目的真实状态。
+- `implementationStatus=not-implemented`、`verification=static-only`：固定静态审计时点的状态，不随原生增量改写成运行注册表；当前实现／测试进度另见 [native-foundation.md](native-foundation.md)。
 
 动态 URL 中的操作名必须由枚举白名单构造；不能把未经校验的 `query.t` 或 `threadId` 原样拼入 C++ 请求。分页默认值、输入互斥、字段类型、授权和响应 schema 仍须逐 operation 在实现前补齐并建立 fixture。
 
@@ -87,4 +88,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 表单／路由、weapi/eapi 编码、异步传输与 Qt Test，见[实现记录](native-foundation.md)。下一步连接登录网关与请求上下文，并补 XEAPI，再按 [migration-plan.md](migration-plan.md)实现。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链与扫码基础 port，见[实现记录](native-foundation.md)。下一步完成账号身份确认、精确 token 凭据交接和匿名／设备启动，独立补 XEAPI，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

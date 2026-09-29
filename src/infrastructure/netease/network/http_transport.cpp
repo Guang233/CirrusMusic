@@ -1,5 +1,6 @@
 #include "http_transport.h"
 
+#include <QHttpHeaders>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPointer>
@@ -10,6 +11,39 @@
 
 namespace cirrus::netease
 {
+namespace
+{
+
+bool validHeaderValue(const QByteArray& value, qsizetype limit)
+{
+    if (value.size() > limit) {
+        return false;
+    }
+    for (const unsigned char c : value) {
+        if (c < 0x20 || c == 0x7f) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool collectCookies(const QNetworkReply& reply, QList<QByteArray>& cookies)
+{
+    qsizetype bytes = 0;
+    // The legacy rawHeaderPairs() view coalesces duplicates. QHttpHeaders keeps
+    // original Set-Cookie boundaries; never split on commas (Expires uses them).
+    for (const auto& value : reply.headers().values(QHttpHeaders::WellKnownHeader::SetCookie)) {
+        bytes += value.size();
+        if (cookies.size() >= 64 || value.size() > 4096 || bytes > 64 * 1024) {
+            cookies.clear();
+            return false;
+        }
+        cookies.append(value);
+    }
+    return true;
+}
+
+} // namespace
 
 struct HttpTransport::Pending {
     QPointer<QNetworkReply> reply;
@@ -74,7 +108,9 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     const auto url = officialRequestUrl(request.protocol, request.logicalPath);
     if (!url || request.logicalPath.size() > 2048 || request.timeoutMs <= 0 ||
         request.timeoutMs > 120000 || request.responseLimit <= 0 ||
-        request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024) {
+        request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024 ||
+        !validHeaderValue(request.cookieHeader, 16 * 1024) ||
+        !validHeaderValue(request.userAgent, 1024)) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -89,6 +125,12 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     wire.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
     wire.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
     wire.setAttribute(QNetworkRequest::CacheSaveControlAttribute, false);
+    if (!request.cookieHeader.isEmpty()) {
+        wire.setRawHeader("Cookie", request.cookieHeader);
+    }
+    if (!request.userAgent.isEmpty()) {
+        wire.setRawHeader("User-Agent", request.userAgent);
+    }
 
     auto* reply = m_manager->post(wire, request.formBody);
     pending->reply = reply;
@@ -178,6 +220,12 @@ void HttpTransport::finish(quint64 id)
             } else if (result.httpStatus < 200 || result.httpStatus >= 300) {
                 result.error = TransportError::HttpStatus;
             }
+        }
+        // Failed/canceled/redirected responses cannot hand credentials to callers.
+        if (result.error == TransportError::None &&
+            !collectCookies(*pending->reply, result.setCookieHeaders)) {
+            result.error = TransportError::ResponseHeadersTooLarge;
+            result.body.clear();
         }
         pending->reply->deleteLater();
     }

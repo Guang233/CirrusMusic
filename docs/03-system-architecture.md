@@ -74,7 +74,7 @@ tools/                 # 开发与质量工具
 packaging/             # Flatpak、AppImage、桌面元数据
 ```
 
-以上是目标结构。已按需建立 domain/account、application/account，以及 infrastructure/netease 下的 protocol、network、session；应用层仅依赖领域值类型和 Qt Core，基础设施不反向控制应用协调器。具体已实现边界见[会话隔离说明](api/session-isolation.md)。根窗口仍是 Qt 模板，composition root／登录网关尚未装配；不为未开发功能创建大量空类。
+以上是目标结构。已按需建立 domain/account、application 下的 account／ports，以及 infrastructure/netease 下的 protocol、network、session、api、auth；应用层仅依赖领域值类型和 Qt Core，基础设施不反向控制应用协调器。扫码 port 的原生适配已有实现，见[会话隔离说明](api/session-isolation.md)和[扫码请求链路](api/qr-auth-request-chain.md)。身份确认／凭据提升、网络线程与 GUI facade／composition root 尚未装配，根窗口仍是 Qt 模板；不为未开发功能创建大量空类。
 
 ## 4. 核心服务及契约
 
