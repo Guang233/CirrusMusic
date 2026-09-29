@@ -12,6 +12,8 @@ target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}"
 target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
 
 add_library(cirrus_application STATIC
+    application/account/qr_login_service.cpp
+    application/account/qr_login_service.h
     application/account/session_coordinator.cpp
     application/account/session_coordinator.h
     application/ports/qr_login_gateway.h
@@ -58,6 +60,8 @@ add_library(cirrus_netease_api STATIC
 target_link_libraries(cirrus_netease_api PUBLIC cirrus_netease_network cirrus_netease_session)
 
 add_library(cirrus_netease_auth STATIC
+    infrastructure/netease/auth/account_identity_mapper.cpp
+    infrastructure/netease/auth/account_identity_mapper.h
     infrastructure/netease/auth/qr_login_gateway.cpp
     infrastructure/netease/auth/qr_login_gateway.h
 )

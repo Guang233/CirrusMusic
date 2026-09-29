@@ -19,6 +19,10 @@ class QrLoginGateway final : public application::IQrLoginGateway
     ~QrLoginGateway() override;
     [[nodiscard]] quint64 requestKey(domain::SessionToken context) override;
     [[nodiscard]] quint64 checkStatus(domain::SessionToken context, QString key) override;
+    [[nodiscard]] bool synchronize(domain::SessionToken context) override;
+    [[nodiscard]] quint64 verifyIdentity(domain::SessionToken context) override;
+    [[nodiscard]] quint64 promoteCredentials(domain::SessionToken attempt,
+                                             domain::SessionToken target, QUuid receipt) override;
     void cancel(quint64 requestId) override;
 
   private:
@@ -27,6 +31,7 @@ class QrLoginGateway final : public application::IQrLoginGateway
         ApiOperation operation{};
         quint64 apiId = 0;
         std::optional<application::AuthFailure> failure;
+        bool promotion = false;
     };
     quint64 submit(domain::SessionToken context, ApiOperation operation, QString key = {});
     void rejectLater(quint64 requestId, application::AuthFailure failure);
@@ -38,6 +43,9 @@ class QrLoginGateway final : public application::IQrLoginGateway
     QHash<quint64, quint64> m_apiIds;
     domain::SessionToken m_keyContext;
     QString m_key;
+    domain::SessionToken m_authorizedContext;
+    std::optional<application::VerifiedLogin> m_verified;
+    quint64 m_promotionId = 0;
     quint64 m_nextId = 0;
 };
 

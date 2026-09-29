@@ -1,6 +1,6 @@
 # 14 · 实施路线与任务拆解
 
-> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与扫码请求链的八个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
+> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与认证事务的十个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
 
 ## 1. 阶段总览
 
@@ -77,7 +77,7 @@ flowchart LR
 
 1. 保留本轮审计成果，先处理[发现与门禁](api/gaps-and-hazards.md)，不宣称 164 个模块已经可用。
 2. C++ 协议、异步传输、JSON／gzip、会话与 Cookie、捕获 token/origin 的请求链已建立；QR 取 key／本地 URL／状态映射有离线测试，见[扫码链路](api/qr-auth-request-chain.md)。
-3. 完成认证用例、账号身份确认和精确 token 凭据交接／网络 ready 屏障；803 不直接提升为 Authenticated。
+3. [认证用例、账号身份确认和精确 token 凭据交接](api/authentication-transaction.md)已有离线验证；同线程 Committing→Authenticated 发布屏障已建立，803 不直接提升为 Authenticated。网络线程／GUI facade 装配仍待实现。
 4. 补匿名／设备 bootstrap、安全存储和通用调度；独立补齐 XEAPI 密钥流程与向量。真实验证需要授权环境，不把凭据放进对话或仓库。
 5. 接入搜索、歌曲详情、官方 URL 和歌词；做真实播放 PoC。
 6. 实现专辑／艺人／歌单、首页、每日推荐、FM 和个人库；用 CLI／测试 harness 贯通。

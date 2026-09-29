@@ -6,8 +6,8 @@
 
 | Target | 已实现职责 | 依赖 |
 | --- | --- | --- |
-| cirrus_domain | 会话及扫码 challenge／status 值类型 | Qt Core |
-| cirrus_application | SessionCoordinator、IQrLoginGateway port 与脱敏结果 | cirrus_domain；不依赖 Network／协议／加密库 |
+| cirrus_domain | 会话、AccountIdentity 及扫码 challenge／status 值类型 | Qt Core |
+| cirrus_application | SessionCoordinator、QrLoginService、IQrLoginGateway 与脱敏结果 | cirrus_domain；不依赖 Network／协议／加密库 |
 | cirrus_netease_protocol | 编码、加解密、解压、JSON envelope 检查 | Qt Core、OpenSSL、zlib |
 | cirrus_netease_network | 有界异步 HTTP，不管理账号状态 | 协议路由工具、Qt Network |
 | cirrus_netease_session | 当前 epoch 的内存 Cookie 存储 | cirrus_domain、Qt Network；不反向控制应用协调器 |
@@ -38,12 +38,12 @@
 
 - 初始为 Guest，身份为空。
 - 开始／重新开始登录：递增 epoch，进入 Authenticating，旧账号／旧二维码请求失效。
-- 接受已经由 gateway 验证的身份：只允许当前 Authenticating token，递增 epoch，进入 Authenticated。
+- 接受已经由 gateway 验证的身份：只允许当前 Authenticating token；prepare 递增 epoch 进入 Committing，凭据绑定确认后 complete 才发布 Authenticated，且不再次旋转 token。
 - 取消登录、会话到期、退出均递增 epoch。重复退出也会使旧游客请求失效。
 - 旧登录结果、旧账号的到期通知和其他协调器的 token 不得改变当前状态。
 - 通知按值发送；同步重入不改变已发出的快照。登录完成返回这次转换的确切 token，而不是事后读取可能已经改变的“当前 token”。
 
-`authenticate(attempt, verifiedAccountId)` **不联网、不验证密码**。它是将来认证用例在确认身份后调用的状态转换，未暴露为 QML invokable。账号 ID 保留字符串；具体服务 ID 的 schema 由 mapper 验证。
+`prepareAuthentication(attempt, verifiedAccountId)` 与 `completeAuthentication(target)` **不联网、不验证密码**。仅由认证用例在确认身份、完成凭据交接后按序调用，未暴露为 QML invokable；Committing 不是私有账号用例的准入状态。账号 ID 保留字符串；具体服务 ID 的 schema 由 mapper 验证。
 
 ## 4. Cookie 信任边界
 
@@ -58,18 +58,18 @@
 - 校验 __Secure-/__Host- 前缀规则，拒绝控制字符；非法批次不会部分覆盖旧凭据。
 - 单 header 4 KiB、单批 64 个／64 KiB、jar 最多 128 个／64 KiB，生成 Cookie header 最多 16 KiB。超限拒绝，不静默截断授权材料。
 
-Cookie 容器须在网络工作线程构造、使用和销毁；应用协调器保持自己的线程亲和性。通过值快照排队通知，不跨线程直接操作 QObject 或 jar。
+Cookie 容器须在所属后端线程构造、使用和销毁。当前认证用例／协调器／适配器／client 在同一个事件循环线程；未来 GUI 通过值快照排队通知，不跨线程直接操作 QObject 或 jar。
 
 ## 5. 已连接与仍待完成的登录边界
 
 HttpTransport 仍关闭自动 Cookie，现已支持受限的显式头与原边界 Set-Cookie。SessionApiClient 已连接编码／传输／解码／Cookie，并捕获 token 和 registry origin；QrLoginGateway 已实现取 key、状态查询和领域映射。详细契约、Qt 重复头处理和证据见[扫码请求链路](qr-auth-request-chain.md)。
 
-身份确认、精确 token 凭据交接、跨线程 ready 屏障和安全存储尚未实现。完整登录仍必须遵循：
+身份确认、精确 token 凭据交接和同线程发布屏障现已实现，见[认证事务](authentication-transaction.md)。跨线程装配和安全存储仍未实现；登录生命周期必须遵循：
 
 1. 每个请求捕获确切 token 和可信 origin；完成时使用原 token，不拿“当前 epoch”给旧响应重新贴标签。
 2. 切号先使应用 token 失效，网络侧推进／清空 jar 后，才分发新账号的私有请求；取消只是优化，token 校验才是必需门禁。
-3. 登录完成会产生新 epoch，认证阶段的 Cookie 不能任意继承。gateway 须持有经验证结果的私有凭据收据，并只向此次转换返回的确切 token 交接；如果已再次登出／换号则丢弃。
+3. 登录完成会产生新 epoch，认证阶段的 Cookie 不能任意继承。gateway 持有身份请求快照的私有凭据收据，并只向 prepare 返回的确切 Committing token 交接；如果已再次登出／换号则丢弃。
 4. Cookie 和原始 JSON 不跨入应用层／QML。应用端只接收身份、能力、脱敏错误和原请求上下文。
 5. 退出先在本地失效，不依赖远程 logout 成功。持久化以后通过独立凭证 port；当前不会用普通配置文件保存 Cookie。
 
-现有组合测试已经过真实的原生编码／请求／解码代码和 fake QNetworkReply，覆盖 HTTP 成功之后切号、取消来不及、queued 值结果等边界；它们不能代替完整认证事务、真实 socket/TLS 和真实账号验证。
+现有组合测试已经过真实的原生编码／请求／解码代码和 fake QNetworkReply，覆盖 HTTP 成功之后切号、取消来不及、queued 值结果等边界；新增组合测试也覆盖两阶段认证事务；它们仍不能代替真实 socket/TLS 和真实账号验证。

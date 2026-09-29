@@ -10,7 +10,8 @@ namespace cirrus::application
 {
 
 // Application-side lifecycle authority. No HTTP, cookies, provider JSON or QML.
-// A future auth use case/gateway must verify identity BEFORE calling authenticate.
+// Verify identity before preparation; publish Authenticated only after the
+// provider acknowledges credential binding to the exact prepared token.
 class SessionCoordinator final : public QObject
 {
     Q_OBJECT
@@ -20,9 +21,10 @@ class SessionCoordinator final : public QObject
     [[nodiscard]] domain::SessionSnapshot snapshot() const;
     [[nodiscard]] bool accepts(const domain::SessionToken& token) const;
     [[nodiscard]] domain::SessionToken beginAuthentication();
-    // Returns the exact promoted token, never a later reentrant snapshot token.
+    // Returns the exact prepared token, never a later reentrant snapshot token.
     [[nodiscard]] std::optional<domain::SessionToken>
-    authenticate(const domain::SessionToken& attempt, QString verifiedAccountId);
+    prepareAuthentication(const domain::SessionToken& attempt, QString verifiedAccountId);
+    [[nodiscard]] bool completeAuthentication(const domain::SessionToken& prepared);
     [[nodiscard]] bool cancelAuthentication(const domain::SessionToken& attempt);
     [[nodiscard]] bool expire(const domain::SessionToken& context);
     void signOut();

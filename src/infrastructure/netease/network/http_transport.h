@@ -34,6 +34,7 @@ struct TransportRequest {
     // Explicit, bounded profile fields; no arbitrary header/Host overrides.
     QByteArray cookieHeader;
     QByteArray userAgent;
+    bool musicReferer = false; // fixed official web origin, never caller-supplied URL
 };
 
 struct TransportResult {

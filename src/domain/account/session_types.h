@@ -15,7 +15,13 @@ struct SessionToken {
     friend bool operator==(const SessionToken&, const SessionToken&) = default;
 };
 
-enum class SessionPhase { Guest, Authenticating, Authenticated, Expired };
+enum class SessionPhase { Guest, Authenticating, Committing, Authenticated, Expired };
+
+struct AccountIdentity {
+    QString accountId;
+    QString nickname;
+    friend bool operator==(const AccountIdentity&, const AccountIdentity&) = default;
+};
 
 struct SessionSnapshot {
     SessionToken token;
@@ -26,5 +32,6 @@ struct SessionSnapshot {
 
 } // namespace cirrus::domain
 
+Q_DECLARE_METATYPE(cirrus::domain::AccountIdentity)
 Q_DECLARE_METATYPE(cirrus::domain::SessionToken)
 Q_DECLARE_METATYPE(cirrus::domain::SessionSnapshot)

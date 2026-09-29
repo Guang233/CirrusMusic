@@ -35,17 +35,17 @@ form 编码遵循 [WHATWG URL Standard](https://url.spec.whatwg.org/#application
 
 ### 领域／应用与凭据基础
 
-`cirrus_domain` 提供会话／扫码值类型；`cirrus_application` 包含 SessionCoordinator 和窄 IQrLoginGateway port；`cirrus_netease_session` 保管当前 epoch 的内存 Cookie。应用层不依赖 Qt Network 或具体协议；凭据留在基础设施。见[会话隔离说明](session-isolation.md)。
+`cirrus_domain` 提供会话／扫码值类型；`cirrus_application` 包含 SessionCoordinator、QrLoginService 和窄 IQrLoginGateway port；`cirrus_netease_session` 保管当前 epoch 的内存 Cookie。应用层不依赖 Qt Network 或具体协议；凭据留在基础设施。见[会话隔离说明](session-isolation.md)。
 
 ### 请求与扫码适配
 
-`cirrus_netease_api` 连接 protocol/network/session，捕获每项请求的 token 与可信 origin，提供封闭 QR operation 契约、编码／解码、Cookie 暂存、失效和取消；最多32个在途 HTTP 请求。
+`cirrus_netease_api` 连接 protocol/network/session，捕获每项请求的 token 与可信 origin，提供封闭 QR／AccountIdentity operation 契约、编码／解码、Cookie 暂存、失效和取消；最多32个在途 HTTP 请求。
 
-`cirrus_netease_auth` 实现应用 port：取 key、本地扫码 URL、800～803 状态映射、同一尝试的 key 绑定和单远程请求限制。原始 JSON／Cookie 不进入应用层。**803 不会直接认证 SessionCoordinator**，账号身份确认与凭据提升还未实现。详见[扫码请求链路](qr-auth-request-chain.md)。
+`cirrus_netease_auth` 实现应用 port：取 key、本地扫码 URL、800～803 状态映射、同一尝试的 key 绑定和单远程请求限制。原始 JSON／Cookie 不进入应用层。**803 不会直接认证 SessionCoordinator**。weapi 账号身份确认、请求时 Cookie 快照、一次性收据、Committing→Authenticated 精确交接与同线程发布屏障已实现；大数值 ID 和跨作用域凭据冲突保守拒绝。详见[扫码请求链路](qr-auth-request-chain.md)及[认证事务](authentication-transaction.md)。
 
 ## 测试与构建
 
-CTest 已登记八个无需账号、无需真实 API 的套件：
+CTest 已登记十个无需账号、无需真实 API 的套件：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -53,12 +53,14 @@ CTest 已登记八个无需账号、无需真实 API 的套件：
 | netease_crypto | 合成向量、无效密文／输入、随机失败与有界拒绝采样 | 10 passed |
 | http_transport | fake reply、429／TLS／重定向、取消／乱序／销毁、显式头、重复 Cookie 和限额 | 22 passed |
 | response_decoder | 明文／加密／gzip、CRC、超限、坏 UTF-8／JSON 和业务码边界 | 19 passed |
-| session_coordinator | epoch、取消、换号、过期和同步重入 | 10 passed |
+| session_coordinator | epoch、两阶段认证、取消、换号、过期和同步重入 | 12 passed |
 | session_cookie_store | 域／路径／属性、原子更新、限额、旧账号响应及冲突凭据查询 | 21 passed |
 | session_api_client | profile、Cookie 链与失效、HTTP 已成功后的切号、取消／并发／封闭 registry | 24 passed |
 | qr_login_gateway | 官方与包装 envelope、QR 状态、错误、key 绑定、queued 值结果和销毁 | 28 passed |
+| qr_login_service | Core-only 应用事务、发布屏障、失败回滚、取消／晚到／重入／析构 | 11 passed |
+| auth_transaction | 身份 schema、快照隔离、精确交接、错误作用域／收据、登出／到期／重入 | 36 passed |
 
-合计 174 passed（包含数据行及初始化／清理）。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
+合计 223 passed（包含数据行及初始化／清理）。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
 
 ```bash
 cmake --preset linux-dev-local
@@ -66,12 +68,12 @@ cmake --build --preset linux-dev-local --parallel
 ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 ```
 
-当前开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：Debug/Release 构建和八个 CTest 套件通过，新增 C++ 源文件主动 LSP 检查无诊断，QML lint 通过。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
+当前开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：Debug/Release 构建和十个 CTest 套件通过，新增 C++ 源文件主动 LSP 检查无诊断，QML lint 通过。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
 
 另有 15 项 Python 清单工具测试和 440 个模块／公共文件 hash 核对通过；这是开发工具证据，不计为产品协议测试。网络测试使用替身，未做真实 socket/TLS 或真实账号集成验证。
 
 ## 未实现与下一步
 
-尚未实现账号身份验证／精确 token 凭据交接、匿名／设备 bootstrap、安全持久化、网络线程装配与 GUI facade、自动轮询／通用调度、XEAPI/X25519／密钥获取或真实 API 验证。registry／DTO 当前只覆盖扫码基础，不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
+尚未实现匿名／设备 bootstrap、安全持久化、网络线程装配与 GUI facade、自动轮询／通用调度、XEAPI/X25519／密钥获取或真实 API 验证。registry／DTO 当前只覆盖两个 eapi QR operation 和一个 weapi 身份 operation，不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
 
-下一步完成认证用例、身份确认和凭据交接，独立补 XEAPI，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+下一步补启动／持久化恢复、轮询调度和线程装配，独立补 XEAPI，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

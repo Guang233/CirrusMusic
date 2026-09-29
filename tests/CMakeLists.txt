@@ -42,3 +42,13 @@ qt_add_executable(tst_qr_login_gateway unit/qr_login_gateway_test.cpp)
 target_link_libraries(tst_qr_login_gateway PRIVATE cirrus_netease_auth Qt6::Test)
 add_test(NAME qr_login_gateway COMMAND tst_qr_login_gateway)
 set_tests_properties(qr_login_gateway PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_qr_login_service unit/qr_login_service_test.cpp)
+target_link_libraries(tst_qr_login_service PRIVATE cirrus_application Qt6::Test)
+add_test(NAME qr_login_service COMMAND tst_qr_login_service)
+set_tests_properties(qr_login_service PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_auth_transaction unit/auth_transaction_test.cpp)
+target_link_libraries(tst_auth_transaction PRIVATE cirrus_netease_auth Qt6::Test)
+add_test(NAME auth_transaction COMMAND tst_auth_transaction)
+set_tests_properties(auth_transaction PROPERTIES TIMEOUT 15)

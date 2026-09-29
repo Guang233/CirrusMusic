@@ -29,7 +29,8 @@
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
 | [native-foundation.md](native-foundation.md) | 已实现的 C++ 协议、传输、解码和离线 Qt Test |
 | [session-isolation.md](session-isolation.md) | 实际编译依赖、epoch／Cookie 隔离和仍待连接的登录边界 |
-| [qr-auth-request-chain.md](qr-auth-request-chain.md) | 已实现的上下文请求链／扫码 port，以及尚未完成的身份验证与凭据提升 |
+| [qr-auth-request-chain.md](qr-auth-request-chain.md) | 已实现的上下文请求链／扫码 port 与协议边界 |
+| [authentication-transaction.md](authentication-transaction.md) | weapi 身份验证、快照收据、Committing 及精确凭据交接 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围
@@ -88,4 +89,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链与扫码基础 port，见[实现记录](native-foundation.md)。下一步完成账号身份确认、精确 token 凭据交接和匿名／设备启动，独立补 XEAPI，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。下一步补匿名／设备启动、安全持久化恢复、轮询调度和线程装配，独立补 XEAPI，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

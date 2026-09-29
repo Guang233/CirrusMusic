@@ -110,7 +110,8 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         request.timeoutMs > 120000 || request.responseLimit <= 0 ||
         request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024 ||
         !validHeaderValue(request.cookieHeader, 16 * 1024) ||
-        !validHeaderValue(request.userAgent, 1024)) {
+        !validHeaderValue(request.userAgent, 1024) ||
+        (request.musicReferer && request.protocol != Protocol::Weapi)) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -132,6 +133,9 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         wire.setRawHeader("User-Agent", request.userAgent);
     }
 
+    if (request.musicReferer) {
+        wire.setRawHeader("Referer", "https://music.163.com");
+    }
     auto* reply = m_manager->post(wire, request.formBody);
     pending->reply = reply;
     reply->setReadBufferSize(64 * 1024);

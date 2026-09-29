@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QMetaType>
 #include <QString>
 #include <QUrl>
 
@@ -18,3 +19,6 @@ struct QrLoginChallenge {
 enum class QrLoginStatus { Expired, WaitingForScan, WaitingForConfirmation, Authorized };
 
 } // namespace cirrus::domain
+
+Q_DECLARE_METATYPE(cirrus::domain::QrLoginChallenge)
+Q_DECLARE_METATYPE(cirrus::domain::QrLoginStatus)

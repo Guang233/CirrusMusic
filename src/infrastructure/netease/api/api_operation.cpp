@@ -10,6 +10,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation)
         return ApiOperationContract{QStringLiteral("/api/login/qrcode/unikey")};
     case ApiOperation::QrCheck:
         return ApiOperationContract{QStringLiteral("/api/login/qrcode/client/login")};
+    case ApiOperation::AccountIdentity:
+        return ApiOperationContract{QStringLiteral("/api/w/nuser/account/get"), Protocol::Weapi};
     }
     return std::nullopt;
 }
@@ -29,6 +31,9 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (operation == ApiOperation::AccountIdentity) {
+        return parameters.isEmpty() ? std::optional<QJsonObject>(QJsonObject{}) : std::nullopt;
+    }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
     case ApiOperation::QrKey:
@@ -44,6 +49,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         }
         break;
     }
+    case ApiOperation::AccountIdentity:
+        break;
     }
     return std::nullopt;
 }
@@ -59,6 +66,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
                validQrKey(response.object.value(QStringLiteral("unikey")).toString());
     case ApiOperation::QrCheck:
         return *response.businessCode >= 801 && *response.businessCode <= 803;
+    case ApiOperation::AccountIdentity:
+        return *response.businessCode == 200; // staged only in its isolated request snapshot
     }
     return false;
 }

@@ -1,4 +1,5 @@
 #include "qr_login_gateway.h"
+#include "account_identity_mapper.h"
 
 #include <QThread>
 #include <QTimer>
@@ -95,6 +96,8 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
                 if (m_client && m_client->accepts(context)) {
                     m_key.clear();
                     m_keyContext = {};
+                    m_authorizedContext = {};
+                    m_verified.reset();
                     // Release the single-flight slot NOW, including pre-dispatch
                     // calls. Old completion still carries its original token.
                     const auto ids = m_pending.keys();
@@ -104,6 +107,9 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
                             const auto apiId = it->apiId;
                             m_apiIds.remove(apiId);
                             it->apiId = 0;
+                            if (m_promotionId == id) {
+                                m_promotionId = 0;
+                            }
                             rejectLater(id, {AuthError::StaleContext});
                             if (apiId != 0 && m_client) {
                                 m_client->cancel(apiId);
@@ -115,6 +121,9 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
     connect(&client, &QObject::destroyed, this, [this] {
         m_key.clear();
         m_keyContext = {};
+        m_authorizedContext = {};
+        m_verified.reset();
+        m_promotionId = 0;
         m_apiIds.clear();
         const auto ids = m_pending.keys();
         for (const auto id : ids) {
@@ -127,6 +136,9 @@ QrLoginGateway::~QrLoginGateway()
 {
     if (m_client) {
         disconnect(m_client, nullptr, this, nullptr);
+        if (m_verified) {
+            m_client->discardReceipt(m_verified->receipt);
+        }
         const auto ids = m_apiIds.keys();
         for (const auto id : ids) {
             m_client->cancel(id);
@@ -144,6 +156,60 @@ quint64 QrLoginGateway::checkStatus(domain::SessionToken context, QString key)
     return submit(context, ApiOperation::QrCheck, std::move(key));
 }
 
+bool QrLoginGateway::synchronize(domain::SessionToken context)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_client && m_client->advanceTo(context);
+}
+
+quint64 QrLoginGateway::verifyIdentity(domain::SessionToken context)
+{
+    return submit(context, ApiOperation::AccountIdentity);
+}
+
+quint64 QrLoginGateway::promoteCredentials(domain::SessionToken attempt,
+                                           domain::SessionToken target, QUuid receipt)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const auto id = ++m_nextId;
+    m_pending.insert(id, {target, ApiOperation::AccountIdentity, 0, std::nullopt, true});
+    if (!m_client || !m_client->accepts(attempt) || !m_verified || receipt.isNull() ||
+        m_verified->receipt != receipt || m_authorizedContext != attempt) {
+        rejectLater(id, {AuthError::CredentialRejected});
+        return id;
+    }
+    if (m_promotionId != 0 || !m_apiIds.isEmpty()) {
+        rejectLater(id, {AuthError::Busy});
+        return id;
+    }
+    m_promotionId = id;
+    const auto identity = m_verified->identity;
+    QTimer::singleShot(0, this, [this, id, attempt, target, receipt, identity] {
+        const auto it = m_pending.constFind(id);
+        if (it == m_pending.constEnd()) {
+            return;
+        }
+        if (it->failure) {
+            finishFailure(id, *it->failure);
+            return;
+        }
+        if (!m_client || !m_verified || m_verified->receipt != receipt ||
+            !m_client->accepts(attempt)) {
+            finishFailure(id, {AuthError::StaleContext});
+            return;
+        }
+        m_verified.reset();
+        if (!m_client->promoteReceipt(attempt, target, receipt)) {
+            finishFailure(id, {AuthError::CredentialRejected});
+            return;
+        }
+        m_pending.remove(id);
+        m_promotionId = 0;
+        emit promotionCompleted(id, target, identity);
+    });
+    return id;
+}
+
 quint64 QrLoginGateway::submit(domain::SessionToken context, ApiOperation operation, QString key)
 {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -153,11 +219,13 @@ quint64 QrLoginGateway::submit(domain::SessionToken context, ApiOperation operat
         rejectLater(id, {AuthError::Network});
     } else if (!m_client->accepts(context)) {
         rejectLater(id, {AuthError::StaleContext});
-    } else if (!m_apiIds.isEmpty()) {
+    } else if (!m_apiIds.isEmpty() || m_promotionId != 0) {
         rejectLater(id, {AuthError::Busy});
     } else if ((operation == ApiOperation::QrKey && m_keyContext == context) ||
                (operation == ApiOperation::QrCheck &&
-                (context != m_keyContext || key != m_key || !validQrKey(key)))) {
+                (context != m_keyContext || key != m_key || !validQrKey(key))) ||
+               (operation == ApiOperation::AccountIdentity &&
+                (context != m_authorizedContext || m_verified.has_value()))) {
         rejectLater(id, {AuthError::InvalidRequest});
     } else {
         QJsonObject parameters;
@@ -193,10 +261,20 @@ void QrLoginGateway::finishFailure(quint64 id, AuthFailure failure)
     }
     const auto pending = m_pending.take(id);
     m_apiIds.remove(pending.apiId);
-    if (m_client && !m_client->accepts(pending.context)) {
+    if (pending.failure) {
+        failure = *pending.failure;
+    }
+    if (m_client && !pending.promotion && !m_client->accepts(pending.context)) {
         failure = {AuthError::StaleContext};
     }
-    if (pending.operation == ApiOperation::QrKey) {
+    if (id == m_promotionId) {
+        m_promotionId = 0;
+    }
+    if (pending.promotion) {
+        emit promotionCompleted(id, pending.context, failure);
+    } else if (pending.operation == ApiOperation::AccountIdentity) {
+        emit identityCompleted(id, pending.context, failure);
+    } else if (pending.operation == ApiOperation::QrKey) {
         emit keyCompleted(id, pending.context, failure);
     } else {
         emit statusCompleted(id, pending.context, failure);
@@ -237,6 +315,21 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
         finishFailure(id, {AuthError::InvalidResponse});
         return;
     }
+    if (it->operation == ApiOperation::AccountIdentity) {
+        const auto identity =
+            *code == 200 ? mapAccountIdentity(result.decoded.object) : std::nullopt;
+        if (!identity || result.credentialReceipt.isNull()) {
+            m_client->discardReceipt(result.credentialReceipt);
+            finishFailure(id, *code == 200 ? AuthFailure{AuthError::InvalidResponse, code}
+                                           : failureFor(result));
+            return;
+        }
+        m_verified = application::VerifiedLogin{*identity, result.credentialReceipt};
+        m_apiIds.remove(apiId);
+        m_pending.remove(id);
+        emit identityCompleted(id, context, *m_verified);
+        return;
+    }
     if (it->operation == ApiOperation::QrKey) {
         if (*code != 200) {
             finishFailure(id, failureFor(result));
@@ -268,6 +361,7 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
         state = domain::QrLoginStatus::WaitingForConfirmation;
         break;
     case 803:
+        m_authorizedContext = context;
         state = domain::QrLoginStatus::Authorized;
         break;
     default:

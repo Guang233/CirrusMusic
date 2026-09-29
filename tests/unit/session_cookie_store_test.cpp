@@ -164,14 +164,18 @@ void SessionCookieStoreTest::lateResponseCannotCrossAccounts()
 {
     SessionCoordinator session;
     SessionCookieStore store;
-    QVERIFY(session.authenticate(session.beginAuthentication(), QStringLiteral("A")));
+    const auto preparedA =
+        session.prepareAuthentication(session.beginAuthentication(), QStringLiteral("A"));
+    QVERIFY(preparedA && session.completeAuthentication(*preparedA));
     const auto accountA = session.snapshot().token;
     QVERIFY(store.advanceTo(accountA));
     QCOMPARE(store.apply(accountA, origin(), {"MUSIC_U=A; Path=/; Secure"}), CookieUpdate::Applied);
     session.signOut();
     QVERIFY(store.advanceTo(session.snapshot().token));
     QCOMPARE(*store.header(session.snapshot().token, origin()), QByteArray{});
-    QVERIFY(session.authenticate(session.beginAuthentication(), QStringLiteral("B")));
+    const auto preparedB =
+        session.prepareAuthentication(session.beginAuthentication(), QStringLiteral("B"));
+    QVERIFY(preparedB && session.completeAuthentication(*preparedB));
     const auto accountB = session.snapshot().token;
     QVERIFY(store.advanceTo(accountB));
     QCOMPARE(store.apply(accountB, origin(), {"MUSIC_U=B; Path=/; Secure"}), CookieUpdate::Applied);

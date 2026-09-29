@@ -7,7 +7,7 @@ namespace cirrus::netease
 {
 
 // Closed native registry. No string-based forwarding from application/QML.
-enum class ApiOperation { QrKey, QrCheck };
+enum class ApiOperation { QrKey, QrCheck, AccountIdentity };
 
 struct ApiOperationContract {
     QString logicalPath;

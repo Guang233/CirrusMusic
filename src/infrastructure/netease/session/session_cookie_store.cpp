@@ -176,4 +176,45 @@ std::optional<QByteArray> SessionCookieStore::value(const domain::SessionToken& 
     return result.value_or(QByteArray{});
 }
 
+bool SessionCookieStore::consistentValue(const domain::SessionToken& context,
+                                         const QByteArray& name, const QByteArray& expected) const
+{
+    if (!accepts(context) || name.isEmpty() || expected.isEmpty()) {
+        return false;
+    }
+    const auto now = QDateTime::currentDateTimeUtc();
+    for (const auto& cookie : m_jar.allCookies()) {
+        if (cookie.name() == name && (cookie.isSessionCookie() || cookie.expirationDate() > now) &&
+            cookie.value() != expected) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::shared_ptr<SessionCookieStore>
+SessionCookieStore::snapshot(const domain::SessionToken& context) const
+{
+    if (!accepts(context)) {
+        return {};
+    }
+    auto copy = std::make_shared<SessionCookieStore>();
+    copy->m_context = context;
+    copy->m_jar.setAllCookies(m_jar.allCookies());
+    return copy;
+}
+
+bool SessionCookieStore::adopt(const SessionCookieStore& snapshot, const domain::SessionToken& from,
+                               const domain::SessionToken& to)
+{
+    if (!accepts(from) || !snapshot.accepts(from) || !to.isValid() ||
+        from.coordinatorId != to.coordinatorId || to.epoch <= from.epoch ||
+        to.epoch - from.epoch != 1) {
+        return false;
+    }
+    m_jar.setAllCookies(snapshot.m_jar.allCookies());
+    m_context = to;
+    return true;
+}
+
 } // namespace cirrus::netease

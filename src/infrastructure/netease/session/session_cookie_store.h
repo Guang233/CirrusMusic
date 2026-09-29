@@ -7,6 +7,7 @@
 #include <QNetworkCookieJar>
 #include <QUrl>
 
+#include <memory>
 #include <optional>
 
 namespace cirrus::netease
@@ -33,6 +34,13 @@ class SessionCookieStore final
                                                   const QByteArray& name) const;
 
   private:
+    friend class SessionApiClient;
+    [[nodiscard]] bool consistentValue(const domain::SessionToken& context, const QByteArray& name,
+                                       const QByteArray& expected) const;
+    [[nodiscard]] std::shared_ptr<SessionCookieStore>
+    snapshot(const domain::SessionToken& context) const;
+    [[nodiscard]] bool adopt(const SessionCookieStore& snapshot, const domain::SessionToken& from,
+                             const domain::SessionToken& to);
     class Jar final : public QNetworkCookieJar
     {
       public:

@@ -4,6 +4,7 @@
 #include "infrastructure/netease/network/http_transport.h"
 #include "infrastructure/netease/session/session_cookie_store.h"
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
 
@@ -29,6 +30,7 @@ struct ApiResult {
     int httpStatus = 0;
     QByteArray retryAfter;
     DecodedResponse decoded;
+    QUuid credentialReceipt; // candidate snapshot handle, never itself proof of identity
 };
 
 // Owns transport + current-epoch credentials in ONE event-loop thread. Construct
@@ -46,6 +48,11 @@ class SessionApiClient final : public QObject
     [[nodiscard]] quint64 submit(domain::SessionToken context, ApiOperation operation,
                                  QJsonObject parameters = {});
     void cancel(quint64 requestId);
+    // Infrastructure-only: auth adapter must validate identity before handing
+    // this one-use request-bound snapshot to the prepared session token.
+    [[nodiscard]] bool promoteReceipt(domain::SessionToken from, domain::SessionToken to,
+                                      const QUuid& receipt);
+    void discardReceipt(const QUuid& receipt);
 
   signals:
     void contextAdvanced(cirrus::domain::SessionToken context);
@@ -61,7 +68,9 @@ class SessionApiClient final : public QObject
         QJsonObject payload;
         quint64 transportId = 0;
         ApiError forcedError{};
+        std::shared_ptr<SessionCookieStore> credentials;
     };
+    void invalidatePrevious(domain::SessionToken context);
     void start(quint64 requestId);
     void receive(quint64 transportId, const TransportResult& result);
     void finish(quint64 requestId, ApiResult result = {});
@@ -73,6 +82,10 @@ class SessionApiClient final : public QObject
     QHash<quint64, Pending> m_pending;
     QHash<quint64, quint64> m_transportIds;
     quint64 m_nextId = 0;
+    QUuid m_receiptId;
+    domain::SessionToken m_receiptContext;
+    std::shared_ptr<SessionCookieStore> m_receiptCookies;
+    QElapsedTimer m_receiptAge;
 };
 
 } // namespace cirrus::netease

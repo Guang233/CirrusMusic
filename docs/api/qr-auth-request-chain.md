@@ -1,20 +1,20 @@
 # 有上下文的请求链路与扫码登录基础
 
-> 状态：原生适配与离线契约测试已实现。**不等于已完成登录，也不证明真实官方接口可用。** 没有调用真实账号接口、采集凭据或改动 QML 窗口。
+> 状态：原生 QR 适配与离线契约测试已实现，后续已补[身份验证与凭据交接](authentication-transaction.md)。**不等于产品已能登录，也不证明真实官方接口可用。** 没有调用真实账号接口、采集凭据或改动 QML 窗口。
 
 ## 1. 本轮的分层
 
 | 层／target | 内容 | 边界 |
 | --- | --- | --- |
 | domain | `QrLoginChallenge`、`QrLoginStatus` | Qt Core 值；challenge 是短期登录材料，不记录／持久化 |
-| application | `IQrLoginGateway`、`AuthFailure`、两个 `std::variant` 结果 | 只依赖 domain/Core；没有 HTTP、JSON、Cookie 或具体服务实现 |
+| application | `IQrLoginGateway`、`AuthFailure`、QR／身份／交接类型化结果 | 只依赖 domain/Core；没有 HTTP、JSON、Cookie 或具体服务实现 |
 | protocol | `prepareEapiRequest` | 固定 eapi 请求 profile、密文 form 与显式头；不管理会话 |
 | `cirrus_netease_api` | 封闭 `ApiOperation`、`SessionApiClient` | operation 契约、请求 token/origin、编码／解码、凭据暂存和取消；不依赖 application |
 | `cirrus_netease_auth` | `QrLoginGateway` | 实现应用 port，解析 QR 业务结果并限制同一登录尝试的并发／key 使用 |
 
 `SessionApiClient` 拥有一个 `HttpTransport` 和一个当前 epoch 的内存 Cookie store；其传输／QNetworkAccessManager 采用 QObject parent 单一所有权。扫码适配器通过 `QPointer` 借用共享 client：自身销毁取消所发请求；client 先销毁时，存活适配器返回脱敏失败，不访问悬空对象。
 
-这些组件必须在同一个所属事件循环线程创建、使用和销毁。值成员中的 CookieJar 不随外层 QObject 自动迁移，**不能构造后把 client 整体 moveToThread**。目前测试使用单线程 QCoreApplication；网络 QThread 装配、GUI 侧异步 facade、身份确认／凭据提升的跨线程完成屏障尚未实现。port 的同步 requestId 返回值只在所属线程取得，不能跨线程直接调用或用阻塞等待获得它。
+这些组件必须在同一个所属事件循环线程创建、使用和销毁。值成员中的 CookieJar 不随外层 QObject 自动迁移，**不能构造后把 client 整体 moveToThread**。目前测试使用单线程 QCoreApplication；同线程身份确认／凭据提升及发布屏障已实现，但网络 QThread 装配、GUI 侧异步 facade 和跨线程完成屏障尚未实现。port 的同步 requestId 返回值只在所属线程取得，不能跨线程直接调用或用阻塞等待获得它。
 
 ## 2. 已接入的 operation 契约
 
@@ -27,7 +27,7 @@
 
 - 两者固定使用 eapi，实际主机是 `interfacepc.music.163.com`，路径 `/api/` 改为 `/eapi/`；响应 JSON 上限 **64 KiB**。
 - `e_r=false` 对应锁定配置的明文 JSON 响应。损坏／非 JSON 响应直接失败，不回退到其他 crypto、主机或格式。
-- registry 仅含这两个枚举项；拒绝未知 operation、额外参数、数字／超长 key 和任意 domain/crypto 参数。静态 `inventory.json` 不参与运行。
+- 本表列出两个 QR operation；registry 后续新增了 weapi `AccountIdentity`，共三个远程 operation。拒绝未知 operation、额外参数、数字／超长 key 和任意 domain/crypto 参数。静态 `inventory.json` 不参与运行。
 - `login_qr_key.js` 给官方正文加的外层 `data` **不属于官方响应**；其包装对象不能被原生 mapper 当成功 fixture。
 - QR URL 在本地构造为 `https://music.163.com/login?codekey=...`，key 使用 URL percent encoding；不接受服务响应中的 URL，也不调用上游 `/login/qr/create` 包装路由。
 - 当前只生成 pc 形式的 URL，没有 QR 矩阵／图片生成，也没有 web `chainId` 分支。
@@ -64,12 +64,12 @@ Qt 的 legacy `rawHeaderPairs()` 会合并重复头；本轮使用 Qt 6.8+ 的 `
 - HTTP 429 和业务 429 映射为 RateLimited；业务 code 可供脱敏诊断，但官方 message／原始正文不进入应用层。仅解析有界数字形式 Retry-After 秒数；日期／未知形式保持未知，不当作零延迟重试。
 - 502 等拒绝不重试 noCookie、其他端点或协议；不复制上游 QR catch 分支的越作用域变量错误。
 
-**`QrLoginStatus::Authorized` 不等于 `SessionPhase::Authenticated`。** port 没有返回已验证账号，也不会调用 `SessionCoordinator::authenticate()`。还必须查询并验证身份、持有基础设施内的凭据收据，并只把凭据交给成功转换返回的确切 token；如果已退出／再次切号，则丢弃。该交接尚未实现，不能拿803直接宣称登录完成。
+**`QrLoginStatus::Authorized` 不等于 `SessionPhase::Authenticated`。** QR 状态本身不会发布已登录。后续 `QrLoginService` 通过 port 验证账号身份，再经 Committing、一次性快照收据和精确 token 交接发布 Authenticated；如果已退出／再次切号则丢弃。详见[认证事务](authentication-transaction.md)。
 
 ## 5. 离线验证与剩余门禁
 
 覆盖显式头／注入拒绝、重复 Set-Cookie／Expires／限额、profile 与密文 payload、作用域 Cookie 链、坏正文／错误 Cookie 不入库、取消、并发限额、HTTP 成功后切号的晚到响应、同步重入、QR 状态与包装差异、queued 值结果和对象销毁。
 
-共8个 Qt Test 套件，Debug/Release 均通过；详细统计与命令见[原生基础记录](native-foundation.md)。`http_transport`／`session_api_client` 的 Cookie 回归各重复3次通过。fixture 全部为合成数据，不含真实 Cookie。
+QR 基础增量最初有8个 Qt Test 套件；后续认证增量扩展为10个。当前统计与命令见[原生基础记录](native-foundation.md)。`http_transport`／`session_api_client` 的 Cookie 回归各重复3次通过。fixture 全部为合成数据，不含真实 Cookie。
 
-下一步：认证用例与账号身份验证 → 精确 token 凭据交接及网络 ready 屏障 → 设备／匿名 bootstrap 与安全存储 → 授权环境下真实 QR／退出验证；XEAPI 可独立推进。完整登录、账号恢复、真实 socket/TLS、音乐查询／播放、UI 均不在本次已完成范围。
+账号身份验证、精确 token 凭据交接及同线程发布屏障已在[后续增量](authentication-transaction.md)实现。下一步为设备／匿名 bootstrap、安全存储与恢复、线程装配及授权环境下真实 QR／退出验证；XEAPI 可独立推进。可用的产品登录、真实 socket/TLS、音乐查询／播放、UI 均不在已完成范围。
