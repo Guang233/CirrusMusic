@@ -45,6 +45,6 @@
 
 按[存储方案](../09-storage-cache-and-sync.md)与 [ADR-0006](../adr/0006-storage-and-secrets.md) 的成熟项目标准，而非图方便：
 
-- **设备 ID 与公钥 version/publicKey**：安装级、非秘密、必须跨重启稳定，不随"重置设置"或清缓存变化，也不应随 dotfiles 同步到别的机器。因此不放 QSettings（AppConfigLocation 是用户偏好），也不放可重建的 `catalog.sqlite`；放 AppLocalDataLocation 下独立的 `state.sqlite`，经 DatabaseWorker 单线程访问，带版本化迁移。
+- **设备 ID**（公钥最终改为整条存入密钥环，见 [B-010 密钥环](B-010-secret-store.md)）：安装级、非秘密、必须跨重启稳定，不随"重置设置"或清缓存变化，也不应随 dotfiles 同步到别的机器。因此不放 QSettings（AppConfigLocation 是用户偏好），也不放可重建的 `catalog.sqlite`；放 AppLocalDataLocation 下独立的 `state.sqlite`，经 DatabaseWorker 单线程访问，带版本化迁移。
 - **`sk`、匿名 `MUSIC_A`、账号 Cookie**：秘密，进入系统密钥环（ADR-0006 选定 QtKeychain，引入前须维护者确认依赖）。密钥环不可用时只保留本次会话内存，不做明文回退（R-012）。
 - DatabaseWorker（B-008 基础）随设备 profile 任务实现，并供后续音乐库复用。

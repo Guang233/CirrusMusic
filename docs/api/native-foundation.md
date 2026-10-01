@@ -49,7 +49,7 @@ form 编码遵循 [WHATWG URL Standard](https://url.spec.whatwg.org/#application
 
 ## 测试与构建
 
-CTest 已登记十二个无需账号、无需真实 API 的套件：
+CTest 已登记十三个无需账号、无需真实 API 的套件：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -62,11 +62,12 @@ CTest 已登记十二个无需账号、无需真实 API 的套件：
 | session_api_client | profile、Cookie 链与失效、HTTP 已成功后的切号、取消／并发／封闭 registry | 24 passed |
 | xeapi | 匿名用户名向量、签名校验、传输层固定头白名单与会话头捕获、公钥注册（nonce 重放／错误拒绝且不改旧状态）、xeapi 请求路径与按 epoch 的会话密钥 | 23 passed |
 | storage | 目录／文件权限、进程锁、pragma／WAL、迁移校验和、更高版本拒绝、升级备份与失败回滚、损坏文件、线程与回调生命周期、设备 ID 生成与稳定性 | 11 passed |
+| secrets | XEAPI 公钥整条密钥环持久化：恢复不回写、不覆盖更新的公钥、损坏／不可用上报、变化合并无重叠；无 D-Bus 时真实适配器报错且无明文回退文件（另有默认跳过的真实密钥环往返） | 12 passed, 1 skipped |
 | qr_login_gateway | 官方与包装 envelope、QR 状态、错误、key 绑定、queued 值结果和销毁 | 28 passed |
 | qr_login_service | Core-only 应用事务、发布屏障、失败回滚、取消／晚到／重入／析构；自动轮询节奏与总时限（虚拟时钟＋Qt 定时器冒烟） | 61 passed |
 | auth_transaction | 身份 schema、快照隔离、精确交接、错误作用域／收据、登出／到期／重入、总时限跨 Committing | 38 passed |
 
-合计 317 passed（包含数据行及初始化／清理）。XEAPI 向量由锁定上游函数在固定随机输入下生成（开发期 Node 脚本，不随产品分发），签名与 R 字段另经 OpenSSL CLI 交叉验证。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
+合计 329 passed（包含数据行及初始化／清理）。XEAPI 向量由锁定上游函数在固定随机输入下生成（开发期 Node 脚本，不随产品分发），签名与 R 字段另经 OpenSSL CLI 交叉验证。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
 
 ```bash
 cmake --preset linux-dev-local
@@ -74,12 +75,12 @@ cmake --build --preset linux-dev-local --parallel
 ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 ```
 
-当前开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：Debug/Release 构建和十二个 CTest 套件通过，新增 C++ 源文件主动 LSP 检查无诊断，QML lint 通过。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
+当前开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：Debug/Release 构建和十三个 CTest 套件通过，新增 C++ 源文件主动 LSP 检查无诊断，QML lint 通过。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
 
 另有 15 项 Python 清单工具测试和 440 个模块／公共文件 hash 核对通过；这是开发工具证据，不计为产品协议测试。网络测试使用替身，未做真实 socket/TLS 或真实账号集成验证。
 
 ## 未实现与下一步
 
-尚未实现匿名 bootstrap、密钥环持久化、网络线程装配与 GUI facade、通用调度或真实 API 验证。registry 当前覆盖两个 eapi QR operation、一个 weapi 身份 operation 和一个 xeapi 匿名注册 operation（其 MUSIC_A 暂不入账号 jar），不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
+尚未实现匿名 bootstrap、账号凭据持久化与恢复、网络线程装配与 GUI facade、通用调度或真实 API 验证。registry 当前覆盖两个 eapi QR operation、一个 weapi 身份 operation 和一个 xeapi 匿名注册 operation（其 MUSIC_A 暂不入账号 jar），不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
 
 扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。下一步补设备 profile、匿名启动、持久化恢复和线程装配，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

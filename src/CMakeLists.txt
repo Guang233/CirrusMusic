@@ -82,6 +82,23 @@ target_compile_features(cirrus_storage PUBLIC cxx_std_20)
 target_include_directories(cirrus_storage PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(cirrus_storage PUBLIC Qt6::Sql)
 
+# System keyring (QtKeychain system package). Plaintext fallback is disabled.
+find_package(Qt6Keychain REQUIRED)
+add_library(cirrus_secrets STATIC
+    infrastructure/secrets/secret_store.cpp
+    infrastructure/secrets/secret_store.h
+)
+target_compile_features(cirrus_secrets PUBLIC cxx_std_20)
+target_include_directories(cirrus_secrets PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(cirrus_secrets PUBLIC Qt6::Core PRIVATE Qt6Keychain::Qt6Keychain)
+
+# Composition-level glue between protocol state, storage and secrets.
+add_library(cirrus_bootstrap STATIC
+    infrastructure/bootstrap/xeapi_key_vault.cpp
+    infrastructure/bootstrap/xeapi_key_vault.h
+)
+target_link_libraries(cirrus_bootstrap PUBLIC cirrus_netease_api cirrus_secrets cirrus_storage)
+
 add_library(cirrus_netease_auth STATIC
     infrastructure/netease/auth/account_identity_mapper.cpp
     infrastructure/netease/auth/account_identity_mapper.h

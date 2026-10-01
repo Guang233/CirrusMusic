@@ -9,10 +9,10 @@
 | 已实现且有离线测试 | 尚未实现／尚未证明 |
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 真实 socket/TLS／官方接口兼容性 |
-| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite DatabaseWorker 与 `state.sqlite` 稳定设备 ID | 匿名 bootstrap、系统密钥环、账号恢复 |
+| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite DatabaseWorker 与 `state.sqlite` 稳定设备 ID；QtKeychain 秘密存储（禁明文回退）与 XEAPI 公钥持久化 | 匿名 bootstrap、账号恢复 |
 | eapi QR key／QR check、weapi AccountIdentity，共3个远程 operation | 其他音乐业务接口、播放器、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限 | 网络线程装配、GUI facade、UI |
-| Debug/Release：12套件、317项 Qt Test pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| Debug/Release：13套件、329项 Qt Test pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-预期 CTest 有12个套件且全部通过；少于12个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。317是当前 Qt Test 明细计数，不是317个独立产品功能。
+预期 CTest 有13个套件且全部通过；少于13个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。329是当前 Qt Test 明细计数（另有1项默认跳过的真实密钥环往返测试），不是329个独立产品功能。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -128,11 +128,11 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。下一步：QtKeychain 密钥环（系统包 `qtkeychain-qt6`，维护者已同意）→ 匿名 bootstrap → 安全存储／恢复与线程装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。下一步：匿名 bootstrap → 安全存储／恢复与线程装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
-| 安全存储实现与新增依赖 | 已确定 QtKeychain 系统包；秘密目前仅内存，不明文 fallback |
+| 安全存储实现与新增依赖 | QtKeychain 系统包（`qtkeychain-qt6`）已接入；无后端时只留内存，不明文 fallback |
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
 | v2 checktoken SDK、一起听接收链 | SDK 与一起听有证据门禁，不暗加 Node/WebEngine，不以 v3 替代 v2 |

@@ -9,13 +9,13 @@
 | 数据 | 位置策略 | 生命周期 |
 | --- | --- | --- |
 | 非敏感设置 | AppConfigLocation，QSettings | 用户主动修改／重置；有 configVersion |
-| 安装级状态（设备 ID、协议公钥公开部分） | AppLocalDataLocation 下 `state.sqlite`（已实现） | 跨重启稳定；不随重置设置／清缓存改变，不随 dotfiles 同步 |
+| 安装级状态（设备 ID） | AppLocalDataLocation 下 `state.sqlite`（已实现） | 跨重启稳定；不随重置设置／清缓存改变，不随 dotfiles 同步 |
 | 公共元数据 | AppLocalDataLocation 下 `catalog.sqlite` | 可重建，只含公开信息 |
 | 私有音乐库 | AppLocalDataLocation 下 `profiles/<opaque-uuid>/library.sqlite` | 账号专属；guest 有独立 profile |
 | 封面／歌词缓存 | CacheLocation；公共和 profile 私有目录分开 | TTL + LRU，可清理 |
 | 临时传输文件 | 受控临时目录或下载目标同目录的私有临时文件 | 完成／取消后回收，启动清理孤儿 |
 | 授权下载 | 用户选择的目录，或应用管理目录 | 用户拥有明确删除权，不归普通 LRU |
-| Cookie／会话秘密 | 系统密钥环 | 到期／登出删除；数据库仅存引用 |
+| Cookie／会话秘密、XEAPI 公钥记录 | 系统密钥环（QtKeychain，禁明文回退；XEAPI 公钥已实现） | 到期／登出删除；数据库仅存引用 |
 | 日志 | 独立应用状态／数据子目录，轮转 | 初始 7 天或总计 20 MiB，先到者触发淘汰 |
 
 目录尽量按用户私有权限创建；敏感文件权限建议 0600、目录 0700。文件系统权限不能防御同一用户下的恶意程序；数据库未采用额外加密时必须如实说明，不宣称“本地数据全加密”。
