@@ -9,6 +9,7 @@
 | 数据 | 位置策略 | 生命周期 |
 | --- | --- | --- |
 | 非敏感设置 | AppConfigLocation，QSettings | 用户主动修改／重置；有 configVersion |
+| 安装级状态（设备 ID、协议公钥公开部分） | AppLocalDataLocation 下 `state.sqlite`（已实现） | 跨重启稳定；不随重置设置／清缓存改变，不随 dotfiles 同步 |
 | 公共元数据 | AppLocalDataLocation 下 `catalog.sqlite` | 可重建，只含公开信息 |
 | 私有音乐库 | AppLocalDataLocation 下 `profiles/<opaque-uuid>/library.sqlite` | 账号专属；guest 有独立 profile |
 | 封面／歌词缓存 | CacheLocation；公共和 profile 私有目录分开 | TTL + LRU，可清理 |

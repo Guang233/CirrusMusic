@@ -1,6 +1,6 @@
 # 14 · 实施路线与任务拆解
 
-> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与认证事务及 XEAPI 的十一个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
+> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与认证事务及 XEAPI 的十二个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
 
 ## 1. 阶段总览
 
@@ -51,7 +51,7 @@ flowchart LR
 | B-005 | 分层 CMake、CI、测试入口、日志（M1） | presets 与协议基础 CTest 已提供；完整分层／业务 CI 尚未实现 |
 | B-006 | Domain IDs、Track/Page/Queue/Error 与 fake ports（M1/M2） | 大 ID、空字段、队列不变量 |
 | B-007 | Tokens、Controls、Gallery、焦点与主题（M5） | 后端门禁后才开始 |
-| B-008 | SQLite worker、profile、migration、设置后端（M1/M4） | 事务、切号、中断恢复 |
+| B-008 | SQLite worker、profile、migration、设置后端（M1/M4） | [DatabaseWorker、迁移校验、升级备份与设备 ID](tasks/B-008-storage-foundation.md) 已实现；音乐库 schema、设置后端未做 |
 | B-009 | 网络调度、主机策略、取消、重试和脱敏（M1） | 独立于 UI，含 mock 服务／故障注入 |
 | B-010 | SessionCoordinator、凭证保管、扫码／恢复／退出（M1） | 离线认证事务及[轮询与总时限](tasks/B-010-qr-polling.md)已实现；设备 bootstrap、恢复等仍未完成 |
 | B-011 | 搜索与目录 repositories/use cases（M2）；ViewModels（M5） | 不先写页面来测试 API |
@@ -75,12 +75,12 @@ flowchart LR
 
 ## 4. 下一轮实际动手顺序
 
-新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)及 [XEAPI](tasks/B-002-xeapi.md) 已完成，下一项为设备 profile 与存储基础，然后匿名 bootstrap。以下是整体后端路线，不要求在一次提交中完成。
+新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)及 [XEAPI](tasks/B-002-xeapi.md) 已完成，[存储基础与设备 ID](tasks/B-008-storage-foundation.md)也已完成，下一项为 QtKeychain 密钥环，然后匿名 bootstrap。以下是整体后端路线，不要求在一次提交中完成。
 
 1. 保留本轮审计成果，先处理[发现与门禁](api/gaps-and-hazards.md)，不宣称 164 个模块已经可用。
 2. C++ 协议、异步传输、JSON／gzip、会话与 Cookie、捕获 token/origin 的请求链已建立；QR 取 key／本地 URL／状态映射有离线测试，见[扫码链路](api/qr-auth-request-chain.md)。
 3. [认证用例、账号身份确认和精确 token 凭据交接](api/authentication-transaction.md)已有离线验证；同线程 Committing→Authenticated 发布屏障已建立，803 不直接提升为 Authenticated。网络线程／GUI facade 装配仍待实现。
-4. XEAPI 编码与密钥流程已有离线向量；补设备 profile（`state.sqlite`）、匿名 bootstrap、安全存储和通用调度。真实验证需要授权环境，不把凭据放进对话或仓库。
+4. XEAPI 编码与密钥流程已有离线向量；设备 ID 已入 `state.sqlite`；补密钥环、匿名 bootstrap 和通用调度。真实验证需要授权环境，不把凭据放进对话或仓库。
 5. 接入搜索、歌曲详情、官方 URL 和歌词；做真实播放 PoC。
 6. 实现专辑／艺人／歌单、首页、每日推荐、FM 和个人库；用 CLI／测试 harness 贯通。
 7. 再做写操作、一起听补证和文件相关后端；遇到需要新运行依赖或协议缺失时停下询问。

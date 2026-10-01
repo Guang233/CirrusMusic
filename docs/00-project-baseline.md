@@ -28,7 +28,7 @@
 | 构建配置 | Qt Creator 缓存及 VS Code 的 Debug/Release 私有 presets 使用本机 Qt 6.11.2 | 共享 presets 不含个人路径；私有 CMakeUserPresets.json 和构建产物不入库 |
 | `src/infrastructure/netease/` | 协议（含 XEAPI）／HTTP／Cookie、封闭四项 operation、XEAPI 公钥注册、QR／身份映射及快照凭据收据 | 尚无匿名 bootstrap、其他音乐接口或真实服务兼容证据 |
 | `src/domain/account/`、`src/application/` | 会话／身份值、SessionCoordinator、QrLoginService 与窄 port；应用层只依赖 Core | 已有同线程两阶段认证编排，未接入窗口；已有可选自动轮询与认证总时限；线程装配与恢复待实现 |
-| 测试与发布 | 11个套件、306项 Qt Test pass 通过 Debug/Release；另有15项 Python清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
+| 测试与发布 | 12个套件、317项 Qt Test pass 通过 Debug/Release；另有15项 Python清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
 | `docs/api/` | 440 个模块：164 采用候选、40 待定、236 排除 | 静态观察不是已实现能力；v2 SDK 与一起听有门禁 |
 | Git | 首个提交为 `4a211a1`；审计和原生后端按可验证增量提交 | 不包含 Qt Creator 私有配置、个人 Qt 路径或构建产物 |
 

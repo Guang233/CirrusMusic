@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS Test)
+find_package(Qt6 REQUIRED COMPONENTS Test Sql)
 
 qt_add_executable(tst_netease_protocol
     unit/netease_protocol_test.cpp
@@ -42,6 +42,11 @@ qt_add_executable(tst_xeapi unit/xeapi_test.cpp)
 target_link_libraries(tst_xeapi PRIVATE cirrus_netease_api Qt6::Test)
 add_test(NAME xeapi COMMAND tst_xeapi)
 set_tests_properties(xeapi PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_storage unit/storage_test.cpp)
+target_link_libraries(tst_storage PRIVATE cirrus_storage Qt6::Test)
+add_test(NAME storage COMMAND tst_storage)
+set_tests_properties(storage PROPERTIES TIMEOUT 15)
 
 qt_add_executable(tst_qr_login_gateway unit/qr_login_gateway_test.cpp)
 target_link_libraries(tst_qr_login_gateway PRIVATE cirrus_netease_auth Qt6::Test)

@@ -1,6 +1,6 @@
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(ZLIB REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Network)
+find_package(Qt6 REQUIRED COMPONENTS Network Sql)
 
 add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
@@ -70,6 +70,17 @@ add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/xeapi_key_ring.h
 )
 target_link_libraries(cirrus_netease_api PUBLIC cirrus_netease_network cirrus_netease_session)
+
+# SQLite via Qt SQL (bundled QSQLITE driver). Not linked by domain/application.
+add_library(cirrus_storage STATIC
+    infrastructure/storage/database_worker.cpp
+    infrastructure/storage/database_worker.h
+    infrastructure/storage/installation_store.cpp
+    infrastructure/storage/installation_store.h
+)
+target_compile_features(cirrus_storage PUBLIC cxx_std_20)
+target_include_directories(cirrus_storage PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(cirrus_storage PUBLIC Qt6::Sql)
 
 add_library(cirrus_netease_auth STATIC
     infrastructure/netease/auth/account_identity_mapper.cpp
