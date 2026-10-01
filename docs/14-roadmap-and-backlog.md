@@ -53,7 +53,7 @@ flowchart LR
 | B-007 | Tokens、Controls、Gallery、焦点与主题（M5） | 后端门禁后才开始 |
 | B-008 | SQLite worker、profile、migration、设置后端（M1/M4） | 事务、切号、中断恢复 |
 | B-009 | 网络调度、主机策略、取消、重试和脱敏（M1） | 独立于 UI，含 mock 服务／故障注入 |
-| B-010 | SessionCoordinator、凭证保管、扫码／恢复／退出（M1） | QR 本地辅助与服务状态区分，epoch 测试 |
+| B-010 | SessionCoordinator、凭证保管、扫码／恢复／退出（M1） | 离线认证事务已实现；下一项为[轮询与总时限](tasks/B-010-qr-polling.md)，恢复等仍未完成 |
 | B-011 | 搜索与目录 repositories/use cases（M2）；ViewModels（M5） | 不先写页面来测试 API |
 | B-012 | PlaybackCoordinator、后端、队列与 generation（M2） | 长期播放、快速切歌、旧事件隔离 |
 | B-013 | 歌词获取／解析／同步（M2） | 行／字级、翻译、错误格式及 seek 时钟 |
@@ -74,6 +74,8 @@ flowchart LR
 | B-028 | 上游清单校验与漂移检查（M0 起持续） | Python 校验器；升级上游需重新审计 |
 
 ## 4. 下一轮实际动手顺序
+
+新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，再领取[扫码轮询与总时限](tasks/B-010-qr-polling.md)。以下是整体后端路线，不要求在一次提交中完成。
 
 1. 保留本轮审计成果，先处理[发现与门禁](api/gaps-and-hazards.md)，不宣称 164 个模块已经可用。
 2. C++ 协议、异步传输、JSON／gzip、会话与 Cookie、捕获 token/origin 的请求链已建立；QR 取 key／本地 URL／状态映射有离线测试，见[扫码链路](api/qr-auth-request-chain.md)。

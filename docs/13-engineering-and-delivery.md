@@ -49,7 +49,7 @@ Qt 6.11.2 是当前建议验证基线，若 M0 调整需同步改上例。Widget
 
 | 配置名 | 用途／当前状态 |
 | --- | --- |
-| linux-dev | 已提供：Debug、Ninja、C++20、compile_commands；已有协议基础 Qt Test |
+| linux-dev | 已提供：Debug、Ninja、C++20、compile_commands；已有10个后端离线 Qt Test 套件 |
 | linux-release | 已提供：本地 Release 构建；不是发行包 |
 | linux-dev-local / linux-release-local | 私有示例继承共享配置，指定本机 Qt Kit，实际私有文件不入库 |
 | linux-asan | 待 M1 实现：Debug/RelWithDebInfo、ASan/UBSan |
@@ -60,9 +60,10 @@ Qt 6.11.2 是当前建议验证基线，若 M0 调整需同步改上例。Widget
 cmake --preset linux-dev
 cmake --build --preset linux-dev
 cmake --build --preset linux-dev --target all_qmllint
+ctest --test-dir build/linux-dev --output-on-failure --no-tests=error
 ```
 
-非系统 Qt 安装按[17](17-vscode-development.md)设置私有 preset。已有 configurePresets、buildPresets 和协议基础 CTest 用例，尚无 testPresets；当前用 `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error` 执行。`BUILD_TESTING=OFF` 不构建测试；业务／真实 API 测试仍未完成。
+非系统 Qt 安装按[17](17-vscode-development.md)设置私有 preset。已有 configurePresets、buildPresets 和协议／会话／认证事务 CTest 用例，尚无 testPresets；当前用 `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error` 执行。`BUILD_TESTING=OFF` 不构建测试；已有离线认证事务测试，但音乐业务／真实 API 验证仍未完成。VS Code 默认构建 all，而非仅空壳 app；提供先构建再运行的 `Cirrus: test` 任务。
 
 构建目录、私有 preset、compile_commands 和本机缓存已加入忽略规则。Qt 6.11.2 下已验证聚合 target `all_qmllint`；未来新增模块应继续检查 QML 导入和生成类型。无测试时 CI 应失败，不能把 CTest 的“未发现测试”当成功。
 
@@ -142,4 +143,6 @@ DEB/RPM、AUR 等在核心发行流程稳定后增加；每种格式有维护责
 
 ## 9. 开发者入门完成标准
 
-新开发者在干净环境按 README 配置后，应能：编译 → 运行 fake 数据应用 → 播放合法本地样本 → 打开 Gallery → 跑测试 → 找到一个 operation fixture → 理解如何启用受控真实协议测试。该路径不要求取得维护者私人账号或自建 API 服务。
+**当前可执行标准**：按 [HANDOFF](HANDOFF.md) 获取完整提交 → 配置自己的 Qt 路径 → 完整构建后端和测试 → 通过 Debug/Release CTest → 找到认证 fixture → 理解 token／凭据边界 → 领取[轮询与总时限任务](tasks/B-010-qr-polling.md)。干净源码复验证据见[验证记录](handoff-verification.md)。不需要维护者私人账号或自建 API 服务。
+
+**未来产品阶段标准，尚未具备**：运行 fake 数据应用、播放本地样本、打开 Gallery、启用受控真实协议测试。当前没有这些入口，不把它们列作新人今天必须完成的步骤。

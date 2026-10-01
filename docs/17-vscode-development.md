@@ -1,10 +1,10 @@
 # 17 · VS Code 开发环境
 
-> 状态：**已提供的工作区配置**，不是未来架构提案。适用当前 Linux Qt Quick 骨架；未实现业务功能、CI 或测试套件。
+> 状态：**已提供的工作区配置**，不是未来架构提案。已有原生后端与10个离线 CTest 套件，尚无可用的产品登录／播放、CI 或发布包。新接手者先读 [HANDOFF](HANDOFF.md)。
 
 ## 1. 工具与扩展
 
-需要 CMake ≥ 3.24（Presets 工作流）、Ninja、C++20 编译器、GDB、clangd，以及满足模板要求的 Qt 6.10+ 开发 Kit。当前实测 Qt 为 6.11.2；发行工具链仍按 02/13 的后续流程冻结。
+构建需要 CMake ≥ 3.24（Presets 工作流）、Ninja、C++20 编译器、OpenSSL ≥ 3 与 zlib 开发包，以及 Qt 6.10+ 开发 Kit（Core、Quick／QML、Network；模板需要 QtQuick.Layouts／QtQuick.Controls.Basic 模块，默认开启测试时还需 Test）。调试／编辑另需 GDB、clangd；Python 3 仅供可选的离线审计工具使用，不参与产品构建和运行。当前实测 Qt 为 6.11.2；发行工具链仍按 02/13 的后续流程冻结。
 
 打开仓库根目录，安装 `.vscode/extensions.json` 推荐的扩展：
 
@@ -69,11 +69,12 @@ cmake --build --preset linux-dev
 | 任务 | 行为 |
 | --- | --- |
 | Cirrus: configure | 使用当前 configure preset 配置 |
-| Cirrus: build | 配置后构建 appCirrusMusic；默认构建任务 |
+| Cirrus: build | 配置后构建 all，包含 app、后端库及已启用测试；默认构建任务 |
+| Cirrus: test | 先完整构建，再在当前 configure preset 的构建目录运行 CTest；无测试时失败 |
 | Cirrus: qmllint | 配置后构建 Qt 自动生成的 all_qmllint target |
 | Cirrus: clean | 清理当前构建 preset 的产物，不删除源文件 |
 
-任务不硬编码本机 Qt 路径。当前没有 tests、testPresets 或 CTest 用例，因此没有伪装成有效测试的空任务。`all_qmllint` 已在当前 Qt 模块上实测存在并运行通过。
+任务不硬编码本机 Qt 路径。`Cirrus: test` 使用 CMake Tools 的 `${command:cmake.buildDirectory}`，要求 configure/build preset 匹配且 `BUILD_TESTING=ON`；不会固定读 Debug 或旧构建目录。当前没有 testPresets，CLI 使用下方 `ctest --test-dir`。`all_qmllint` 已实测通过。交接轮次验证了 JSON 配置及等价 CLI 命令，未人工操作 VS Code 图形任务；若扩展变量解析失败，可先使用 CLI。
 
 ## 5. 语言服务和格式化
 
@@ -113,11 +114,12 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 cmake --preset linux-release-local
 cmake --build --preset linux-release-local --parallel
+ctest --test-dir build/linux-release-local --output-on-failure --no-tests=error
 ```
 
 Release 这里只是本地优化构建，不代表已完成 Flatpak/AppImage 打包、依赖部署和发布验收。
 
-已新增原生协议基础 Qt Test，详见[实现记录](api/native-foundation.md)。`BUILD_TESTING` 默认开启；只构建应用时可在 configure 加 `-DBUILD_TESTING=OFF`。Python 的接口清单校验是可选开发工具，不参与客户端构建／运行。
+已有协议、会话与认证事务离线 Qt Test，详见[实现记录](api/native-foundation.md)。`BUILD_TESTING` 默认开启；只构建应用时可在 configure 加 `-DBUILD_TESTING=OFF`。Python 的接口清单校验是可选开发工具，不参与客户端构建／运行。
 
 ## 7. 本次验证范围
 
@@ -132,7 +134,7 @@ Release 这里只是本地优化构建，不代表已完成 Flatpak/AppImage 打
 - Debug/Release 在 offscreen + 软件渲染下运行 3 秒，未出现 QML 加载错误，随后由验证脚本正常发送终止信号。
 - JSON、CMake preset 解析和 clang-format 配置读取检查。
 
-本机日志位于忽略目录 `build/workspace-checks/`，不随仓库发布。尚未人工操作 VS Code 图形调试会话，也未做真实 Wayland/X11 窗口视觉验收；这些不能由 offscreen 冒烟替代。
+以上调试／运行冒烟为早期模板验证记录；当前后端测试与干净源码接手复验见[交接验证记录](handoff-verification.md)。本机日志位于忽略目录 `build/workspace-checks/`，不随仓库发布。尚未人工操作 VS Code 图形调试会话，也未做真实 Wayland/X11 窗口视觉验收；这些不能由 offscreen 冒烟替代。
 
 ## 8. 常见问题
 

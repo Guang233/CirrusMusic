@@ -1,6 +1,6 @@
 # 00 · 项目现状与文档约定
 
-> 基线 0.2 · 2026-09-26。当前事实含固定版本 API 审计和首批 C++ 协议基础；架构目标仍是提案。
+> 产品文档基线0.2；实现现状更新至认证事务 `1a60b74`。新接手者先读 [HANDOFF](HANDOFF.md)，其中区分已实现、离线验证和未来任务；架构目标不等于已交付功能。
 
 ## 1. 目标与已知输入
 
@@ -26,13 +26,13 @@
 | QML 模块 | URI 为 `CirrusMusic`，挂在 `appCirrusMusic` target | 初期保留作为根模块，拆出 `Cirrus.Controls` 等独立模块 |
 | `importedcontent/` | Figma-to-Qt 占位说明 | 不是正式设计源；若不使用设计导入工作流可在实施期移除 |
 | 构建配置 | Qt Creator 缓存及 VS Code 的 Debug/Release 私有 presets 使用本机 Qt 6.11.2 | 共享 presets 不含个人路径；私有 CMakeUserPresets.json 和构建产物不入库 |
-| `src/infrastructure/netease/` | C++ 编码／解密／有界响应解码、HttpTransport、epoch 绑定的内存 Cookie | 尚无 XEAPI、登录网关或真实请求与会话的编排 |
-| `src/domain/account/`、`src/application/account/` | 会话值类型与 SessionCoordinator；应用层不依赖网络／加密 | 只处理生命周期，不验证真实身份；未接入应用窗口 |
-| 测试与发布 | Qt Test 基础单测通过 Debug/Release CTest；另有离线清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
+| `src/infrastructure/netease/` | 协议／HTTP／Cookie、封闭三项 operation、QR／身份映射及快照凭据收据 | 尚无 XEAPI、其他音乐接口或真实服务兼容证据 |
+| `src/domain/account/`、`src/application/` | 会话／身份值、SessionCoordinator、QrLoginService 与窄 port；应用层只依赖 Core | 已有同线程两阶段认证编排，未接入窗口；自动轮询、线程装配与恢复待实现 |
+| 测试与发布 | 10个套件、223项 Qt Test pass 通过 Debug/Release；另有15项 Python清单工具测试 | 无 CI、数据库、播放器、真实 API 兼容证明或正式安装包 |
 | `docs/api/` | 440 个模块：164 采用候选、40 待定、236 排除 | 静态观察不是已实现能力；v2 SDK 与一起听有门禁 |
 | Git | 首个提交为 `4a211a1`；审计和原生后端按可验证增量提交 | 不包含 Qt Creator 私有配置、个人 Qt 路径或构建产物 |
 
-音乐客户端功能仍未实施。后续 VS Code 配置阶段已验证模板 Debug/Release 构建、QML lint、clangd、GDB 断点和 offscreen 冒烟；具体环境与验证边界见[17](17-vscode-development.md)，不等于通过产品功能测试。
+可用的客户端登录／音乐功能仍未交付；不能把原生认证事务的 fake 网络测试当作官方兼容证明。早期 VS Code 配置阶段已验证模板 Debug/Release 构建、QML lint、clangd、GDB 断点和 offscreen 冒烟；具体环境与验证边界见[17](17-vscode-development.md)，不等于通过产品功能测试。
 
 ## 3. 术语
 

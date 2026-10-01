@@ -12,7 +12,7 @@
             "label": "Cirrus: build",
             "type": "cmake",
             "command": "build",
-            "targets": ["appCirrusMusic"],
+            "targets": ["all"],
             "dependsOn": ["Cirrus: configure"],
             "dependsOrder": "sequence",
             "group": {
@@ -20,7 +20,24 @@
                 "isDefault": true
             },
             "problemMatcher": ["$gcc"],
-            "detail": "Build Cirrus with the selected preset (Ctrl+Shift+B)."
+            "detail": "Build the app, backend libraries and enabled tests with the selected preset (Ctrl+Shift+B)."
+        },
+        {
+            "label": "Cirrus: test",
+            "type": "process",
+            "command": "ctest",
+            "args": [
+                "--test-dir", "${command:cmake.buildDirectory}",
+                "--output-on-failure", "--no-tests=error"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": ["Cirrus: build"],
+            "dependsOrder": "sequence",
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Build first, then run CTest in the active configure preset directory; requires BUILD_TESTING=ON."
         },
         {
             "label": "Cirrus: qmllint",

@@ -6,7 +6,7 @@
 
 ## 开发文档
 
-从 **[技术文档总览](docs/README.md)** 开始阅读。
+**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。下一项可领取任务是[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
 
 - [产品范围与需求](docs/01-product-requirements.md)
 - [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)
@@ -31,7 +31,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 ./build/linux-dev-local/appCirrusMusic
 ```
 
-在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 构建，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务。
+在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
 Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议、网络、会话隔离和认证事务的 10 个测试套件（223 项 Qt Test pass，含数据行／初始化／清理）已通过 Debug/Release CTest；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
