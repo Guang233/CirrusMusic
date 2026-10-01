@@ -1,5 +1,7 @@
 #include "http_transport.h"
 
+#include "infrastructure/netease/protocol/xeapi_request_profile.h"
+
 #include <QHttpHeaders>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -43,6 +45,25 @@ bool collectCookies(const QNetworkReply& reply, QList<QByteArray>& cookies)
     return true;
 }
 
+bool validXeapiHeaders(const TransportRequest& request)
+{
+    if (request.xeapiHeaders.isEmpty()) {
+        return true;
+    }
+    if (request.protocol != Protocol::Xeapi || request.xeapiHeaders.size() > 16) {
+        return false;
+    }
+    QList<QByteArray> seen;
+    for (const auto& [name, value] : request.xeapiHeaders) {
+        if (!isXeapiProfileHeader(name) || seen.contains(name) || value.isEmpty() ||
+            !validHeaderValue(value, 4096)) {
+            return false;
+        }
+        seen.append(name);
+    }
+    return true;
+}
+
 } // namespace
 
 struct HttpTransport::Pending {
@@ -50,6 +71,7 @@ struct HttpTransport::Pending {
     QPointer<QTimer> timer;
     QByteArray body;
     qsizetype limit = 0;
+    bool xeapi = false;
     TransportError forcedError = TransportError::None;
 };
 
@@ -111,11 +133,13 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024 ||
         !validHeaderValue(request.cookieHeader, 16 * 1024) ||
         !validHeaderValue(request.userAgent, 1024) ||
-        (request.musicReferer && request.protocol != Protocol::Weapi)) {
+        (request.musicReferer && request.protocol != Protocol::Weapi) ||
+        !validXeapiHeaders(request)) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
     }
+    pending->xeapi = request.protocol == Protocol::Xeapi;
     QNetworkRequest wire(*url);
     wire.setHeader(QNetworkRequest::ContentTypeHeader,
                    QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
@@ -135,6 +159,9 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
 
     if (request.musicReferer) {
         wire.setRawHeader("Referer", "https://music.163.com");
+    }
+    for (const auto& [name, value] : request.xeapiHeaders) {
+        wire.setRawHeader(name, value);
     }
     auto* reply = m_manager->post(wire, request.formBody);
     pending->reply = reply;
@@ -230,6 +257,15 @@ void HttpTransport::finish(quint64 id)
             !collectCookies(*pending->reply, result.setCookieHeaders)) {
             result.error = TransportError::ResponseHeadersTooLarge;
             result.body.clear();
+        }
+        if (result.error == TransportError::None && pending->xeapi) {
+            auto sessionId = pending->reply->rawHeader("x-encr-ssid");
+            auto sessionKey = pending->reply->rawHeader("x-encr-sskey");
+            if (!sessionId.isEmpty() && !sessionKey.isEmpty() && validHeaderValue(sessionId, 256) &&
+                validHeaderValue(sessionKey, 256)) {
+                result.xeapiSessionId = std::move(sessionId);
+                result.xeapiSessionKey = std::move(sessionKey);
+            }
         }
         pending->reply->deleteLater();
     }

@@ -30,6 +30,13 @@ struct XeapiSessionKey {
 
 // Base64 HMAC-SHA256 used by key registration (request and response signatures).
 [[nodiscard]] QByteArray xeapiSignature(QByteArrayView timestamp, QByteArrayView nonce);
+// Constant-time comparison against xeapiSignature(timestamp, nonce).
+[[nodiscard]] bool verifyXeapiSignature(QByteArrayView timestamp, QByteArrayView nonce,
+                                        QByteArrayView signature);
+
+// register_anonimous username: Base64("<id> " + Base64(MD5(id XOR fixed key))).
+// deviceId must be printable ASCII <= 128; returns empty on invalid input.
+[[nodiscard]] QString anonymousRegistrationUsername(QStringView deviceId);
 
 // Decrypts and validates the registration response's encryptedData (Base64).
 [[nodiscard]] std::optional<XeapiPublicKey> decryptXeapiPublicKey(QByteArrayView encryptedData);

@@ -1,6 +1,7 @@
 #include "session_api_client.h"
 
 #include "infrastructure/netease/protocol/eapi_request_profile.h"
+#include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QDateTime>
 #include <QThread>
@@ -46,9 +47,19 @@ bool SessionApiClient::advanceTo(const domain::SessionToken& context)
     return accepts(context);
 }
 
+void SessionApiClient::setXeapiKeyRing(XeapiKeyRing* ring)
+{
+    Q_ASSERT(QThread::currentThread() == thread() && (!ring || ring->thread() == thread()));
+    m_xeapiKeys = ring;
+}
+
 void SessionApiClient::invalidatePrevious(domain::SessionToken context)
 {
     m_context = context; // credentials already cleared/adopted before any notification
+    if (m_xeapiSession) {
+        m_xeapiSession->key.fill('\0');
+        m_xeapiSession.reset(); // never carried into another session epoch
+    }
     QList<quint64> cancelIds;
     for (auto& pending : m_pending) {
         if (pending.context != context) {
@@ -108,7 +119,8 @@ quint64 SessionApiClient::submit(domain::SessionToken context, ApiOperation oper
     const auto contract = operationContract(operation);
     const auto payload = operationPayload(operation, parameters);
     if (!contract || !payload ||
-        (contract->protocol != Protocol::Eapi && contract->protocol != Protocol::Weapi)) {
+        (contract->protocol != Protocol::Eapi && contract->protocol != Protocol::Weapi &&
+         contract->protocol != Protocol::Xeapi)) {
         pending.forcedError = ApiError::InvalidRequest;
     } else {
         const auto origin = officialRequestUrl(contract->protocol, contract->logicalPath);
@@ -144,6 +156,10 @@ void SessionApiClient::start(quint64 id)
     }
     // These lookups use the destination captured from the CLOSED operation
     // registry, never a URL or cookie domain supplied by an API response.
+    if (it->contract.protocol == Protocol::Xeapi) {
+        startXeapi(id, *it);
+        return;
+    }
     if (it->operation == ApiOperation::AccountIdentity) {
         const auto musicU = m_cookies.value(it->context, it->origin, "MUSIC_U");
         const auto csrf = m_cookies.value(it->context, it->origin, "__csrf");
@@ -208,6 +224,47 @@ void SessionApiClient::start(quint64 id)
     it->payload = {};
 }
 
+void SessionApiClient::startXeapi(quint64 id, Pending& pending)
+{
+    const auto key = m_xeapiKeys ? m_xeapiKeys->current() : std::nullopt;
+    if (!key) {
+        finish(id, {ApiError::MissingProtocolKey}); // never downgrade to another protocol
+        return;
+    }
+    const auto csrf = m_cookies.value(pending.context, pending.origin, "__csrf");
+    const auto musicU = m_cookies.value(pending.context, pending.origin, "MUSIC_U");
+    const auto musicA = m_cookies.value(pending.context, pending.origin, "MUSIC_A");
+    const auto nmtid = m_cookies.value(pending.context, pending.origin, "NMTID");
+    if (!csrf || !musicU || !musicA || !nmtid) {
+        finish(id, {ApiError::Cookie});
+        return;
+    }
+    auto payload = pending.payload;
+    if (pending.operation == ApiOperation::AnonymousRegister) {
+        payload.insert(QStringLiteral("username"), anonymousRegistrationUsername(m_deviceId));
+    }
+    const auto fields = xeapiFormFields(payload);
+    const XeapiRequestMetadata metadata{
+        m_deviceId, QDateTime::currentMSecsSinceEpoch(), *csrf, *musicU, *musicA, *nmtid};
+    const auto prepared = fields ? prepareXeapiRequest(*fields, *key, m_xeapiSession, metadata)
+                                 : PreparedXeapiRequest{CryptoError::InvalidInput};
+    if (!prepared.ok()) {
+        finish(id, {ApiError::Crypto});
+        return;
+    }
+    TransportRequest request;
+    request.protocol = Protocol::Xeapi;
+    request.logicalPath = pending.contract.logicalPath;
+    request.formBody = prepared.formBody;
+    request.cookieHeader = prepared.cookieHeader;
+    request.userAgent = prepared.userAgent;
+    request.xeapiHeaders = prepared.headers;
+    request.responseLimit = pending.contract.responseLimit;
+    pending.transportId = m_transport->post(std::move(request));
+    m_transportIds.insert(pending.transportId, id);
+    pending.payload = {};
+}
+
 void SessionApiClient::cancel(quint64 id)
 {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -248,6 +305,14 @@ void SessionApiClient::receive(quint64 transportId, const TransportResult& trans
     result.decoded =
         decodeResponse(transport.body, pending.contract.responseEncoding,
                        {pending.contract.responseLimit, pending.contract.responseLimit});
+    if (result.decoded.ok() && pending.contract.protocol == Protocol::Xeapi &&
+        !transport.xeapiSessionId.isEmpty()) {
+        // Adopted only for the still-current epoch (checked above); invalid values ignored.
+        const XeapiSessionKey session{transport.xeapiSessionId, transport.xeapiSessionKey};
+        if (session.isValid()) {
+            m_xeapiSession = session;
+        }
+    }
     if (!result.decoded.ok()) {
         result.error = ApiError::Decode;
     } else if (acceptsResponseCookies(pending.operation, result.decoded)) {

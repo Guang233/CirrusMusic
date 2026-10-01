@@ -38,6 +38,11 @@ target_link_libraries(tst_session_api_client PRIVATE cirrus_netease_api Qt6::Tes
 add_test(NAME session_api_client COMMAND tst_session_api_client)
 set_tests_properties(session_api_client PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_xeapi unit/xeapi_test.cpp)
+target_link_libraries(tst_xeapi PRIVATE cirrus_netease_api Qt6::Test)
+add_test(NAME xeapi COMMAND tst_xeapi)
+set_tests_properties(xeapi PROPERTIES TIMEOUT 15)
+
 qt_add_executable(tst_qr_login_gateway unit/qr_login_gateway_test.cpp)
 target_link_libraries(tst_qr_login_gateway PRIVATE cirrus_netease_auth Qt6::Test)
 add_test(NAME qr_login_gateway COMMAND tst_qr_login_gateway)

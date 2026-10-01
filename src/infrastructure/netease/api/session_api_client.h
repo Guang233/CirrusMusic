@@ -3,10 +3,12 @@
 #include "api_operation.h"
 #include "infrastructure/netease/network/http_transport.h"
 #include "infrastructure/netease/session/session_cookie_store.h"
+#include "xeapi_key_ring.h"
 
 #include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
+#include <QPointer>
 
 namespace cirrus::netease
 {
@@ -20,7 +22,8 @@ enum class ApiError {
     Transport,
     Crypto,
     Decode,
-    Cookie
+    Cookie,
+    MissingProtocolKey // xeapi without a valid installation key; nothing was sent
 };
 
 // Infrastructure envelope only. Application ports must map this to typed values.
@@ -53,6 +56,8 @@ class SessionApiClient final : public QObject
     [[nodiscard]] bool promoteReceipt(domain::SessionToken from, domain::SessionToken to,
                                       const QUuid& receipt);
     void discardReceipt(const QUuid& receipt);
+    // Installation key for xeapi operations; same thread, tracked weakly.
+    void setXeapiKeyRing(XeapiKeyRing* ring);
 
   signals:
     void contextAdvanced(cirrus::domain::SessionToken context);
@@ -74,8 +79,11 @@ class SessionApiClient final : public QObject
     void start(quint64 requestId);
     void receive(quint64 transportId, const TransportResult& result);
     void finish(quint64 requestId, ApiResult result = {});
+    void startXeapi(quint64 requestId, Pending& pending);
 
     HttpTransport* m_transport = nullptr; // QObject parent ownership
+    QPointer<XeapiKeyRing> m_xeapiKeys;
+    std::optional<XeapiSessionKey> m_xeapiSession; // current epoch only; secret
     const QString m_deviceId;
     SessionCookieStore m_cookies;
     domain::SessionToken m_context;

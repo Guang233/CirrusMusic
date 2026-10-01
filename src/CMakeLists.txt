@@ -37,6 +37,8 @@ add_library(cirrus_netease_protocol STATIC
     infrastructure/netease/protocol/response_decoder.h
     infrastructure/netease/protocol/xeapi_crypto.cpp
     infrastructure/netease/protocol/xeapi_crypto.h
+    infrastructure/netease/protocol/xeapi_request_profile.cpp
+    infrastructure/netease/protocol/xeapi_request_profile.h
 )
 
 target_compile_features(cirrus_netease_protocol PUBLIC cxx_std_20)
@@ -62,6 +64,10 @@ add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/api_operation.h
     infrastructure/netease/api/session_api_client.cpp
     infrastructure/netease/api/session_api_client.h
+    infrastructure/netease/api/xeapi_key_registrar.cpp
+    infrastructure/netease/api/xeapi_key_registrar.h
+    infrastructure/netease/api/xeapi_key_ring.cpp
+    infrastructure/netease/api/xeapi_key_ring.h
 )
 target_link_libraries(cirrus_netease_api PUBLIC cirrus_netease_network cirrus_netease_session)
 

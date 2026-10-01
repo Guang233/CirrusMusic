@@ -159,8 +159,8 @@ std::optional<QByteArray> encryptS(const QByteArray& dynamicKey, const XeapiPubl
 
 bool XeapiPublicKey::isValid() const
 {
-    if (!printableAscii(version.toLatin1(), 64) || version.toLatin1() != version.toUtf8() ||
-        publicKey.size() != 32 || sk.isEmpty() || sk.size() > 1024 || !sk.isValidUtf8()) {
+    if (!printableAscii(version.toUtf8(), 64) || publicKey.size() != 32 || sk.isEmpty() ||
+        sk.size() > 1024 || !sk.isValidUtf8()) {
         return false;
     }
     for (const unsigned char c : sk) {
@@ -232,6 +232,36 @@ QByteArray xeapiSignature(QByteArrayView timestamp, QByteArrayView nonce)
     // The key is the Base64 TEXT itself, as in the reference; it is not decoded.
     const auto digest = hmacSha256(QByteArrayView(SignKey), QByteArray(timestamp) + nonce);
     return digest ? digest->toBase64() : QByteArray();
+}
+
+bool verifyXeapiSignature(QByteArrayView timestamp, QByteArrayView nonce, QByteArrayView signature)
+{
+    const auto expected = xeapiSignature(timestamp, nonce);
+    return !expected.isEmpty() && signature.size() == expected.size() &&
+           CRYPTO_memcmp(expected.constData(), signature.data(),
+                         static_cast<size_t>(expected.size())) == 0;
+}
+
+QString anonymousRegistrationUsername(QStringView deviceId)
+{
+    constexpr char XorKey[] = "3go8&$8*3*3h0k(2)2";
+    constexpr qsizetype XorKeySize = sizeof(XorKey) - 1;
+    const auto id = deviceId.toUtf8(); // any non-ASCII byte fails printableAscii
+    if (!printableAscii(id, 128)) {
+        return {};
+    }
+    QByteArray xored(id.size(), Qt::Uninitialized);
+    for (qsizetype i = 0; i < id.size(); ++i) {
+        xored[i] = static_cast<char>(id[i] ^ XorKey[i % XorKeySize]); // stays 7-bit ASCII
+    }
+    unsigned char digest[EVP_MAX_MD_SIZE]{};
+    unsigned int size = 0;
+    if (EVP_Digest(xored.constData(), static_cast<size_t>(xored.size()), digest, &size, EVP_md5(),
+                   nullptr) != 1) {
+        return {};
+    }
+    const auto encoded = QByteArray(reinterpret_cast<const char*>(digest), size).toBase64();
+    return QString::fromLatin1((id + ' ' + encoded).toBase64());
 }
 
 std::optional<XeapiPublicKey> decryptXeapiPublicKey(QByteArrayView encryptedData)

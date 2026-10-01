@@ -35,6 +35,8 @@ struct TransportRequest {
     QByteArray cookieHeader;
     QByteArray userAgent;
     bool musicReferer = false; // fixed official web origin, never caller-supplied URL
+    // Protocol::Xeapi only; names restricted to the fixed profile set, no duplicates.
+    QList<std::pair<QByteArray, QByteArray>> xeapiHeaders;
 };
 
 struct TransportResult {
@@ -44,6 +46,10 @@ struct TransportResult {
     QByteArray body;
     QByteArray retryAfter;
     QList<QByteArray> setCookieHeaders; // infrastructure-only, never log/broadcast to UI
+    // x-encr-ssid / x-encr-sskey: successful Protocol::Xeapi responses only, both
+    // present and bounded, otherwise both empty. Secret; never log.
+    QByteArray xeapiSessionId;
+    QByteArray xeapiSessionKey;
 };
 
 // Thread-affine async POST transport. It does not sign, retry, decrypt, parse

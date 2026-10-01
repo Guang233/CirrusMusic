@@ -89,4 +89,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限已实现。下一步补匿名／设备启动、安全持久化恢复和线程装配，独立补 XEAPI，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。下一步补设备 profile、匿名启动、安全持久化恢复和线程装配，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

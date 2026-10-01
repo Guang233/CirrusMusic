@@ -1,6 +1,6 @@
 # 14 · 实施路线与任务拆解
 
-> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与认证事务的十个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
+> 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；C++ 协议、会话隔离与认证事务及 XEAPI 的十一个 Qt Test 套件已通过；尚无完整登录／播放或真实协议验证。接口清单工具测试不等于产品测试。
 
 ## 1. 阶段总览
 
@@ -45,7 +45,7 @@ flowchart LR
 | ID | 工作包及阶段 | 证据／依赖 |
 | --- | --- | --- |
 | B-001 | 固定上游和范围；逐 operation 契约、DTO 与 fixture（M0～M4） | 静态部分见 api/；真实验证仍待进行 |
-| B-002 | weapi/eapi/XEAPI 编码、密钥状态与测试向量（M1） | 字节一致性、损坏密文、gzip 上限、随机源注入 |
+| B-002 | weapi/eapi/XEAPI 编码、密钥状态与测试向量（M1） | weapi/eapi 与 [XEAPI](tasks/B-002-xeapi.md) 编码、公钥注册和会话密钥已有离线向量；真实服务未验证 |
 | B-003 | Qt 官方流 PoC 与 IPlaybackBackend（M2） | seek、格式、URL 过期、headers/CDN 信任边界 |
 | B-004 | Qt/编译器、app ID、发行 Runtime 和许可（M1/M4） | app ID 和自身许可仍待确认；不阻塞协议单测 |
 | B-005 | 分层 CMake、CI、测试入口、日志（M1） | presets 与协议基础 CTest 已提供；完整分层／业务 CI 尚未实现 |
@@ -75,12 +75,12 @@ flowchart LR
 
 ## 4. 下一轮实际动手顺序
 
-新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)已完成，下一项为设备／匿名 bootstrap。以下是整体后端路线，不要求在一次提交中完成。
+新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)及 [XEAPI](tasks/B-002-xeapi.md) 已完成，下一项为设备 profile 与存储基础，然后匿名 bootstrap。以下是整体后端路线，不要求在一次提交中完成。
 
 1. 保留本轮审计成果，先处理[发现与门禁](api/gaps-and-hazards.md)，不宣称 164 个模块已经可用。
 2. C++ 协议、异步传输、JSON／gzip、会话与 Cookie、捕获 token/origin 的请求链已建立；QR 取 key／本地 URL／状态映射有离线测试，见[扫码链路](api/qr-auth-request-chain.md)。
 3. [认证用例、账号身份确认和精确 token 凭据交接](api/authentication-transaction.md)已有离线验证；同线程 Committing→Authenticated 发布屏障已建立，803 不直接提升为 Authenticated。网络线程／GUI facade 装配仍待实现。
-4. 补匿名／设备 bootstrap、安全存储和通用调度；独立补齐 XEAPI 密钥流程与向量。真实验证需要授权环境，不把凭据放进对话或仓库。
+4. XEAPI 编码与密钥流程已有离线向量；补设备 profile（`state.sqlite`）、匿名 bootstrap、安全存储和通用调度。真实验证需要授权环境，不把凭据放进对话或仓库。
 5. 接入搜索、歌曲详情、官方 URL 和歌词；做真实播放 PoC。
 6. 实现专辑／艺人／歌单、首页、每日推荐、FM 和个人库；用 CLI／测试 harness 贯通。
 7. 再做写操作、一起听补证和文件相关后端；遇到需要新运行依赖或协议缺失时停下询问。
