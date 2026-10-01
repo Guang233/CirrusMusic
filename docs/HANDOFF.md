@@ -1,6 +1,6 @@
 # 开发接手指南
 
-> 接手入口，不需要阅读此前聊天。代码基线为 `1a60b74`（认证事务）；本轮交接补充文档和 VS Code 构建／测试入口，不扩展产品能力。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
+> 接手入口，不需要阅读此前聊天。代码基线为认证事务 `1a60b74`，其后增加 B-010 扫码轮询与总时限（见 `git log`）；[验证记录](handoff-verification.md)对应的是 `1a60b74` 时点。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
 
 ## 1. 先理解现在的状态
 
@@ -11,8 +11,8 @@
 | C++20／Qt 分层 targets、weapi/eapi、form、路由、HTTP、gzip／JSON 解码 | XEAPI、真实 socket/TLS／官方接口兼容性 |
 | epoch 隔离、内存 Cookie、取消及晚到结果保护 | 设备／匿名 bootstrap、系统安全存储、账号恢复 |
 | eapi QR key／QR check、weapi AccountIdentity，共3个远程 operation | 其他音乐业务接口、播放器、云盘／下载、一起听 |
-| `QrLoginService` 身份验证、快照收据、两阶段凭据交接 | 自动轮询／总时限、网络线程装配、GUI facade、UI |
-| Debug/Release：10套件、223项 Qt Test pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限 | 网络线程装配、GUI facade、UI |
+| Debug/Release：10套件、275项 Qt Test pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-预期 CTest 有10个套件且全部通过；少于10个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。223是本基线 Qt Test 明细计数，不是223个独立产品功能。
+预期 CTest 有10个套件且全部通过；少于10个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。275是当前 Qt Test 明细计数，不是275个独立产品功能。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -96,19 +96,20 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 3. 最小阅读与代码导航
 
-顺序：本页 → [实现记录](api/native-foundation.md) → [系统架构](03-system-architecture.md) → [认证事务](api/authentication-transaction.md) → [下一任务](tasks/B-010-qr-polling.md)。遇到协议疑问再查 [API 审计](api/README.md)和[门禁](api/gaps-and-hazards.md)，不必先读完440模块。
+顺序：本页 → [实现记录](api/native-foundation.md) → [系统架构](03-system-architecture.md) → [认证事务](api/authentication-transaction.md) → [已完成的轮询任务契约](tasks/B-010-qr-polling.md)。遇到协议疑问再查 [API 审计](api/README.md)和[门禁](api/gaps-and-hazards.md)，不必先读完440模块。
 
 | 入口 | 看什么 |
 | --- | --- |
 | `src/CMakeLists.txt`、`tests/CMakeLists.txt` | 实际依赖方向、测试 target；不是架构图中的未来空模块 |
 | `src/domain/account/session_types.h` | Token、phase、身份值；token 不是凭据 |
 | `src/application/account/session_coordinator.*` | lifecycle 与重入安全的两阶段转换 |
-| `src/application/account/qr_login_service.*` | begin/poll/cancel、身份确认、精确 target 提交 |
+| `src/application/account/qr_login_service.*` | begin/poll/cancel、自动轮询与总时限、身份确认、精确 target 提交 |
+| `src/application/account/login_scheduler.*` | 单调时钟＋单次定时器窄接缝；测试替身在 `tests/support/fake_login_scheduler.h` |
 | `src/application/ports/qr_login_gateway.h` | 窄 port、按值结果、脱敏错误；无 JSON／Cookie |
 | `src/infrastructure/netease/api/api_operation.*` | 目前3项封闭注册契约 |
 | `src/infrastructure/netease/api/session_api_client.*` | 捕获 token/origin、快照和一次性收据 |
 | `src/infrastructure/netease/auth/` | QR 映射、身份 schema、port 实现 |
-| `tests/unit/qr_login_service_test.cpp` | Core-only fake port 用例，下一任务优先扩展 |
+| `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
 | `tests/unit/auth_transaction_test.cpp` | 从实际协议代码到应用的合成网络认证链 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
@@ -125,14 +126,14 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 5. 接下来做什么，什么时候需要询问
 
-**优先领取 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)**，其中已给出范围、保守默认策略与验收矩阵；本轮只写任务契约，未实现该功能。
+[B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-其后：设备／匿名 bootstrap → 安全存储／恢复与线程装配 → 受控真实认证验证；XEAPI 可独立规划，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+下一步：设备／匿名 bootstrap（领取前先按同样格式写任务契约并请维护者确认） → 安全存储／恢复与线程装配 → 受控真实认证验证；XEAPI 可独立规划，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
 | 安全存储实现与新增依赖 | 目前仅内存；新增 QtKeychain、系统桥接等实现／依赖前确认，不明文 fallback |
-| app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍轮询单测，不擅自填公司域名或发布许可证 |
+| app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
 | XEAPI、v2 checktoken SDK、一起听接收链 | XEAPI 未实现；SDK 与一起听有证据门禁，不暗加 Node/WebEngine，不以 v3 替代 v2 |
 | 播放后端 | QMediaPlayer/QAudioOutput 仍待真实来源 PoC，不把方案当已落地 |

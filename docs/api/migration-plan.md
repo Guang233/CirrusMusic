@@ -4,7 +4,7 @@
 
 ## M1：公共协议 → 登录／会话
 
-当前已实现封闭 QR／AccountIdentity operation、上下文请求链、应用认证事务、精确凭据交接及同线程发布屏障；还没有匿名启动、持久化、自动轮询或网络线程／GUI facade 装配。详见[扫码链路](qr-auth-request-chain.md)及[认证事务](authentication-transaction.md)，不能把803或离线通过当作 M1 登录门禁通过。
+当前已实现封闭 QR／AccountIdentity operation、上下文请求链、应用认证事务、精确凭据交接及同线程发布屏障；已有可选自动轮询与认证总时限；还没有匿名启动、持久化或网络线程／GUI facade 装配。详见[扫码链路](qr-auth-request-chain.md)及[认证事务](authentication-transaction.md)，不能把803或离线通过当作 M1 登录门禁通过。
 
 - 建立 Network、Protocol、Session 和 DTO 测试边界，应用层不依赖上游包装格式。
 - 先证明 URL 改写、form/JSON、weapi/eapi、响应解码的字节行为，再接 XEAPI key/session/加密响应。

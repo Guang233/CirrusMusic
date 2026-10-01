@@ -12,6 +12,8 @@ target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}"
 target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
 
 add_library(cirrus_application STATIC
+    application/account/login_scheduler.cpp
+    application/account/login_scheduler.h
     application/account/qr_login_service.cpp
     application/account/qr_login_service.h
     application/account/session_coordinator.cpp

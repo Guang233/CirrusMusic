@@ -48,7 +48,7 @@ Guest
 
 `QrLoginService` 位于 `cirrus_application`，仅依赖 SessionCoordinator、IQrLoginGateway、domain 和 Qt Core。port 增加身份与提交结果；Cookie、JSON、HTTP、Qt Network、OpenSSL 留在基础设施。
 
-当前 `begin()`／`poll()`／`cancel()` 是**所属线程内**的非阻塞调用；`poll()` 由调用方决定节奏，一次只能有一项远程认证操作，没有自动轮询、自动重试或完整登录总时限调度。单次 HTTP 仍受既有超时约束；收据提交是本地延迟事件，不再次联网。
+当前 `begin()`／`poll()`／`cancel()` 是**所属线程内**的非阻塞调用，一次只能有一项远程认证操作，没有自动重试。`QrLoginOptions` 在 begin 时固定：自动轮询默认关闭（默认间隔 3000 ms，按上一次完成时间排期，手动 `poll()` 不能绕过节奏）；每次认证有单调时钟绝对总时限（默认 180000 ms），覆盖取 key、轮询、身份核验与 Committing，`now >= deadline` 即以 `AuthError::Timeout` 回到 Guest，晚到成功不能抢先发布。这些是保守工程默认，不是网易官方频率，详见[任务契约](../tasks/B-010-qr-polling.md)。时间与定时器经窄接缝 `ILoginScheduler` 注入，生产使用 Qt Core 的 `QtLoginScheduler`。单次 HTTP 仍受既有超时约束；收据提交是本地延迟事件，不再次联网。
 
 Coordinator、service、gateway、client 必须在同一后端事件循环线程创建、使用和销毁。Coordinator 必须比 service 活得更久，正常装配也须让 gateway/client 覆盖 service 的生命周期；service 析构会取消仍在进行的认证。不要构造含值成员 CookieJar 的 client 后再 moveToThread，也不要从 GUI 跨线程直接调用同步 requestId API。
 
@@ -56,7 +56,8 @@ Coordinator、service、gateway、client 必须在同一后端事件循环线程
 
 ## 4. 离线证据
 
-- 应用专用 `qr_login_service` 套件只链接 application／Qt Core／Test，覆盖 ready 屏障、迟到完成、取消、失败回滚、准备及发布过程中的重入退出、二维码过期和析构。
+- 应用专用 `qr_login_service` 套件只链接 application／Qt Core／Test，覆盖 ready 屏障、迟到完成、取消、失败回滚、准备及发布过程中的重入退出、二维码过期和析构；并以虚拟时钟覆盖配置边界、轮询节奏与单飞、800／803／错误不重试、各阶段同一 deadline、边界恰好到达／晚到定时器、重入与旧定时器，另有少量真实 Qt 定时器冒烟。
+- `auth_transaction` 另验证总时限跨越 Committing：凭据已绑定但发布前超时也会清凭据回到 Guest。
 - `auth_transaction` 走真实 C++ 加密／路由／传输适配／解码／Cookie／gateway／应用链，但使用 fake QNetworkReply 与合成 Cookie；覆盖精确 target、身份 response Cookie 更新、退出／到期清理、非法身份及 HTTP 失败、跨主机作用域、不同作用域凭据冲突、验证中的取消和错误提交目标。
 - 并发回归明确断言 B 的 Cookie 响应先于 A 的身份响应完成，而最终交接的仍是 A 的请求快照；不依赖最终 jar 恰巧未变化的伪阳性。
 - 正常提交后的收据重放被拒绝。60秒期限由单调时钟检查，但本轮没有等待60秒的计时边界测试。

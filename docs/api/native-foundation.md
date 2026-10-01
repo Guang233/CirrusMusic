@@ -57,10 +57,10 @@ CTest 已登记十个无需账号、无需真实 API 的套件：
 | session_cookie_store | 域／路径／属性、原子更新、限额、旧账号响应及冲突凭据查询 | 21 passed |
 | session_api_client | profile、Cookie 链与失效、HTTP 已成功后的切号、取消／并发／封闭 registry | 24 passed |
 | qr_login_gateway | 官方与包装 envelope、QR 状态、错误、key 绑定、queued 值结果和销毁 | 28 passed |
-| qr_login_service | Core-only 应用事务、发布屏障、失败回滚、取消／晚到／重入／析构 | 11 passed |
-| auth_transaction | 身份 schema、快照隔离、精确交接、错误作用域／收据、登出／到期／重入 | 36 passed |
+| qr_login_service | Core-only 应用事务、发布屏障、失败回滚、取消／晚到／重入／析构；自动轮询节奏与总时限（虚拟时钟＋Qt 定时器冒烟） | 61 passed |
+| auth_transaction | 身份 schema、快照隔离、精确交接、错误作用域／收据、登出／到期／重入、总时限跨 Committing | 38 passed |
 
-合计 223 passed（包含数据行及初始化／清理）。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
+合计 275 passed（包含数据行及初始化／清理）。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
 
 ```bash
 cmake --preset linux-dev-local
@@ -74,6 +74,6 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 ## 未实现与下一步
 
-尚未实现匿名／设备 bootstrap、安全持久化、网络线程装配与 GUI facade、自动轮询／通用调度、XEAPI/X25519／密钥获取或真实 API 验证。registry／DTO 当前只覆盖两个 eapi QR operation 和一个 weapi 身份 operation，不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
+尚未实现匿名／设备 bootstrap、安全持久化、网络线程装配与 GUI facade、通用调度、XEAPI/X25519／密钥获取或真实 API 验证。registry／DTO 当前只覆盖两个 eapi QR operation 和一个 weapi 身份 operation，不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
 
-下一步补启动／持久化恢复、轮询调度和线程装配，独立补 XEAPI，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。下一步补设备／匿名启动、持久化恢复和线程装配，独立补 XEAPI，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

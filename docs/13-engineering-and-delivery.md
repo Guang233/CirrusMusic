@@ -143,6 +143,6 @@ DEB/RPM、AUR 等在核心发行流程稳定后增加；每种格式有维护责
 
 ## 9. 开发者入门完成标准
 
-**当前可执行标准**：按 [HANDOFF](HANDOFF.md) 获取完整提交 → 配置自己的 Qt 路径 → 完整构建后端和测试 → 通过 Debug/Release CTest → 找到认证 fixture → 理解 token／凭据边界 → 领取[轮询与总时限任务](tasks/B-010-qr-polling.md)。干净源码复验证据见[验证记录](handoff-verification.md)。不需要维护者私人账号或自建 API 服务。
+**当前可执行标准**：按 [HANDOFF](HANDOFF.md) 获取完整提交 → 配置自己的 Qt 路径 → 完整构建后端和测试 → 通过 Debug/Release CTest → 找到认证 fixture → 理解 token／凭据边界 → 参照[轮询与总时限任务](tasks/B-010-qr-polling.md)的契约格式领取下一任务。干净源码复验证据见[验证记录](handoff-verification.md)。不需要维护者私人账号或自建 API 服务。
 
 **未来产品阶段标准，尚未具备**：运行 fake 数据应用、播放本地样本、打开 Gallery、启用受控真实协议测试。当前没有这些入口，不把它们列作新人今天必须完成的步骤。

@@ -1,4 +1,5 @@
 #include "../support/fake_http.h"
+#include "../support/fake_login_scheduler.h"
 #include "application/account/qr_login_service.h"
 #include "infrastructure/netease/auth/account_identity_mapper.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
@@ -33,7 +34,8 @@ struct Fixture {
     std::unique_ptr<SessionApiClient> client;
     std::unique_ptr<QrLoginGateway> gateway;
     std::unique_ptr<QrLoginService> service;
-    explicit Fixture(QList<Plan> plans, bool withService = true)
+    explicit Fixture(QList<Plan> plans, bool withService = true,
+                     ILoginScheduler* scheduler = nullptr, QrLoginOptions options = {})
     {
         auto manager = std::make_unique<FakeManager>();
         fake = manager.get();
@@ -43,7 +45,7 @@ struct Fixture {
                                                QStringLiteral("synthetic-device"));
         gateway = std::make_unique<QrLoginGateway>(*client);
         if (withService)
-            service = std::make_unique<QrLoginService>(session, *gateway);
+            service = std::make_unique<QrLoginService>(session, *gateway, options, scheduler);
     }
 };
 
@@ -63,6 +65,8 @@ class AuthTransactionTest : public QObject
     void mixedCredentialScopesRejected();
     void wrongPromotionTarget_data();
     void wrongPromotionTarget();
+    void deadlineSpansCommitting_data();
+    void deadlineSpansCommitting();
 };
 
 void AuthTransactionTest::identitySchema_data()
@@ -376,6 +380,63 @@ void AuthTransactionTest::wrongPromotionTarget()
         qvariant_cast<PromotionResult>(promotions.first().at(2))));
     QVERIFY(h.client->accepts(attempt));
     QVERIFY(h.session.snapshot().phase != SessionPhase::Authenticated);
+}
+
+void AuthTransactionTest::deadlineSpansCommitting_data()
+{
+    QTest::addColumn<bool>("afterBinding");
+    // Deadline timer delivered while Committing (before the receipt is promoted).
+    QTest::newRow("timer-during-committing") << false;
+    // Credentials already bound to the target, acknowledgement arrives after the deadline.
+    QTest::newRow("late-binding-ack") << true;
+}
+void AuthTransactionTest::deadlineSpansCommitting()
+{
+    QFETCH(bool, afterBinding);
+    FakeLoginScheduler clock;
+    QrLoginOptions options;
+    options.autoPoll = true;
+    options.pollInterval = std::chrono::milliseconds(1000);
+    options.totalTimeout = std::chrono::milliseconds(10000);
+    Fixture h({keyPlan(), authorizedPlan(), identityPlan(), keyPlan()}, true, &clock, options);
+    QSignalSpy key(h.service.get(), &QrLoginService::challengeReady);
+    QSignalSpy ready(h.service.get(), &QrLoginService::signedIn);
+    QSignalSpy failed(h.service.get(), &QrLoginService::failed);
+    bool bound = false;
+    if (afterBinding) {
+        connect(h.client.get(), &SessionApiClient::contextAdvanced, this, [&](SessionToken t) {
+            if (h.session.snapshot().phase == SessionPhase::Committing && h.client->accepts(t)) {
+                bound = true;
+                clock.jump(std::chrono::milliseconds(20000)); // no timer delivery
+            }
+        });
+    } else {
+        connect(&h.session, &SessionCoordinator::changed, this, [&](SessionSnapshot snapshot) {
+            if (snapshot.phase == SessionPhase::Committing) {
+                QCOMPARE(clock.now(), std::chrono::milliseconds(1000));
+                clock.advance(std::chrono::milliseconds(8999));
+                QCOMPARE(failed.size(), 0); // epoch rotation did not restart the clock
+                clock.advance(std::chrono::milliseconds(1));
+            }
+        });
+    }
+    const auto attempt = h.service->begin();
+    QTRY_COMPARE(key.size(), 1);
+    clock.advance(std::chrono::milliseconds(1000)); // automatic check -> 803 -> verify
+    QTRY_COMPARE(failed.size(), 1);
+    QCOMPARE(bound, afterBinding);
+    QCOMPARE(qvariant_cast<AuthFailure>(failed.first().at(1)).error, AuthError::Timeout);
+    QCOMPARE(h.fake->requests.size(), 3);
+    QTest::qWait(20); // any queued promotion acknowledgement is drained and ignored
+    QCOMPARE(ready.size(), 0);
+    QCOMPARE(failed.size(), 1);
+    QCOMPARE(h.session.snapshot().phase, SessionPhase::Guest);
+    QVERIFY(!h.session.accepts(attempt));
+    QVERIFY(h.client->accepts(h.session.snapshot().token));
+    QVERIFY(h.client->submit(h.session.snapshot().token, ApiOperation::QrKey) > 0);
+    QTRY_COMPARE(h.fake->requests.size(), 4);
+    QVERIFY(!h.fake->requests.last().rawHeader("Cookie").contains("MUSIC_U="));
+    QCOMPARE(clock.pending(), 0);
 }
 
 QTEST_GUILESS_MAIN(AuthTransactionTest)
