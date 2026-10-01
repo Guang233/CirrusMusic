@@ -29,10 +29,14 @@ add_library(cirrus_netease_protocol STATIC
     infrastructure/netease/protocol/form_encoding.h
     infrastructure/netease/protocol/official_route.cpp
     infrastructure/netease/protocol/official_route.h
+    infrastructure/netease/protocol/openssl_primitives.cpp
+    infrastructure/netease/protocol/openssl_primitives.h
     infrastructure/netease/protocol/protocol_crypto.cpp
     infrastructure/netease/protocol/protocol_crypto.h
     infrastructure/netease/protocol/response_decoder.cpp
     infrastructure/netease/protocol/response_decoder.h
+    infrastructure/netease/protocol/xeapi_crypto.cpp
+    infrastructure/netease/protocol/xeapi_crypto.h
 )
 
 target_compile_features(cirrus_netease_protocol PUBLIC cxx_std_20)

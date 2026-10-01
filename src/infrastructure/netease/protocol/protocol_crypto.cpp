@@ -3,22 +3,24 @@
 #include "protocol_crypto.h"
 
 #include "official_route.h"
+#include "openssl_primitives.h"
 
 #include <QJsonDocument>
 
 #include <openssl/crypto.h>
-#include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
 
 #include <algorithm>
-#include <memory>
 
 namespace cirrus::netease
 {
 namespace
 {
+
+using detail::aes;
+using detail::Owned;
 
 constexpr char PresetKey[] = "0CoJUm6Qyw8W8jud";
 constexpr char EapiKey[] = "e82ckenh8dichen8";
@@ -30,33 +32,6 @@ constexpr char PublicKey[] =
     "aKzmFbt7clFSs6sXqHauqKWqdtLkF2KexO40H1YTX8z2lSgBBOAxLsvaklV8k4cBFK9snQXE9/"
     "DDaFt6Rr7iVZMldczhC0JNgTz+SHXT6CBHuX3e9SdB1Ua44oncaTWz7OBGLbCiK45wIDAQAB\n"
     "-----END PUBLIC KEY-----\n";
-
-template <typename T, void (*Free)(T*)> using Owned = std::unique_ptr<T, decltype(Free)>;
-
-std::optional<QByteArray> aes(const QByteArray& input, const QByteArray& key,
-                              const EVP_CIPHER* cipher, bool encrypt, const char* iv = nullptr)
-{
-    Owned<EVP_CIPHER_CTX, EVP_CIPHER_CTX_free> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-    if (!context ||
-        EVP_CipherInit_ex(context.get(), cipher, nullptr,
-                          reinterpret_cast<const unsigned char*>(key.constData()),
-                          reinterpret_cast<const unsigned char*>(iv), encrypt ? 1 : 0) != 1) {
-        return std::nullopt;
-    }
-    QByteArray output(input.size() + EVP_MAX_BLOCK_LENGTH, Qt::Uninitialized);
-    auto* bytes = reinterpret_cast<unsigned char*>(output.data());
-    int written = 0;
-    int tail = 0;
-    if (EVP_CipherUpdate(context.get(), bytes, &written,
-                         reinterpret_cast<const unsigned char*>(input.constData()),
-                         static_cast<int>(input.size())) != 1 ||
-        EVP_CipherFinal_ex(context.get(), bytes + written, &tail) != 1) {
-        OPENSSL_cleanse(output.data(), static_cast<size_t>(output.size()));
-        return std::nullopt;
-    }
-    output.resize(written + tail);
-    return output;
-}
 
 std::optional<QByteArray> rsaKey(QByteArray secret)
 {
