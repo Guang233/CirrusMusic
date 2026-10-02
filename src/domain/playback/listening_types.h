@@ -7,6 +7,7 @@ struct QueueEntry {
     QUuid id;
     SongId song;
 };
+enum class ListeningMode { Queue, PersonalFm };
 enum class QueueOrder { Sequential, Shuffle };
 enum class QueueRepeat { Off, All, One };
 struct QueueSnapshot {

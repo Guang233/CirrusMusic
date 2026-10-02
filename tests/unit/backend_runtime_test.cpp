@@ -31,6 +31,7 @@ class Gate : public QObject
     Q_OBJECT
   signals:
     void release();
+    void endPlayback();
 };
 
 struct SharedState {
@@ -234,6 +235,7 @@ class BackendRuntimeTest : public QObject
     void startLoginCloseRestore();
     void musicQueriesThroughThread();
     void discoveryThroughThread();
+    void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
     void closeDuringAnonymousWrite();
@@ -249,17 +251,31 @@ class BackendRuntimeTest : public QObject
     void trackedStoreKeepsDeadRecipientsAccounted();
 };
 
+void BackendRuntimeTest::playbackThroughThread_data()
+{
+    QTest::addColumn<bool>("fm");
+    QTest::newRow("queue") << false;
+    QTest::newRow("fm") << true;
+}
 void BackendRuntimeTest::playbackThroughThread()
 {
+    QFETCH(bool, fm);
     class Player final : public IPlaybackBackend
     {
       public:
         std::shared_ptr<SharedState> state;
         domain::LoadToken token;
-        explicit Player(std::shared_ptr<SharedState> s) : state(std::move(s))
+        explicit Player(std::shared_ptr<SharedState> s, Gate& gate) : state(std::move(s))
         {
             check();
             ++state->created;
+            connect(
+                &gate, &Gate::endPlayback, this,
+                [this] {
+                    check();
+                    emit event({token, PlaybackEvent::Kind::Ended});
+                },
+                Qt::QueuedConnection);
         }
         ~Player() override
         {
@@ -309,10 +325,16 @@ void BackendRuntimeTest::playbackThroughThread()
         "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
     QVERIFY(response2);
     const Plan lyric{R"({"code":200,"lrc":{"lyric":"[00:00]a\n[00:01]b"}})"};
-    auto f = factories(
-        state, gate,
-        {{*response, 200, 10}, lyric, {*response2, 200, 10}, lyric, {"", 200, -1}, {"", 200, -1}});
-    f.playback = [state] { return std::make_unique<Player>(state); };
+    QList<Plan> plans;
+    if (fm) {
+        plans = loginPlans();
+        plans.append(Plan{R"({"code":200,"data":[{"id":1},{"id":2},{"id":3}]})"});
+        plans.append(Plan{"", 200, -1}); // low-water refill remains pending through close
+    }
+    plans.append(QList<Plan>{
+        {*response, 200, 10}, lyric, {*response2, 200, 10}, lyric, {"", 200, -1}, {"", 200, -1}});
+    auto f = factories(state, gate, plans);
+    f.playback = [state, &gate] { return std::make_unique<Player>(state, gate); };
     BackendRuntime runtime(config, std::move(f));
     auto& facade = runtime.facade();
     QSignalSpy started(&facade, &BackendFacade::started), stopped(&facade, &BackendFacade::stopped);
@@ -321,27 +343,52 @@ void BackendRuntimeTest::playbackThroughThread()
     QTRY_VERIFY(facade.snapshot().token.isValid());
     auto& listening = runtime.listening();
     QVERIFY(listening.setVolume(0));
-    QVERIFY(listening.replaceQueue({{"1"}, {"2"}, {"3"}}));
-    QVERIFY(listening.pause());
+    if (fm) {
+        QSignalSpy challenge(&facade, &BackendFacade::challengeReady),
+            login(&facade, &BackendFacade::signedIn);
+        QVERIFY(facade.beginLogin());
+        QTRY_COMPARE(challenge.size(), 1);
+        QVERIFY(facade.poll());
+        QTRY_COMPARE(login.size(), 1);
+        QVERIFY(listening.startFm(domain::AudioQuality::Standard, domain::TransportIntent::Pause));
+    } else {
+        QVERIFY(listening.replaceQueue({{"1"}, {"2"}, {"3"}}));
+        QVERIFY(listening.pause());
+    }
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Paused);
     QCOMPARE(facade.playback().actualQuality, "standard");
     QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
     QVERIFY(listening.seek(1250));
     QTRY_COMPARE(facade.playback().positionMs, 1250);
     QTRY_COMPARE(listening.cursors().original.standard.lines, (QList<qsizetype>{1}));
-    QVERIFY(listening.next()); // atomic initial Pause, not a second command after Play
+    if (fm) {
+        // A terminal notification observer pauses the NEXT load, without resurrecting this one.
+        const auto pauseAtEnd = connect(&listening, &ListeningSession::playbackChanged, this,
+                                        [&](domain::PlaybackSnapshot s) {
+                                            if (s.state == domain::PlaybackState::Ended)
+                                                QVERIFY(listening.pause());
+                                        });
+        QVERIFY(listening.resume());
+        QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
+        emit gate.endPlayback();
+        QTRY_COMPARE(facade.playback().song.value, "2");
+        disconnect(pauseAtEnd);
+    } else
+        QVERIFY(listening.next()); // atomic initial Pause, not Play then Pause
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Paused);
     QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
     QCOMPARE(listening.lyrics()->song.value, "2");
     QVERIFY(listening.resume());
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
     QVERIFY(listening.next());
-    QTRY_COMPARE(state->requests.load(), 6);
+    QTRY_COMPARE(state->requests.load(), fm ? 11 : 6);
     facade.close();
     QTRY_COMPARE(stopped.size(), 1);
     QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
     QVERIFY(listening.queue().entries.isEmpty());
     QVERIFY(!listening.lyrics());
+    QCOMPARE(listening.mode(), domain::ListeningMode::Queue);
+    QVERIFY(!runtime.fm().snapshot().active);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

@@ -24,6 +24,10 @@ class PersonalFmSource final : public QObject
     bool retry();
     [[nodiscard]] std::optional<domain::Song> takeNext();
     [[nodiscard]] PersonalFmSnapshot snapshot() const;
+    [[nodiscard]] bool isBoundTo(const BackendFacade& backend) const
+    {
+        return &m_backend == &backend;
+    }
   signals:
     void changed(cirrus::application::PersonalFmSnapshot snapshot);
 

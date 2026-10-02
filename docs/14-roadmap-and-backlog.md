@@ -59,7 +59,7 @@ flowchart LR
 | B-013 | 歌词获取／解析／同步（M2） | [逐行／逐字、原文／翻译／罗马音独立解析](api/music-queries-and-lyrics.md)已实现；[媒体时钟／seek／试听偏移定位](api/queue-and-lyric-clock.md)已实现，声学延迟与UI动画未验证 |
 | B-014 | AppShell、路由、列表、迷你栏与沉浸页（M5） | 复用稳定后端；性能、键盘、无障碍 |
 | B-015 | 喜欢、收藏、歌单编辑和写对账（M3） | 部分成功、未知结果；v2 token 受限点单独决策 |
-| B-016 | 推荐、独立每日歌曲、榜单、FM、历史（M2/M3） | [日推读取与FM有界供给](api/discovery-and-fm.md)已接入；FM连续播放接线、服务端跨日语义／缓存仍未交付；实际收听累计／历史与scrobble均未接入，禁止用进度条位置代替已听时长；真实上报另授权 |
+| B-016 | 推荐、独立每日歌曲、榜单、FM、历史（M2/M3） | [日推读取与FM有界供给](api/discovery-and-fm.md)已接入；[FM连续播放／模式切换／失败预算](api/fm-continuous-playback.md)已离线接通，服务端跨日语义／缓存仍未交付；实际收听累计／历史与scrobble均未接入，禁止用进度条位置代替已听时长；真实上报另授权 |
 | B-017 | MPRIS 等非视觉服务（M4）；托盘／通知入口（M5） | GNOME/KDE Wayland 实测，不耦合页面 |
 | B-018 | 下载、Range/hash、离线、空间管理（M4） | 权限、到期 URL、崩溃恢复 |
 | B-019 | 文件访问、扫描、标签与去重（M4），文件选择交互（M5） | 坏文件、符号链接、授权撤销 |
@@ -75,14 +75,14 @@ flowchart LR
 
 ## 4. 下一轮实际动手顺序
 
-新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)及 [XEAPI](tasks/B-002-xeapi.md) 已完成，[存储基础与设备 ID](tasks/B-008-storage-foundation.md)、[密钥环](tasks/B-010-secret-store.md)也已完成，[匿名 bootstrap](api/anonymous-bootstrap.md)现有定向离线回归，[账号记忆／恢复／退出](api/account-session-restore.md)也已完成后端闭环；[后台线程、非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成；[搜索／歌曲详情／六轨歌词](api/music-queries-and-lyrics.md)也已接入；[官方URL／Qt单曲播放与静音PoC](api/stream-resolution-and-playback.md)已完成首个闭环；[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)已接入；[只读目录](api/catalog-queries.md)也已接入；[每日推荐读取／FM条目供给](api/discovery-and-fm.md)已接入；下一项补FM连续播放接线及个人库读取。以下是整体后端路线，不要求在一次提交中完成。
+新接手者先完成 [HANDOFF](HANDOFF.md) 的环境／测试步骤，[扫码轮询与总时限](tasks/B-010-qr-polling.md)及 [XEAPI](tasks/B-002-xeapi.md) 已完成，[存储基础与设备 ID](tasks/B-008-storage-foundation.md)、[密钥环](tasks/B-010-secret-store.md)也已完成，[匿名 bootstrap](api/anonymous-bootstrap.md)现有定向离线回归，[账号记忆／恢复／退出](api/account-session-restore.md)也已完成后端闭环；[后台线程、非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成；[搜索／歌曲详情／六轨歌词](api/music-queries-and-lyrics.md)也已接入；[官方URL／Qt单曲播放与静音PoC](api/stream-resolution-and-playback.md)已完成首个闭环；[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)已接入；[只读目录](api/catalog-queries.md)也已接入；[每日推荐读取／FM条目供给](api/discovery-and-fm.md)已接入；[FM连续播放](api/fm-continuous-playback.md)已接通；下一项个人库读取。以下是整体后端路线，不要求在一次提交中完成。
 
 1. 保留本轮审计成果，先处理[发现与门禁](api/gaps-and-hazards.md)，不宣称 164 个模块已经可用。
 2. C++ 协议、异步传输、JSON／gzip、会话与 Cookie、捕获 token/origin 的请求链已建立；QR 取 key／本地 URL／状态映射有离线测试，见[扫码链路](api/qr-auth-request-chain.md)。
 3. [认证用例、账号身份确认和精确 token 凭据交接](api/authentication-transaction.md)已有离线验证；同线程 Committing→Authenticated 发布屏障已建立，803 不直接提升为 Authenticated。[后台线程与Core-only非阻塞Facade](api/backend-runtime.md)已装配，未接模板UI。
 4. XEAPI 编码与密钥流程已有离线向量；设备 ID 已入 `state.sqlite`，XEAPI 公钥已入密钥环；匿名 token 启动／恢复／重置已实现，[账号凭据恢复／退出清理](api/account-session-restore.md)已有离线回归，后台启动／关闭也已装配，业务调度随对应查询需求实现，不先造通用框架。真实验证需要授权环境，不把凭据放进对话或仓库。
 5. 搜索、歌曲详情、三语言歌词、官方音源与单曲Qt播放已接入；队列／歌词时钟与有限自动跳过已接入；URL刷新／流式起播等恢复另立小包，元数据成功不代表播放权限，试听不代表整曲授权。
-6. 专辑／艺人／歌单只读详情及分页、每日推荐读取／FM动态供给已接入；继续FM播放接线、首页数据和个人库，用CLI／测试harness贯通；实际已听累计与官方上报单列为播放历史包。
+6. 专辑／艺人／歌单只读详情及分页、每日推荐读取／FM动态供给已接入；FM播放接线已完成；继续首页数据和个人库，用CLI／测试harness贯通；实际已听累计与官方上报单列为播放历史包。
 7. 再做写操作、一起听补证和文件相关后端；遇到需要新运行依赖或协议缺失时停下询问。
 8. 后端完成或受限项明确获批后，再启动全部 UI 工作。
 

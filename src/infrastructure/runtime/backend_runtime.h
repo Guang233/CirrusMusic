@@ -53,8 +53,8 @@ class BackendRuntime final : public QObject
     [[nodiscard]] application::PersonalFmSource& fm() const { return *m_fm; }
 
   private:
-    application::PersonalFmSource* m_fm = nullptr;
     application::BackendFacade* m_facade = nullptr;
+    application::PersonalFmSource* m_fm = nullptr;
     application::ListeningSession* m_listening = nullptr;
 };
 

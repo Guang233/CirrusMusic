@@ -1,6 +1,6 @@
 # 每日推荐读取与私人FM条目供给
 
-本包仅交付账号态读取和动态条目供给，**不是已接好的FM连续播放器**。UI、FM／普通队列模式切换、播放失败后的FM续播策略、日推持久缓存、个人库及真实已听累计／scrobble仍待后续。
+本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。UI、日推持久缓存、个人库及真实已听累计／scrobble仍待后续。
 
 ## 1. 封闭请求与权限边界
 
@@ -33,7 +33,7 @@ Gateway成功收到日推时附加本机UTC `receivedAtUtc`；它**不是服务�
 
 `PersonalFmBatch`只含本次`data`歌曲数组，最多20首。空数组有效；不假定固定三首，不虚构total／offset／hasMore。原批次保留重复；去重属于动态供给层，而不是把服务端列表改造成普通歌单。
 
-`src/application/music/personal_fm_source.*`是调用线程Core-only QObject，Runtime通过`fm()`持有它。Facade必须活得更久；Runtime析构时先销毁FM供给层及ListeningSession，再关闭Facade。
+`src/application/music/personal_fm_source.*`是调用线程Core-only QObject，Runtime通过`fm()`持有它。Facade必须活得更久；接入连续播放后，Runtime析构先销毁ListeningSession，再销毁其引用的FM供给，最后关闭Facade。
 
 | 方法／状态 | 语义 |
 | --- | --- |
@@ -50,7 +50,7 @@ Gateway成功收到日推时附加本机UTC `receivedAtUtc`；它**不是服务�
 - changed携带的是发出时的值，只作变更通知；同线程重入／排队转发后以当前snapshot()为准，不能将旧通知当成当前账号缓存提交。访问器也只能在所属线程调用。
 - 使用此供给层时不要同时直接调用Facade的personalFmBatch，也不要另造一个供给实例争用同一消费序列。直接Facade入口是底层批次查询，不替多个调用者协调FM游标。
 
-它**不接管播放命令**：没有自动将条目塞进PlaybackQueue、没有设置RepeatAll、没有发送“不喜欢”。后续FM播放控制器须明确处理媒体结束、暂停意图、错误预算、取下一首与普通队列切换时stop供给；本包不宣称这些接线已经完成。正常队列、单曲播放和歌词时钟的行为未改。
+它**不接管播放命令**：没有自动将条目塞进PlaybackQueue、没有设置RepeatAll、没有发送“不喜欢”。后续[ListeningSession的FM模式](fm-continuous-playback.md)已接通媒体结束、暂停意图、错误预算和队列切换时stop供给；播放时不得再直接操作本Source。这里保留的是底层读取包证据，不将其冒充连续播放验证。
 
 ## 4. 听歌上报仍未实现
 
@@ -71,7 +71,7 @@ Qt6.11.2 Debug，`QT_FATAL_WARNINGS=1`，没有全量／Release或新的实网�
 | 合计 | **108** |
 | backend_runtime仅discoveryThroughThread、musicQueriesThroughThread、destructionStillDrains | **5** |
 
-首次组合运行发现新用例重复追加了默认已有的Retry-After:3，合成为不可解析的`3, 3`；修正fixture后只重建／复跑discovery（17 pass），未放松产品解析器。随后补强匿名token不得代替账号凭据、两项读取的Cookie隔离、理由数组上限及同步stop→重启用例，仅复跑discovery／personal_fm（17／11 pass）。上表取各套件最新成功结果，不累加重跑次数，不是全量结果；当前登记25个CTest套件。
+首次组合运行发现新用例重复追加了默认已有的Retry-After:3，合成为不可解析的`3, 3`；修正fixture后只重建／复跑discovery（17 pass），未放松产品解析器。随后补强匿名token不得代替账号凭据、两项读取的Cookie隔离、理由数组上限及同步stop→重启用例，仅复跑discovery／personal_fm（17／11 pass）。上表取各套件最新成功结果，不累加重跑次数，不是全量结果；该读取包完成时登记25个CTest套件，最新数量见[HANDOFF](../HANDOFF.md)。
 
 覆盖封闭载荷／无强制刷新、认证前无网络、宽ID／新旧歌曲结构、理由按ID独立、缺失／空／错误类型与大小边界、Cookie不回写、取消／换号／429，以及FM的低水位、单请求、有界队列、重复／空批次、保留余项、显式重试、立即隐私屏障、重入与析构取消。新Runtime用例采用全合成登录事务及HTTP，验证日推与FM跨线程传值、挂起补充时关闭排空；绝不使用真实凭据。
 

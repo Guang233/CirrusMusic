@@ -1,13 +1,13 @@
 # 队列与六轨歌词时钟：最小听歌闭环
 
-> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；[日推读取／FM动态供给](discovery-and-fm.md)也已接入，但尚未连接FM连续播放，不继续扩大音频框架。
+> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；[日推读取／FM动态供给](discovery-and-fm.md)也已接入，[FM连续播放](fm-continuous-playback.md)现已通过ListeningSession的独立模式接通，不继续扩大音频框架。
 
 ## 1. 装配与入口
 
 - `PlaybackQueue`：Core-only可复制值模型，管理UUID条目、播放排列、有限历史。相同SongId可以有不同entryId。
 - `LyricTimeline`：Core-only六轨区间索引，只做给定位置的定位，没有定时器／播放器／JSON。
 - `ListeningSession`：调用方线程的Core QObject，通过异步 `BackendFacade` 发起播放与歌词查询。`BackendRuntime::listening()`返回其引用，Runtime拥有它并在Facade之前销毁它。账号／其他查询仍通过Facade。
-- 使用队列时以ListeningSession作为**唯一播放命令生产者**；不要同时直接调用Facade.playSong／stopPlayback。外部播放意图会使本队列失去当前load所有权并清空。独立使用时Facade必须更长寿；释放服务前由所有者停止播放或关闭Runtime，析构仅取消自己的歌词请求。
+- 使用队列时以ListeningSession作为**唯一播放命令生产者**；不要同时直接调用Facade.playSong／stopPlayback。外部播放意图会使本队列失去当前load所有权并清空。独立使用时Facade必须更长寿；释放服务前由所有者停止播放或关闭Runtime，普通队列析构仅取消自己的歌词请求；后续FM模式还会停止其拥有的供给源，注入的Source也须更长寿。
 - 公开方法在该对象所属线程调用，返回true表示本地操作／异步命令已接纳，不代表来源可用或已出声。网络、解析协议、QMediaPlayer仍在后台；服务不拥有或跨线程触碰这些对象。
 
 ```cpp
@@ -80,4 +80,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步与未实现项
 
-后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，接下来做FM连续播放接线与个人库。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。
+后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，[FM连续播放接线](fm-continuous-playback.md)也已完成，接下来个人库读取。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。

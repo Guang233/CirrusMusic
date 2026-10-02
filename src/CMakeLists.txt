@@ -32,6 +32,7 @@ add_library(cirrus_application STATIC
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
     application/playback/lyric_timeline.h
+    application/playback/listening_fm.cpp
     application/playback/listening_session.cpp
     application/playback/listening_session.h
     application/playback/playback_coordinator.cpp

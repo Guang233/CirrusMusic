@@ -391,9 +391,9 @@ class BackendWorker final : public QObject
 
 BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories, QObject* parent)
     : QObject(parent), m_facade(new BackendFacade(this)),
-      m_listening(new ListeningSession(*m_facade, this))
+      m_fm(new PersonalFmSource(*m_facade, this)),
+      m_listening(new ListeningSession(*m_facade, *m_fm, this))
 {
-    m_fm = new PersonalFmSource(*m_facade, this);
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
@@ -435,10 +435,10 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 
 BackendRuntime::~BackendRuntime()
 {
-    delete m_fm; // all caller-thread consumers retire before their facade
-    m_fm = nullptr;
-    delete m_listening; // facade must outlive its caller-thread orchestration
+    delete m_listening; // injected source and facade must outlive the listening session
     m_listening = nullptr;
+    delete m_fm;
+    m_fm = nullptr;
     m_facade->close();
 }
 

@@ -129,3 +129,8 @@ qt_add_executable(tst_personal_fm unit/personal_fm_test.cpp)
 target_link_libraries(tst_personal_fm PRIVATE cirrus_application Qt6::Test)
 add_test(NAME personal_fm COMMAND tst_personal_fm)
 set_tests_properties(personal_fm PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_fm_listening unit/fm_listening_test.cpp)
+target_link_libraries(tst_fm_listening PRIVATE cirrus_application Qt6::Test)
+add_test(NAME fm_listening COMMAND tst_fm_listening)
+set_tests_properties(fm_listening PROPERTIES TIMEOUT 20)
