@@ -88,6 +88,11 @@ void ListeningSession::reset()
 {
     const auto revision = ++m_revision;
     const bool wasFm = m_mode == ListeningMode::PersonalFm;
+    if (m_backend.state() != BackendState::Ready ||
+        m_history.context() != m_backend.snapshot().token)
+        m_history.reset();
+    else
+        m_history.finish(ListeningEnd::Detached);
     clearFmState();
     m_queue.clear();
     m_playback = {};
@@ -101,6 +106,9 @@ void ListeningSession::reset()
         return;
     if (wasFm && m_fm)
         m_fm->stop();
+    if (revision != m_revision)
+        return;
+    emit historyChanged();
     if (revision != m_revision)
         return;
     emit fmChanged();
@@ -149,6 +157,9 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     m_playback = m_backend.playback();
     m_token = m_playback.token;
     m_queueContext = m_token.session;
+    m_history.begin(m_token, m_backend.snapshot().accountId, entry->song,
+                    fm ? ListeningMode::PersonalFm : ListeningMode::Queue,
+                    fm ? QUuid{} : entry->id);
     m_quality = quality;
     m_intent = intent;
     m_auto = automatic;
@@ -172,6 +183,9 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     }
     m_lyricRequest = lyricRequest;
     m_lyricsState = m_lyricRequest ? LyricsState::Loading : LyricsState::Failed;
+    emit historyChanged();
+    if (revision != m_revision)
+        return true;
     emit fmChanged();
     if (revision != m_revision)
         return true;
@@ -295,6 +309,7 @@ bool ListeningSession::stop()
     m_starting = false;
     if (!acceptLoadCommand(id, revision))
         return false;
+    m_history.finish(ListeningEnd::Stopped);
     if (m_mode == ListeningMode::PersonalFm) {
         reset();
         return true;
@@ -307,6 +322,9 @@ bool ListeningSession::stop()
     m_intent = TransportIntent::Stop;
     m_auto = false;
     m_autoVisited.clear();
+    emit historyChanged();
+    if (revision != m_revision)
+        return true;
     emit playbackChanged(m_playback);
     if (revision != m_revision)
         return true;
@@ -383,6 +401,18 @@ bool ListeningSession::setLyricOffset(qint64 offset)
     refreshCursors();
     return true;
 }
+void ListeningSession::clearHistory()
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const bool changed = !m_history.records().isEmpty();
+    if (m_history.context() != m_backend.snapshot().token ||
+        m_backend.state() != BackendState::Ready)
+        m_history.reset();
+    else
+        m_history.clear();
+    if (changed)
+        emit historyChanged();
+}
 void ListeningSession::refreshCursors()
 {
     LyricCursors cursor;
@@ -415,6 +445,11 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
     const auto revision = m_revision;
     m_playback = snapshot;
     m_playback.intent = m_intent;
+    if (m_history.observe(snapshot)) {
+        emit historyChanged();
+        if (revision != m_revision)
+            return;
+    }
     emit playbackChanged(m_playback);
     if (revision != m_revision)
         return;

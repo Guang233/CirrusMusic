@@ -80,4 +80,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步与未实现项
 
-后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，[FM连续播放接线](fm-continuous-playback.md)也已完成，[个人库四项读取](personal-library.md)也已接入；下一步先做本地实际收听累计／历史契约。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。
+后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，[FM连续播放接线](fm-continuous-playback.md)也已完成，[个人库四项读取](personal-library.md)也已接入；[本地观测累计／会话历史](local-listening-history.md)也已另包接入。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、持久听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。

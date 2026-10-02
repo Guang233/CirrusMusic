@@ -81,4 +81,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 忽略的本机日志：`build/workspace-checks/catalog-build.log`、`catalog-focused.log`、`catalog-thread.log`。调试中发现moc对内联测试原始字符串里的file URL误判注释；fixture使用JSON转义斜杠，运行时仍测试同一个file URL，没有减弱非法图片URL检查。
 
-后续[每日推荐读取／FM条目供给](discovery-and-fm.md)已接入，[FM连续播放](fm-continuous-playback.md)也已接入，[个人库四项读取](personal-library.md)也已接入；下一步先做本地收听累计／历史契约，scrobble单列。目录列表发现、收藏／编辑、缓存、UI、自动整歌单入队并未因本包而全部完成。
+后续[每日推荐读取／FM条目供给](discovery-and-fm.md)已接入，[FM连续播放](fm-continuous-playback.md)也已接入，[个人库四项读取](personal-library.md)也已接入；[本地观测累计／会话历史](local-listening-history.md)也已另包接入，持久历史与scrobble仍单列。目录列表发现、收藏／编辑、缓存、UI、自动整歌单入队并未因本包而全部完成。

@@ -44,6 +44,7 @@ bool ListeningSession::startFm(AudioQuality quality, TransportIntent intent)
     m_starting = false;
     if (!acceptLoadCommand(id, revision))
         return false;
+    m_history.finish(ListeningEnd::Replaced);
     clearFmState();
     m_mode = ListeningMode::PersonalFm;
     m_fmWaiting = true;
@@ -65,6 +66,9 @@ bool ListeningSession::startFm(AudioQuality quality, TransportIntent intent)
         return true;
     if (!m_fm->start())
         blockFm();
+    if (revision != m_revision)
+        return true;
+    emit historyChanged();
     if (revision != m_revision)
         return true;
     emit queueChanged(queue());
@@ -95,6 +99,7 @@ bool ListeningSession::enterFmWait(bool automatic, bool stopMedia)
         m_starting = false;
         if (!acceptLoadCommand(id, revision))
             return false;
+        m_history.finish(ListeningEnd::Replaced);
         m_token = m_backend.playback().token;
         m_playback = m_backend.playback();
         m_playback.intent = m_intent;
@@ -107,6 +112,9 @@ bool ListeningSession::enterFmWait(bool automatic, bool stopMedia)
         m_fmAttempts = 0;
     m_terminalHandled = true;
     cancelLyrics();
+    if (revision != m_revision)
+        return true;
+    emit historyChanged();
     if (revision != m_revision)
         return true;
     emit playbackChanged(m_playback);

@@ -68,10 +68,10 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
   libraryThroughThread musicQueriesThroughThread playbackThroughThread destructionStillDrains
 ```
 
-登记**27个CTest套件**，不是27套全量验收。忽略日志：`build/workspace-checks/library-*.log`，最新为focused、final-library、final-thread及对应构建日志。入口main.cpp／Main.qml仍为模板。
+本包完成时登记**27个CTest套件**，不是27套全量验收；最新数量见[接手指南](../HANDOFF.md)。忽略日志：`build/workspace-checks/library-*.log`，最新为focused、final-library、final-thread及对应构建日志。入口main.cpp／Main.qml仍为模板。
 
 ## 5. 未实现项与下一步
 
 这四项读取不是完整个人中心：其他独立创建／收藏歌单接口、关注／喜欢／收藏写入、库缓存／同步、云盘／下载／评论／榜单仍未因本包完成。
 
-[FM连续播放](fm-continuous-playback.md)与本包都**没有实际已听区间累计、持久播放历史或scrobble**。下一包可先做本地收听累计／历史契约，排除暂停、缓冲、seek跳跃及旧账号；不能以曲目时长或进度条代替实听，更不能从喜欢列表推断播放记录。官方上报及真实账号写入仍需单独授权，UI继续最后。
+个人库读取本身不提供计量、持久播放历史或scrobble。后续[本地观测累计／有界会话历史](local-listening-history.md)已另包接入，持久历史及scrobble仍未实现；不能以曲目时长或进度条代替实听，更不能从喜欢列表推断播放记录。官方上报及真实账号写入仍需单独授权，UI继续最后。

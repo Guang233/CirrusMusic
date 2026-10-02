@@ -1,0 +1,19 @@
+#pragma once
+#include "listening_types.h"
+
+namespace cirrus::domain
+{
+enum class ListeningEnd { Active, Ended, Failed, Stopped, Replaced, Detached };
+struct ListeningRecord {
+    LoadToken token;   // distinct loads, including replaying the same song/queue entry
+    QString accountId; // empty for guest; never reassigned on login
+    SongId song;
+    ListeningMode source = ListeningMode::Queue;
+    QUuid queueEntry; // no playlist/album origin is fabricated
+    std::optional<PreviewRange> preview;
+    QString actualQuality;
+    qint64 playedMs = 0; // observed elapsed progress, NOT final position or unique coverage
+    bool capped = false;
+    ListeningEnd end = ListeningEnd::Active;
+};
+} // namespace cirrus::domain

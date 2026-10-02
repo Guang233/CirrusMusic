@@ -1,7 +1,9 @@
 #pragma once
+#include "application/playback/observed_playback.h"
 #include "application/ports/playback.h"
 #include "media_buffer.h"
 #include <QAudioOutput>
+#include <QElapsedTimer>
 #include <QMediaPlayer>
 #include <memory>
 
@@ -26,8 +28,14 @@ class QtPlaybackBackend final : public application::IPlaybackBackend
     void fail(domain::LoadToken token, domain::PlaybackError error);
     void ended(domain::LoadToken token);
     void send(application::PlaybackEvent event);
+    void sampleProgress();
     MediaBuffer m_buffer;
     QTimer m_decodeDeadline;
+    QTimer m_sampleTimer;
+    QElapsedTimer m_sampleClock;
+    application::ObservedPlaybackMeter m_meter;
+    std::optional<domain::ObservedPlayback> m_publishedProgress;
+    std::optional<qint64> m_seekTarget; // fail closed until exact position acknowledgement
     std::unique_ptr<QAudioOutput> m_audio;
     std::unique_ptr<QMediaPlayer> m_player;
     domain::LoadToken m_token;

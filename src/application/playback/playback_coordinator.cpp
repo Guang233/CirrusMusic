@@ -197,6 +197,16 @@ void PlaybackCoordinator::receive(PlaybackEvent event)
         else
             return;
         break;
+    case Kind::Observation:
+        if (!m_ready || !event.observed || event.observed->playedMs < 0 ||
+            event.observed->playedMs > ObservedPlayback::MaximumMs ||
+            (event.observed->capped && event.observed->playedMs != ObservedPlayback::MaximumMs) ||
+            (m_snapshot.observed && (event.observed->playedMs < m_snapshot.observed->playedMs ||
+                                     (m_snapshot.observed->capped && !event.observed->capped))) ||
+            m_snapshot.observed == event.observed)
+            return;
+        m_snapshot.observed = event.observed;
+        break;
     case Kind::Position:
         m_snapshot.positionMs = qMax<qint64>(0, event.value);
         if (m_snapshot.durationMs)

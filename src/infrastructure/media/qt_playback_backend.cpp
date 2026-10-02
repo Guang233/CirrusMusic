@@ -15,6 +15,9 @@ QtPlaybackBackend::QtPlaybackBackend(std::unique_ptr<QNetworkAccessManager> mana
                                      QObject* parent)
     : IPlaybackBackend(parent), m_buffer(std::move(manager))
 {
+    m_sampleTimer.setInterval(250);
+    m_sampleTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_sampleTimer, &QTimer::timeout, this, &QtPlaybackBackend::sampleProgress);
     m_decodeDeadline.setSingleShot(true);
     connect(&m_decodeDeadline, &QTimer::timeout, this, [this] {
         if (m_active && !m_ready)
@@ -31,6 +34,10 @@ void QtPlaybackBackend::stop()
     m_active = false;
     m_ready = false;
     m_decodeDeadline.stop();
+    m_sampleTimer.stop();
+    m_meter.reset();
+    m_publishedProgress.reset();
+    m_seekTarget.reset();
     if (m_player) {
         disconnect(m_player.get(), nullptr, this, nullptr);
         m_player->stop();
@@ -48,6 +55,7 @@ void QtPlaybackBackend::load(StreamSource source, LoadToken token)
     m_ended = false;
     m_format = source.format;
     m_preview = source.preview;
+    m_sampleClock.start();
     m_buffer.start(std::move(source), token);
 }
 void QtPlaybackBackend::send(PlaybackEvent value)
@@ -55,10 +63,33 @@ void QtPlaybackBackend::send(PlaybackEvent value)
     if (m_active && value.token == m_token)
         emit event(std::move(value));
 }
+void QtPlaybackBackend::sampleProgress()
+{
+    if (!m_active || !m_ready || m_ended || !m_player)
+        return;
+    const bool eligible = !m_seekTarget && m_player->isPlaying() &&
+                          m_player->mediaStatus() == QMediaPlayer::BufferedMedia &&
+                          m_player->playbackRate() == 1.0 && m_audio && !m_audio->isMuted() &&
+                          m_audio->volume() > 0;
+    auto position = m_player->position();
+    if (m_player->duration() > 0)
+        position = qMin(position, m_player->duration());
+    if (m_preview)
+        position = qMin(position, m_preview->endMs - m_preview->startMs);
+    const auto progress = m_meter.sample(position, m_sampleClock.elapsed(), eligible);
+    if (m_publishedProgress == progress)
+        return;
+    m_publishedProgress = progress;
+    PlaybackEvent observation{m_token, Kind::Observation};
+    observation.observed = progress;
+    send(observation); // last operation: observers may retire this load synchronously
+}
 void QtPlaybackBackend::fail(LoadToken token, PlaybackError error)
 {
     if (!m_active || token != m_token)
         return;
+    m_meter.breakInterval();
+    m_sampleTimer.stop();
     // Deferring disposal avoids destroying a QMediaPlayer within its own signal emission.
     QTimer::singleShot(0, this, [this, token, error] {
         if (!m_active || token != m_token)
@@ -94,10 +125,30 @@ void QtPlaybackBackend::openBuffered(LoadToken token)
     m_player =
         std::make_unique<QMediaPlayer>(); // one object/context per load, NEVER re-tag old signals
     m_player->setAudioOutput(m_audio.get());
+    // Break immediately at state/status transitions, including brief stalls between timer ticks.
+    // These callbacks do not emit outward signals or destroy the player in its signal stack.
+    connect(m_player.get(), &QMediaPlayer::mediaStatusChanged, this, [this, token] {
+        if (m_active && token == m_token)
+            m_meter.breakInterval();
+    });
+    connect(m_player.get(), &QMediaPlayer::playbackStateChanged, this, [this, token] {
+        if (m_active && token == m_token)
+            m_meter.breakInterval();
+    });
+    connect(m_player.get(), &QMediaPlayer::playbackRateChanged, this, [this, token] {
+        if (m_active && token == m_token)
+            m_meter.breakInterval();
+    });
+    connect(m_player.get(), &QMediaPlayer::positionChanged, this, [this, token](qint64 position) {
+        if (m_active && token == m_token && m_seekTarget && position == *m_seekTarget) {
+            m_seekTarget.reset();
+            m_meter.breakInterval();
+        }
+    });
     connect(
         m_player.get(), &QMediaPlayer::errorOccurred, this,
         [this, token](QMediaPlayer::Error, const QString&) { fail(token, PlaybackError::Decode); },
-        Qt::QueuedConnection);
+        Qt::AutoConnection);
     connect(
         m_player.get(), &QMediaPlayer::mediaStatusChanged, this,
         [this, token](QMediaPlayer::MediaStatus status) {
@@ -111,6 +162,7 @@ void QtPlaybackBackend::openBuffered(LoadToken token)
                 }
                 m_ready = true;
                 m_decodeDeadline.stop();
+                m_sampleTimer.start();
                 send({token, Kind::Duration, {}, m_player->duration()});
                 if (!m_active || token != m_token)
                     return;
@@ -158,6 +210,8 @@ void QtPlaybackBackend::ended(LoadToken token)
     if (!m_active || token != m_token || m_ended)
         return;
     m_ended = true;
+    m_sampleTimer.stop();
+    m_meter.breakInterval();
     if (m_player)
         m_player->pause();
     send({token, Kind::Ended});
@@ -169,6 +223,7 @@ void QtPlaybackBackend::play()
 }
 void QtPlaybackBackend::pause()
 {
+    m_meter.breakInterval();
     if (m_player)
         m_player->pause();
 }
@@ -179,12 +234,19 @@ void QtPlaybackBackend::seek(qint64 positionMs)
     auto maximum = m_player->duration();
     if (m_preview)
         maximum = qMin(maximum, m_preview->endMs - m_preview->startMs);
-    m_player->setPosition(std::clamp<qint64>(positionMs, 0, qMax<qint64>(0, maximum - 1)));
+    const auto target = std::clamp<qint64>(positionMs, 0, qMax<qint64>(0, maximum - 1));
+    m_meter.breakInterval();
+    if (m_player->position() == target && !m_seekTarget)
+        return; // no asynchronous jump needed
+    m_seekTarget = target;
+    m_player->setPosition(target);
 }
 void QtPlaybackBackend::setVolume(float linear)
 {
     if (!std::isfinite(linear) || linear < 0 || linear > 1)
         return;
+    if ((linear == 0) != (m_volume == 0))
+        m_meter.breakInterval();
     m_volume = linear;
     if (m_audio) {
         m_audio->setVolume(linear);

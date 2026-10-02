@@ -32,6 +32,7 @@ class Gate : public QObject
   signals:
     void release();
     void endPlayback();
+    void observedPlayback(qint64 playedMs);
 };
 
 struct SharedState {
@@ -271,6 +272,15 @@ void BackendRuntimeTest::playbackThroughThread()
             check();
             ++state->created;
             connect(
+                &gate, &Gate::observedPlayback, this,
+                [this](qint64 played) {
+                    check();
+                    PlaybackEvent observation{token, PlaybackEvent::Kind::Observation};
+                    observation.observed = domain::ObservedPlayback{played};
+                    emit event(observation);
+                },
+                Qt::QueuedConnection);
+            connect(
                 &gate, &Gate::endPlayback, this,
                 [this] {
                     check();
@@ -362,6 +372,7 @@ void BackendRuntimeTest::playbackThroughThread()
     QVERIFY(listening.seek(1250));
     QTRY_COMPARE(facade.playback().positionMs, 1250);
     QTRY_COMPARE(listening.cursors().original.standard.lines, (QList<qsizetype>{1}));
+    QVERIFY(listening.history().isEmpty()); // pause/seek position alone is not listening
     if (fm) {
         // A terminal notification observer pauses the NEXT load, without resurrecting this one.
         const auto pauseAtEnd = connect(&listening, &ListeningSession::playbackChanged, this,
@@ -371,6 +382,9 @@ void BackendRuntimeTest::playbackThroughThread()
                                         });
         QVERIFY(listening.resume());
         QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
+        QVERIFY(listening.setVolume(0.5f));
+        emit gate.observedPlayback(500); // synthetic backend evidence, not a device test
+        QTRY_COMPARE(listening.history().size(), 1);
         emit gate.endPlayback();
         QTRY_COMPARE(facade.playback().song.value, "2");
         disconnect(pauseAtEnd);
@@ -381,6 +395,14 @@ void BackendRuntimeTest::playbackThroughThread()
     QCOMPARE(listening.lyrics()->song.value, "2");
     QVERIFY(listening.resume());
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
+    QVERIFY(listening.setVolume(0.5f));
+    emit gate.observedPlayback(1000);
+    QTRY_COMPARE(listening.history().size(), fm ? 2 : 1);
+    QCOMPARE(listening.history().first().playedMs, 1000);
+    QCOMPARE(listening.history().first().song.value, "2");
+    QCOMPARE(listening.history().first().source,
+             fm ? domain::ListeningMode::PersonalFm : domain::ListeningMode::Queue);
+    QCOMPARE(listening.history().first().accountId, fm ? QString("101") : QString{});
     QVERIFY(listening.next());
     QTRY_COMPARE(state->requests.load(), fm ? 11 : 6);
     facade.close();
@@ -388,6 +410,7 @@ void BackendRuntimeTest::playbackThroughThread()
     QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
     QVERIFY(listening.queue().entries.isEmpty());
     QVERIFY(!listening.lyrics());
+    QVERIFY(listening.history().isEmpty());
     QCOMPARE(listening.mode(), domain::ListeningMode::Queue);
     QVERIFY(!runtime.fm().snapshot().active);
     QCOMPARE(state->wrongThread.load(), 0);

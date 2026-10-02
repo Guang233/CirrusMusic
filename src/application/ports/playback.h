@@ -19,12 +19,13 @@ class IStreamResolver : public QObject
                    cirrus::application::StreamResult result);
 };
 struct PlaybackEvent {
-    enum class Kind { Ready, State, Position, Duration, Seekable, Ended, Failure };
+    enum class Kind { Ready, State, Position, Duration, Seekable, Ended, Failure, Observation };
     domain::LoadToken token;
     Kind kind{};
     domain::PlaybackState state{};
     qint64 value = 0;
     domain::PlaybackFailure failure;
+    std::optional<domain::ObservedPlayback> observed; // backend cumulative evidence, not position
 };
 class IPlaybackBackend : public QObject
 {

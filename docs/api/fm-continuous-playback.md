@@ -82,4 +82,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 仍未实现
 
-UI、个人库读取、持久播放历史／队列、实际收听区间累计、scrobble／startplay／不喜欢反馈及FM模式偏好均未因本包完成。FM批次取出、媒体位置或自然End都不是“实际已听时长”；本包没有任何上报，真实写入另行授权。后续[个人库四项读取](personal-library.md)已另包接入；下一步先做本地实际已听累计／历史契约，官方上报仍单列。
+UI、个人库读取、持久播放历史／队列、实际收听区间累计、scrobble／startplay／不喜欢反馈及FM模式偏好均未因本包完成。FM批次取出、媒体位置或自然End都不是“实际已听时长”；本包没有任何上报，真实写入另行授权。后续[个人库四项读取](personal-library.md)已另包接入；后续[本地观测累计／会话历史](local-listening-history.md)也已另包接入，持久历史与官方上报仍单列。

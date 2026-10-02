@@ -69,6 +69,12 @@ struct LoadToken {
 };
 enum class PlaybackState { Empty, Resolving, Loading, Ready, Playing, Paused, Ended, Failed };
 enum class TransportIntent { Play, Pause, Stop };
+struct ObservedPlayback {
+    static constexpr qint64 MaximumMs = 7LL * 24 * 60 * 60 * 1000;
+    qint64 playedMs = 0;
+    bool capped = false;
+    friend bool operator==(const ObservedPlayback&, const ObservedPlayback&) = default;
+};
 struct PlaybackSnapshot {
     LoadToken token;
     SongId song;
@@ -80,6 +86,8 @@ struct PlaybackSnapshot {
     std::optional<qint64> durationMs;
     bool seekable = false;
     std::optional<PlaybackFailure> failure;
+    // Monotonic per-load observed progress. Absent means no instrumented backend evidence.
+    std::optional<ObservedPlayback> observed;
 };
 } // namespace cirrus::domain
 Q_DECLARE_METATYPE(cirrus::domain::PlaybackSnapshot)

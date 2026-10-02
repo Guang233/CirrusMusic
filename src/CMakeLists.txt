@@ -11,6 +11,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/discovery_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
+    domain/playback/listening_history.h
 )
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -32,6 +33,10 @@ add_library(cirrus_application STATIC
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
     application/playback/lyric_timeline.h
+    application/playback/observed_playback.cpp
+    application/playback/observed_playback.h
+    application/playback/listening_history.cpp
+    application/playback/listening_history.h
     application/playback/listening_fm.cpp
     application/playback/listening_session.cpp
     application/playback/listening_session.h
