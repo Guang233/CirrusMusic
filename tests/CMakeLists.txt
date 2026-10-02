@@ -77,3 +77,13 @@ qt_add_executable(tst_account_restore unit/account_restore_test.cpp)
 target_link_libraries(tst_account_restore PRIVATE cirrus_netease_auth Qt6::Test)
 add_test(NAME account_restore COMMAND tst_account_restore)
 set_tests_properties(account_restore PROPERTIES TIMEOUT 20)
+
+qt_add_executable(tst_backend_facade unit/backend_facade_test.cpp)
+target_link_libraries(tst_backend_facade PRIVATE cirrus_application Qt6::Test)
+add_test(NAME backend_facade COMMAND tst_backend_facade)
+set_tests_properties(backend_facade PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_backend_runtime unit/backend_runtime_test.cpp)
+target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test)
+add_test(NAME backend_runtime COMMAND tst_backend_runtime)
+set_tests_properties(backend_runtime PROPERTIES TIMEOUT 30)

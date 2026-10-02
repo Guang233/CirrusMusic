@@ -29,8 +29,10 @@ class AccountCredentialVault final : public QObject
               std::function<void(SavedCredentialResult)> done);
     void save(domain::SessionToken context, const QString& accountId);
     void forget(domain::SessionToken context);
+    [[nodiscard]] bool isIdle() const { return !m_busy && !m_dirty && !m_read; }
 
   signals:
+    void idle();
     void settled(cirrus::domain::SessionToken context, bool remembered,
                  cirrus::secrets::SecretError error);
 
@@ -49,7 +51,8 @@ class AccountCredentialVault final : public QObject
     quint64 m_revision = 0;
     bool m_busy = false;
     bool m_dirty = false;
-    bool m_forgotten = false; // ignore old data until a new save succeeds, even after failed deletion
+    bool m_forgotten =
+        false; // ignore old data until a new save succeeds, even after failed deletion
 };
 
 } // namespace cirrus::netease

@@ -23,6 +23,8 @@ class XeapiKeyVault final : public QObject
     // Loads a stored record into an EMPTY ring (never overwrites a newer key and
     // never writes back). Result via restored().
     void restore();
+    // Read jobs are accounted for by the composition's TrackedSecretStore.
+    [[nodiscard]] bool isIdle() const { return !m_busy && !m_dirty; }
 
     [[nodiscard]] static QByteArray serialize(const netease::XeapiPublicKey& key);
     [[nodiscard]] static std::optional<netease::XeapiPublicKey> deserialize(const QByteArray& data);

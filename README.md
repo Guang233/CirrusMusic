@@ -6,7 +6,7 @@
 
 ## 开发文档
 
-**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；下一步为后台线程和非阻塞装配（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
+**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；下一步接搜索／歌曲详情／歌词（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
 
 - [产品范围与需求](docs/01-product-requirements.md)
 - [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)
@@ -33,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前新增 bootstrap与account_restore，共15套件；账号恢复本轮只执行受影响的6个 Debug 套件，191项通过，不声明重新完成全量／Release验证；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共17套件；后台装配本轮只执行受影响的7个 Debug 套件，158项通过、1项真实keyring往返默认跳过，不声明重新完成全量／Release验证；当前仍没有 CI、真实 API／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

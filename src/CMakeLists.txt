@@ -12,6 +12,8 @@ target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}"
 target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
 
 add_library(cirrus_application STATIC
+    application/backend/backend_facade.cpp
+    application/backend/backend_facade.h
     application/account/login_scheduler.cpp
     application/account/login_scheduler.h
     application/account/qr_login_service.cpp
@@ -85,6 +87,8 @@ target_link_libraries(cirrus_storage PUBLIC Qt6::Sql)
 # System keyring (QtKeychain system package). Plaintext fallback is disabled.
 find_package(Qt6Keychain REQUIRED)
 add_library(cirrus_secrets STATIC
+    infrastructure/secrets/tracked_secret_store.cpp
+    infrastructure/secrets/tracked_secret_store.h
     infrastructure/secrets/secret_store.cpp
     infrastructure/secrets/secret_store.h
 )
@@ -110,3 +114,11 @@ add_library(cirrus_netease_auth STATIC
     infrastructure/netease/auth/qr_login_gateway.h
 )
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
+
+# Composition stays out of application/domain and is not linked into the template UI.
+add_library(cirrus_backend STATIC
+    infrastructure/runtime/backend_runtime.cpp
+    infrastructure/runtime/backend_runtime.h
+)
+target_link_libraries(cirrus_backend PUBLIC cirrus_application
+    PRIVATE cirrus_bootstrap cirrus_netease_auth)

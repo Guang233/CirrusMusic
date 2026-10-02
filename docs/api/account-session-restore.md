@@ -39,12 +39,12 @@
 - 保存失败不撤销已经核验的内存登录，也不自动重试或转明文存储。同进程不能再从旧记录恢复；如果此前系统中已有旧账号记录，失败可能使旧记录仍留在后端，下次进程启动仍需身份复核，不能宣称已记住新账号。
 - 网络错误不证明凭据被撤销，所以恢复网络失败保留记录。损坏／过期记录和已解码的身份不匹配被删除；301／302拒绝时清理候选，其他未知业务错误不自行猜测刷新协议。
 - 删除失败会报告错误；同进程不再恢复旧记录。无法保证失败删除或进程在删除完成前退出后的跨进程擦除。
-- SecretStore没有可撤销后端操作或统一超时；客户端恢复有deadline，但系统job可能仍在排队。要保证退出删除落地，需让vault和store保持存活到settled通知，不能直接销毁后宣称已经擦除。完整后台线程与关闭排空装配是下一工作包。
+- SecretStore没有可撤销后端操作或统一超时；客户端恢复有deadline，但系统job可能仍在排队。要保证退出删除落地，需让vault和store保持存活到settled通知，不能直接销毁后宣称已经擦除。后续已完成[后台线程与关闭排空装配](backend-runtime.md)，但无法抹去系统后端永久不回调或进程被杀的限制。
 - 同步信号槽可重入logout／new login；对象本身不能从自身完成信号中立即销毁（使用deleteLater／正常装配生命周期）。
 
 ## 4. 必要验证与剩余工作
 
-本轮仅编译／执行受影响的6个Debug套件：account_restore、qr_login_service、qr_login_gateway、auth_transaction、session_api_client、session_cookie_store。共 **191 passed**，无失败／跳过（含数据行、init/cleanup）。
+账号恢复工作包（`4aedb18`）当时仅编译／执行受影响的6个Debug套件：account_restore、qr_login_service、qr_login_gateway、auth_transaction、session_api_client、session_cookie_store。共 **191 passed**，无失败／跳过（含数据行、init/cleanup）。
 
 新account_restore套件17项，覆盖记住→新客户端恢复→身份验证→凭据轮换→退出；仅内存与存储失败；账号不匹配；删除失败后禁止同进程恢复旧记录；网络失败保留记录；退出压过read/write；旧read未完成时重启恢复；错误设备／格式／base64／scope／过期／超限记录。应用Core-only套件另补恢复的发布屏障与虚拟deadline回归，不真实等待180秒。
 
@@ -57,6 +57,6 @@ ctest --test-dir build/linux-dev-local \
   -V --no-tests=error
 ```
 
-未重新跑全量／Release／QML／发行验证，未调用真实系统密钥环或官方接口。当前登记15套件；历史完整验证与本轮定向验证分开记录，不累计旧结果伪称全量已通过。
+未重新跑全量／Release／QML／发行验证，未调用真实系统密钥环或官方接口。该时点登记15套件，最新数量见[接手指南](../HANDOFF.md)；历史完整验证与本轮定向验证分开记录，不累计旧结果伪称全量已通过。
 
-下一工作包是后台线程与非阻塞应用facade、启动／关闭装配；之后接入首批音乐查询（搜索／详情／歌词）。它们不需要重新重写已验证的认证／存储协议，业务接口只依赖网络ready和稳定session边界。UI仍最后。
+后续[后台线程与非阻塞应用facade、启动／关闭装配](backend-runtime.md)也已完成；下一步接入首批音乐查询（搜索／详情／歌词）。它们不需要重新重写已验证的认证／存储协议，业务接口只依赖网络ready和稳定session边界。UI仍最后。

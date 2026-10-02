@@ -91,10 +91,12 @@ void AccountCredentialVault::flush()
         return;
     }
     if (!m_read) {
+        emit idle();
         return;
     }
     const auto request = std::exchange(m_read, std::nullopt).value();
     if (!request.receiver) {
+        emit idle();
         return;
     }
     m_busy = true;
