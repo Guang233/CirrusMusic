@@ -2,6 +2,7 @@
 
 #include "domain/account/session_types.h"
 #include "domain/music/catalog_types.h"
+#include "domain/music/discovery_types.h"
 
 #include <QObject>
 #include <variant>
@@ -20,7 +21,8 @@ enum class MusicError {
     ProviderRejected,
     InvalidResponse,
     ProtocolFailure,
-    IncompleteCatalog
+    IncompleteCatalog,
+    AuthenticationRequired
 };
 struct MusicFailure {
     MusicError error{};
@@ -49,15 +51,23 @@ struct LyricQuery {
 using MusicQuery =
     std::variant<domain::SongSearch, DetailQuery, LyricQuery, domain::AlbumQuery,
                  domain::ArtistQuery, domain::ArtistSongsQuery, domain::ArtistAlbumsQuery,
-                 domain::PlaylistQuery, domain::PlaylistSongsQuery>;
+                 domain::PlaylistQuery, domain::PlaylistSongsQuery,
+                 domain::DailyRecommendationsQuery, domain::PersonalFmQuery>;
 using MusicResult =
     std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
                  domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
-                 domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage>;
+                 domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
+                 domain::DailyRecommendations, domain::PersonalFmBatch>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool requiresAuthenticatedMusicQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::DailyRecommendationsQuery>(query) ||
+           std::holds_alternative<domain::PersonalFmQuery>(query);
 }
 
 // Same-thread, deferred, value-only port; no arbitrary endpoints, JSON or Cookie.

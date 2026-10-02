@@ -8,6 +8,7 @@ target_sources(cirrus_domain INTERFACE
     domain/account/qr_login_types.h
     domain/music/music_types.h
     domain/music/catalog_types.h
+    domain/music/discovery_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
 )
@@ -35,6 +36,8 @@ add_library(cirrus_application STATIC
     application/playback/listening_session.h
     application/playback/playback_coordinator.cpp
     application/playback/playback_coordinator.h
+    application/music/personal_fm_source.cpp
+    application/music/personal_fm_source.h
     application/music/music_query_service.cpp
     application/music/music_query_service.h
 )
@@ -136,6 +139,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/stream_resolver.h
     infrastructure/netease/music/lyric_parser.cpp
     infrastructure/netease/music/lyric_parser.h
+    infrastructure/netease/music/discovery_mapper.cpp
+    infrastructure/netease/music/discovery_mapper.h
     infrastructure/netease/music/catalog_mapper.cpp
     infrastructure/netease/music/catalog_mapper.h
     infrastructure/netease/music/music_mapping.h

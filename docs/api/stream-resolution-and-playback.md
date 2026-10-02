@@ -97,4 +97,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 CIRRUS_AUDIO_SMOKE=1 \
 
 ## 6. 下一步
 
-后续已在现有单曲协调器上接入[队列与歌词时钟同步](queue-and-lyric-clock.md)；[专辑／艺人／歌单目录](catalog-queries.md)也已离线接入，下一步继续每日推荐、私人FM与个人库。流式起播、受控Range缓冲及失效恢复应另立小工作包，不用放开CDN策略或任意播放器网络访问来掩盖当前限制。UI仍最后。
+后续已在现有单曲协调器上接入[队列与歌词时钟同步](queue-and-lyric-clock.md)；[专辑／艺人／歌单目录](catalog-queries.md)也已离线接入，[日推读取与FM供给](discovery-and-fm.md)也已接入；下一步继续FM播放接线与个人库。流式起播、受控Range缓冲及失效恢复应另立小工作包，不用放开CDN策略或任意播放器网络访问来掩盖当前限制。UI仍最后。

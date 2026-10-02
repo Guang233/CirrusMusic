@@ -22,7 +22,9 @@ enum class ApiOperation {
     ArtistDetails,
     ArtistSongs,
     ArtistAlbums,
-    PlaylistDetails
+    PlaylistDetails,
+    DailyRecommendations,
+    PersonalFm
 };
 
 struct ApiOperationContract {

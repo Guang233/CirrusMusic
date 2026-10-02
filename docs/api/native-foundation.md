@@ -57,9 +57,11 @@ Core-only `PlaybackQueue`／`LyricTimeline`／`ListeningSession`已组成[队列
 
 [专辑／艺人／歌单目录](catalog-queries.md)已扩展原查询port／Facade；含完整歌单索引检查与至多两次请求的分页补详情，无新运行依赖。
 
+[每日推荐读取与私人FM条目供给](discovery-and-fm.md)新增2项认证态weapi读取；Core-only PersonalFmSource处理单请求、低水位、去重、保留余项及显式重试，Runtime提供fm()；未连接FM连续播放／模式切换。
+
 ## 测试与构建
 
-下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media、listening、catalog，当前登记23套件。本轮[目录验证](catalog-queries.md)5套件共100 pass、另2条线程用例共4 pass；此前[队列／歌词验证](queue-and-lyric-clock.md)仅3套件各自最后一次结果共37 pass，另2条线程用例共4 pass；此前[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
+下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media、listening、catalog、discovery及personal_fm，当前登记25套件。本轮[发现验证](discovery-and-fm.md)6套件最新成功结果共108 pass、另3条线程用例共5 pass；此前[目录验证](catalog-queries.md)5套件共100 pass、另2条线程用例共4 pass；此前[队列／歌词验证](queue-and-lyric-clock.md)仅3套件各自最后一次结果共37 pass，另2条线程用例共4 pass；此前[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -91,6 +93,6 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 ## 未实现与下一步
 
-[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端和队列／歌词时钟，尚未实现模板入口／QML接线或真实账号验收。registry 当前13项业务operation（原8项认证／歌曲／播放加5项目录读取），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
+[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端和队列／歌词时钟，尚未实现模板入口／QML接线或真实账号验收。registry 当前15项业务operation（原8项认证／歌曲／播放加5项目录读取及2项发现读取），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
 
-扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC、队列和歌词时钟已完成最小闭环，目录读取也已接入并离线验证，下一步补每日推荐／私人FM；实际收听累计与scrobble尚未接入，真实写入另授权；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC、队列和歌词时钟已完成最小闭环，目录读取也已接入并离线验证，日推读取与FM条目供给也已接入；下一步补FM播放接线及个人库；实际收听累计与scrobble尚未接入，真实写入另授权；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

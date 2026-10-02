@@ -1,5 +1,6 @@
 #include "music_mapper.h"
 #include "catalog_mapper.h"
+#include "discovery_mapper.h"
 #include "lyric_parser.h"
 #include "music_mapping.h"
 
@@ -143,6 +144,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (requiresAuthenticatedMusicQuery(query))
+        return mapDiscoveryResponse(query, object);
     if (!std::holds_alternative<SongSearch>(query) && !std::holds_alternative<DetailQuery>(query))
         return mapCatalogResponse(query, object);
     QJsonValue values;

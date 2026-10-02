@@ -56,6 +56,9 @@ quint64 MusicQueryService::request(domain::SessionToken context, MusicQuery quer
     else if (snapshot.phase != domain::SessionPhase::Guest &&
              snapshot.phase != domain::SessionPhase::Authenticated)
         rejectLater(id, MusicError::Busy);
+    else if (requiresAuthenticatedMusicQuery(query) &&
+             snapshot.phase != domain::SessionPhase::Authenticated)
+        rejectLater(id, MusicError::AuthenticationRequired);
     else if (!validMusicQuery(query))
         rejectLater(id, MusicError::InvalidRequest);
     else if (!m_gateway)

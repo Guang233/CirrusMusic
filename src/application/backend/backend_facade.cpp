@@ -171,11 +171,19 @@ quint64 BackendFacade::playlistSongs(domain::PlaylistSongsQuery query)
     return submitMusic(std::move(query));
 }
 
+quint64 BackendFacade::dailyRecommendations()
+{
+    return submitMusic(domain::DailyRecommendationsQuery{});
+}
+quint64 BackendFacade::personalFmBatch() { return submitMusic(domain::PersonalFmQuery{}); }
+
 quint64 BackendFacade::submitMusic(MusicQuery query)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_state != BackendState::Ready || !m_snapshot.token.isValid() || m_music.size() >= 16 ||
         !validMusicQuery(query) ||
+        (requiresAuthenticatedMusicQuery(query) &&
+         m_snapshot.phase != domain::SessionPhase::Authenticated) ||
         (m_snapshot.phase != domain::SessionPhase::Guest &&
          m_snapshot.phase != domain::SessionPhase::Authenticated))
         return 0;

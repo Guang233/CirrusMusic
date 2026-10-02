@@ -1,5 +1,6 @@
 #include "../support/fake_http.h"
 #include "../support/fake_secret_store.h"
+#include "application/music/personal_fm_source.h"
 #include "application/playback/listening_session.h"
 #include "application/ports/playback.h"
 #include "infrastructure/bootstrap/xeapi_key_vault.h"
@@ -232,6 +233,7 @@ class BackendRuntimeTest : public QObject
   private slots:
     void startLoginCloseRestore();
     void musicQueriesThroughThread();
+    void discoveryThroughThread();
     void playbackThroughThread();
     void closeDuringRead();
     void closeDuringAnonymousWrite();
@@ -399,6 +401,56 @@ void BackendRuntimeTest::musicQueriesThroughThread()
     QTRY_COMPARE(done.size(), 6);
     QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last().at(2))).error,
              MusicError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+void BackendRuntimeTest::discoveryThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    const BackendConfig config{directory.filePath(QStringLiteral("state.sqlite")),
+                               QStringLiteral("synthetic-discovery")};
+    seed(config.databasePath, *state);
+    Gate gate;
+    auto plans = loginPlans();
+    plans.append(Plan{R"({"code":200,"data":{"dailySongs":[{"id":1,"reason":"synthetic"}]}})"});
+    plans.append(Plan{R"({"code":200,"data":[{"id":2},{"id":3}]})"});
+    plans.append(Plan{"{}", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    auto& fm = runtime.fm();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);
+    QSignalSpy challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn);
+    QSignalSpy done(&f, &BackendFacade::musicCompleted);
+    bool wrongThread = false;
+    connect(&fm, &PersonalFmSource::changed, this,
+            [&](PersonalFmSnapshot) { wrongThread |= QThread::currentThread() != qApp->thread(); });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QCOMPARE(f.dailyRecommendations(), 0);
+    QVERIFY(!fm.start());
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    QVERIFY(f.dailyRecommendations());
+    QTRY_COMPARE(done.size(), 1);
+    const auto daily =
+        std::get<domain::DailyRecommendations>(qvariant_cast<MusicResult>(done.last().at(2)));
+    QCOMPARE(daily.songs.first().song.id.value, "1");
+    QVERIFY(daily.receivedAtUtc.isValid());
+    QVERIFY(fm.start());
+    QTRY_COMPARE(fm.snapshot().upcoming.size(), 2);
+    QCOMPARE(fm.takeNext()->id.value, "2");
+    QTRY_COMPARE(state->requests.load(), 6);
+    QVERIFY(fm.snapshot().fetching);
+    f.close();
+    QVERIFY(fm.snapshot().upcoming.isEmpty());
+    QTRY_COMPARE(stopped.size(), 1);
+    QVERIFY(!fm.snapshot().active);
+    QVERIFY(!wrongThread);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

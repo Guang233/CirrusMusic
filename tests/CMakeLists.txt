@@ -118,3 +118,14 @@ qt_add_executable(tst_catalog unit/catalog_test.cpp)
 target_link_libraries(tst_catalog PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME catalog COMMAND tst_catalog)
 set_tests_properties(catalog PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_discovery unit/discovery_test.cpp)
+target_link_libraries(tst_discovery PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME discovery COMMAND tst_discovery)
+set_tests_properties(discovery PROPERTIES TIMEOUT 15)
+
+# Dynamic FM supply stays Core-only, independently of provider/network/media.
+qt_add_executable(tst_personal_fm unit/personal_fm_test.cpp)
+target_link_libraries(tst_personal_fm PRIVATE cirrus_application Qt6::Test)
+add_test(NAME personal_fm COMMAND tst_personal_fm)
+set_tests_properties(personal_fm PROPERTIES TIMEOUT 15)

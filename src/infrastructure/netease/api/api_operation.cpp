@@ -24,6 +24,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::AlbumDetails:
     case ApiOperation::ArtistAlbums:
         return std::nullopt; // resolved only from a validated canonical ID above
+    case ApiOperation::DailyRecommendations:
+        return ApiOperationContract{QStringLiteral("/api/v3/discovery/recommend/songs"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PersonalFm:
+        return ApiOperationContract{QStringLiteral("/api/v1/radio/get"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::ArtistDetails:
         return ApiOperationContract{QStringLiteral("/api/artist/head/info/get"), Protocol::Eapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
@@ -75,8 +81,13 @@ bool validQrKey(QStringView key)
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
     if (operation == ApiOperation::AccountIdentity ||
-        operation == ApiOperation::AnonymousRegister) {
+        operation == ApiOperation::AnonymousRegister || operation == ApiOperation::PersonalFm) {
         return parameters.isEmpty() ? std::optional<QJsonObject>(QJsonObject{}) : std::nullopt;
+    }
+    if (operation == ApiOperation::DailyRecommendations) {
+        if (!parameters.isEmpty())
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("afresh"), false}};
     }
     if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistDetails ||
         operation == ApiOperation::PlaylistDetails) {
@@ -189,6 +200,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::ArtistSongs:
     case ApiOperation::ArtistAlbums:
     case ApiOperation::PlaylistDetails:
+    case ApiOperation::DailyRecommendations:
+    case ApiOperation::PersonalFm:
         break;
     }
     return std::nullopt;
@@ -217,6 +230,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::ArtistSongs:
     case ApiOperation::ArtistAlbums:
     case ApiOperation::PlaylistDetails:
+    case ApiOperation::DailyRecommendations:
+    case ApiOperation::PersonalFm:
         return false; // read-only metadata must not mutate verified account credentials
     }
     return false;

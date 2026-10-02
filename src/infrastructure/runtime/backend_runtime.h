@@ -13,6 +13,7 @@ namespace cirrus::application
 {
 class IPlaybackBackend;
 class ListeningSession;
+class PersonalFmSource;
 } // namespace cirrus::application
 namespace cirrus::secrets
 {
@@ -49,8 +50,10 @@ class BackendRuntime final : public QObject
     ~BackendRuntime() override;
     [[nodiscard]] application::BackendFacade& facade() const { return *m_facade; }
     [[nodiscard]] application::ListeningSession& listening() const { return *m_listening; }
+    [[nodiscard]] application::PersonalFmSource& fm() const { return *m_fm; }
 
   private:
+    application::PersonalFmSource* m_fm = nullptr;
     application::BackendFacade* m_facade = nullptr;
     application::ListeningSession* m_listening = nullptr;
 };

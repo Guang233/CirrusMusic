@@ -68,7 +68,7 @@
 | 合计 | **100** |
 | backend_runtime仅musicQueriesThroughThread、playbackThroughThread | **4** |
 
-目录用例覆盖五项原生编码／合成传输链与封闭路由、宽ID、元数据不完整／矛盾、两阶段切片／重复／缺失、取消／换号与429、只读Cookie隔离。线程用例覆盖新的artistDetails与playlistSongs跨线程值传递，再回归播放器／歌词消费者。未重跑完整认证矩阵、全量／Release、真实账号／keyring／声卡；本包无新的官方访问。当前登记23个CTest套件，旧工作包结果不叠加成全量成绩。
+目录用例覆盖五项原生编码／合成传输链与封闭路由、宽ID、元数据不完整／矛盾、两阶段切片／重复／缺失、取消／换号与429、只读Cookie隔离。线程用例覆盖新的artistDetails与playlistSongs跨线程值传递，再回归播放器／歌词消费者。未重跑完整认证矩阵、全量／Release、真实账号／keyring／声卡；本包无新的官方访问。本目录工作包完成时登记23个CTest套件，旧工作包结果不叠加成全量成绩。
 
 ```bash
 cmake --build --preset linux-dev-local --target \
@@ -81,4 +81,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 忽略的本机日志：`build/workspace-checks/catalog-build.log`、`catalog-focused.log`、`catalog-thread.log`。调试中发现moc对内联测试原始字符串里的file URL误判注释；fixture使用JSON转义斜杠，运行时仍测试同一个file URL，没有减弱非法图片URL检查。
 
-下一包转每日推荐／私人FM与个人库读取；历史累计／scrobble单列。目录列表发现、收藏／编辑、缓存、UI、自动整歌单入队并未因本包而全部完成。
+后续[每日推荐读取／FM条目供给](discovery-and-fm.md)已接入，接下来补FM连续播放接线与个人库读取；历史累计／scrobble单列。目录列表发现、收藏／编辑、缓存、UI、自动整歌单入队并未因本包而全部完成。

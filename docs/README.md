@@ -30,6 +30,7 @@
 | [原生后端实现记录](api/native-foundation.md) | 当前哪些组件和离线测试已落地？ |
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
+| [日推读取与私人FM供给](api/discovery-and-fm.md) | 独立日推、认证态读取、动态批次及失败／换号边界；连续播放接线未交付 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |
 | [队列与六轨歌词时钟](api/queue-and-lyric-clock.md) | 最小听歌闭环：队列策略、暂停切歌、媒体位置与独立歌词游标的实现边界 |
 | [06 播放与音频系统](06-playback-and-audio.md) | 播放状态、并发切歌、错误恢复和后端如何实现？ |

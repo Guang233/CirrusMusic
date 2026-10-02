@@ -108,6 +108,8 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 artistAlbums(domain::ArtistAlbumsQuery query);
     [[nodiscard]] quint64 playlistDetails(domain::PlaylistId playlist);
     [[nodiscard]] quint64 playlistSongs(domain::PlaylistSongsQuery query);
+    [[nodiscard]] quint64 dailyRecommendations();
+    [[nodiscard]] quint64 personalFmBatch(); // use one PersonalFmSource for dynamic consumption
     void cancelMusic(quint64 id);
     [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
     [[nodiscard]] quint64 playSong(domain::SongId song,

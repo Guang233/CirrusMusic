@@ -1,6 +1,6 @@
 # 队列与六轨歌词时钟：最小听歌闭环
 
-> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；每日推荐／私人FM是下一包，不继续扩大音频框架。
+> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；[日推读取／FM动态供给](discovery-and-fm.md)也已接入，但尚未连接FM连续播放，不继续扩大音频框架。
 
 ## 1. 装配与入口
 
@@ -80,4 +80,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步与未实现项
 
-后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，接下来做每日推荐、私人FM与个人库。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。
+后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，接下来做FM连续播放接线与个人库。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。

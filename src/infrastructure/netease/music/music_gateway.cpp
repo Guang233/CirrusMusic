@@ -124,6 +124,10 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
     } else if (const auto* lyrics = std::get_if<LyricQuery>(&query)) {
         operation = ApiOperation::SongLyrics;
         parameters.insert(QStringLiteral("id"), lyrics->song.value);
+    } else if (std::holds_alternative<domain::DailyRecommendationsQuery>(query)) {
+        operation = ApiOperation::DailyRecommendations;
+    } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
+        operation = ApiOperation::PersonalFm;
     } else {
         const auto catalog = catalogRequest(query);
         if (!catalog) {
@@ -151,7 +155,10 @@ void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object)
     const auto pending = m_pending.value(id);
     const auto* query = std::get_if<domain::PlaylistSongsQuery>(&pending.query);
     if (!query) {
-        finish(id, mapMusicResponse(pending.query, object));
+        auto result = mapMusicResponse(pending.query, object);
+        if (auto* daily = std::get_if<domain::DailyRecommendations>(&result))
+            daily->receivedAtUtc = QDateTime::currentDateTimeUtc();
+        finish(id, std::move(result));
         return;
     }
     if (!pending.page) {

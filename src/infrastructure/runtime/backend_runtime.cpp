@@ -1,4 +1,5 @@
 #include "backend_runtime.h"
+#include "application/music/personal_fm_source.h"
 
 #include "application/music/music_query_service.h"
 #include "application/playback/listening_session.h"
@@ -392,6 +393,7 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
     : QObject(parent), m_facade(new BackendFacade(this)),
       m_listening(new ListeningSession(*m_facade, this))
 {
+    m_fm = new PersonalFmSource(*m_facade, this);
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
@@ -433,6 +435,8 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 
 BackendRuntime::~BackendRuntime()
 {
+    delete m_fm; // all caller-thread consumers retire before their facade
+    m_fm = nullptr;
     delete m_listening; // facade must outlive its caller-thread orchestration
     m_listening = nullptr;
     m_facade->close();

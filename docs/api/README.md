@@ -25,6 +25,7 @@
 | [upstream-lock.json](upstream-lock.json) | 固定版本、module tree、公共文件校验值与许可来源 |
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
+| [discovery-and-fm.md](discovery-and-fm.md) | 已实现的日推读取、FM动态条目供给、账号隔离；不等于FM连续播放或听歌上报 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
 | [native-foundation.md](native-foundation.md) | 已实现的 C++ 协议、传输、解码和离线 Qt Test |
@@ -94,4 +95,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；[官方URL与单曲Qt播放](stream-resolution-and-playback.md)已接入并有公开试听静音实测，[队列／六轨歌词时钟](queue-and-lyric-clock.md)也已完成后端最小闭环，[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证，下一步补每日推荐、私人FM，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；[官方URL与单曲Qt播放](stream-resolution-and-playback.md)已接入并有公开试听静音实测，[队列／六轨歌词时钟](queue-and-lyric-clock.md)也已完成后端最小闭环，[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](discovery-and-fm.md)也已接入；FM连续播放接线与个人库仍待后续，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
