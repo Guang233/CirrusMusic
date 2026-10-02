@@ -1,5 +1,5 @@
 #include "api_operation.h"
-#include "domain/music/music_types.h"
+#include "domain/music/catalog_types.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -7,9 +7,32 @@
 namespace cirrus::netease
 {
 
-std::optional<ApiOperationContract> operationContract(ApiOperation operation)
+std::optional<ApiOperationContract> operationContract(ApiOperation operation,
+                                                      const QJsonObject& parameters)
 {
+    if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistAlbums) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        if (!domain::validMusicId(id))
+            return std::nullopt;
+        const auto prefix = operation == ApiOperation::AlbumDetails
+                                ? QStringLiteral("/api/v1/album/")
+                                : QStringLiteral("/api/artist/albums/");
+        return ApiOperationContract{prefix + id, Protocol::Weapi, ResponseEncoding::Json,
+                                    8 * 1024 * 1024};
+    }
     switch (operation) {
+    case ApiOperation::AlbumDetails:
+    case ApiOperation::ArtistAlbums:
+        return std::nullopt; // resolved only from a validated canonical ID above
+    case ApiOperation::ArtistDetails:
+        return ApiOperationContract{QStringLiteral("/api/artist/head/info/get"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::ArtistSongs:
+        return ApiOperationContract{QStringLiteral("/api/v1/artist/songs"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PlaylistDetails:
+        return ApiOperationContract{QStringLiteral("/api/v6/playlist/detail"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 16 * 1024 * 1024};
     case ApiOperation::QrKey:
         return ApiOperationContract{QStringLiteral("/api/login/qrcode/unikey")};
     case ApiOperation::QrCheck:
@@ -54,6 +77,42 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     if (operation == ApiOperation::AccountIdentity ||
         operation == ApiOperation::AnonymousRegister) {
         return parameters.isEmpty() ? std::optional<QJsonObject>(QJsonObject{}) : std::nullopt;
+    }
+    if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistDetails ||
+        operation == ApiOperation::PlaylistDetails) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        if (parameters.size() != 1 || !domain::validMusicId(id))
+            return std::nullopt;
+        if (operation == ApiOperation::AlbumDetails)
+            return QJsonObject{};
+        if (operation == ApiOperation::ArtistDetails)
+            return QJsonObject{{QStringLiteral("id"), id}};
+        return QJsonObject{
+            {QStringLiteral("id"), id}, {QStringLiteral("n"), 100000}, {QStringLiteral("s"), 8}};
+    }
+    if (operation == ApiOperation::ArtistSongs || operation == ApiOperation::ArtistAlbums) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto offset = parameters.value(QStringLiteral("offset"));
+        const domain::CatalogPage page{limit.toInt(-1), offset.toInt(-1)};
+        const bool songs = operation == ApiOperation::ArtistSongs;
+        if (parameters.size() != (songs ? 4 : 3) || !domain::validMusicId(id) || !page.isValid() ||
+            limit != QJsonValue(page.limit) || offset != QJsonValue(page.offset))
+            return std::nullopt;
+        QJsonObject payload{{QStringLiteral("limit"), page.limit},
+                            {QStringLiteral("offset"), page.offset}};
+        if (!songs) {
+            payload.insert(QStringLiteral("total"), true);
+            return payload;
+        }
+        const auto order = parameters.value(QStringLiteral("order")).toString();
+        if (order != QStringLiteral("hot") && order != QStringLiteral("time"))
+            return std::nullopt;
+        payload.insert(QStringLiteral("id"), id);
+        payload.insert(QStringLiteral("order"), order);
+        payload.insert(QStringLiteral("private_cloud"), QStringLiteral("true"));
+        payload.insert(QStringLiteral("work_type"), 1);
+        return payload;
     }
     if (operation == ApiOperation::SearchSongs) {
         const auto limit = parameters.value(QStringLiteral("limit"));
@@ -125,6 +184,11 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
     case ApiOperation::SongStream:
+    case ApiOperation::AlbumDetails:
+    case ApiOperation::ArtistDetails:
+    case ApiOperation::ArtistSongs:
+    case ApiOperation::ArtistAlbums:
+    case ApiOperation::PlaylistDetails:
         break;
     }
     return std::nullopt;
@@ -148,6 +212,11 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
     case ApiOperation::SongStream:
+    case ApiOperation::AlbumDetails:
+    case ApiOperation::ArtistDetails:
+    case ApiOperation::ArtistSongs:
+    case ApiOperation::ArtistAlbums:
+    case ApiOperation::PlaylistDetails:
         return false; // read-only metadata must not mutate verified account credentials
     }
     return false;

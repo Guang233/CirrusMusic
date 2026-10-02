@@ -1,6 +1,6 @@
 # 队列与六轨歌词时钟：最小听歌闭环
 
-> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。目录／每日推荐／私人FM是下一包，不继续扩大音频框架。
+> 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；每日推荐／私人FM是下一包，不继续扩大音频框架。
 
 ## 1. 装配与入口
 
@@ -65,7 +65,7 @@ listening.next(); // 新load原子携带Pause，不能先Play再补发Pause
 | 三套件合计 | **37** |
 | backend_runtime仅playbackThroughThread、destructionStillDrains | **4** |
 
-首轮三套件为34 pass，随后只重跑修改过的listening至20 pass；不要把增量次数相加成新全量成绩。共登记22个CTest套件。listening为Core-only合成测试；线程用例经过实际Runtime、Facade、协议／歌词解析与注入播放器，验证暂停切歌、seek游标、挂起请求中关闭及析构排空，不等于真实声卡／长时间连续播放验证。此前公开试听与Qt适配器PoC证据仍单列于[单曲工作包](stream-resolution-and-playback.md)。
+首轮三套件为34 pass，随后只重跑修改过的listening至20 pass；不要把增量次数相加成新全量成绩。该工作包时点登记22个CTest套件，最新数量见[接手指南](../HANDOFF.md)。listening为Core-only合成测试；线程用例经过实际Runtime、Facade、协议／歌词解析与注入播放器，验证暂停切歌、seek游标、挂起请求中关闭及析构排空，不等于真实声卡／长时间连续播放验证。此前公开试听与Qt适配器PoC证据仍单列于[单曲工作包](stream-resolution-and-playback.md)。
 
 ```bash
 cmake --build --preset linux-dev-local --target \
@@ -80,4 +80,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步与未实现项
 
-先补专辑／艺人／歌单目录，再接每日推荐、私人FM与个人库。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。
+后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，接下来做每日推荐、私人FM与个人库。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "domain/account/session_types.h"
-#include "domain/music/music_types.h"
+#include "domain/music/catalog_types.h"
 
 #include <QObject>
 #include <variant>
@@ -19,7 +19,8 @@ enum class MusicError {
     RateLimited,
     ProviderRejected,
     InvalidResponse,
-    ProtocolFailure
+    ProtocolFailure,
+    IncompleteCatalog
 };
 struct MusicFailure {
     MusicError error{};
@@ -28,30 +29,35 @@ struct MusicFailure {
 };
 struct DetailQuery {
     QList<domain::SongId> songs;
+    [[nodiscard]] bool isValid() const
+    {
+        if (songs.isEmpty() || songs.size() > 100)
+            return false;
+        QStringList seen;
+        for (const auto& id : songs) {
+            if (!domain::validMusicId(id.value) || seen.contains(id.value))
+                return false;
+            seen.append(id.value);
+        }
+        return true;
+    }
 };
 struct LyricQuery {
     domain::SongId song;
+    [[nodiscard]] bool isValid() const { return domain::validMusicId(song.value); }
 };
-using MusicQuery = std::variant<domain::SongSearch, DetailQuery, LyricQuery>;
+using MusicQuery =
+    std::variant<domain::SongSearch, DetailQuery, LyricQuery, domain::AlbumQuery,
+                 domain::ArtistQuery, domain::ArtistSongsQuery, domain::ArtistAlbumsQuery,
+                 domain::PlaylistQuery, domain::PlaylistSongsQuery>;
 using MusicResult =
-    std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure>;
+    std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
+                 domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
+                 domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
-    if (const auto* search = std::get_if<domain::SongSearch>(&query))
-        return search->isValid();
-    if (const auto* lyric = std::get_if<LyricQuery>(&query))
-        return domain::validMusicId(lyric->song.value);
-    const auto& ids = std::get<DetailQuery>(query).songs;
-    if (ids.isEmpty() || ids.size() > 100)
-        return false;
-    QStringList seen;
-    for (const auto& id : ids) {
-        if (!domain::validMusicId(id.value) || seen.contains(id.value))
-            return false;
-        seen.append(id.value);
-    }
-    return true;
+    return std::visit([](const auto& value) { return value.isValid(); }, query);
 }
 
 // Same-thread, deferred, value-only port; no arbitrary endpoints, JSON or Cookie.

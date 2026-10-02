@@ -1,7 +1,9 @@
 #include "music_gateway.h"
+#include "catalog_mapper.h"
 #include "music_mapper.h"
 
 #include <QJsonArray>
+#include <QSet>
 #include <QThread>
 #include <QTimer>
 
@@ -10,6 +12,24 @@ namespace cirrus::netease
 using namespace application;
 namespace
 {
+DetailQuery pageDetails(const domain::PlaylistSongsPage& page)
+{
+    DetailQuery query;
+    QSet<QString> seen;
+    for (const auto& id : page.ids)
+        if (!seen.contains(id.value)) {
+            seen.insert(id.value);
+            query.songs.append(id);
+        }
+    return query;
+}
+QJsonObject detailParameters(const DetailQuery& query)
+{
+    QJsonArray ids;
+    for (const auto& song : query.songs)
+        ids.append(song.value);
+    return {{QStringLiteral("ids"), ids}};
+}
 MusicFailure failure(const ApiResult& result)
 {
     MusicFailure error{MusicError::ProtocolFailure};
@@ -55,10 +75,12 @@ MusicGateway::MusicGateway(SessionApiClient& client, QObject* parent)
                     return;
                 if (it->context != token || !m_client || !m_client->accepts(token))
                     finish(id, MusicFailure{MusicError::StaleContext});
+                else if (it->canceled)
+                    finish(id, MusicFailure{MusicError::Canceled});
                 else if (result.error != ApiError::None || result.decoded.businessCode != 200)
                     finish(id, failure(result));
                 else
-                    finish(id, mapMusicResponse(it->query, result.decoded.object));
+                    receiveSuccess(id, result.decoded.object);
             });
     connect(&client, &QObject::destroyed, this, [this] {
         const auto ids = m_pending.keys();
@@ -98,18 +120,82 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
                       {QStringLiteral("offset"), search->offset}};
     } else if (const auto* details = std::get_if<DetailQuery>(&query)) {
         operation = ApiOperation::SongDetails;
-        QJsonArray ids;
-        for (const auto& song : details->songs)
-            ids.append(song.value);
-        parameters.insert(QStringLiteral("ids"), ids);
-    } else {
+        parameters = detailParameters(*details);
+    } else if (const auto* lyrics = std::get_if<LyricQuery>(&query)) {
         operation = ApiOperation::SongLyrics;
-        parameters.insert(QStringLiteral("id"), std::get<LyricQuery>(query).song.value);
+        parameters.insert(QStringLiteral("id"), lyrics->song.value);
+    } else {
+        const auto catalog = catalogRequest(query);
+        if (!catalog) {
+            QTimer::singleShot(
+                0, this, [this, id] { finish(id, MusicFailure{MusicError::InvalidRequest}); });
+            return id;
+        }
+        operation = catalog->operation;
+        parameters = catalog->parameters;
     }
-    const auto apiId = m_client->submit(context, operation, parameters);
-    m_pending[id].apiId = apiId;
-    m_apiIds.insert(apiId, id);
+    submitApi(id, operation, parameters);
     return id;
+}
+
+void MusicGateway::submitApi(quint64 id, ApiOperation operation, QJsonObject parameters)
+{
+    auto& pending = m_pending[id];
+    m_apiIds.remove(pending.apiId);
+    pending.apiId = m_client->submit(pending.context, operation, std::move(parameters));
+    m_apiIds.insert(pending.apiId, id);
+}
+
+void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object)
+{
+    const auto pending = m_pending.value(id);
+    const auto* query = std::get_if<domain::PlaylistSongsQuery>(&pending.query);
+    if (!query) {
+        finish(id, mapMusicResponse(pending.query, object));
+        return;
+    }
+    if (!pending.page) {
+        const auto result = mapCatalogResponse(domain::PlaylistQuery{query->playlist}, object);
+        if (const auto* error = std::get_if<MusicFailure>(&result)) {
+            finish(id, *error);
+            return;
+        }
+        const auto& playlist = std::get<domain::PlaylistDetails>(result);
+        if (!playlist.trackIdsComplete || !playlist.trackIds) {
+            finish(id, MusicFailure{MusicError::IncompleteCatalog});
+            return;
+        }
+        domain::PlaylistSongsPage page;
+        page.query = *query;
+        page.total = playlist.trackIds->size();
+        page.ids = playlist.trackIds->mid(query->page.offset, query->page.limit);
+        page.hasMore = query->page.offset + page.ids.size() < page.total;
+        page.indexUpdatedAtMs = playlist.updatedAtMs;
+        if (page.ids.isEmpty()) {
+            finish(id, page);
+            return;
+        }
+        m_pending[id].page = page;
+        submitApi(id, ApiOperation::SongDetails, detailParameters(pageDetails(page)));
+        return;
+    }
+    auto page = *pending.page;
+    const auto result = mapMusicResponse(pageDetails(page), object);
+    if (const auto* error = std::get_if<MusicFailure>(&result)) {
+        finish(id, *error);
+        return;
+    }
+    QHash<QString, domain::Song> byId;
+    for (const auto& song : std::get<domain::SongDetails>(result).songs)
+        byId.insert(song.id.value, song);
+    for (const auto& song : page.ids) {
+        const auto found = byId.constFind(song.value);
+        if (found == byId.cend())
+            page.missing.append(song);
+        else
+            page.songs.append(*found);
+    }
+    finish(id, page);
 }
 
 void MusicGateway::cancel(quint64 id)
@@ -117,8 +203,10 @@ void MusicGateway::cancel(quint64 id)
     const auto it = m_pending.constFind(id);
     if (it == m_pending.cend())
         return;
-    if (m_client && it->apiId != 0)
-        m_client->cancel(it->apiId);
+    const auto apiId = it->apiId;
+    m_pending[id].canceled = true; // before potentially reentrant transport abort
+    if (m_client && apiId != 0)
+        m_client->cancel(apiId);
     QTimer::singleShot(0, this, [this, id] { finish(id, MusicFailure{MusicError::Canceled}); });
 }
 
@@ -128,6 +216,8 @@ void MusicGateway::finish(quint64 id, MusicResult result)
         return;
     const auto pending = m_pending.take(id);
     m_apiIds.remove(pending.apiId);
+    if (pending.canceled)
+        result = MusicFailure{MusicError::Canceled};
     if (m_client && !m_client->accepts(pending.context))
         result = MusicFailure{MusicError::StaleContext};
     emit completed(id, pending.context, std::move(result));

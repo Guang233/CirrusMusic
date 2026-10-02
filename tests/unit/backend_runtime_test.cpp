@@ -357,6 +357,9 @@ void BackendRuntimeTest::musicQueriesThroughThread()
         Plan{R"({"code":200,"songs":[{"id":1}]})"},
         Plan{
             R"({"code":200,"yrc":{"lyric":"[1000,500](1000,500,0)x"},"ytlrc":{"lyric":"[00:01]t"}})"},
+        Plan{R"({"code":200,"data":{"artist":{"id":1,"name":"synthetic"}}})"},
+        Plan{R"({"code":200,"playlist":{"id":1,"trackCount":1,"trackIds":[{"id":2}]}})"},
+        Plan{R"({"code":200,"songs":[{"id":2}]})"},
         Plan{"{}", 200, -1}};
     BackendRuntime runtime(config, factories(state, gate, plans));
     auto& f = runtime.facade();
@@ -378,11 +381,22 @@ void BackendRuntimeTest::musicQueriesThroughThread()
     const auto lyrics = std::get<domain::SongLyrics>(qvariant_cast<MusicResult>(done.last().at(2)));
     QCOMPARE(lyrics.original.enhanced.timing, domain::LyricTiming::Words);
     QCOMPARE(lyrics.translation.enhanced.timing, domain::LyricTiming::Lines);
+    QVERIFY(f.artistDetails({"1"}));
+    QTRY_COMPARE(done.size(), 4);
+    QCOMPARE(
+        std::get<domain::ArtistDetails>(qvariant_cast<MusicResult>(done.last().at(2))).id.value,
+        "1");
+    QVERIFY(f.playlistSongs({{"1"}, {10, 0}}));
+    QTRY_COMPARE(done.size(), 5);
+    const auto page =
+        std::get<domain::PlaylistSongsPage>(qvariant_cast<MusicResult>(done.last().at(2)));
+    QCOMPARE(page.songs.first().id.value, "2");
+    QVERIFY(!page.hasMore);
     QVERIFY(f.lyrics({QStringLiteral("2")}) != 0);
-    QTRY_COMPARE(state->requests.load(), 4);
+    QTRY_COMPARE(state->requests.load(), 7);
     f.close();
     QTRY_COMPARE(stopped.size(), 1);
-    QTRY_COMPARE(done.size(), 4);
+    QTRY_COMPARE(done.size(), 6);
     QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last().at(2))).error,
              MusicError::Canceled);
     QCOMPARE(state->wrongThread.load(), 0);

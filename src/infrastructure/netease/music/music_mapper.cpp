@@ -1,5 +1,7 @@
 #include "music_mapper.h"
+#include "catalog_mapper.h"
 #include "lyric_parser.h"
+#include "music_mapping.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -8,10 +10,9 @@
 
 namespace cirrus::netease
 {
-namespace
+namespace mapping
 {
 using namespace domain;
-using namespace application;
 
 QString providerId(const QJsonValue& value)
 {
@@ -102,6 +103,12 @@ std::optional<Song> songFrom(const QJsonObject& object)
     return song;
 }
 
+} // namespace mapping
+namespace
+{
+using namespace domain;
+using namespace application;
+using namespace mapping;
 LyricTrack lyricField(const QJsonObject& object, const QString& name)
 {
     const auto value = object.value(name);
@@ -136,6 +143,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (!std::holds_alternative<SongSearch>(query) && !std::holds_alternative<DetailQuery>(query))
+        return mapCatalogResponse(query, object);
     QJsonValue values;
     SongSearchPage page;
     if (const auto* search = std::get_if<SongSearch>(&query)) {

@@ -78,4 +78,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一工作包
 
-后续[官方歌曲URL解析与无界面Qt播放PoC](stream-resolution-and-playback.md)已完成首个单曲闭环，后续[队列与六轨歌词时钟](queue-and-lyric-clock.md)也已接入。专辑／艺人／歌单、每日推荐、FM及个人库仍未实现；UI仍最后。不要为播放成功引入第三方解锁，也不要把元数据查询成功当作音源授权。
+后续[官方歌曲URL解析与无界面Qt播放PoC](stream-resolution-and-playback.md)已完成首个单曲闭环，后续[队列与六轨歌词时钟](queue-and-lyric-clock.md)也已接入。[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证；每日推荐、FM及个人库仍未实现；UI仍最后。不要为播放成功引入第三方解锁，也不要把元数据查询成功当作音源授权。

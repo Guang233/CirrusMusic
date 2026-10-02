@@ -233,7 +233,7 @@ quint64 SessionApiClient::submit(domain::SessionToken context, ApiOperation oper
     Pending pending;
     pending.context = context;
     pending.operation = operation;
-    const auto contract = operationContract(operation);
+    const auto contract = operationContract(operation, parameters);
     const auto payload = operationPayload(operation, parameters);
     if (!contract || !payload ||
         (contract->protocol != Protocol::Eapi && contract->protocol != Protocol::Weapi &&

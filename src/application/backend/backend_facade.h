@@ -102,6 +102,12 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 searchSongs(domain::SongSearch query);
     [[nodiscard]] quint64 songDetails(QList<domain::SongId> songs);
     [[nodiscard]] quint64 lyrics(domain::SongId song);
+    [[nodiscard]] quint64 albumDetails(domain::AlbumId album);
+    [[nodiscard]] quint64 artistDetails(domain::ArtistId artist);
+    [[nodiscard]] quint64 artistSongs(domain::ArtistSongsQuery query);
+    [[nodiscard]] quint64 artistAlbums(domain::ArtistAlbumsQuery query);
+    [[nodiscard]] quint64 playlistDetails(domain::PlaylistId playlist);
+    [[nodiscard]] quint64 playlistSongs(domain::PlaylistSongsQuery query);
     void cancelMusic(quint64 id);
     [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
     [[nodiscard]] quint64 playSong(domain::SongId song,

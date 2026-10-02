@@ -113,3 +113,8 @@ qt_add_executable(tst_listening unit/listening_test.cpp)
 target_link_libraries(tst_listening PRIVATE cirrus_application Qt6::Test)
 add_test(NAME listening COMMAND tst_listening)
 set_tests_properties(listening PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_catalog unit/catalog_test.cpp)
+target_link_libraries(tst_catalog PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME catalog COMMAND tst_catalog)
+set_tests_properties(catalog PROPERTIES TIMEOUT 15)

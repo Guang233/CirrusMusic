@@ -146,6 +146,31 @@ quint64 BackendFacade::lyrics(domain::SongId song)
     return submitMusic(LyricQuery{std::move(song)});
 }
 
+quint64 BackendFacade::albumDetails(domain::AlbumId album)
+{
+    return submitMusic(domain::AlbumQuery{std::move(album)});
+}
+quint64 BackendFacade::artistDetails(domain::ArtistId artist)
+{
+    return submitMusic(domain::ArtistQuery{std::move(artist)});
+}
+quint64 BackendFacade::artistSongs(domain::ArtistSongsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::artistAlbums(domain::ArtistAlbumsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::playlistDetails(domain::PlaylistId playlist)
+{
+    return submitMusic(domain::PlaylistQuery{std::move(playlist)});
+}
+quint64 BackendFacade::playlistSongs(domain::PlaylistSongsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+
 quint64 BackendFacade::submitMusic(MusicQuery query)
 {
     Q_ASSERT(QThread::currentThread() == thread());

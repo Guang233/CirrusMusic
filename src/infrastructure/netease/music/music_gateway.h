@@ -19,8 +19,12 @@ class MusicGateway final : public application::IMusicGateway
         domain::SessionToken context;
         application::MusicQuery query;
         quint64 apiId = 0;
+        bool canceled = false;
+        std::optional<domain::PlaylistSongsPage> page;
     };
     void finish(quint64 id, application::MusicResult result);
+    void submitApi(quint64 id, ApiOperation operation, QJsonObject parameters);
+    void receiveSuccess(quint64 id, const QJsonObject& object);
     QPointer<SessionApiClient> m_client;
     QHash<quint64, Pending> m_pending;
     QHash<quint64, quint64> m_apiIds;

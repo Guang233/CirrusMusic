@@ -17,7 +17,12 @@ enum class ApiOperation {
     SearchSongs,
     SongDetails,
     SongLyrics,
-    SongStream
+    SongStream,
+    AlbumDetails,
+    ArtistDetails,
+    ArtistSongs,
+    ArtistAlbums,
+    PlaylistDetails
 };
 
 struct ApiOperationContract {
@@ -27,7 +32,8 @@ struct ApiOperationContract {
     qsizetype responseLimit = 64 * 1024;
 };
 
-[[nodiscard]] std::optional<ApiOperationContract> operationContract(ApiOperation operation);
+[[nodiscard]] std::optional<ApiOperationContract>
+operationContract(ApiOperation operation, const QJsonObject& parameters = {});
 [[nodiscard]] bool validQrKey(QStringView key);
 [[nodiscard]] std::optional<QJsonObject> operationPayload(ApiOperation operation,
                                                           const QJsonObject& parameters);
