@@ -9,7 +9,15 @@ namespace cirrus::netease
 // Closed native registry. No string-based forwarding from application/QML.
 // AnonymousRegister (xeapi): username is derived from the client's device ID;
 // its MUSIC_A cookie is NOT staged until the anonymous credential scope exists.
-enum class ApiOperation { QrKey, QrCheck, AccountIdentity, AnonymousRegister };
+enum class ApiOperation {
+    QrKey,
+    QrCheck,
+    AccountIdentity,
+    AnonymousRegister,
+    SearchSongs,
+    SongDetails,
+    SongLyrics
+};
 
 struct ApiOperationContract {
     QString logicalPath;

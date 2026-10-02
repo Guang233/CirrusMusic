@@ -1,8 +1,10 @@
 #include "backend_runtime.h"
 
+#include "application/music/music_query_service.h"
 #include "infrastructure/bootstrap/anonymous_bootstrap.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
+#include "infrastructure/netease/music/music_gateway.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
 
@@ -93,6 +95,30 @@ class BackendWorker final : public QObject
         emit delivered(event);
     }
 
+    void music(MusicCommand command)
+    {
+        const auto id = m_ready && !m_closing && m_musicService
+                            ? m_musicService->request(command.context, command.query)
+                            : 0;
+        if (id == 0)
+            emit musicDelivered(
+                {command.id, command.generation, command.context, MusicFailure{MusicError::Busy}});
+        else
+            m_musicRequests.insert(id, std::move(command));
+    }
+
+    void cancelMusic(quint64 requestId)
+    {
+        if (!m_musicService)
+            return;
+        for (auto it = m_musicRequests.cbegin(); it != m_musicRequests.cend(); ++it) {
+            if (it->id == requestId) {
+                m_musicService->cancel(it.key());
+                return;
+            }
+        }
+    }
+
     void close()
     {
         if (m_closing)
@@ -103,6 +129,9 @@ class BackendWorker final : public QObject
         // or anonymous.reset on normal application exit.
         m_anonymous.reset();
         m_registrar.reset();
+        m_musicService.reset();
+        m_musicGateway.reset();
+        m_musicRequests.clear();
         m_service.reset();
         m_gateway.reset();
         queueDrain();
@@ -111,6 +140,7 @@ class BackendWorker final : public QObject
   signals:
     void delivered(cirrus::application::BackendEvent event);
     void drained(bool persistenceFailed);
+    void musicDelivered(cirrus::application::MusicDelivery delivery);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -192,6 +222,16 @@ class BackendWorker final : public QObject
                 });
         m_gateway = std::make_unique<netease::QrLoginGateway>(*m_client, *m_accountVault);
         m_service = std::make_unique<QrLoginService>(*m_session, *m_gateway);
+        m_musicGateway = std::make_unique<netease::MusicGateway>(*m_client);
+        m_musicService = std::make_unique<MusicQueryService>(*m_session, *m_musicGateway);
+        connect(m_musicService.get(), &MusicQueryService::completed, this,
+                [this](quint64 id, domain::SessionToken context, MusicResult result) {
+                    if (!m_musicRequests.contains(id))
+                        return;
+                    const auto command = m_musicRequests.take(id);
+                    emit musicDelivered(
+                        {command.id, command.generation, context, std::move(result)});
+                });
         connect(m_session.get(), &SessionCoordinator::changed, this,
                 &BackendWorker::publishSession);
         connect(m_service.get(), &QrLoginService::challengeReady, this,
@@ -285,6 +325,9 @@ class BackendWorker final : public QObject
     std::unique_ptr<netease::QrLoginGateway> m_gateway;
     std::unique_ptr<QrLoginService> m_service;
     std::unique_ptr<bootstrap::AnonymousBootstrap> m_anonymous;
+    std::unique_ptr<netease::MusicGateway> m_musicGateway;
+    std::unique_ptr<MusicQueryService> m_musicService;
+    QHash<quint64, MusicCommand> m_musicRequests;
 };
 
 BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories, QObject* parent)
@@ -302,6 +345,12 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
     connect(m_facade, &BackendFacade::closeRequested, worker, &BackendWorker::close,
             Qt::QueuedConnection);
     connect(worker, &BackendWorker::delivered, m_facade, &BackendFacade::deliver,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::musicRequested, worker, &BackendWorker::music,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::musicCancelRequested, worker, &BackendWorker::cancelMusic,
+            Qt::QueuedConnection);
+    connect(worker, &BackendWorker::musicDelivered, m_facade, &BackendFacade::deliverMusic,
             Qt::QueuedConnection);
     connect(
         worker, &BackendWorker::drained, thread,

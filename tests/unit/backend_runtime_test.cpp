@@ -228,6 +228,7 @@ class BackendRuntimeTest : public QObject
     Q_OBJECT
   private slots:
     void startLoginCloseRestore();
+    void musicQueriesThroughThread();
     void closeDuringRead();
     void closeDuringAnonymousWrite();
     void anonymousPersistenceFailureIsReported();
@@ -241,6 +242,51 @@ class BackendRuntimeTest : public QObject
     void closeBeforeStart();
     void trackedStoreKeepsDeadRecipientsAccounted();
 };
+
+void BackendRuntimeTest::musicQueriesThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    const BackendConfig config{directory.filePath(QStringLiteral("state.sqlite")),
+                               QStringLiteral("synthetic")};
+    seed(config.databasePath, *state);
+    Gate gate;
+    const QList<Plan> plans{
+        Plan{R"({"code":200,"result":{"songs":[],"songCount":0}})"},
+        Plan{R"({"code":200,"songs":[{"id":1}]})"},
+        Plan{
+            R"({"code":200,"yrc":{"lyric":"[1000,500](1000,500,0)x"},"ytlrc":{"lyric":"[00:01]t"}})"},
+        Plan{"{}", 200, -1}};
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);
+    QSignalSpy done(&f, &BackendFacade::musicCompleted);
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(f.searchSongs({QStringLiteral("fixture")}) != 0);
+    QTRY_COMPARE(done.size(), 1);
+    QVERIFY(std::holds_alternative<domain::SongSearchPage>(
+        qvariant_cast<MusicResult>(done.last().at(2))));
+    QVERIFY(f.songDetails({{QStringLiteral("1")}}) != 0);
+    QTRY_COMPARE(done.size(), 2);
+    QVERIFY(
+        std::holds_alternative<domain::SongDetails>(qvariant_cast<MusicResult>(done.last().at(2))));
+    QVERIFY(f.lyrics({QStringLiteral("1")}) != 0);
+    QTRY_COMPARE(done.size(), 3);
+    const auto lyrics = std::get<domain::SongLyrics>(qvariant_cast<MusicResult>(done.last().at(2)));
+    QCOMPARE(lyrics.original.enhanced.timing, domain::LyricTiming::Words);
+    QCOMPARE(lyrics.translation.enhanced.timing, domain::LyricTiming::Lines);
+    QVERIFY(f.lyrics({QStringLiteral("2")}) != 0);
+    QTRY_COMPARE(state->requests.load(), 4);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 4);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last().at(2))).error,
+             MusicError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
 
 void BackendRuntimeTest::startLoginCloseRestore()
 {

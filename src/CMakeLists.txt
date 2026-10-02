@@ -6,6 +6,7 @@ add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
     domain/account/session_types.h
     domain/account/qr_login_types.h
+    domain/music/music_types.h
 )
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -21,6 +22,9 @@ add_library(cirrus_application STATIC
     application/account/session_coordinator.cpp
     application/account/session_coordinator.h
     application/ports/qr_login_gateway.h
+    application/ports/music_gateway.h
+    application/music/music_query_service.cpp
+    application/music/music_query_service.h
 )
 target_link_libraries(cirrus_application PUBLIC cirrus_domain)
 
@@ -115,10 +119,20 @@ add_library(cirrus_netease_auth STATIC
 )
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
+add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/lyric_parser.cpp
+    infrastructure/netease/music/lyric_parser.h
+    infrastructure/netease/music/music_mapper.cpp
+    infrastructure/netease/music/music_mapper.h
+    infrastructure/netease/music/music_gateway.cpp
+    infrastructure/netease/music/music_gateway.h
+)
+target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_netease_api)
+
 # Composition stays out of application/domain and is not linked into the template UI.
 add_library(cirrus_backend STATIC
     infrastructure/runtime/backend_runtime.cpp
     infrastructure/runtime/backend_runtime.h
 )
 target_link_libraries(cirrus_backend PUBLIC cirrus_application
-    PRIVATE cirrus_bootstrap cirrus_netease_auth)
+    PRIVATE cirrus_bootstrap cirrus_netease_auth cirrus_netease_music)

@@ -8,7 +8,7 @@ Cirrus 的接口审计参考：
 - 许可：MIT，原文见 [LICENSE](LICENSE)
 - 原版权声明：Copyright (c) 2013-2022 Binaryify
 
-当前使用范围：接口名称、协议和请求结构的静态分析，`docs/api/inventory.json` 中的源码表达式片段，以及 `src/infrastructure/netease/protocol/protocol_crypto.cpp` 中 weapi/eapi 协议常量与流程、`protocol/eapi_request_profile.cpp` 中请求 profile／UA／Cookie 结构、`api/api_operation.cpp` 和 `auth/qr_login_gateway.cpp` 中 QR／账号查询路径、参数与业务状态映射，以及 `api/session_api_client.cpp` 中身份查询的 weapi 请求 profile／浏览器 UA、匿名 MUSIC_A fallback，以及 `protocol/xeapi_crypto.cpp`／`protocol/xeapi_request_profile.cpp` 中 XEAPI 协议、匿名用户名生成与请求结构的 C++ 改写（路径均位于 `src/infrastructure/netease/` 下）；不包含上游服务或其 Node.js 运行依赖。未来原生实现若复制／改写上游受保护表达，须保留必要版权与许可通知，并在分发材料中包含此通知和 MIT 原文。
+当前使用范围：接口名称、协议和请求结构的静态分析，`docs/api/inventory.json` 中的源码表达式片段，以及 `src/infrastructure/netease/protocol/protocol_crypto.cpp` 中 weapi/eapi 协议常量与流程、`protocol/eapi_request_profile.cpp` 中请求 profile／UA／Cookie 结构、`api/api_operation.cpp` 和 `auth/qr_login_gateway.cpp` 中 QR／账号查询路径、参数与业务状态映射，以及 `api/session_api_client.cpp` 中身份查询的 weapi 请求 profile／浏览器 UA、匿名 MUSIC_A fallback，以及 `protocol/xeapi_crypto.cpp`／`protocol/xeapi_request_profile.cpp` 中 XEAPI 协议、匿名用户名生成与请求结构的 C++ 改写（路径均位于 `src/infrastructure/netease/` 下）；新增音乐查询还参考 `module/search.js`、`song_detail.js`、`lyric_new.js`的路径／参数，以及 `public/docs/home.md` 的YRC结构说明，原生实现位于 `api/api_operation.cpp` 和 `music/`；测试歌词使用合成内容，不包含曲库原文。不包含上游服务或其 Node.js 运行依赖。未来原生实现若复制／改写上游受保护表达，须保留必要版权与许可通知，并在分发材料中包含此通知和 MIT 原文。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。
 

@@ -277,15 +277,24 @@ void SessionApiClient::start(quint64 id)
         startXeapi(id, *it);
         return;
     }
-    if (it->operation == ApiOperation::AccountIdentity) {
+    if (it->contract.protocol == Protocol::Weapi) {
+        const bool identity = it->operation == ApiOperation::AccountIdentity;
         const auto musicU = m_cookies.value(it->context, it->origin, "MUSIC_U");
+        const auto musicA = m_cookies.value(it->context, it->origin, "MUSIC_A");
         const auto csrf = m_cookies.value(it->context, it->origin, "__csrf");
-        const auto header = m_cookies.header(it->context, it->origin);
-        if (!musicU || musicU->isEmpty() || !csrf || !csrf->isValidUtf8() || !header) {
+        auto header = m_cookies.header(it->context, it->origin);
+        if (!musicU || !musicA || (identity && musicU->isEmpty()) || !csrf ||
+            !csrf->isValidUtf8() || !header) {
             finish(id, {ApiError::Cookie});
             return;
         }
-        it->credentials = m_cookies.snapshot(it->context);
+        if (identity) {
+            it->credentials = m_cookies.snapshot(it->context);
+        } else if (musicU->isEmpty() && musicA->isEmpty() && !m_anonymousToken.isEmpty()) {
+            if (!header->isEmpty())
+                header->append("; ");
+            header->append("MUSIC_A=" + m_anonymousToken);
+        }
         auto payload = it->payload;
         payload.insert(QStringLiteral("e_r"), false);
         payload.insert(QStringLiteral("csrf_token"), QString::fromUtf8(*csrf));

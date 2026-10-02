@@ -49,9 +49,11 @@ form 编码遵循 [WHATWG URL Standard](https://url.spec.whatwg.org/#application
 
 `cirrus_backend` 已装配后台线程、Core-only非阻塞Facade、匿名启动与账号服务，关闭时排空vault队列和真实keyring回调后再退出线程；不把已构造的CookieJar移动线程，不在GUI线程等待SQL。见[后台生命周期](backend-runtime.md)。
 
+`cirrus_netease_music` 已实现歌曲搜索／详情／六轨歌词映射及LRC／YRC解析，通过MusicQueryService和原Facade跨线程接入；仅当前Guest／Authenticated上下文可查询。见[契约与少量官方实测](music-queries-and-lyrics.md)。
+
 ## 测试与构建
 
-下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，当前登记17套件。后台装配本轮按风险编译／执行7个受影响Debug套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
+下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music，当前登记18套件。本轮音乐查询4个受影响Debug套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -79,10 +81,10 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 密钥环增量记录的开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：当时 Debug/Release 构建和十三个 CTest 套件通过，C++ 源文件主动 LSP 检查无诊断，QML lint 通过。匿名启动增量只进行了受影响 Debug 目标编译／3套件回归；账号恢复增量只编译／执行受影响6套件；后台装配增量仅7个受影响套件（QT_FATAL_WARNINGS=1）及变更文件诊断。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
 
-另有 15 项 Python 清单工具测试和 440 个模块／公共文件 hash 核对通过；这是开发工具证据，不计为产品协议测试。网络测试使用替身，未做真实 socket/TLS 或真实账号集成验证。
+另有 15 项 Python 清单工具测试和 440 个模块／公共文件 hash 核对通过；这是开发工具证据，不计为产品协议测试。自动化网络测试仍使用替身；本轮按授权另做[3项官方公开查询的少量真实socket/TLS探测](music-queries-and-lyrics.md)，未做真实账号集成验证。
 
 ## 未实现与下一步
 
-[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；尚未实现音乐业务调度、模板入口／QML接线或真实 API 验证。registry 当前覆盖两个 eapi QR operation、一个 weapi 身份 operation 和一个 xeapi 匿名注册 operation（其 MUSIC_A 暂不入账号 jar），不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
+[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，尚未实现播放器、模板入口／QML接线或真实账号验收。registry 当前7项业务operation（原4项认证／匿名链加搜索、歌曲详情、歌词），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
 
-扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。下一步直接实现搜索／歌曲详情／歌词，再接官方URL与播放PoC；受控实测另行授权。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。下一步接官方URL与播放PoC；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

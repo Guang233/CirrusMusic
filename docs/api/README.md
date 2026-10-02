@@ -34,6 +34,7 @@
 | [anonymous-bootstrap.md](anonymous-bootstrap.md) | 安装级匿名启动、密钥环恢复／持久化、重置排空边界和本轮定向验证 |
 | [account-session-restore.md](account-session-restore.md) | 账号记忆、身份复核后恢复、退出排空旧写再删除、显式保存结果 |
 | [backend-runtime.md](backend-runtime.md) | 后台线程装配、Core-only异步入口、启动降级、旧事件隔离与关闭排空 |
+| [music-queries-and-lyrics.md](music-queries-and-lyrics.md) | 搜索／歌曲详情／原文·翻译·罗马音歌词、逐行／逐字解析与公开小样本实测 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围
@@ -92,4 +93,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；下一步直接接搜索／歌曲详情／歌词，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；下一步接官方歌曲URL，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

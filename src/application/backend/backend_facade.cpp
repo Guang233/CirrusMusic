@@ -32,6 +32,7 @@ void BackendFacade::close()
         return;
     ++m_generation;
     m_snapshot = {};
+    invalidateMusic(MusicError::Canceled);
     const auto pending = std::exchange(m_pending, {});
     setState(BackendState::Stopping);
     emit closeRequested();
@@ -53,6 +54,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
     if (action != AccountAction::Poll) {
         ++m_generation;
         m_snapshot = {}; // immediate intent barrier, before backend processes the command
+        invalidateMusic(MusicError::StaleContext);
     }
     emit commandRequested({id, m_generation, action, options});
     return id;
@@ -100,6 +102,8 @@ void BackendFacade::deliver(BackendEvent event)
     if (m_state != BackendState::Ready)
         return;
     if (event.kind == Kind::Session) {
+        if (m_snapshot.token != event.session.token)
+            invalidateMusic(MusicError::StaleContext);
         m_snapshot = event.session;
         emit sessionChanged(m_snapshot);
         return;
@@ -122,6 +126,70 @@ void BackendFacade::deliver(BackendEvent event)
     default:
         break;
     }
+}
+
+quint64 BackendFacade::searchSongs(domain::SongSearch query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::songDetails(QList<domain::SongId> songs)
+{
+    return submitMusic(DetailQuery{std::move(songs)});
+}
+quint64 BackendFacade::lyrics(domain::SongId song)
+{
+    return submitMusic(LyricQuery{std::move(song)});
+}
+
+quint64 BackendFacade::submitMusic(MusicQuery query)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() || m_music.size() >= 16 ||
+        !validMusicQuery(query) ||
+        (m_snapshot.phase != domain::SessionPhase::Guest &&
+         m_snapshot.phase != domain::SessionPhase::Authenticated))
+        return 0;
+    const auto id = ++m_nextId;
+    const MusicCommand command{id, m_generation, m_snapshot.token, std::move(query)};
+    m_music.insert(id, command);
+    emit musicRequested(command);
+    return id;
+}
+
+void BackendFacade::cancelMusicWith(quint64 id, MusicError error)
+{
+    if (!m_music.contains(id))
+        return;
+    const auto command = m_music.take(id);
+    emit musicCancelRequested(id);
+    QTimer::singleShot(0, this, [this, id, context = command.context, error] {
+        emit musicCompleted(id, context, MusicFailure{error});
+    });
+}
+
+void BackendFacade::invalidateMusic(MusicError error)
+{
+    for (auto id : m_music.keys())
+        cancelMusicWith(id, error);
+}
+
+void BackendFacade::cancelMusic(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    cancelMusicWith(id, MusicError::Canceled);
+}
+
+void BackendFacade::deliverMusic(MusicDelivery delivery)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_music.contains(delivery.id))
+        return;
+    const auto expected = m_music.take(delivery.id);
+    if (delivery.generation != expected.generation || delivery.context != expected.context ||
+        expected.generation != m_generation || expected.context != m_snapshot.token ||
+        m_state != BackendState::Ready)
+        delivery.result = MusicFailure{MusicError::StaleContext};
+    emit musicCompleted(expected.id, expected.context, std::move(delivery.result));
 }
 
 void BackendFacade::finishClose(bool persistenceFailed)

@@ -88,19 +88,27 @@ QueueSnapshot
 ## 6. 歌词模型
 
 ```text
-LyricDocument
-  trackKey, formatVersion, sourceFingerprint
-  kind: TimedWords | TimedLines | PlainText | Instrumental | Unavailable
-  providerOffsetMs, userOffsetMs
-  lines: [LyricLine]
+SongLyrics
+  song: SongId
+  original / translation / romanization: LyricVersions
+  providerNoLyric?, instrumental?
 
-LyricLine
-  startMs?, endMs?, originalText
-  translatedText?, romanizedText?
-  words?: [LyricWord(startMs, durationMs, text)]
+LyricVersions
+  standard / enhanced: LyricTrack
+
+LyricTrack
+  availability: Missing | Empty | Present | Malformed
+  timing: PlainText | Lines | Words
+  providerOffsetMs, credits[], malformedLines
+  lines: [LyricLine(startMs?, endMs?, text, words[])]
+
+LyricWord
+  startMs, durationMs, text
 ```
 
-时间线使用内容时间，显示时应用偏移。约定**正 userOffsetMs 表示歌词延后显示**，有效行起点为 `startMs + providerOffsetMs + userOffsetMs`；实现和设置文案遵守同一符号约定。保留同时间多行，不能用时间戳作为唯一 key 丢掉对唱。空行、重叠、重复标签、畸形时间戳和无结束时间均需测试；逐字格式未经验证时降级，不臆造时间戳。
+上述模型已在[首批音乐查询](api/music-queries-and-lyrics.md)实现；缓存fingerprint／版本、用户偏移设置及播放同步仍待后续实现。六个源字段独立保留，enhanced也可能是逐行；不同语言的行数／时间不一致时不能按下标绑定，不把原文逐字时长复制给译文／罗马音。
+
+时间线使用内容时间，显示时应用偏移。约定**正 userOffsetMs 表示歌词延后显示**，有效行起点为 `startMs + providerOffsetMs + userOffsetMs`；实现和设置文案遵守同一符号约定。LRC的正offset表示提前，解析时转换为负providerOffsetMs，不直接改写内容时间。保留同时间多行，不能用时间戳作为唯一 key 丢掉对唱。空行、重叠、重复标签、畸形时间戳和无结束时间均需测试；逐字格式未经验证时降级，不臆造时间戳。
 
 ## 7. 下载、本地资源与操作结果
 

@@ -58,7 +58,7 @@ Runtime析构只排队请求close，不阻塞调用方，不直接销毁运行�
 
 ## 4. 离线验证
 
-本轮针对7个受影响Debug套件，启用 `QT_FATAL_WARNINGS=1`（跨线程QObject／定时器警告即失败）：
+后台装配工作包（`0f8dd24`）当时针对7个受影响Debug套件，启用 `QT_FATAL_WARNINGS=1`（跨线程QObject／定时器警告即失败）：
 
 | 套件 | pass | skip |
 | --- | ---: | ---: |
@@ -82,8 +82,8 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 ctest --test-dir build/linux-dev-local \
   -V --no-tests=error
 ```
 
-真实keyring往返默认跳过；现有无D-Bus适配器失败检查不等于真实桌面keyring成功验证。没有本轮全量／Release／QML／真实socket或官方账号兼容性证明；没有修改模板入口。当前登记17套件，旧工作包的结果不可相加伪称全量验证。
+真实keyring往返默认跳过；现有无D-Bus适配器失败检查不等于真实桌面keyring成功验证。没有本轮全量／Release／QML／真实socket或官方账号兼容性证明；没有修改模板入口。该时点登记17套件，最新数量见[接手指南](../HANDOFF.md)，旧工作包的结果不可相加伪称全量验证。
 
 ## 5. 下一步
 
-直接推进搜索／歌曲详情／歌词的后端纵向工作包，再接官方歌曲URL与播放PoC；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。
+后续[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入Facade；其16条有界查询、原token与generation隔离、关闭取消继续复用本装配。下一步接官方歌曲URL与播放PoC；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。

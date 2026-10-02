@@ -87,3 +87,8 @@ qt_add_executable(tst_backend_runtime unit/backend_runtime_test.cpp)
 target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test)
 add_test(NAME backend_runtime COMMAND tst_backend_runtime)
 set_tests_properties(backend_runtime PROPERTIES TIMEOUT 30)
+
+qt_add_executable(tst_music unit/music_test.cpp)
+target_link_libraries(tst_music PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME music COMMAND tst_music)
+set_tests_properties(music PROPERTIES TIMEOUT 15)

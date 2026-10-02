@@ -14,6 +14,7 @@ class BackendFacadeTest : public QObject
     void newerIntentDropsAlreadyQueuedEvents();
     void closingRejectsLateStartupAndAcknowledgesPending();
     void readyObserverMayClose();
+    void musicResultCannotSurviveLogout();
 };
 
 static void ready(BackendFacade& facade)
@@ -106,6 +107,27 @@ void BackendFacadeTest::readyObserverMayClose()
     ready(facade);
     QCOMPARE(facade.state(), BackendState::Stopping);
     QCOMPARE(started.size(), 0);
+}
+
+void BackendFacadeTest::musicResultCannotSurviveLogout()
+{
+    BackendFacade facade;
+    ready(facade);
+    BackendEvent event;
+    event.kind = BackendEvent::Kind::Session;
+    event.session = {{QUuid::createUuid(), 1}, SessionPhase::Guest, {}};
+    facade.deliver(event);
+    QSignalSpy requests(&facade, &BackendFacade::musicRequested);
+    QSignalSpy completed(&facade, &BackendFacade::musicCompleted);
+    const auto id = facade.lyrics({QStringLiteral("101")});
+    QVERIFY(id != 0);
+    const auto request = qvariant_cast<MusicCommand>(requests.first().first());
+    QVERIFY(facade.signOut() != 0);
+    facade.deliverMusic({id, request.generation, request.context, SongLyrics{}});
+    QTRY_COMPARE(completed.size(), 1);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(completed.first().at(2))).error,
+             MusicError::StaleContext);
+    QCOMPARE(facade.lyrics({QStringLiteral("101")}), 0ULL);
 }
 
 QTEST_GUILESS_MAIN(BackendFacadeTest)
