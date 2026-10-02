@@ -31,6 +31,7 @@
 | [session-isolation.md](session-isolation.md) | 实际编译依赖、epoch／Cookie 隔离和仍待连接的登录边界 |
 | [qr-auth-request-chain.md](qr-auth-request-chain.md) | 已实现的上下文请求链／扫码 port 与协议边界 |
 | [authentication-transaction.md](authentication-transaction.md) | weapi 身份验证、快照收据、Committing 及精确凭据交接 |
+| [anonymous-bootstrap.md](anonymous-bootstrap.md) | 安装级匿名启动、密钥环恢复／持久化、重置排空边界和本轮定向验证 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围

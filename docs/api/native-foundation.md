@@ -12,7 +12,7 @@
 - `official_route.*`：api/weapi/eapi/xeapi 默认官方 HTTPS 主机和路径改写；拒绝外部 URL、查询串、片段、路径穿越和控制字符。
 - `protocol_crypto.*`：weapi 双层 AES-128-CBC + raw RSA；eapi 的 MD5／分隔符／AES-128-ECB 编码，以及二进制 eapi 响应解密。
 - `response_decoder.*`：有界 gzip、UTF-8／JSON object 校验和可选业务码提取；解码成功不等于业务成功，不吞掉损坏／超限数据。
-- `eapi_request_profile.*`：固定 pc 请求 profile、显式 Cookie／User-Agent、`e_r=false`；设备 ID 由装配方提供，未实现匿名 bootstrap。
+- `eapi_request_profile.*`：固定 pc 请求 profile、显式 Cookie／User-Agent、`e_r=false`；设备 ID 由装配方提供；匿名 bootstrap 见[安装级启动记录](anonymous-bootstrap.md)。
 - `xeapi_crypto.*`：XEAPI B/S/R 编码（AES-256-ECB／随机中间变换／X25519＋HMAC 派生＋AES-128-GCM）、注册签名与常数时间校验、公钥响应解密校验、匿名注册用户名；拒绝小阶点和非法会话密钥。
 - `xeapi_request_profile.*`：固定 android xeapi 兼容 profile（`x-*` 头、Cookie 子集，不发送追踪类随机 Cookie）；`openssl_primitives.*` 为库内共享 AES／HMAC 辅助。
 - 生产随机数使用 OpenSSL RAND_bytes，base62 用拒绝采样避免偏差；测试可注入随机源，但没有用户可配置的固定 seed/key。
@@ -49,7 +49,7 @@ form 编码遵循 [WHATWG URL Standard](https://url.spec.whatwg.org/#application
 
 ## 测试与构建
 
-CTest 已登记十三个无需账号、无需真实 API 的套件：
+下表是密钥环增量时的13套件完整验证基线；当前新增 bootstrap，共登记14套件。本轮按风险只重跑 bootstrap／session_api_client／xeapi，结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ CTest 已登记十三个无需账号、无需真实 API 的套件：
 | qr_login_service | Core-only 应用事务、发布屏障、失败回滚、取消／晚到／重入／析构；自动轮询节奏与总时限（虚拟时钟＋Qt 定时器冒烟） | 61 passed |
 | auth_transaction | 身份 schema、快照隔离、精确交接、错误作用域／收据、登出／到期／重入、总时限跨 Committing | 38 passed |
 
-合计 329 passed（包含数据行及初始化／清理）。XEAPI 向量由锁定上游函数在固定随机输入下生成（开发期 Node 脚本，不随产品分发），签名与 R 字段另经 OpenSSL CLI 交叉验证。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
+该历史完整基线合计 329 passed（包含数据行及初始化／清理）。XEAPI 向量由锁定上游函数在固定随机输入下生成（开发期 Node 脚本，不随产品分发），签名与 R 字段另经 OpenSSL CLI 交叉验证。加密向量由合成 JSON、固定测试密钥和公开协议常量构成；AES/MD5 通过 OpenSSL CLI 独立组装，raw RSA 另以大整数模幂计算。它们不是官方响应样本，不证明当前服务可用。
 
 ```bash
 cmake --preset linux-dev-local
@@ -75,12 +75,12 @@ cmake --build --preset linux-dev-local --parallel
 ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 ```
 
-当前开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：Debug/Release 构建和十三个 CTest 套件通过，新增 C++ 源文件主动 LSP 检查无诊断，QML lint 通过。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
+密钥环增量记录的开发机 Qt 6.11.2、OpenSSL 3.6.4、zlib 1.3.2：当时 Debug/Release 构建和十三个 CTest 套件通过，C++ 源文件主动 LSP 检查无诊断，QML lint 通过。匿名启动增量只进行了受影响 Debug 目标编译／3套件回归和变更文件诊断。`BUILD_TESTING=OFF` 不构建测试；测试不安装。
 
 另有 15 项 Python 清单工具测试和 440 个模块／公共文件 hash 核对通过；这是开发工具证据，不计为产品协议测试。网络测试使用替身，未做真实 socket/TLS 或真实账号集成验证。
 
 ## 未实现与下一步
 
-尚未实现匿名 bootstrap、账号凭据持久化与恢复、网络线程装配与 GUI facade、通用调度或真实 API 验证。registry 当前覆盖两个 eapi QR operation、一个 weapi 身份 operation 和一个 xeapi 匿名注册 operation（其 MUSIC_A 暂不入账号 jar），不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
+[匿名 bootstrap](anonymous-bootstrap.md)已实现并有定向离线回归；尚未实现账号凭据持久化与恢复、网络线程装配与 GUI facade、通用调度或真实 API 验证。registry 当前覆盖两个 eapi QR operation、一个 weapi 身份 operation 和一个 xeapi 匿名注册 operation（其 MUSIC_A 暂不入账号 jar），不代表目录／播放业务已支持；应用空窗口不变，后端尚未装配到产品入口。
 
-扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。下一步补设备 profile、匿名启动、持久化恢复和线程装配，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。下一步补账号持久化恢复和线程装配，再开展受控实测和音乐业务。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

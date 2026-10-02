@@ -34,7 +34,14 @@ struct ApiResult {
     QByteArray retryAfter;
     DecodedResponse decoded;
     QUuid credentialReceipt; // candidate snapshot handle, never itself proof of identity
+    // AnonymousRegister with code 200 only: validated MUSIC_A, NOT adopted automatically.
+    QByteArray anonymousToken;
 };
+
+[[nodiscard]] bool validAnonymousToken(const QByteArray& token);
+// Single consistent, unexpired MUSIC_A scoped to music.163.com or the origin host.
+[[nodiscard]] QByteArray anonymousTokenFrom(const QUrl& origin,
+                                            const QList<QByteArray>& setCookieHeaders);
 
 // Owns transport + current-epoch credentials in ONE event-loop thread. Construct
 // and destroy in that thread (the value-owned jar must not be moved afterwards).
@@ -58,6 +65,10 @@ class SessionApiClient final : public QObject
     void discardReceipt(const QUuid& receipt);
     // Installation key for xeapi operations; same thread, tracked weakly.
     void setXeapiKeyRing(XeapiKeyRing* ring);
+    // Installation-level guest credential; survives epoch changes and is sent only
+    // when the session has no MUSIC_U. Invalid values clear it.
+    void setAnonymousToken(QByteArray token);
+    [[nodiscard]] bool hasAnonymousToken() const { return !m_anonymousToken.isEmpty(); }
 
   signals:
     void contextAdvanced(cirrus::domain::SessionToken context);
@@ -80,10 +91,12 @@ class SessionApiClient final : public QObject
     void receive(quint64 transportId, const TransportResult& result);
     void finish(quint64 requestId, ApiResult result = {});
     void startXeapi(quint64 requestId, Pending& pending);
+    [[nodiscard]] QByteArray guestMusicA(const QByteArray& musicU, const QByteArray& musicA) const;
 
     HttpTransport* m_transport = nullptr; // QObject parent ownership
     QPointer<XeapiKeyRing> m_xeapiKeys;
     std::optional<XeapiSessionKey> m_xeapiSession; // current epoch only; secret
+    QByteArray m_anonymousToken;                   // installation-level; secret
     const QString m_deviceId;
     SessionCookieStore m_cookies;
     domain::SessionToken m_context;

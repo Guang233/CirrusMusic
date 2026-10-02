@@ -1,6 +1,6 @@
 # 开发接手指南
 
-> 接手入口，不需要阅读此前聊天。代码基线为认证事务 `1a60b74`，其后增加 B-010 扫码轮询与总时限（见 `git log`）；[验证记录](handoff-verification.md)对应的是 `1a60b74` 时点。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
+> 接手入口，不需要阅读此前聊天。代码基线为认证事务 `1a60b74`，其后增加扫码调度、XEAPI、SQLite／密钥环与[匿名启动](api/anonymous-bootstrap.md)（见 `git log`）；[验证记录](handoff-verification.md)对应的是 `1a60b74` 时点。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
 
 ## 1. 先理解现在的状态
 
@@ -9,10 +9,10 @@
 | 已实现且有离线测试 | 尚未实现／尚未证明 |
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 真实 socket/TLS／官方接口兼容性 |
-| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite DatabaseWorker 与 `state.sqlite` 稳定设备 ID；QtKeychain 秘密存储（禁明文回退）与 XEAPI 公钥持久化 | 匿名 bootstrap、账号恢复 |
-| eapi QR key／QR check、weapi AccountIdentity，共3个远程 operation | 其他音乐业务接口、播放器、云盘／下载、一起听 |
+| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置 | 已登录账号凭据恢复 |
+| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，共4个业务 operation，另有独立公钥注册链 | 其他音乐业务接口、播放器、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限 | 网络线程装配、GUI facade、UI |
-| Debug/Release：13套件、329项 Qt Test pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；匿名启动本轮定向3套件／79 pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -41,8 +41,8 @@ git clone -b master /path/to/CirrusMusic-handoff.bundle CirrusMusic
 ### B. 准备工具链
 
 - Linux；当前实测 x86_64。CMake ≥3.24、Ninja、支持 C++20 的编译器。
-- Qt 开发 Kit：模板要求 ≥6.10，**实际验证的是6.11.2**；需要 Core、Quick／QML、Network、Test 及 QML lint 工具；模板还使用 `QtQuick.Layouts`、`QtQuick.Controls.Basic`，不能只装 Qt Core 开发包。未证明6.10或其他发行版兼容。
-- OpenSSL ≥3 Crypto、zlib 的开发头和库。仅有运行库不足以编译。
+- Qt 开发 Kit：模板要求 ≥6.10，**实际验证的是6.11.2**；需要 Core、Quick／QML、Network、Sql（含QSQLITE插件）、Test及QML lint工具；模板还使用 `QtQuick.Layouts`、`QtQuick.Controls.Basic`，不能只装 Qt Core 开发包。未证明6.10或其他发行版兼容。
+- OpenSSL ≥3 Crypto、zlib、Qt6Keychain 的开发头和库（系统包名依发行版而异，如 `qtkeychain-qt6`）。仅有运行库不足以编译。系统密钥环不可用时有明确错误，不明文回退。
 - Python 3：可选审计校验，不是应用构建／运行依赖。不需要 Node.js。
 - GDB、clangd、clang-format、VS Code 扩展是调试／编辑工具，不是运行依赖。不要盲目复制本机编译器版本作为最低版本要求。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-预期 CTest 有13个套件且全部通过；少于13个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。329是当前 Qt Test 明细计数（另有1项默认跳过的真实密钥环往返测试），不是329个独立产品功能。
+当前 CTest 登记14个套件；少于14个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，匿名启动本轮只验证3个受影响套件／79 pass；不自动累加为新的完整验证报告。另有1项默认跳过的真实密钥环往返测试。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -106,11 +106,12 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/account/qr_login_service.*` | begin/poll/cancel、自动轮询与总时限、身份确认、精确 target 提交 |
 | `src/application/account/login_scheduler.*` | 单调时钟＋单次定时器窄接缝；测试替身在 `tests/support/fake_login_scheduler.h` |
 | `src/application/ports/qr_login_gateway.h` | 窄 port、按值结果、脱敏错误；无 JSON／Cookie |
-| `src/infrastructure/netease/api/api_operation.*` | 目前3项封闭注册契约 |
+| `src/infrastructure/netease/api/api_operation.*` | 目前4项业务operation的封闭注册契约 |
 | `src/infrastructure/netease/api/session_api_client.*` | 捕获 token/origin、快照和一次性收据 |
 | `src/infrastructure/netease/auth/` | QR 映射、身份 schema、port 实现 |
 | `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
 | `tests/unit/auth_transaction_test.cpp` | 从实际协议代码到应用的合成网络认证链 |
+| `src/infrastructure/bootstrap/anonymous_bootstrap.*`、`tests/unit/bootstrap_test.cpp` | 安装级匿名恢复／注册，重置后排空在途写入再删除的边界 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
@@ -128,7 +129,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。下一步：匿名 bootstrap → 安全存储／恢复与线程装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。匿名 bootstrap 已实现，见[契约与验证范围](api/anonymous-bootstrap.md)。下一步：已登录账号凭据的安全持久化／恢复与线程装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
@@ -146,6 +147,6 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 - [ ] 从干净源码配置／构建／测试，而非复用发送者的 build 目录；结果与[验证记录](handoff-verification.md)比较。
 - [ ] 接收方找到 service、port、native adapter 及其测试，能说明为何803不是登录完成。
 - [ ] 领取单一任务，记录验收项；新依赖／真实访问先获授权。
-- [ ] 每个增量附完整测试结果、剩余风险并更新本页和实现记录；提交、推送、发布分别授权。
+- [ ] 每个增量按影响范围记录必要编译／测试结果及未复验项目，剩余风险同步更新本页和实现记录；提交、推送、发布分别授权。
 
 不交付：`CMakeUserPresets.json`、Qt Creator 私有配置、Qt 安装目录、编译数据库、构建缓存、本机日志、真实凭据。以上接收勾选项尚待实际接手者执行，不因本机复验而代勾。

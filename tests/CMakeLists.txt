@@ -53,6 +53,11 @@ target_link_libraries(tst_secrets PRIVATE cirrus_bootstrap Qt6::Test)
 add_test(NAME secrets COMMAND tst_secrets)
 set_tests_properties(secrets PROPERTIES TIMEOUT 30)
 
+qt_add_executable(tst_bootstrap unit/bootstrap_test.cpp)
+target_link_libraries(tst_bootstrap PRIVATE cirrus_bootstrap Qt6::Test)
+add_test(NAME bootstrap COMMAND tst_bootstrap)
+set_tests_properties(bootstrap PROPERTIES TIMEOUT 15)
+
 qt_add_executable(tst_qr_login_gateway unit/qr_login_gateway_test.cpp)
 target_link_libraries(tst_qr_login_gateway PRIVATE cirrus_netease_auth Qt6::Test)
 add_test(NAME qr_login_gateway COMMAND tst_qr_login_gateway)

@@ -4,6 +4,7 @@
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QDateTime>
+#include <QNetworkCookie>
 #include <QThread>
 #include <QTimer>
 
@@ -11,6 +12,47 @@
 
 namespace cirrus::netease
 {
+
+bool validAnonymousToken(const QByteArray& token)
+{
+    if (token.isEmpty() || token.size() > 4096) {
+        return false;
+    }
+    for (const unsigned char c : token) {
+        if (c < 0x21 || c > 0x7e || c == ';' || c == ',') {
+            return false;
+        }
+    }
+    return true;
+}
+
+QByteArray anonymousTokenFrom(const QUrl& origin, const QList<QByteArray>& setCookieHeaders)
+{
+    const auto now = QDateTime::currentDateTimeUtc();
+    QByteArray found;
+    for (const auto& header : setCookieHeaders) {
+        for (auto cookie : QNetworkCookie::parseCookies(header)) {
+            cookie.normalize(origin);
+            if (cookie.name() != "MUSIC_A") {
+                continue;
+            }
+            const auto domain = cookie.domain();
+            const bool official = domain == QStringLiteral(".music.163.com") ||
+                                  domain == origin.host() ||
+                                  domain == QLatin1Char('.') + origin.host();
+            const bool expired =
+                cookie.expirationDate().isValid() && cookie.expirationDate() <= now;
+            if (!official || expired || !validAnonymousToken(cookie.value())) {
+                return {}; // a suspicious MUSIC_A is never partially trusted
+            }
+            if (!found.isEmpty() && found != cookie.value()) {
+                return {}; // conflicting values: never guess
+            }
+            found = cookie.value();
+        }
+    }
+    return found;
+}
 
 SessionApiClient::SessionApiClient(QString deviceId, QObject* parent)
     : SessionApiClient(std::make_unique<HttpTransport>(), std::move(deviceId), parent)
@@ -51,6 +93,19 @@ void SessionApiClient::setXeapiKeyRing(XeapiKeyRing* ring)
 {
     Q_ASSERT(QThread::currentThread() == thread() && (!ring || ring->thread() == thread()));
     m_xeapiKeys = ring;
+}
+
+void SessionApiClient::setAnonymousToken(QByteArray token)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_anonymousToken.fill('\0');
+    m_anonymousToken = validAnonymousToken(token) ? std::move(token) : QByteArray();
+}
+
+QByteArray SessionApiClient::guestMusicA(const QByteArray& musicU, const QByteArray& musicA) const
+{
+    // As in the reference: only guests (no MUSIC_U) fall back to the anonymous token.
+    return musicU.isEmpty() && musicA.isEmpty() ? m_anonymousToken : musicA;
 }
 
 void SessionApiClient::invalidatePrevious(domain::SessionToken context)
@@ -204,7 +259,7 @@ void SessionApiClient::start(quint64 id)
                                        static_cast<quint16>(id % 1000),
                                        *csrf,
                                        *musicU,
-                                       *musicA,
+                                       guestMusicA(*musicU, *musicA),
                                        *nmtid};
     const auto prepared = prepareEapiRequest(it->contract.logicalPath, it->payload, metadata);
     if (!prepared.ok()) {
@@ -244,8 +299,8 @@ void SessionApiClient::startXeapi(quint64 id, Pending& pending)
         payload.insert(QStringLiteral("username"), anonymousRegistrationUsername(m_deviceId));
     }
     const auto fields = xeapiFormFields(payload);
-    const XeapiRequestMetadata metadata{
-        m_deviceId, QDateTime::currentMSecsSinceEpoch(), *csrf, *musicU, *musicA, *nmtid};
+    const XeapiRequestMetadata metadata{m_deviceId, QDateTime::currentMSecsSinceEpoch(), *csrf,
+                                        *musicU,    guestMusicA(*musicU, *musicA),       *nmtid};
     const auto prepared = fields ? prepareXeapiRequest(*fields, *key, m_xeapiSession, metadata)
                                  : PreparedXeapiRequest{CryptoError::InvalidInput};
     if (!prepared.ok()) {
@@ -312,6 +367,11 @@ void SessionApiClient::receive(quint64 transportId, const TransportResult& trans
         if (session.isValid()) {
             m_xeapiSession = session;
         }
+    }
+    if (result.decoded.ok() && pending.operation == ApiOperation::AnonymousRegister &&
+        result.decoded.businessCode == 200) {
+        // Returned to the caller, never staged into the account jar.
+        result.anonymousToken = anonymousTokenFrom(pending.origin, transport.setCookieHeaders);
     }
     if (!result.decoded.ok()) {
         result.error = ApiError::Decode;

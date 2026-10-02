@@ -94,6 +94,8 @@ target_link_libraries(cirrus_secrets PUBLIC Qt6::Core PRIVATE Qt6Keychain::Qt6Ke
 
 # Composition-level glue between protocol state, storage and secrets.
 add_library(cirrus_bootstrap STATIC
+    infrastructure/bootstrap/anonymous_bootstrap.cpp
+    infrastructure/bootstrap/anonymous_bootstrap.h
     infrastructure/bootstrap/xeapi_key_vault.cpp
     infrastructure/bootstrap/xeapi_key_vault.h
 )
