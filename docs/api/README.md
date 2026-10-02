@@ -32,6 +32,7 @@
 | [qr-auth-request-chain.md](qr-auth-request-chain.md) | 已实现的上下文请求链／扫码 port 与协议边界 |
 | [authentication-transaction.md](authentication-transaction.md) | weapi 身份验证、快照收据、Committing 及精确凭据交接 |
 | [anonymous-bootstrap.md](anonymous-bootstrap.md) | 安装级匿名启动、密钥环恢复／持久化、重置排空边界和本轮定向验证 |
+| [account-session-restore.md](account-session-restore.md) | 账号记忆、身份复核后恢复、退出排空旧写再删除、显式保存结果 |
 | [来源与许可说明](../../third_party/api-enhanced/NOTICE.md) | MIT 通知及未授权转移的第三方 SDK 边界 |
 
 ## 3. 已确认范围
@@ -90,4 +91,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。下一步补设备 profile、匿名启动、安全持久化恢复和线程装配，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；下一步补后台线程和非阻塞启动／关闭装配，再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

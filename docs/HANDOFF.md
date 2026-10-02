@@ -1,6 +1,6 @@
 # 开发接手指南
 
-> 接手入口，不需要阅读此前聊天。代码基线为认证事务 `1a60b74`，其后增加扫码调度、XEAPI、SQLite／密钥环与[匿名启动](api/anonymous-bootstrap.md)（见 `git log`）；[验证记录](handoff-verification.md)对应的是 `1a60b74` 时点。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
+> 接手入口，不需要阅读此前聊天。代码基线为认证事务 `1a60b74`，其后增加扫码调度、XEAPI、SQLite／密钥环、[匿名启动](api/anonymous-bootstrap.md)与[账号恢复](api/account-session-restore.md)（见 `git log`）；[验证记录](handoff-verification.md)对应的是 `1a60b74` 时点。交付方应提供**包含本文件的完整提交**，并告知 `git rev-parse HEAD`，不要只发送这个旧基线号。
 
 ## 1. 先理解现在的状态
 
@@ -9,10 +9,10 @@
 | 已实现且有离线测试 | 尚未实现／尚未证明 |
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 真实 socket/TLS／官方接口兼容性 |
-| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置 | 已登录账号凭据恢复 |
+| epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置；已登录账号凭据记忆／身份复核／恢复／退出清理 | 产品启动／关闭排空装配 |
 | eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，共4个业务 operation，另有独立公钥注册链 | 其他音乐业务接口、播放器、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限 | 网络线程装配、GUI facade、UI |
-| 历史完整基线：13套件／329 pass；匿名启动本轮定向3套件／79 pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；账号恢复本轮定向6套件／191 pass（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-当前 CTest 登记14个套件；少于14个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，匿名启动本轮只验证3个受影响套件／79 pass；不自动累加为新的完整验证报告。另有1项默认跳过的真实密钥环往返测试。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
+当前 CTest 登记15个套件；少于15个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，账号恢复本轮只验证6个受影响套件／191 pass；不自动累加为新的完整验证报告。另有1项默认跳过的真实密钥环往返测试。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -112,6 +112,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
 | `tests/unit/auth_transaction_test.cpp` | 从实际协议代码到应用的合成网络认证链 |
 | `src/infrastructure/bootstrap/anonymous_bootstrap.*`、`tests/unit/bootstrap_test.cpp` | 安装级匿名恢复／注册，重置后排空在途写入再删除的边界 |
+| `src/infrastructure/netease/auth/account_credential_vault.*`、`tests/unit/account_restore_test.cpp` | 单槽位账号记录、版本隔离、身份复核与read/write/logout竞态 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
@@ -129,7 +130,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。匿名 bootstrap 已实现，见[契约与验证范围](api/anonymous-bootstrap.md)。下一步：已登录账号凭据的安全持久化／恢复与线程装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。下一步：后台线程／非阻塞facade与启动／关闭排空装配 → 受控真实认证验证，再扩展音乐查询与播放后端。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |

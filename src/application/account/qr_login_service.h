@@ -25,6 +25,7 @@ struct QrLoginOptions {
     Milliseconds pollInterval = Milliseconds(3000);
     // Whole attempt, including identity verification and Committing.
     Milliseconds totalTimeout = Milliseconds(180000);
+    bool rememberSession = false; // explicit consent; otherwise memory-only
 
     [[nodiscard]] bool isValid() const
     {
@@ -52,6 +53,9 @@ class QrLoginService final : public QObject
     void setOptions(QrLoginOptions options) { m_options = options; } // next begin()
 
     [[nodiscard]] domain::SessionToken begin();
+    [[nodiscard]] domain::SessionToken
+    restore();      // saved credentials still require identity verification
+    void signOut(); // local invalidation + removal of the remembered account
     // Manual mode: caller-paced. Auto mode: also refused (false, no signal) before
     // the next allowed time. Never more than one remote request; no error retry.
     [[nodiscard]] bool poll();
@@ -64,12 +68,15 @@ class QrLoginService final : public QObject
     // Failure is reported on the resulting Guest token, not an already-dead attempt.
     void failed(cirrus::domain::SessionToken context, cirrus::application::AuthFailure failure);
     void signedIn(cirrus::domain::SessionToken context, cirrus::domain::AccountIdentity identity);
+    void savedSessionCompleted(cirrus::domain::SessionToken context,
+                               cirrus::application::SavedSessionResult result);
 
   private:
     // Local schedule of one authentication attempt (Authenticating -> Committing).
     struct Schedule {
         quint64 generation = 0; // 0: no active attempt
         bool autoPoll = false;
+        bool rememberSession = false;
         Milliseconds interval = Milliseconds(0);
         Milliseconds deadline = Milliseconds(0); // absolute monotonic
         Milliseconds nextPollAt = Milliseconds(0);
@@ -77,6 +84,7 @@ class QrLoginService final : public QObject
         quint64 pollTimer = 0;
     };
 
+    [[nodiscard]] domain::SessionToken startAttempt(bool restore);
     void sessionChanged(domain::SessionSnapshot snapshot);
     void cancelRequests();
     void endSchedule();
@@ -102,6 +110,7 @@ class QrLoginService final : public QObject
     Schedule m_schedule;
     quint64 m_generations = 0;
     bool m_preparing = false;
+    domain::SessionPhase m_phase = domain::SessionPhase::Guest;
     domain::SessionToken m_context;
     domain::SessionToken m_synchronized;
     QString m_key;

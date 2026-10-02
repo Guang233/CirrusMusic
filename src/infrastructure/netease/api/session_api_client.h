@@ -63,6 +63,12 @@ class SessionApiClient final : public QObject
     [[nodiscard]] bool promoteReceipt(domain::SessionToken from, domain::SessionToken to,
                                       const QUuid& receipt);
     void discardReceipt(const QUuid& receipt);
+    // Secure-store adapter only. Import stages an untrusted saved record into the
+    // current attempt; callers MUST verify identity before promotion/publication.
+    [[nodiscard]] std::optional<QByteArray> saveCredentials(domain::SessionToken context,
+                                                            QString accountId) const;
+    [[nodiscard]] std::optional<QString> restoreCredentials(domain::SessionToken context,
+                                                            const QByteArray& record);
     // Installation key for xeapi operations; same thread, tracked weakly.
     void setXeapiKeyRing(XeapiKeyRing* ring);
     // Installation-level guest credential; survives epoch changes and is sent only

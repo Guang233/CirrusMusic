@@ -1,4 +1,5 @@
 #include "qr_login_gateway.h"
+#include "account_credential_vault.h"
 #include "account_identity_mapper.h"
 
 #include <QThread>
@@ -98,6 +99,9 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
                     m_keyContext = {};
                     m_authorizedContext = {};
                     m_verified.reset();
+                    m_boundContext = {};
+                    m_boundAccount.clear();
+                    m_restoreId = 0;
                     // Release the single-flight slot NOW, including pre-dispatch
                     // calls. Old completion still carries its original token.
                     const auto ids = m_pending.keys();
@@ -130,6 +134,101 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
             rejectLater(id, {AuthError::Network});
         }
     });
+}
+
+QrLoginGateway::QrLoginGateway(SessionApiClient& client, AccountCredentialVault& vault,
+                               QObject* parent)
+    : QrLoginGateway(client, parent)
+{
+    Q_ASSERT(vault.thread() == thread());
+    m_vault = &vault;
+    connect(&vault, &AccountCredentialVault::settled, this,
+            [this](domain::SessionToken context, bool remembered, secrets::SecretError error) {
+                if (error == secrets::SecretError::None) {
+                    emit savedSessionCompleted(context, remembered);
+                } else {
+                    emit savedSessionCompleted(context, AuthFailure{AuthError::CredentialRejected});
+                }
+            });
+    connect(&vault, &QObject::destroyed, this, [this] {
+        if (m_restoreId != 0) {
+            rejectLater(m_restoreId, {AuthError::CredentialRejected});
+        }
+    });
+}
+
+quint64 QrLoginGateway::restoreIdentity(domain::SessionToken context)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const auto id = ++m_nextId;
+    m_pending.insert(id, {context, ApiOperation::AccountIdentity});
+    if (!m_client || !m_client->accepts(context)) {
+        rejectLater(id, {AuthError::StaleContext});
+    } else if (!m_vault) {
+        rejectLater(id, {AuthError::CredentialRejected});
+    } else if (!m_apiIds.isEmpty() || m_promotionId != 0 || m_restoreId != 0) {
+        rejectLater(id, {AuthError::Busy});
+    } else {
+        m_restoreId = id;
+        m_vault->read(context, this, [this, id, context](SavedCredentialResult result) {
+            const auto it = m_pending.constFind(id);
+            if (it == m_pending.constEnd() || it->failure) {
+                result.record.fill('\0');
+                return;
+            }
+            if (result.stale || !m_client || !m_client->accepts(context)) {
+                result.record.fill('\0');
+                finishFailure(id, {AuthError::StaleContext});
+                return;
+            }
+            const auto account = result.error == secrets::SecretError::None
+                                     ? m_client->restoreCredentials(context, result.record)
+                                     : std::nullopt;
+            result.record.fill('\0');
+            if (!account) {
+                if (result.error == secrets::SecretError::None && m_vault) {
+                    m_vault->forget(context); // damaged/expired record, not a network failure
+                }
+                finishFailure(id, {AuthError::CredentialRejected});
+                return;
+            }
+            m_authorizedContext = context; // only enables identity verification, not login
+            m_pending[id].restoredAccount = *account;
+            const auto apiId = m_client->submit(context, ApiOperation::AccountIdentity);
+            m_pending[id].apiId = apiId;
+            m_apiIds.insert(apiId, id);
+        });
+    }
+    return id;
+}
+
+void QrLoginGateway::storeSession(domain::SessionToken context, domain::AccountIdentity identity,
+                                  bool remember)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_client || !m_client->accepts(context) || m_boundContext != context ||
+        m_boundAccount != identity.accountId) {
+        return;
+    }
+    if (m_vault) {
+        if (remember) {
+            m_vault->save(context, identity.accountId);
+        } else {
+            m_vault->forget(context);
+        }
+    } else if (remember) {
+        QTimer::singleShot(0, this, [this, context] {
+            emit savedSessionCompleted(context, AuthFailure{AuthError::CredentialRejected});
+        });
+    }
+}
+
+void QrLoginGateway::forgetSession(domain::SessionToken context)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_vault && m_client && m_client->accepts(context)) {
+        m_vault->forget(context);
+    }
 }
 
 QrLoginGateway::~QrLoginGateway()
@@ -205,6 +304,8 @@ quint64 QrLoginGateway::promoteCredentials(domain::SessionToken attempt,
         }
         m_pending.remove(id);
         m_promotionId = 0;
+        m_boundContext = target;
+        m_boundAccount = identity.accountId;
         emit promotionCompleted(id, target, identity);
     });
     return id;
@@ -219,7 +320,7 @@ quint64 QrLoginGateway::submit(domain::SessionToken context, ApiOperation operat
         rejectLater(id, {AuthError::Network});
     } else if (!m_client->accepts(context)) {
         rejectLater(id, {AuthError::StaleContext});
-    } else if (!m_apiIds.isEmpty() || m_promotionId != 0) {
+    } else if (!m_apiIds.isEmpty() || m_promotionId != 0 || m_restoreId != 0) {
         rejectLater(id, {AuthError::Busy});
     } else if ((operation == ApiOperation::QrKey && m_keyContext == context) ||
                (operation == ApiOperation::QrCheck &&
@@ -266,6 +367,9 @@ void QrLoginGateway::finishFailure(quint64 id, AuthFailure failure)
     }
     if (m_client && !pending.promotion && !m_client->accepts(pending.context)) {
         failure = {AuthError::StaleContext};
+    }
+    if (id == m_restoreId) {
+        m_restoreId = 0;
     }
     if (id == m_promotionId) {
         m_promotionId = 0;
@@ -318,6 +422,16 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
     if (it->operation == ApiOperation::AccountIdentity) {
         const auto identity =
             *code == 200 ? mapAccountIdentity(result.decoded.object) : std::nullopt;
+        if (!it->restoredAccount.isEmpty() &&
+            (!identity || identity->accountId != it->restoredAccount ||
+             result.credentialReceipt.isNull())) {
+            m_client->discardReceipt(result.credentialReceipt);
+            if (m_vault && (*code == 200 || *code == 301 || *code == 302)) {
+                m_vault->forget(context);
+            }
+            finishFailure(id, {AuthError::CredentialRejected});
+            return;
+        }
         if (!identity || result.credentialReceipt.isNull()) {
             m_client->discardReceipt(result.credentialReceipt);
             finishFailure(id, *code == 200 ? AuthFailure{AuthError::InvalidResponse, code}
@@ -325,6 +439,7 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
             return;
         }
         m_verified = application::VerifiedLogin{*identity, result.credentialReceipt};
+        m_restoreId = 0;
         m_apiIds.remove(apiId);
         m_pending.remove(id);
         emit identityCompleted(id, context, *m_verified);

@@ -41,6 +41,7 @@ struct VerifiedLogin {
 };
 using IdentityResult = std::variant<VerifiedLogin, AuthFailure>;
 using PromotionResult = std::variant<domain::AccountIdentity, AuthFailure>;
+using SavedSessionResult = std::variant<bool, AuthFailure>; // true saved, false forgotten
 
 // Narrow, thread-affine port; invoke in the object's owning event-loop thread.
 // All results (including validation failures) are deferred, by value, and carry
@@ -60,6 +61,10 @@ class IQrLoginGateway : public QObject
     [[nodiscard]] virtual quint64 promoteCredentials(domain::SessionToken attempt,
                                                      domain::SessionToken target,
                                                      QUuid receipt) = 0;
+    [[nodiscard]] virtual quint64 restoreIdentity(domain::SessionToken context) = 0;
+    virtual void storeSession(domain::SessionToken context, domain::AccountIdentity identity,
+                              bool remember) = 0;
+    virtual void forgetSession(domain::SessionToken context) = 0;
     virtual void cancel(quint64 requestId) = 0;
 
   signals:
@@ -71,6 +76,8 @@ class IQrLoginGateway : public QObject
                            cirrus::application::IdentityResult result);
     void promotionCompleted(quint64 requestId, cirrus::domain::SessionToken target,
                             cirrus::application::PromotionResult result);
+    void savedSessionCompleted(cirrus::domain::SessionToken context,
+                               cirrus::application::SavedSessionResult result);
 };
 
 } // namespace cirrus::application
@@ -80,3 +87,4 @@ Q_DECLARE_METATYPE(cirrus::application::QrKeyResult)
 Q_DECLARE_METATYPE(cirrus::application::QrStatusResult)
 Q_DECLARE_METATYPE(cirrus::application::IdentityResult)
 Q_DECLARE_METATYPE(cirrus::application::PromotionResult)
+Q_DECLARE_METATYPE(cirrus::application::SavedSessionResult)

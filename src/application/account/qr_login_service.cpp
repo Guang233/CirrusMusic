@@ -29,6 +29,8 @@ QrLoginService::QrLoginService(SessionCoordinator& session, IQrLoginGateway& gat
             &QrLoginService::identityCompleted);
     connect(&gateway, &IQrLoginGateway::promotionCompleted, this,
             &QrLoginService::promotionCompleted);
+    connect(&gateway, &IQrLoginGateway::savedSessionCompleted, this,
+            &QrLoginService::savedSessionCompleted);
     connect(&gateway, &QObject::destroyed, this, [this] { fail(m_context, {AuthError::Network}); });
     sessionChanged(session.snapshot());
 }
@@ -68,6 +70,12 @@ void QrLoginService::sessionChanged(domain::SessionSnapshot snapshot)
     if (!m_session.accepts(snapshot.token)) {
         return; // stale reentrant notification
     }
+    if (m_phase == domain::SessionPhase::Authenticated && m_gateway &&
+        (snapshot.phase == domain::SessionPhase::Guest ||
+         snapshot.phase == domain::SessionPhase::Expired)) {
+        m_gateway->forgetSession(m_context); // delete while the old client token is still current
+    }
+    m_phase = snapshot.phase;
     // Only our own attempt -> prepared target keeps the attempt's schedule and deadline.
     // begin/cancel/logout/Authenticated or any other transition ends it.
     const bool continuation = std::exchange(m_preparing, false) && m_schedule.generation != 0 &&
@@ -90,7 +98,19 @@ void QrLoginService::sessionChanged(domain::SessionSnapshot snapshot)
     }
 }
 
-domain::SessionToken QrLoginService::begin()
+domain::SessionToken QrLoginService::begin() { return startAttempt(false); }
+domain::SessionToken QrLoginService::restore() { return startAttempt(true); }
+
+void QrLoginService::signOut()
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_gateway) {
+        m_gateway->forgetSession(m_session.snapshot().token);
+    }
+    m_session.signOut(); // never waits for the keyring or a remote logout
+}
+
+domain::SessionToken QrLoginService::startAttempt(bool restore)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     const auto started = m_scheduler->now();
@@ -108,11 +128,16 @@ domain::SessionToken QrLoginService::begin()
         return context;
     }
     m_schedule.generation = ++m_generations;
-    m_schedule.autoPoll = options.autoPoll;
+    m_schedule.autoPoll = options.autoPoll && !restore;
+    m_schedule.rememberSession = options.rememberSession || restore;
     m_schedule.interval = options.pollInterval;
     m_schedule.deadline = started + options.totalTimeout;
     armDeadline();
-    m_keyRequest = m_gateway->requestKey(context);
+    if (restore) {
+        m_identityRequest = m_gateway->restoreIdentity(context);
+    } else {
+        m_keyRequest = m_gateway->requestKey(context);
+    }
     return context;
 }
 
@@ -358,8 +383,14 @@ void QrLoginService::promotionCompleted(quint64 id, domain::SessionToken context
         fail(context, {AuthError::InvalidResponse});
         return;
     }
+    const bool remember = m_schedule.rememberSession;
     if (m_session.completeAuthentication(context)) {
-        emit signedIn(context, identity);
+        if (m_gateway && m_session.accepts(context)) {
+            m_gateway->storeSession(context, identity, remember);
+        }
+        if (m_session.accepts(context)) {
+            emit signedIn(context, identity);
+        }
     }
 }
 

@@ -72,3 +72,8 @@ qt_add_executable(tst_auth_transaction unit/auth_transaction_test.cpp)
 target_link_libraries(tst_auth_transaction PRIVATE cirrus_netease_auth Qt6::Test)
 add_test(NAME auth_transaction COMMAND tst_auth_transaction)
 set_tests_properties(auth_transaction PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_account_restore unit/account_restore_test.cpp)
+target_link_libraries(tst_account_restore PRIVATE cirrus_netease_auth Qt6::Test)
+add_test(NAME account_restore COMMAND tst_account_restore)
+set_tests_properties(account_restore PROPERTIES TIMEOUT 20)

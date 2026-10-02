@@ -17,7 +17,8 @@ enum class CookieUpdate { Applied, StaleContext, InvalidOrigin, InvalidHeader, L
 
 // In-memory, thread-affine credentials owned by one coordinator's current epoch.
 // Never attached to QNetworkAccessManager: automatic network cookie IO stays off.
-// No disk export and no unrestricted all-cookies accessor.
+// No public credential export; the session client alone can encode bounded
+// snapshots for the infrastructure's secure store.
 class SessionCookieStore final
 {
   public:
@@ -35,6 +36,8 @@ class SessionCookieStore final
 
   private:
     friend class SessionApiClient;
+    [[nodiscard]] std::optional<QByteArray> encode(const domain::SessionToken& context) const;
+    [[nodiscard]] bool restore(const domain::SessionToken& context, const QByteArray& record);
     [[nodiscard]] bool consistentValue(const domain::SessionToken& context, const QByteArray& name,
                                        const QByteArray& expected) const;
     [[nodiscard]] std::shared_ptr<SessionCookieStore>

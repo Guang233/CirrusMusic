@@ -18,6 +18,7 @@ class FakeGateway : public IQrLoginGateway
     int promotions = 0, keys = 0, checks = 0, identities = 0;
     SessionToken lastCheck;
     bool syncAccepted = true;
+    bool remembered = false;
     QList<quint64> canceled;
     bool synchronize(SessionToken context) override
     {
@@ -48,6 +49,16 @@ class FakeGateway : public IQrLoginGateway
         ++promotions;
         return promotionId = ++sequence;
     }
+    quint64 restoreIdentity(SessionToken) override
+    {
+        ++identities;
+        return identityId = ++sequence;
+    }
+    void storeSession(SessionToken, AccountIdentity, bool remember) override
+    {
+        remembered = remember;
+    }
+    void forgetSession(SessionToken) override {}
     void cancel(quint64 id) override { canceled.append(id); }
     void key(SessionToken token)
     {
@@ -92,6 +103,8 @@ class QrLoginServiceTest : public QObject
     void expired();
     void contextBarrierFailure();
     void destructionCancels();
+    void restoreUsesSamePublicationBarrier();
+    void restoreDeadlineCancelsRead();
 
     // B-010: automatic polling and total authentication deadline (virtual time).
     void optionBounds_data();
@@ -877,6 +890,46 @@ void QrLoginServiceTest::qtTimersDriveService()
     QTRY_COMPARE_WITH_TIMEOUT(failed.size(), 1, 3000);
     QCOMPARE(qvariant_cast<AuthFailure>(failed.at(0).at(1)).error, AuthError::Timeout);
     QVERIFY(gateway.canceled.contains(gateway.pollId));
+    QCOMPARE(session.snapshot().phase, SessionPhase::Guest);
+}
+
+void QrLoginServiceTest::restoreUsesSamePublicationBarrier()
+{
+    SessionCoordinator session;
+    FakeGateway gateway;
+    FakeLoginScheduler scheduler;
+    QrLoginService service(session, gateway, QrLoginOptions{}, &scheduler);
+    QSignalSpy ready(&service, &QrLoginService::signedIn);
+    const auto attempt = service.restore();
+    QCOMPARE(gateway.keys, 0);
+    QCOMPARE(session.snapshot().phase, SessionPhase::Authenticating);
+    gateway.verified(attempt);
+    QCOMPARE(session.snapshot().phase, SessionPhase::Committing);
+    QCOMPARE(ready.size(), 0);
+    gateway.promoted();
+    QCOMPARE(ready.size(), 1);
+    QVERIFY(gateway.remembered); // refresh a restored record after identity revalidation
+    QCOMPARE(session.snapshot().phase, SessionPhase::Authenticated);
+    QCOMPARE(scheduler.pending(), qsizetype(0));
+}
+
+void QrLoginServiceTest::restoreDeadlineCancelsRead()
+{
+    SessionCoordinator session;
+    FakeGateway gateway;
+    FakeLoginScheduler scheduler;
+    auto options = QrLoginOptions{};
+    options.totalTimeout = Ms(3000);
+    QrLoginService service(session, gateway, options, &scheduler);
+    QSignalSpy failed(&service, &QrLoginService::failed);
+    QSignalSpy ready(&service, &QrLoginService::signedIn);
+    const auto attempt = service.restore();
+    scheduler.advance(Ms(3000));
+    QCOMPARE(failed.size(), 1);
+    QCOMPARE(qvariant_cast<AuthFailure>(failed.first().at(1)).error, AuthError::Timeout);
+    QVERIFY(gateway.canceled.contains(gateway.identityId));
+    gateway.verified(attempt); // late keyring result must not restart the transaction
+    QCOMPARE(ready.size(), 0);
     QCOMPARE(session.snapshot().phase, SessionPhase::Guest);
 }
 

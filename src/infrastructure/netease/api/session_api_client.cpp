@@ -4,6 +4,7 @@
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QDateTime>
+#include <QJsonDocument>
 #include <QNetworkCookie>
 #include <QThread>
 #include <QTimer>
@@ -140,6 +141,67 @@ void SessionApiClient::discardReceipt(const QUuid& receipt)
         m_receiptContext = {};
         m_receiptAge.invalidate();
     }
+}
+
+std::optional<QByteArray> SessionApiClient::saveCredentials(domain::SessionToken context,
+                                                            QString accountId) const
+{
+    const auto origin =
+        officialRequestUrl(Protocol::Weapi, QStringLiteral("/api/w/nuser/account/get"));
+    const auto token = m_cookies.value(context, *origin, "MUSIC_U");
+    const auto cookies = m_cookies.encode(context);
+    bool validId = false;
+    const auto id = accountId.toLongLong(&validId);
+    if (!accepts(context) || !token || token->isEmpty() || !cookies || !validId || id <= 0 ||
+        QString::number(id) != accountId ||
+        !m_cookies.consistentValue(context, "MUSIC_U", *token)) {
+        return std::nullopt;
+    }
+    const auto record = QJsonDocument(QJsonObject{{QStringLiteral("format"), 1},
+                                                  {QStringLiteral("deviceId"), m_deviceId},
+                                                  {QStringLiteral("accountId"), accountId},
+                                                  {QStringLiteral("cookies"),
+                                                   QString::fromLatin1(cookies->toBase64())}})
+                            .toJson(QJsonDocument::Compact);
+    return record.size() <= 192 * 1024 ? std::optional<QByteArray>(record) : std::nullopt;
+}
+
+std::optional<QString> SessionApiClient::restoreCredentials(domain::SessionToken context,
+                                                            const QByteArray& record)
+{
+    if (!accepts(context) || !m_pending.isEmpty() || record.size() > 192 * 1024) {
+        return std::nullopt;
+    }
+    const auto object = QJsonDocument::fromJson(record).object();
+    const auto idValue = object.value(QStringLiteral("accountId"));
+    const auto encoded = object.value(QStringLiteral("cookies"));
+    const auto accountId = idValue.toString();
+    bool validId = false;
+    const auto number = accountId.toLongLong(&validId);
+    if (object.size() != 4 || object.value(QStringLiteral("format")) != QJsonValue(1) ||
+        object.value(QStringLiteral("deviceId")).toString() != m_deviceId || !idValue.isString() ||
+        !validId || number <= 0 || QString::number(number) != accountId || !encoded.isString()) {
+        return std::nullopt;
+    }
+    const auto data = QByteArray::fromBase64Encoding(encoded.toString().toLatin1(),
+                                                     QByteArray::AbortOnBase64DecodingErrors);
+    SessionCookieStore candidate;
+    if (!data || QString::fromLatin1(data.decoded.toBase64()) != encoded.toString() ||
+        !candidate.advanceTo(context) || !candidate.restore(context, data.decoded)) {
+        return std::nullopt;
+    }
+    const auto origin =
+        officialRequestUrl(Protocol::Weapi, QStringLiteral("/api/w/nuser/account/get"));
+    const auto token = candidate.value(context, *origin, "MUSIC_U");
+    if (!token || token->isEmpty() || !candidate.consistentValue(context, "MUSIC_U", *token)) {
+        return std::nullopt;
+    }
+    // Copy only after complete schema, scope and credential consistency checks.
+    if (!m_cookies.restore(context, data.decoded)) {
+        return std::nullopt;
+    }
+    discardReceipt(m_receiptId);
+    return accountId;
 }
 
 bool SessionApiClient::promoteReceipt(domain::SessionToken from, domain::SessionToken to,

@@ -102,9 +102,11 @@ add_library(cirrus_bootstrap STATIC
 target_link_libraries(cirrus_bootstrap PUBLIC cirrus_netease_api cirrus_secrets cirrus_storage)
 
 add_library(cirrus_netease_auth STATIC
+    infrastructure/netease/auth/account_credential_vault.cpp
+    infrastructure/netease/auth/account_credential_vault.h
     infrastructure/netease/auth/account_identity_mapper.cpp
     infrastructure/netease/auth/account_identity_mapper.h
     infrastructure/netease/auth/qr_login_gateway.cpp
     infrastructure/netease/auth/qr_login_gateway.h
 )
-target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api)
+target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)

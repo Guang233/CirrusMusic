@@ -1,7 +1,11 @@
 #include "session_cookie_store.h"
 
 #include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkCookie>
+#include <QSet>
 #include <QThread>
 
 namespace cirrus::netease
@@ -189,6 +193,102 @@ bool SessionCookieStore::consistentValue(const domain::SessionToken& context,
             return false;
         }
     }
+    return true;
+}
+
+std::optional<QByteArray> SessionCookieStore::encode(const domain::SessionToken& context) const
+{
+    if (!accepts(context)) {
+        return std::nullopt;
+    }
+    QJsonArray entries;
+    const auto now = QDateTime::currentDateTimeUtc();
+    for (const auto& cookie : m_jar.allCookies()) {
+        if (!cookie.isSessionCookie() && cookie.expirationDate() <= now) {
+            continue;
+        }
+        entries.append(
+            QJsonObject{{QStringLiteral("raw"), QString::fromLatin1(cookie.toRawForm().toBase64())},
+                        {QStringLiteral("domain"), cookie.domain()}});
+    }
+    const auto result = QJsonDocument(entries).toJson(QJsonDocument::Compact);
+    return result.size() <= 128 * 1024 ? std::optional<QByteArray>(result) : std::nullopt;
+}
+
+bool SessionCookieStore::restore(const domain::SessionToken& context, const QByteArray& record)
+{
+    if (!accepts(context) || record.size() > 128 * 1024) {
+        return false;
+    }
+    const auto doc = QJsonDocument::fromJson(record);
+    if (!doc.isArray() || doc.array().size() > 128) {
+        return false;
+    }
+    QList<QNetworkCookie> cookies;
+    QSet<QByteArray> identities;
+    qsizetype bytes = 0;
+    for (const auto& entry : doc.array()) {
+        const auto object = entry.toObject();
+        const auto rawValue = object.value(QStringLiteral("raw"));
+        const auto domainValue = object.value(QStringLiteral("domain"));
+        if (object.size() != 2 || !rawValue.isString() || !domainValue.isString()) {
+            return false;
+        }
+        const auto raw = QByteArray::fromBase64Encoding(rawValue.toString().toLatin1(),
+                                                        QByteArray::AbortOnBase64DecodingErrors);
+        if (!raw || raw.decoded.size() > 4096 ||
+            QString::fromLatin1(raw.decoded.toBase64()) != rawValue.toString()) {
+            return false;
+        }
+        bytes += raw.decoded.size();
+        if (bytes > 64 * 1024) {
+            return false;
+        }
+        for (unsigned char c : raw.decoded) {
+            if (c < 0x20 || c == 0x7f) {
+                return false;
+            }
+        }
+        const auto parsed = QNetworkCookie::parseCookies(raw.decoded);
+        if (parsed.size() != 1) {
+            return false;
+        }
+        auto cookie = parsed.first();
+        const auto domain = domainValue.toString();
+        const auto bareDomain = domain.startsWith(u'.') ? domain.mid(1) : domain;
+        const auto parsedDomain =
+            cookie.domain().startsWith(u'.') ? cookie.domain().mid(1) : cookie.domain();
+        bool exactDomain = false;
+        for (const auto& field : raw.decoded.split(';')) {
+            exactDomain = exactDomain || field.trimmed().toLower() == "domain=" + domain.toLatin1();
+        }
+        if (!exactDomain || !approvedHost(bareDomain) || parsedDomain != bareDomain ||
+            cookie.path().isEmpty() || !cookie.path().startsWith(u'/')) {
+            return false;
+        }
+        cookie.setDomain(domain); // preserve exact host-only versus Domain scope
+        auto validation = cookie;
+        if (cookie.name().startsWith("__Host-") && !domain.startsWith(u'.')) {
+            // Qt normalizes host-only cookies to an exact host in its jar.
+            validation.setDomain({});
+        }
+        if (!validCookie(validation,
+                         QUrl(QStringLiteral("https://") + bareDomain + QStringLiteral("/")))) {
+            return false;
+        }
+        const auto identity =
+            cookie.name() + '\0' + domain.toUtf8() + '\0' + cookie.path().toUtf8();
+        if (identities.contains(identity)) {
+            return false;
+        }
+        identities.insert(identity);
+        if (!cookie.isSessionCookie() &&
+            cookie.expirationDate() <= QDateTime::currentDateTimeUtc()) {
+            continue;
+        }
+        cookies.append(cookie);
+    }
+    m_jar.setAllCookies(cookies); // atomic, after the complete record validates
     return true;
 }
 
