@@ -8,6 +8,7 @@ target_sources(cirrus_domain INTERFACE
     domain/account/qr_login_types.h
     domain/music/music_types.h
     domain/playback/playback_types.h
+    domain/playback/listening_types.h
 )
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -25,6 +26,12 @@ add_library(cirrus_application STATIC
     application/ports/qr_login_gateway.h
     application/ports/music_gateway.h
     application/ports/playback.h
+    application/playback/playback_queue.cpp
+    application/playback/playback_queue.h
+    application/playback/lyric_timeline.cpp
+    application/playback/lyric_timeline.h
+    application/playback/listening_session.cpp
+    application/playback/listening_session.h
     application/playback/playback_coordinator.cpp
     application/playback/playback_coordinator.h
     application/music/music_query_service.cpp

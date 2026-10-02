@@ -49,9 +49,9 @@ Qt媒体引擎的内部网络不复用业务manager，也没有本实现可用�
 - A→B→C乱序回包或旧实例error／position／end不能覆盖C。End只消费一次，终止后释放临时来源；再次播放需要新generation。
 - Resolving／Loading阶段暂停只改变用户意图；Ready后保持暂停，不能突然出声。尚未可seek时只保存最后一个位置；duration／seekable具备后夹取应用。
 - 整体解析／加载时限75秒、媒体解码准备时限15秒；定时器为可取消的单实例，不随快速切歌堆积旧长时定时任务。
-- positionMs和durationMs为**本次媒体片段内部时间**。试听对应原歌位置需要加preview.startMs；以后歌词同步器负责该转换，不把试听片段的0误认为整曲的0。
+- positionMs和durationMs为**本次媒体片段内部时间**。试听对应原歌位置需要加preview.startMs；后续[ListeningSession](queue-and-lyric-clock.md)已负责该转换，不把试听片段的0误认为整曲的0。
 - 显式试听时，解码时长超出范围250ms以上拒绝（给MP3封装／padding留余量）；seek限制到片段，播放位置达到试听长度时结束。不宣称采样级DRM执行或已授权播放完整歌曲。
-- 本轮没有队列／循环／FM续批、自动故障恢复、音质切换保留位置、歌词时钟或MPRIS。End／Failed后resume不偷偷重播旧来源，调用方可明确重新playSong。
+- 该单曲工作包本身不含队列／歌词时钟；后续[队列与歌词工作包](queue-and-lyric-clock.md)已补齐并提供有限自动跳过，仍无FM续批、URL刷新、音质切换保留位置或MPRIS。End／Failed后resume不偷偷重播旧来源，调用方可明确重新playSong。
 
 ## 5. 本轮验证
 
@@ -68,7 +68,7 @@ Qt6.11.2本机Debug，`QT_FATAL_WARNINGS=1`：
 | backend_runtime仅选4条用例 | 6 pass（含init/cleanup）：线程内播放／暂停／seek／关闭，登录恢复、匿名写入关闭、析构排空 |
 | 显式启用silentQtSmoke | 3 pass（含init/cleanup）：合成3秒静音WAV，真实Qt适配器在独立QThread中创建／加载／暂停／seek／stop／销毁 |
 
-前四套件最后一次运行结果合计**49 pass、1默认skip**（末次只重跑stream确认补充的超时／HTTP错误映射）；该音频skip随后单独显式启用通过，不把多次init/cleanup相加成“全量通过”。当前登记**21套件**。本轮没有全量／Release／真实账号／真实keyring／跨桌面／打包矩阵验证。
+前四套件最后一次运行结果合计**49 pass、1默认skip**（末次只重跑stream确认补充的超时／HTTP错误映射）；该音频skip随后单独显式启用通过，不把多次init/cleanup相加成“全量通过”。该工作包时点登记**21套件**，最新数量见[接手指南](../HANDOFF.md)。本轮没有全量／Release／真实账号／真实keyring／跨桌面／打包矩阵验证。
 
 ```bash
 cmake --preset linux-dev-local
@@ -97,4 +97,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 CIRRUS_AUDIO_SMOKE=1 \
 
 ## 6. 下一步
 
-在现有单曲协调器上接**队列与歌词时钟同步**（独立原文／翻译／罗马音轨、逐行／逐字定位、seek／试听偏移）；之后继续专辑／艺人／歌单、每日推荐、私人FM与个人库。流式起播、受控Range缓冲及失效恢复应另立小工作包，不用放开CDN策略或任意播放器网络访问来掩盖当前限制。UI仍最后。
+后续已在现有单曲协调器上接入[队列与歌词时钟同步](queue-and-lyric-clock.md)；下一步继续专辑／艺人／歌单、每日推荐、私人FM与个人库。流式起播、受控Range缓冲及失效恢复应另立小工作包，不用放开CDN策略或任意播放器网络访问来掩盖当前限制。UI仍最后。

@@ -17,6 +17,19 @@ class PlaybackTest : public QObject
 {
     Q_OBJECT
   private slots:
+    void initialPauseIsAtomic()
+    {
+        application::SessionCoordinator session;
+        test::FakeStreamResolver resolver;
+        test::FakePlaybackBackend backend;
+        application::PlaybackCoordinator player(session, resolver, backend);
+        const LoadToken token{session.snapshot().token, 1};
+        QVERIFY(player.start(token, {{"1"}}, TransportIntent::Pause));
+        resolver.finish(0, source("1"));
+        emit backend.event({token, Kind::Ready});
+        QCOMPARE(backend.plays, 0);
+        QCOMPARE(player.snapshot().state, PlaybackState::Paused);
+    }
     void pauseAndCoalescedSeek()
     {
         application::SessionCoordinator session;

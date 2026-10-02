@@ -13,7 +13,8 @@ class PlaybackCoordinator final : public QObject
     PlaybackCoordinator(SessionCoordinator& session, IStreamResolver& resolver,
                         IPlaybackBackend& backend, QObject* parent = nullptr);
     ~PlaybackCoordinator() override;
-    bool start(domain::LoadToken token, domain::StreamQuery query);
+    bool start(domain::LoadToken token, domain::StreamQuery query,
+               domain::TransportIntent intent = domain::TransportIntent::Play);
     void stop(domain::LoadToken token = {});
     bool pause();
     bool resume();

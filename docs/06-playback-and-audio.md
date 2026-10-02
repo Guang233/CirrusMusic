@@ -1,17 +1,18 @@
 # 06 · 播放与音频系统
 
-> 状态：完整播放器设计仍为提案；[官方音源／Qt单曲播放](api/stream-resolution-and-playback.md)已落地并通过公开试听静音PoC。当前为有界完整临时缓冲后起播，尚无队列／歌词时钟／流式起播；下文未逐项标注的完整产品能力不能视为已实现。
+> 状态：完整播放器设计仍为提案；[官方音源／Qt单曲播放](api/stream-resolution-and-playback.md)已落地并通过公开试听静音PoC。[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)已完成最小后端闭环。当前仍为有界完整临时缓冲后起播，尚无流式起播；下文未逐项标注的完整产品能力不能视为已实现。
 
 ## 1. 组件职责
 
 | 组件 | 职责 |
 | --- | --- |
-| PlaybackCoordinator | 唯一播放控制中心；解析来源、目标意图、状态机、恢复、generation |
-| QueueService | 队列与随机／循环顺序；不直接操作解码器 |
+| ListeningSession | 已实现：调用方Core-only唯一队列意图入口，通过异步Facade驱动单曲协调器与歌词查询 |
+| PlaybackCoordinator | 已实现：后台单曲来源／目标意图／状态机／generation，恢复能力仍有限 |
+| PlaybackQueue | 已实现：独立队列值模型、随机／循环与真实历史；不直接操作解码器 |
 | IStreamResolver | 根据 TrackKey、账号和音质获得本次可播放来源 |
 | IPlaybackBackend | load、play、pause、stop、seek、音量、设备、事件；不调用官方 API |
 | QtPlaybackBackend | QMediaPlayer/QAudioOutput 实现；把 Qt 状态映射为统一后端事件 |
-| LyricsSynchronizer | 根据媒体时钟定位歌词，不建立独立音频时钟 |
+| LyricTimeline | 已实现：独立六轨时间索引；ListeningSession用媒体位置及试听起点定位，不建立独立音频时钟 |
 | PlayerViewModel | 对 QML 发布脱敏快照及窄命令接口 |
 | MprisAdapter | 对同一协调器发布 D-Bus 能力，不维护第二套播放状态 |
 

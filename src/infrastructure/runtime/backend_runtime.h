@@ -12,7 +12,8 @@ class HttpTransport;
 namespace cirrus::application
 {
 class IPlaybackBackend;
-}
+class ListeningSession;
+} // namespace cirrus::application
 namespace cirrus::secrets
 {
 class SecretStore;
@@ -47,9 +48,11 @@ class BackendRuntime final : public QObject
                    QObject* parent = nullptr);
     ~BackendRuntime() override;
     [[nodiscard]] application::BackendFacade& facade() const { return *m_facade; }
+    [[nodiscard]] application::ListeningSession& listening() const { return *m_listening; }
 
   private:
     application::BackendFacade* m_facade = nullptr;
+    application::ListeningSession* m_listening = nullptr;
 };
 
 } // namespace cirrus::runtime

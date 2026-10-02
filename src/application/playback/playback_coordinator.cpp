@@ -84,11 +84,12 @@ void PlaybackCoordinator::stop(LoadToken token)
     retire();
     emit changed(m_snapshot);
 }
-bool PlaybackCoordinator::start(LoadToken token, StreamQuery query)
+bool PlaybackCoordinator::start(LoadToken token, StreamQuery query, TransportIntent intent)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     const auto session = m_session.snapshot();
-    if (!m_session.accepts(token.session) || token.generation <= m_lastGeneration ||
+    if ((intent != TransportIntent::Play && intent != TransportIntent::Pause) ||
+        !m_session.accepts(token.session) || token.generation <= m_lastGeneration ||
         !validMusicId(query.song.value) || qualityName(query.quality).isEmpty() ||
         (session.phase != SessionPhase::Guest && session.phase != SessionPhase::Authenticated))
         return false;
@@ -99,7 +100,7 @@ bool PlaybackCoordinator::start(LoadToken token, StreamQuery query)
     m_snapshot.token = token;
     m_snapshot.song = query.song;
     m_snapshot.state = PlaybackState::Resolving;
-    m_snapshot.intent = TransportIntent::Play;
+    m_snapshot.intent = intent;
     emit changed(m_snapshot);
     if (!current(token))
         return true;

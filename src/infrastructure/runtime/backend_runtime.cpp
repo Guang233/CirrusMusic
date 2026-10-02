@@ -1,6 +1,7 @@
 #include "backend_runtime.h"
 
 #include "application/music/music_query_service.h"
+#include "application/playback/listening_session.h"
 #include "application/playback/playback_coordinator.h"
 #include "infrastructure/bootstrap/anonymous_bootstrap.h"
 #include "infrastructure/media/qt_playback_backend.h"
@@ -133,7 +134,7 @@ class BackendWorker final : public QObject
                 m_playbackToken = command.token;
                 m_playbackParentGeneration = command.generation;
                 if (command.action == PlaybackAction::Play)
-                    accepted = m_playback->start(command.token, command.query);
+                    accepted = m_playback->start(command.token, command.query, command.intent);
                 else
                     m_playback->stop(command.token);
             } else if (command.action == PlaybackAction::Volume)
@@ -388,7 +389,8 @@ class BackendWorker final : public QObject
 };
 
 BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories, QObject* parent)
-    : QObject(parent), m_facade(new BackendFacade(this))
+    : QObject(parent), m_facade(new BackendFacade(this)),
+      m_listening(new ListeningSession(*m_facade, this))
 {
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
@@ -429,7 +431,12 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
     thread->start(); // idle event loop only; no IO until explicit facade.start()
 }
 
-BackendRuntime::~BackendRuntime() { m_facade->close(); }
+BackendRuntime::~BackendRuntime()
+{
+    delete m_listening; // facade must outlive its caller-thread orchestration
+    m_listening = nullptr;
+    m_facade->close();
+}
 
 } // namespace cirrus::runtime
 

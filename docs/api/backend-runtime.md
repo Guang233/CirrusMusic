@@ -86,4 +86,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 ctest --test-dir build/linux-dev-local \
 
 ## 5. 下一步
 
-后续[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入Facade；其16条有界查询、原token与generation隔离、关闭取消继续复用本装配。[官方歌曲URL与单曲Qt播放](stream-resolution-and-playback.md)也已接入：共享32条命令邮箱，播放快照脱敏且保留固定LoadToken，媒体对象在后台创建／销毁。下一步接队列与歌词时钟；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。
+后续[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入Facade；其16条有界查询、原token与generation隔离、关闭取消继续复用本装配。[官方歌曲URL与单曲Qt播放](stream-resolution-and-playback.md)也已接入：共享32条命令邮箱，播放快照脱敏且保留固定LoadToken，媒体对象在后台创建／销毁。后续[队列与六轨歌词时钟](queue-and-lyric-clock.md)也已接入：Runtime拥有调用方Core-only `ListeningSession`（`listening()`），在Facade之前销毁它。使用队列时由它独占播放命令生产，仍通过异步Facade驱动后台；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。

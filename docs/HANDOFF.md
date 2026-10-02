@@ -10,9 +10,9 @@
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 除少量公开查询／XEAPI音源／试听播放外的广泛官方兼容性 |
 | epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置；已登录账号凭据记忆／身份复核／恢复／退出清理 | 真实桌面密钥环／进程异常终止后的验收 |
-| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，共8个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端 | 其他目录接口、队列／歌词时钟、云盘／下载、一起听 |
+| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，共8个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端；[队列／六轨歌词时钟](api/queue-and-lyric-clock.md) | 其他目录接口、流式起播、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限；BackendRuntime后台装配、Core-only非阻塞Facade和关闭排空 | 模板入口接线、QML注册和UI |
-| 历史完整基线：13套件／329 pass；播放本轮4套件最后一次结果共49 pass、1默认skip；另4条线程用例及显式音频冒烟通过（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；队列／歌词本轮3套件各自最后一次结果共37 pass；另2条线程用例共4 pass；现登记22套件，先前播放PoC证据单列（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-当前 CTest 登记21个套件；少于21个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[播放工作包](api/stream-resolution-and-playback.md)仅4个受影响套件最后一次结果共49 pass、1音频默认skip，另4条线程用例及显式音频冒烟通过；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
+当前 CTest 登记22个套件；少于22个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[队列／歌词工作包](api/queue-and-lyric-clock.md)仅3个受影响套件各自最后一次结果共37 pass，另2条线程用例共4 pass；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -117,6 +117,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/infrastructure/secrets/tracked_secret_store.*` | 原接收者销毁后仍追踪真实keyring操作完成，vault排空前不销毁后端 |
 | `src/domain/music/`、`src/application/music/`、`src/infrastructure/netease/music/` | 歌曲查询、原token用例、JSON映射与六轨歌词解析；见[音乐查询契约](api/music-queries-and-lyrics.md) |
 | `src/domain/playback/`、`src/application/playback/`、`src/infrastructure/media/`、`netease/music/stream_resolver.*` | [官方音源／试听／TTL、固定load身份、独立Qt媒体对象与临时缓冲](api/stream-resolution-and-playback.md) |
+| `src/application/playback/listening_session.*`、`playback_queue.*`、`lyric_timeline.*` | Runtime.listening()调用方入口；队列身份、有限续播、六轨时钟索引，无网络／解码器依赖 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
@@ -135,7 +136,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，下一步接队列与歌词时钟；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，下一步补专辑／艺人／歌单，再接每日推荐／私人FM；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |

@@ -44,6 +44,7 @@ struct PlaybackCommand {
     domain::StreamQuery query;
     qint64 positionMs = 0;
     float volume = 0.5f;
+    domain::TransportIntent intent = domain::TransportIntent::Play;
 };
 struct PlaybackDelivery {
     quint64 generation = 0;
@@ -104,7 +105,8 @@ class BackendFacade final : public QObject
     void cancelMusic(quint64 id);
     [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
     [[nodiscard]] quint64 playSong(domain::SongId song,
-                                   domain::AudioQuality quality = domain::AudioQuality::Standard);
+                                   domain::AudioQuality quality = domain::AudioQuality::Standard,
+                                   domain::TransportIntent intent = domain::TransportIntent::Play);
     [[nodiscard]] quint64 pausePlayback();
     [[nodiscard]] quint64 resumePlayback();
     [[nodiscard]] quint64 stopPlayback();

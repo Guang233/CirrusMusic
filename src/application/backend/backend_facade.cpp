@@ -208,11 +208,13 @@ void BackendFacade::invalidatePlayback()
             emit playbackChanged(m_playback);
     });
 }
-quint64 BackendFacade::playSong(domain::SongId song, domain::AudioQuality quality)
+quint64 BackendFacade::playSong(domain::SongId song, domain::AudioQuality quality,
+                                domain::TransportIntent intent)
 {
     PlaybackCommand command;
     command.action = PlaybackAction::Play;
     command.query = {std::move(song), quality};
+    command.intent = intent;
     return submitPlayback(command);
 }
 quint64 BackendFacade::pausePlayback()
@@ -256,7 +258,9 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
         return 0;
     if (command.action == PlaybackAction::Play &&
         (!domain::validMusicId(command.query.song.value) ||
-         domain::qualityName(command.query.quality).isEmpty()))
+         domain::qualityName(command.query.quality).isEmpty() ||
+         (command.intent != domain::TransportIntent::Play &&
+          command.intent != domain::TransportIntent::Pause)))
         return 0;
     if (command.action == PlaybackAction::Seek &&
         (command.positionMs < 0 || command.positionMs > 7LL * 24 * 60 * 60 * 1000))
@@ -276,7 +280,7 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
         if (command.action == PlaybackAction::Play) {
             m_playback.song = command.query.song;
             m_playback.state = domain::PlaybackState::Resolving;
-            m_playback.intent = domain::TransportIntent::Play;
+            m_playback.intent = command.intent;
         }
     }
     command.token = {m_snapshot.token, m_playbackGeneration};

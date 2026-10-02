@@ -1,5 +1,6 @@
 #include "../support/fake_http.h"
 #include "../support/fake_secret_store.h"
+#include "application/playback/listening_session.h"
 #include "application/ports/playback.h"
 #include "infrastructure/bootstrap/xeapi_key_vault.h"
 #include "infrastructure/netease/network/http_transport.h"
@@ -301,7 +302,14 @@ void BackendRuntimeTest::playbackThroughThread()
         R"({"code":200,"data":[{"id":1,"code":200,"url":"https://m802.music.126.net/synthetic.mp3","level":"standard","type":"mp3","expi":1200,"size":8,"freeTrialInfo":null}]})",
         "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
     QVERIFY(response);
-    auto f = factories(state, gate, {{*response, 200, 10}, {"", 200, -1}});
+    const auto response2 = netease::detail::aes(
+        R"({"code":200,"data":[{"id":2,"code":200,"url":"https://m802.music.126.net/synthetic.mp3","level":"standard","type":"mp3","expi":1200,"size":8,"freeTrialInfo":null}]})",
+        "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
+    QVERIFY(response2);
+    const Plan lyric{R"({"code":200,"lrc":{"lyric":"[00:00]a\n[00:01]b"}})"};
+    auto f = factories(
+        state, gate,
+        {{*response, 200, 10}, lyric, {*response2, 200, 10}, lyric, {"", 200, -1}, {"", 200, -1}});
     f.playback = [state] { return std::make_unique<Player>(state); };
     BackendRuntime runtime(config, std::move(f));
     auto& facade = runtime.facade();
@@ -309,20 +317,29 @@ void BackendRuntimeTest::playbackThroughThread()
     facade.start();
     QTRY_COMPARE(started.size(), 1);
     QTRY_VERIFY(facade.snapshot().token.isValid());
-    QVERIFY(facade.setPlaybackVolume(0));
-    QVERIFY(facade.playSong({"1"}));
-    QVERIFY(facade.pausePlayback());
+    auto& listening = runtime.listening();
+    QVERIFY(listening.setVolume(0));
+    QVERIFY(listening.replaceQueue({{"1"}, {"2"}, {"3"}}));
+    QVERIFY(listening.pause());
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Paused);
     QCOMPARE(facade.playback().actualQuality, "standard");
-    QVERIFY(facade.seekPlayback(1250));
+    QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
+    QVERIFY(listening.seek(1250));
     QTRY_COMPARE(facade.playback().positionMs, 1250);
-    QVERIFY(facade.resumePlayback());
+    QTRY_COMPARE(listening.cursors().original.standard.lines, (QList<qsizetype>{1}));
+    QVERIFY(listening.next()); // atomic initial Pause, not a second command after Play
+    QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Paused);
+    QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
+    QCOMPARE(listening.lyrics()->song.value, "2");
+    QVERIFY(listening.resume());
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
-    QVERIFY(facade.playSong({"2"}));
-    QTRY_COMPARE(state->requests.load(), 2);
+    QVERIFY(listening.next());
+    QTRY_COMPARE(state->requests.load(), 6);
     facade.close();
     QTRY_COMPARE(stopped.size(), 1);
     QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
+    QVERIFY(listening.queue().entries.isEmpty());
+    QVERIFY(!listening.lyrics());
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

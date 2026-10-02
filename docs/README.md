@@ -30,6 +30,7 @@
 | [原生后端实现记录](api/native-foundation.md) | 当前哪些组件和离线测试已落地？ |
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
+| [队列与六轨歌词时钟](api/queue-and-lyric-clock.md) | 最小听歌闭环：队列策略、暂停切歌、媒体位置与独立歌词游标的实现边界 |
 | [06 播放与音频系统](06-playback-and-audio.md) | 播放状态、并发切歌、错误恢复和后端如何实现？ |
 | [07 QML 与设计系统工程](07-qml-and-design-system.md) | 如何自绘现代控件而不丢掉交互、性能和可访问性？ |
 | [08 功能流程规格](08-feature-specifications.md) | 登录、搜索、歌词、下载、云盘等具体怎样工作？ |

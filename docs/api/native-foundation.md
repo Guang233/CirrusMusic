@@ -53,9 +53,11 @@ form 编码遵循 [WHATWG URL Standard](https://url.spec.whatwg.org/#application
 
 `cirrus_netease_music`新增官方XEAPI音源解析，`cirrus_media`新增经批准的Qt Multimedia依赖、受控HTTPS/CDN临时缓冲和独立load媒体实例；Core-only单曲协调器已跨线程接入Facade。见[音源／播放契约与静音实测](stream-resolution-and-playback.md)。
 
+Core-only `PlaybackQueue`／`LyricTimeline`／`ListeningSession`已组成[队列与六轨歌词时钟](queue-and-lyric-clock.md)，Runtime提供调用方listening()入口，不把网络或媒体依赖带入应用层。
+
 ## 测试与构建
 
-下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media，当前登记21套件。本轮[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
+下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media、listening，当前登记22套件。本轮[队列／歌词验证](queue-and-lyric-clock.md)仅3套件各自最后一次结果共37 pass，另2条线程用例共4 pass；此前[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -87,6 +89,6 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 ## 未实现与下一步
 
-[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端，尚未实现队列／歌词时钟、模板入口／QML接线或真实账号验收。registry 当前8项业务operation（原4项认证／匿名链加搜索、歌曲详情、歌词、官方音源），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
+[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端和队列／歌词时钟，尚未实现模板入口／QML接线或真实账号验收。registry 当前8项业务operation（原4项认证／匿名链加搜索、歌曲详情、歌词、官方音源），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
 
-扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC已完成，下一步接队列和歌词时钟；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC、队列和歌词时钟已完成最小闭环，下一步补目录／每日推荐／私人FM；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
