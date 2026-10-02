@@ -9,6 +9,10 @@ namespace cirrus::netease
 {
 class HttpTransport;
 }
+namespace cirrus::application
+{
+class IPlaybackBackend;
+}
 namespace cirrus::secrets
 {
 class SecretStore;
@@ -28,6 +32,7 @@ struct BackendFactories {
     std::function<std::unique_ptr<secrets::SecretStore>()> secrets;
     std::function<std::unique_ptr<netease::HttpTransport>()> apiTransport;
     std::function<std::unique_ptr<netease::HttpTransport>()> keyTransport;
+    std::function<std::unique_ptr<application::IPlaybackBackend>()> playback;
 };
 
 // Composition root only; the template app does not instantiate it yet.

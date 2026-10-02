@@ -25,6 +25,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation)
     case ApiOperation::SongLyrics:
         return ApiOperationContract{QStringLiteral("/api/song/lyric/v1"), Protocol::Eapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::SongStream:
+        return ApiOperationContract{QStringLiteral("/api/song/enhance/player/url/v1"),
+                                    Protocol::Xeapi, ResponseEncoding::EapiAutoJson};
     case ApiOperation::AnonymousRegister:
         // xeapi responses are always AES-ECB encrypted, gzip detected by magic.
         return ApiOperationContract{QStringLiteral("/api/register/anonimous"), Protocol::Xeapi,
@@ -90,6 +93,17 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
             {QStringLiteral("lv"), 0},  {QStringLiteral("rv"), 0},     {QStringLiteral("kv"), 0},
             {QStringLiteral("yv"), 0},  {QStringLiteral("ytv"), 0},    {QStringLiteral("yrv"), 0}};
     }
+    if (operation == ApiOperation::SongStream) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        const auto level = parameters.value(QStringLiteral("level")).toString();
+        if (parameters.size() != 2 || !domain::validMusicId(id) ||
+            (level != QStringLiteral("standard") && level != QStringLiteral("exhigh") &&
+             level != QStringLiteral("lossless") && level != QStringLiteral("hires")))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("ids"), u'[' + id + u']'},
+                           {QStringLiteral("level"), level},
+                           {QStringLiteral("encodeType"), QStringLiteral("flac")}};
+    }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
     case ApiOperation::QrKey:
@@ -110,6 +124,7 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
+    case ApiOperation::SongStream:
         break;
     }
     return std::nullopt;
@@ -132,6 +147,7 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
+    case ApiOperation::SongStream:
         return false; // read-only metadata must not mutate verified account credentials
     }
     return false;

@@ -16,7 +16,8 @@ enum class ApiOperation {
     AnonymousRegister,
     SearchSongs,
     SongDetails,
-    SongLyrics
+    SongLyrics,
+    SongStream
 };
 
 struct ApiOperationContract {

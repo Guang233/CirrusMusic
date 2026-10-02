@@ -1,10 +1,13 @@
 #include "backend_runtime.h"
 
 #include "application/music/music_query_service.h"
+#include "application/playback/playback_coordinator.h"
 #include "infrastructure/bootstrap/anonymous_bootstrap.h"
+#include "infrastructure/media/qt_playback_backend.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
 #include "infrastructure/netease/music/music_gateway.h"
+#include "infrastructure/netease/music/stream_resolver.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
 
@@ -68,6 +71,8 @@ class BackendWorker final : public QObject
         bool accepted = m_ready && !m_closing && m_service;
         if (accepted) {
             m_generation = command.generation;
+            if (command.action != AccountAction::Poll && m_playback)
+                m_playback->stop();
             switch (command.action) {
             case AccountAction::BeginLogin:
                 m_service->setOptions(command.options);
@@ -119,6 +124,35 @@ class BackendWorker final : public QObject
         }
     }
 
+    void playback(PlaybackCommand command)
+    {
+        bool accepted = m_ready && !m_closing && m_playback && command.generation == m_generation &&
+                        m_session->accepts(command.token.session);
+        if (accepted) {
+            if (command.action == PlaybackAction::Play || command.action == PlaybackAction::Stop) {
+                m_playbackToken = command.token;
+                m_playbackParentGeneration = command.generation;
+                if (command.action == PlaybackAction::Play)
+                    accepted = m_playback->start(command.token, command.query);
+                else
+                    m_playback->stop(command.token);
+            } else if (command.action == PlaybackAction::Volume)
+                m_playback->setVolume(command.volume);
+            else if (command.token != m_playbackToken)
+                accepted = false;
+            else if (command.action == PlaybackAction::Pause)
+                accepted = m_playback->pause();
+            else if (command.action == PlaybackAction::Resume)
+                accepted = m_playback->resume();
+            else if (command.action == PlaybackAction::Seek)
+                accepted = m_playback->seek(command.positionMs);
+        }
+        auto event = makeEvent(Kind::Acknowledged);
+        event.commandId = command.id;
+        event.accepted = accepted;
+        emit delivered(event);
+    }
+
     void close()
     {
         if (m_closing)
@@ -129,6 +163,9 @@ class BackendWorker final : public QObject
         // or anonymous.reset on normal application exit.
         m_anonymous.reset();
         m_registrar.reset();
+        m_playback.reset();
+        m_streamResolver.reset();
+        m_player.reset();
         m_musicService.reset();
         m_musicGateway.reset();
         m_musicRequests.clear();
@@ -141,6 +178,7 @@ class BackendWorker final : public QObject
     void delivered(cirrus::application::BackendEvent event);
     void drained(bool persistenceFailed);
     void musicDelivered(cirrus::application::MusicDelivery delivery);
+    void playbackDelivered(cirrus::application::PlaybackDelivery delivery);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -224,6 +262,20 @@ class BackendWorker final : public QObject
         m_service = std::make_unique<QrLoginService>(*m_session, *m_gateway);
         m_musicGateway = std::make_unique<netease::MusicGateway>(*m_client);
         m_musicService = std::make_unique<MusicQueryService>(*m_session, *m_musicGateway);
+        m_player = m_factories.playback ? m_factories.playback()
+                                        : std::make_unique<media::QtPlaybackBackend>();
+        if (!m_player) {
+            startup(StartupError::Configuration);
+            return;
+        }
+        m_streamResolver = std::make_unique<netease::StreamResolver>(*m_client);
+        m_playback =
+            std::make_unique<PlaybackCoordinator>(*m_session, *m_streamResolver, *m_player);
+        connect(m_playback.get(), &PlaybackCoordinator::changed, this,
+                [this](domain::PlaybackSnapshot snapshot) {
+                    if (snapshot.token == m_playbackToken)
+                        emit playbackDelivered({m_playbackParentGeneration, std::move(snapshot)});
+                });
         connect(m_musicService.get(), &MusicQueryService::completed, this,
                 [this](quint64 id, domain::SessionToken context, MusicResult result) {
                     if (!m_musicRequests.contains(id))
@@ -328,6 +380,11 @@ class BackendWorker final : public QObject
     std::unique_ptr<netease::MusicGateway> m_musicGateway;
     std::unique_ptr<MusicQueryService> m_musicService;
     QHash<quint64, MusicCommand> m_musicRequests;
+    std::unique_ptr<IPlaybackBackend> m_player;
+    std::unique_ptr<netease::StreamResolver> m_streamResolver;
+    std::unique_ptr<PlaybackCoordinator> m_playback;
+    domain::LoadToken m_playbackToken;
+    quint64 m_playbackParentGeneration = 0;
 };
 
 BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories, QObject* parent)
@@ -351,6 +408,10 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
     connect(m_facade, &BackendFacade::musicCancelRequested, worker, &BackendWorker::cancelMusic,
             Qt::QueuedConnection);
     connect(worker, &BackendWorker::musicDelivered, m_facade, &BackendFacade::deliverMusic,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::playbackRequested, worker, &BackendWorker::playback,
+            Qt::QueuedConnection);
+    connect(worker, &BackendWorker::playbackDelivered, m_facade, &BackendFacade::deliverPlayback,
             Qt::QueuedConnection);
     connect(
         worker, &BackendWorker::drained, thread,

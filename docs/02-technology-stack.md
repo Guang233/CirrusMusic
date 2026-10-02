@@ -13,7 +13,7 @@
 | UI | Qt Quick、Qt Quick Controls 的 **Templates/Basic 基础**、Qt Quick Layouts | 重写外观，复用成熟交互语义；见 ADR-0005 |
 | 客户端后端 | 模块化单体 C++，应用服务 + 领域对象 + 适配器 | 无独立业务服务器，无微服务；见 ADR-0002 |
 | 官方 API | Qt Network；内置 NetEaseGateway 与协议签名适配器 | 客户端直连官方接口，用户无 API 配置；见 ADR-0003 |
-| 密码学 | 已引入 OpenSSL 3.x `libcrypto`，本机验证 3.6.4 | 使用 EVP；weapi/eapi 离线向量已通过，真实协议仍待验证，不启动外部脚本 |
+| 密码学 | 已引入 OpenSSL 3.x `libcrypto`，本机验证 3.6.4 | 使用 EVP；协议离线向量及少量公开weapi/eapi/XEAPI调用已通过，真实账号仍待验证，不启动外部脚本 |
 | 压缩响应 | 已引入 zlib，当前本机 1.3.2 | gzip 流式解压／CRC／输出限额；系统开发包，发布时锁定版本与许可，未 vendoring 源码 |
 | 音频 | **Qt Multimedia / QMediaPlayer + QAudioOutput**，封装可替换接口 | 首版适配成本低；gapless/DSP/复杂鉴权必须先做 PoC；见 ADR-0004 |
 | 持久化 | Qt SQL + SQLite；QSettings 保存非敏感偏好 | 可迁移、可事务、可测试；见 ADR-0006 |
@@ -35,7 +35,7 @@ Qt 的浮动文档在本次检索时显示 6.11.2。已有模板的 `REQUIRES 6.
 | Gui / Qml / Quick | M1 | 窗口、图形、QML 运行时与场景图 |
 | QuickControls2 | M1 | 控件基础与样式集成；QML Templates/Layouts 也需正确部署 |
 | Network | M0/M2 | API、图片、下载 HTTP；不同信任域隔离管理器和 Cookie |
-| Multimedia | M0/M1 | 音频播放、输出设备与媒体后端 |
+| Multimedia | 已批准并接入M2 | [无界面Qt单曲播放](api/stream-resolution-and-playback.md)，默认输出；设备切换／完整发行门禁未做 |
 | Sql | M1 | SQLite 驱动及迁移 |
 | DBus | M3 | Linux 系统集成；非 Linux 构建用 stub |
 | Concurrent | 需要时 | 有界 CPU/文件任务；不替代有线程亲和性的网络／SQL worker |
@@ -50,7 +50,7 @@ Qt 的浮动文档在本次检索时显示 6.11.2。已有模板的 `REQUIRES 6.
 
 | 方案 | 优点 | 成本／风险 | 决定 |
 | --- | --- | --- | --- |
-| Qt Multimedia | Qt 生命周期一致、部署体系可复用、基础播放足够 | 实际协议／格式／设备支持依赖 Qt 后端；没有由本项目验证的 gapless 保证 | 默认，M0 必测 |
+| Qt Multimedia | Qt 生命周期一致、部署体系可复用、基础播放足够 | 实际协议／格式／设备支持依赖 Qt 后端；没有由本项目验证的 gapless 保证 | 已接入，有静音试听MP3／WAV PoC；尚非完整发行验收 |
 | libmpv | 成熟媒体能力、丰富播放控制 | 新增事件桥接、构建和许可证审核；Linux 打包复杂度更高 | PoC 失败或高级音频成为硬需求时评估 |
 | 直接 FFmpeg + 自建音频输出 | 控制力强 | 自行承担解码、时钟、缓冲、重采样、设备和大量测试 | 首版不选 |
 | GStreamer 自有管线 | Linux 管线扩展性强 | 插件矩阵和平台差异增加维护面 | 特定需求的备选，不与默认实现并行维护 |

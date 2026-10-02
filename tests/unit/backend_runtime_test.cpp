@@ -1,7 +1,9 @@
 #include "../support/fake_http.h"
 #include "../support/fake_secret_store.h"
+#include "application/ports/playback.h"
 #include "infrastructure/bootstrap/xeapi_key_vault.h"
 #include "infrastructure/netease/network/http_transport.h"
+#include "infrastructure/netease/protocol/openssl_primitives.h"
 #include "infrastructure/runtime/backend_runtime.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
@@ -229,6 +231,7 @@ class BackendRuntimeTest : public QObject
   private slots:
     void startLoginCloseRestore();
     void musicQueriesThroughThread();
+    void playbackThroughThread();
     void closeDuringRead();
     void closeDuringAnonymousWrite();
     void anonymousPersistenceFailureIsReported();
@@ -242,6 +245,87 @@ class BackendRuntimeTest : public QObject
     void closeBeforeStart();
     void trackedStoreKeepsDeadRecipientsAccounted();
 };
+
+void BackendRuntimeTest::playbackThroughThread()
+{
+    class Player final : public IPlaybackBackend
+    {
+      public:
+        std::shared_ptr<SharedState> state;
+        domain::LoadToken token;
+        explicit Player(std::shared_ptr<SharedState> s) : state(std::move(s))
+        {
+            check();
+            ++state->created;
+        }
+        ~Player() override
+        {
+            check();
+            ++state->destroyed;
+        }
+        void check()
+        {
+            if (QThread::currentThread() == qApp->thread())
+                ++state->wrongThread;
+        }
+        void load(domain::StreamSource, domain::LoadToken t) override
+        {
+            check();
+            token = t;
+            QTimer::singleShot(0, this, [this, t] {
+                emit event({t, PlaybackEvent::Kind::Duration, {}, 3000});
+                emit event({t, PlaybackEvent::Kind::Seekable, {}, 1});
+                emit event({t, PlaybackEvent::Kind::Ready});
+            });
+        }
+        void play() override
+        {
+            check();
+            emit event({token, PlaybackEvent::Kind::State, domain::PlaybackState::Playing});
+        }
+        void pause() override { check(); }
+        void stop() override { check(); }
+        void seek(qint64 position) override
+        {
+            check();
+            emit event({token, PlaybackEvent::Kind::Position, {}, position});
+        }
+        void setVolume(float) override { check(); }
+    };
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    const auto response = netease::detail::aes(
+        R"({"code":200,"data":[{"id":1,"code":200,"url":"https://m802.music.126.net/synthetic.mp3","level":"standard","type":"mp3","expi":1200,"size":8,"freeTrialInfo":null}]})",
+        "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
+    QVERIFY(response);
+    auto f = factories(state, gate, {{*response, 200, 10}, {"", 200, -1}});
+    f.playback = [state] { return std::make_unique<Player>(state); };
+    BackendRuntime runtime(config, std::move(f));
+    auto& facade = runtime.facade();
+    QSignalSpy started(&facade, &BackendFacade::started), stopped(&facade, &BackendFacade::stopped);
+    facade.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(facade.snapshot().token.isValid());
+    QVERIFY(facade.setPlaybackVolume(0));
+    QVERIFY(facade.playSong({"1"}));
+    QVERIFY(facade.pausePlayback());
+    QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Paused);
+    QCOMPARE(facade.playback().actualQuality, "standard");
+    QVERIFY(facade.seekPlayback(1250));
+    QTRY_COMPARE(facade.playback().positionMs, 1250);
+    QVERIFY(facade.resumePlayback());
+    QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
+    QVERIFY(facade.playSong({"2"}));
+    QTRY_COMPARE(state->requests.load(), 2);
+    facade.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
 
 void BackendRuntimeTest::musicQueriesThroughThread()
 {

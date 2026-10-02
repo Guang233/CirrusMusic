@@ -2,6 +2,7 @@
 
 #include <QThread>
 #include <QTimer>
+#include <cmath>
 #include <utility>
 
 namespace cirrus::application
@@ -33,6 +34,7 @@ void BackendFacade::close()
     ++m_generation;
     m_snapshot = {};
     invalidateMusic(MusicError::Canceled);
+    invalidatePlayback();
     const auto pending = std::exchange(m_pending, {});
     setState(BackendState::Stopping);
     emit closeRequested();
@@ -55,6 +57,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
         ++m_generation;
         m_snapshot = {}; // immediate intent barrier, before backend processes the command
         invalidateMusic(MusicError::StaleContext);
+        invalidatePlayback();
     }
     emit commandRequested({id, m_generation, action, options});
     return id;
@@ -102,8 +105,10 @@ void BackendFacade::deliver(BackendEvent event)
     if (m_state != BackendState::Ready)
         return;
     if (event.kind == Kind::Session) {
-        if (m_snapshot.token != event.session.token)
+        if (m_snapshot.token != event.session.token) {
             invalidateMusic(MusicError::StaleContext);
+            invalidatePlayback();
+        }
         m_snapshot = event.session;
         emit sessionChanged(m_snapshot);
         return;
@@ -190,6 +195,105 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
         m_state != BackendState::Ready)
         delivery.result = MusicFailure{MusicError::StaleContext};
     emit musicCompleted(expected.id, expected.context, std::move(delivery.result));
+}
+
+void BackendFacade::invalidatePlayback()
+{
+    m_playbackGeneration = ++m_nextId;
+    m_playback = {};
+    // Deferred: account intent invalidation must not reenter submit before its command is emitted.
+    const auto generation = m_playbackGeneration;
+    QTimer::singleShot(0, this, [this, generation] {
+        if (generation == m_playbackGeneration)
+            emit playbackChanged(m_playback);
+    });
+}
+quint64 BackendFacade::playSong(domain::SongId song, domain::AudioQuality quality)
+{
+    PlaybackCommand command;
+    command.action = PlaybackAction::Play;
+    command.query = {std::move(song), quality};
+    return submitPlayback(command);
+}
+quint64 BackendFacade::pausePlayback()
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Pause;
+    return submitPlayback(c);
+}
+quint64 BackendFacade::resumePlayback()
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Resume;
+    return submitPlayback(c);
+}
+quint64 BackendFacade::stopPlayback()
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Stop;
+    return submitPlayback(c);
+}
+quint64 BackendFacade::seekPlayback(qint64 positionMs)
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Seek;
+    c.positionMs = positionMs;
+    return submitPlayback(c);
+}
+quint64 BackendFacade::setPlaybackVolume(float linear)
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Volume;
+    c.volume = linear;
+    return submitPlayback(c);
+}
+quint64 BackendFacade::submitPlayback(PlaybackCommand command)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || m_pending.size() >= 32 || !m_snapshot.token.isValid() ||
+        (m_snapshot.phase != domain::SessionPhase::Guest &&
+         m_snapshot.phase != domain::SessionPhase::Authenticated))
+        return 0;
+    if (command.action == PlaybackAction::Play &&
+        (!domain::validMusicId(command.query.song.value) ||
+         domain::qualityName(command.query.quality).isEmpty()))
+        return 0;
+    if (command.action == PlaybackAction::Seek &&
+        (command.positionMs < 0 || command.positionMs > 7LL * 24 * 60 * 60 * 1000))
+        return 0;
+    if (command.action == PlaybackAction::Volume &&
+        (!std::isfinite(command.volume) || command.volume < 0 || command.volume > 1))
+        return 0;
+    command.id = ++m_nextId;
+    command.generation = m_generation;
+    m_pending.insert(command.id);
+    const bool replacing =
+        command.action == PlaybackAction::Play || command.action == PlaybackAction::Stop;
+    if (replacing) {
+        m_playbackGeneration = command.id;
+        m_playback = {};
+        m_playback.token = {m_snapshot.token, m_playbackGeneration};
+        if (command.action == PlaybackAction::Play) {
+            m_playback.song = command.query.song;
+            m_playback.state = domain::PlaybackState::Resolving;
+            m_playback.intent = domain::TransportIntent::Play;
+        }
+    }
+    command.token = {m_snapshot.token, m_playbackGeneration};
+    emit playbackRequested(command);
+    if (replacing && m_playback.token == command.token)
+        emit playbackChanged(m_playback);
+    return command.id;
+}
+void BackendFacade::deliverPlayback(PlaybackDelivery delivery)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || delivery.generation != m_generation ||
+        delivery.snapshot.token.session != m_snapshot.token ||
+        delivery.snapshot.token.generation != m_playbackGeneration)
+        return;
+    m_playback = std::move(delivery.snapshot);
+    emit playbackChanged(m_playback);
 }
 
 void BackendFacade::finishClose(bool persistenceFailed)

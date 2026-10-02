@@ -1,10 +1,10 @@
 # 17 · VS Code 开发环境
 
-> 状态：**已提供的工作区配置**，不是未来架构提案。已有原生后端与10个离线 CTest 套件，尚无可用的产品登录／播放、CI 或发布包。新接手者先读 [HANDOFF](HANDOFF.md)。
+> 状态：**已提供的工作区配置**，不是未来架构提案。已有原生后端，当前套件数量与定向验证见HANDOFF；单曲播放有无界面PoC，尚未接模板UI，没有CI或发布包。新接手者先读 [HANDOFF](HANDOFF.md)。
 
 ## 1. 工具与扩展
 
-构建需要 CMake ≥ 3.24（Presets 工作流）、Ninja、C++20 编译器、OpenSSL ≥ 3 与 zlib 开发包，以及 Qt 6.10+ 开发 Kit（Core、Quick／QML、Network；模板需要 QtQuick.Layouts／QtQuick.Controls.Basic 模块，默认开启测试时还需 Test）。调试／编辑另需 GDB、clangd；Python 3 仅供可选的离线审计工具使用，不参与产品构建和运行。当前实测 Qt 为 6.11.2；发行工具链仍按 02/13 的后续流程冻结。
+构建需要 CMake ≥ 3.24（Presets 工作流）、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib、Qt6Keychain开发包，以及 Qt 6.10+ 开发 Kit（Core、Quick／QML、Network、Sql／QSQLITE、Multimedia及音频后端插件；模板需要 QtQuick.Layouts／QtQuick.Controls.Basic 模块，默认开启测试时还需 Test）。调试／编辑另需 GDB、clangd；Python 3 仅供可选的离线审计工具使用，不参与产品构建和运行。当前实测 Qt 为 6.11.2；发行工具链仍按 02/13 的后续流程冻结。
 
 打开仓库根目录，安装 `.vscode/extensions.json` 推荐的扩展：
 

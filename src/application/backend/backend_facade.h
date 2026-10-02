@@ -2,6 +2,7 @@
 
 #include "application/account/qr_login_service.h"
 #include "application/ports/music_gateway.h"
+#include "domain/playback/playback_types.h"
 #include <QHash>
 
 #include <QSet>
@@ -32,6 +33,21 @@ struct MusicDelivery {
     quint64 generation = 0;
     domain::SessionToken context;
     MusicResult result;
+};
+
+enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume };
+struct PlaybackCommand {
+    quint64 id = 0;
+    quint64 generation = 0; // account intent barrier
+    domain::LoadToken token;
+    PlaybackAction action{};
+    domain::StreamQuery query;
+    qint64 positionMs = 0;
+    float volume = 0.5f;
+};
+struct PlaybackDelivery {
+    quint64 generation = 0;
+    domain::PlaybackSnapshot snapshot; // NEVER contains a URL or provider payload
 };
 
 // A value-only, internal queued delivery envelope. No infrastructure objects or
@@ -86,11 +102,20 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 songDetails(QList<domain::SongId> songs);
     [[nodiscard]] quint64 lyrics(domain::SongId song);
     void cancelMusic(quint64 id);
+    [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
+    [[nodiscard]] quint64 playSong(domain::SongId song,
+                                   domain::AudioQuality quality = domain::AudioQuality::Standard);
+    [[nodiscard]] quint64 pausePlayback();
+    [[nodiscard]] quint64 resumePlayback();
+    [[nodiscard]] quint64 stopPlayback();
+    [[nodiscard]] quint64 seekPlayback(qint64 positionMs);
+    [[nodiscard]] quint64 setPlaybackVolume(float linear);
 
     // Runtime delivery endpoints; queued connections only, not public commands.
     void deliver(BackendEvent event);
     void finishClose(bool persistenceFailed);
     void deliverMusic(MusicDelivery delivery);
+    void deliverPlayback(PlaybackDelivery delivery);
 
   signals:
     void stateChanged(cirrus::application::BackendState state);
@@ -112,17 +137,24 @@ class BackendFacade final : public QObject
     void musicCompleted(quint64 id, cirrus::domain::SessionToken context,
                         cirrus::application::MusicResult result);
 
+    void playbackChanged(cirrus::domain::PlaybackSnapshot snapshot);
+
     // Composition wiring only; emitted on this object's thread.
     void startRequested();
     void closeRequested();
     void commandRequested(cirrus::application::BackendCommand command);
     void musicRequested(cirrus::application::MusicCommand command);
     void musicCancelRequested(quint64 id);
+    void playbackRequested(cirrus::application::PlaybackCommand command);
 
   private:
     quint64 submit(AccountAction action, QrLoginOptions options = {});
     void setState(BackendState state);
     quint64 submitMusic(MusicQuery query);
+    quint64 submitPlayback(PlaybackCommand command);
+    void invalidatePlayback();
+    domain::PlaybackSnapshot m_playback;
+    quint64 m_playbackGeneration = 0;
     void invalidateMusic(MusicError error);
     void cancelMusicWith(quint64 id, MusicError error);
     BackendState m_state = BackendState::Dormant;
@@ -142,3 +174,5 @@ Q_DECLARE_METATYPE(cirrus::application::BackendCommand)
 Q_DECLARE_METATYPE(cirrus::application::BackendEvent)
 Q_DECLARE_METATYPE(cirrus::application::MusicCommand)
 Q_DECLARE_METATYPE(cirrus::application::MusicDelivery)
+Q_DECLARE_METATYPE(cirrus::application::PlaybackCommand)
+Q_DECLARE_METATYPE(cirrus::application::PlaybackDelivery)

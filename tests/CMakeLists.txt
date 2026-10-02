@@ -92,3 +92,19 @@ qt_add_executable(tst_music unit/music_test.cpp)
 target_link_libraries(tst_music PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME music COMMAND tst_music)
 set_tests_properties(music PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_stream unit/stream_test.cpp)
+target_link_libraries(tst_stream PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME stream COMMAND tst_stream)
+set_tests_properties(stream PROPERTIES TIMEOUT 15)
+
+# Keep the coordinator independently linkable using Core/Test only.
+qt_add_executable(tst_playback unit/playback_test.cpp)
+target_link_libraries(tst_playback PRIVATE cirrus_application Qt6::Test)
+add_test(NAME playback COMMAND tst_playback)
+set_tests_properties(playback PROPERTIES TIMEOUT 15)
+
+qt_add_executable(tst_media unit/media_test.cpp)
+target_link_libraries(tst_media PRIVATE cirrus_media Qt6::Test)
+add_test(NAME media COMMAND tst_media)
+set_tests_properties(media PROPERTIES TIMEOUT 30)

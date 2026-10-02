@@ -1,6 +1,6 @@
 # 后台装配、非阻塞入口与关闭排空
 
-> 已实现并通过离线线程／生命周期测试。`main.cpp` 和 `Main.qml` 仍为模板；没有自动启动官方网络、访问真实账号或把后台入口注册给QML。本工作包没有新增运行依赖。
+> 已实现并通过离线线程／生命周期测试。`main.cpp` 和 `Main.qml` 仍为模板；没有自动启动官方网络、访问真实账号或把后台入口注册给QML。原后台装配工作包没有新增运行依赖；后续[播放增量](stream-resolution-and-playback.md)已获准接入Qt Multimedia。
 
 ## 1. 实际边界
 
@@ -44,7 +44,7 @@ Ready以后支持beginLogin(options)、restore、poll、cancel、signOut。默�
 关闭顺序：
 
 1. Facade进入Stopping，立刻拒绝新命令并过滤旧成功事件。
-2. 后台销毁匿名bootstrap／公钥registrar／账号service和gateway，取消自己的网络工作，停止定时器和新的存储生产者。
+2. 后台先退役单曲播放协调器／resolver／Qt媒体实例和临时设备，再销毁查询／匿名bootstrap／公钥registrar／账号service和gateway，取消自己的网络工作，停止定时器和新的存储生产者。
 3. 保留client、两个vault、tracked store及其后端。已排队但未发出的vault写入仍会flush；接收者销毁不等于后端写入取消。
 4. 等待tracked store实际pending归零、account vault的read／dirty／busy为空、key vault的dirty／busy为空；完成回调所派生的新写／删除也纳入屏障。检查在下一事件循环轮次执行，不从完成信号里同步删除vault。
 5. 销毁vault/client/ring/session/store，关闭DatabaseWorker，排空其已有SQL工作并释放进程锁。SQL join发生在后台线程，**不是GUI线程**。
@@ -86,4 +86,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 ctest --test-dir build/linux-dev-local \
 
 ## 5. 下一步
 
-后续[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入Facade；其16条有界查询、原token与generation隔离、关闭取消继续复用本装配。下一步接官方歌曲URL与播放PoC；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。
+后续[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入Facade；其16条有界查询、原token与generation隔离、关闭取消继续复用本装配。[官方歌曲URL与单曲Qt播放](stream-resolution-and-playback.md)也已接入：共享32条命令邮箱，播放快照脱敏且保留固定LoadToken，媒体对象在后台创建／销毁。下一步接队列与歌词时钟；无需重做已建立的认证／装配基础。Runtime只增加对应窄业务入口，不扩成集协议、缓存和播放器于一身的Manager。真实官方访问、桌面keyring验证和app ID落地仍需要授权／决策；UI保持最后。

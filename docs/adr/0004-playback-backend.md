@@ -1,7 +1,7 @@
 # ADR-0004 · Qt Multimedia 首选与可替换播放后端
 
 - 日期：2026-09-26
-- 状态：Proposed，M0 PoC 通过后才能采纳为正式后端
+- 状态：Proposed；基础Qt单曲实现与小样本PoC已完成，完整设备／发行矩阵通过后才冻结为正式产品后端
 - 负责人：播放／维护者
 
 ## 背景
@@ -13,6 +13,14 @@
 默认以 QMediaPlayer + QAudioOutput 实现 IPlaybackBackend。官方来源解析在播放器之外；应用层管理权限、队列、用户意图、generation 和错误恢复。
 
 M0 验证真实 HTTPS/CDN、headers、Range、过期 URL、格式、设备与安装包。无缝、crossfade、EQ、位完美输出不作为默认后端已具备能力。
+
+## 当前落地（2026-10-02）
+
+维护者明确批准Qt6::Multimedia依赖。已有[官方XEAPI音源、受控CDN缓冲、固定load身份和Qt单曲播放](../api/stream-resolution-and-playback.md)，公开30秒试听MP3及合成WAV静音PoC通过。
+
+当前不让QMediaPlayer直接访问远程URL：先由无账号凭据的独立Qt Network manager校验TLS／每跳CDN并有界写入临时设备，再由独立媒体对象解码。最多64MiB／45秒，完整缓冲后起播，不宣称低延迟流式、离线缓存或所有高解析文件可播。MP3／FLAC为当前provider白名单，AAC／外部引用容器暂不开放。
+
+队列／自动恢复／歌词时钟、完整音质／设备／打包验证仍未完成；本次结果不覆盖所有M0退出条件，因此保留Proposed和原复议门禁。
 
 ## 备选
 

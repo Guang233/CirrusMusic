@@ -15,6 +15,7 @@ class BackendFacadeTest : public QObject
     void closingRejectsLateStartupAndAcknowledgesPending();
     void readyObserverMayClose();
     void musicResultCannotSurviveLogout();
+    void playbackHasIntentAndSessionBarriers();
 };
 
 static void ready(BackendFacade& facade)
@@ -128,6 +129,43 @@ void BackendFacadeTest::musicResultCannotSurviveLogout()
     QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(completed.first().at(2))).error,
              MusicError::StaleContext);
     QCOMPARE(facade.lyrics({QStringLiteral("101")}), 0ULL);
+}
+
+void BackendFacadeTest::playbackHasIntentAndSessionBarriers()
+{
+    BackendFacade facade;
+    ready(facade);
+    BackendEvent session;
+    session.kind = BackendEvent::Kind::Session;
+    session.session = {{QUuid::createUuid(), 1}, SessionPhase::Guest, {}};
+    facade.deliver(session);
+    QSignalSpy commands(&facade, &BackendFacade::playbackRequested);
+    QVERIFY(facade.playSong({"1"}));
+    const auto first = qvariant_cast<PlaybackCommand>(commands.last().first());
+    QVERIFY(facade.playSong({"2"}));
+    const auto second = qvariant_cast<PlaybackCommand>(commands.last().first());
+    PlaybackSnapshot old;
+    old.token = first.token;
+    old.song = {"1"};
+    old.state = PlaybackState::Playing;
+    facade.deliverPlayback({first.generation, old});
+    QCOMPARE(facade.playback().song.value, "2");
+    PlaybackSnapshot current;
+    current.token = second.token;
+    current.song = {"2"};
+    current.state = PlaybackState::Playing;
+    facade.deliverPlayback({second.generation, current});
+    QCOMPARE(facade.playback().state, PlaybackState::Playing);
+    QVERIFY(facade.stopPlayback());
+    facade.deliverPlayback({second.generation, current});
+    QCOMPARE(facade.playback().state, PlaybackState::Empty);
+    QVERIFY(facade.signOut());
+    facade.deliverPlayback({second.generation, current});
+    QCOMPARE(facade.playback().state, PlaybackState::Empty);
+    QCOMPARE(facade.playSong({"3"}), 0ULL);
+    facade.close();
+    facade.deliverPlayback({second.generation, current});
+    QCOMPARE(facade.playback().state, PlaybackState::Empty);
 }
 
 QTEST_GUILESS_MAIN(BackendFacadeTest)

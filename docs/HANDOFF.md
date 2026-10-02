@@ -8,11 +8,11 @@
 
 | 已实现且有离线测试 | 尚未实现／尚未证明 |
 | --- | --- |
-| C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 除少量公开搜索／详情／歌词探测外的广泛官方兼容性 |
+| C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 除少量公开查询／XEAPI音源／试听播放外的广泛官方兼容性 |
 | epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置；已登录账号凭据记忆／身份复核／恢复／退出清理 | 真实桌面密钥环／进程异常终止后的验收 |
-| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词，共7个业务operation，另有独立公钥注册链 | 其他目录接口、播放器、云盘／下载、一起听 |
+| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，共8个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端 | 其他目录接口、队列／歌词时钟、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限；BackendRuntime后台装配、Core-only非阻塞Facade和关闭排空 | 模板入口接线、QML注册和UI |
-| 历史完整基线：13套件／329 pass；音乐查询本轮4套件／95 pass，另1条线程集成用例（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；播放本轮4套件最后一次结果共49 pass、1默认skip；另4条线程用例及显式音频冒烟通过（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -41,7 +41,7 @@ git clone -b master /path/to/CirrusMusic-handoff.bundle CirrusMusic
 ### B. 准备工具链
 
 - Linux；当前实测 x86_64。CMake ≥3.24、Ninja、支持 C++20 的编译器。
-- Qt 开发 Kit：模板要求 ≥6.10，**实际验证的是6.11.2**；需要 Core、Quick／QML、Network、Sql（含QSQLITE插件）、Test及QML lint工具；模板还使用 `QtQuick.Layouts`、`QtQuick.Controls.Basic`，不能只装 Qt Core 开发包。未证明6.10或其他发行版兼容。
+- Qt 开发 Kit：模板要求 ≥6.10，**实际验证的是6.11.2**；需要 Core、Quick／QML、Network、Sql（含QSQLITE插件）、Multimedia（含音频后端插件）、Test及QML lint工具；模板还使用 `QtQuick.Layouts`、`QtQuick.Controls.Basic`，不能只装 Qt Core 开发包。未证明6.10或其他发行版兼容。
 - OpenSSL ≥3 Crypto、zlib、Qt6Keychain 的开发头和库（系统包名依发行版而异，如 `qtkeychain-qt6`）。仅有运行库不足以编译。系统密钥环不可用时有明确错误，不明文回退。
 - Python 3：可选审计校验，不是应用构建／运行依赖。不需要 Node.js。
 - GDB、clangd、clang-format、VS Code 扩展是调试／编辑工具，不是运行依赖。不要盲目复制本机编译器版本作为最低版本要求。
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-当前 CTest 登记18个套件；少于18个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，音乐查询本轮只验证4个受影响套件／95 pass及一条线程查询用例；不自动累加为新的完整验证报告。另有1项默认跳过的真实密钥环往返测试。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
+当前 CTest 登记21个套件；少于21个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[播放工作包](api/stream-resolution-and-playback.md)仅4个受影响套件最后一次结果共49 pass、1音频默认skip，另4条线程用例及显式音频冒烟通过；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -106,7 +106,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/account/qr_login_service.*` | begin/poll/cancel、自动轮询与总时限、身份确认、精确 target 提交 |
 | `src/application/account/login_scheduler.*` | 单调时钟＋单次定时器窄接缝；测试替身在 `tests/support/fake_login_scheduler.h` |
 | `src/application/ports/qr_login_gateway.h` | 窄 port、按值结果、脱敏错误；无 JSON／Cookie |
-| `src/infrastructure/netease/api/api_operation.*` | 目前7项业务operation的封闭注册契约 |
+| `src/infrastructure/netease/api/api_operation.*` | 目前8项业务operation的封闭注册契约 |
 | `src/infrastructure/netease/api/session_api_client.*` | 捕获 token/origin、快照和一次性收据 |
 | `src/infrastructure/netease/auth/` | QR 映射、身份 schema、port 实现 |
 | `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
@@ -116,11 +116,12 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/backend/backend_facade.*`、`src/infrastructure/runtime/backend_runtime.*` | 调用方Core-only入口、后台装配／启动／关闭；契约见[后台生命周期](api/backend-runtime.md) |
 | `src/infrastructure/secrets/tracked_secret_store.*` | 原接收者销毁后仍追踪真实keyring操作完成，vault排空前不销毁后端 |
 | `src/domain/music/`、`src/application/music/`、`src/infrastructure/netease/music/` | 歌曲查询、原token用例、JSON映射与六轨歌词解析；见[音乐查询契约](api/music-queries-and-lyrics.md) |
+| `src/domain/playback/`、`src/application/playback/`、`src/infrastructure/media/`、`netease/music/stream_resolver.*` | [官方音源／试听／TTL、固定load身份、独立Qt媒体对象与临时缓冲](api/stream-resolution-and-playback.md) |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
 
-- domain／application 仅 Qt Core 值与用例；不引入 Qt Network、JSON、OpenSSL、具体 NetEase 实现或 QML。当前不需要额外运行时。
+- domain／application 仅 Qt Core 值与用例；不引入 Qt Network、JSON、OpenSSL、具体 NetEase 实现或 QML。Qt Multimedia已获准引入基础设施层；domain／application仍不链接Network／Multimedia。
 - `803 ≠ Authenticated`。身份查询验证后 prepare 到 **Committing**；凭据交给返回的**确切 target**并确认后，才能 complete 到 Authenticated。Committing 不可分发账号私有用例。
 - 身份请求前捕获 Cookie 快照，不能在身份 A 返回后复制已更新成 B 的当前 jar。普通 epoch 前进清凭据，不自动继承。
 - 所有完成信号带原 token；取消只是优化，消费者必须校验上下文。重入退出／换号优先于旧成功结果。
@@ -134,7 +135,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。下一步接官方URL与播放后端；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，下一步接队列与歌词时钟；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
@@ -142,7 +143,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
 | v2 checktoken SDK、一起听接收链 | SDK 与一起听有证据门禁，不暗加 Node/WebEngine，不以 v3 替代 v2 |
-| 播放后端 | QMediaPlayer/QAudioOutput 仍待真实来源 PoC，不把方案当已落地 |
+| 播放后端 | Qt Multimedia已明确获准接入；公开试听MP3／合成WAV PoC通过，完整缓冲后起播；流式、设备切换／打包等仍有门禁 |
 
 当前没有指定新的接手人／问题负责人；由维护者分配。详见[风险与决策](15-risks-and-open-questions.md)。
 

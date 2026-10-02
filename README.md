@@ -6,7 +6,7 @@
 
 ## 开发文档
 
-**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；下一步接官方歌曲URL（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
+**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证，下一步接队列与歌词时钟（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
 
 - [产品范围与需求](docs/01-product-requirements.md)
 - [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)
@@ -20,7 +20,7 @@
 
 ## VS Code 与当前骨架构建
 
-完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib、Qt6Keychain 开发包及 Qt 开发 Kit（含 Network、Sql／QSQLITE，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
+完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib、Qt6Keychain 开发包及 Qt 开发 Kit（含 Network、Sql／QSQLITE、Multimedia及音频后端插件，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
 
 首次克隆时复制 `CMakeUserPresets.json.example` 为 `CMakeUserPresets.json`，填写其中两处 Qt Kit 路径。本次已为当前机器配置好私有文件，不必重复覆盖；个人路径不会提交。
 
@@ -33,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共18套件；音乐查询本轮仅4个受影响 Debug 套件95项通过，另通过一条后台线程查询用例，不声明重新完成全量／Release验证；已有3种公开查询的少量实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共21套件；播放增量仅4个受影响 Debug 套件最后一次结果共49项通过，音频冒烟默认跳过后单独启用通过，另通过4条后台线程／生命周期用例，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 
