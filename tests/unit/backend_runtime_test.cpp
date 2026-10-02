@@ -235,6 +235,7 @@ class BackendRuntimeTest : public QObject
     void startLoginCloseRestore();
     void musicQueriesThroughThread();
     void discoveryThroughThread();
+    void libraryThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -448,6 +449,81 @@ void BackendRuntimeTest::musicQueriesThroughThread()
     QTRY_COMPARE(done.size(), 6);
     QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last().at(2))).error,
              MusicError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+void BackendRuntimeTest::libraryThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    const BackendConfig config{directory.filePath(QStringLiteral("state.sqlite")),
+                               QStringLiteral("synthetic-library")};
+    seed(config.databasePath, *state);
+    Gate gate;
+    auto plans = loginPlans();
+    plans.append(
+        Plan{R"({"code":200,"playlist":[{"id":1,"creator":{"userId":101}}],"more":false})"});
+    plans.append(Plan{R"({"code":200,"ids":["9007199254740993",2]})"});
+    plans.append(Plan{R"({"code":200,"data":[{"id":3}],"count":1,"hasMore":false})"});
+    plans.append(Plan{R"({"code":200,"data":[{"id":4}],"count":1,"hasMore":false})"});
+    plans.append(Plan{"{}", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);
+    QSignalSpy challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn);
+    QSignalSpy done(&f, &BackendFacade::musicCompleted);
+    bool wrongThread = false;
+    connect(&f, &BackendFacade::musicCompleted, this,
+            [&](quint64, domain::SessionToken, MusicResult) {
+                wrongThread |= QThread::currentThread() != qApp->thread();
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QCOMPARE(f.myPlaylists(), 0);
+    QCOMPARE(f.likedSongIds(), 0);
+    QCOMPARE(f.savedAlbums(), 0);
+    QCOMPARE(f.savedArtists(), 0);
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    QVERIFY(f.myPlaylists({1, 2}));
+    QTRY_COMPARE(done.size(), 1);
+    const auto playlists =
+        std::get<domain::MyPlaylistsPage>(qvariant_cast<MusicResult>(done.last().at(2)));
+    QCOMPARE(playlists.query.accountId, "101");
+    QCOMPARE(playlists.query.page.offset, 2);
+    QCOMPARE(playlists.playlists.first().creatorId, std::optional<QString>("101"));
+    QVERIFY(f.likedSongIds());
+    QTRY_COMPARE(done.size(), 2);
+    QCOMPARE(std::get<domain::LikedSongIds>(qvariant_cast<MusicResult>(done.last().at(2)))
+                 .ids.first()
+                 .value,
+             "9007199254740993");
+    QVERIFY(f.savedAlbums());
+    QTRY_COMPARE(done.size(), 3);
+    QCOMPARE(std::get<domain::SavedAlbumsPage>(qvariant_cast<MusicResult>(done.last().at(2)))
+                 .albums.first()
+                 .id.value,
+             "3");
+    QVERIFY(f.savedArtists());
+    QTRY_COMPARE(done.size(), 4);
+    QCOMPARE(std::get<domain::SavedArtistsPage>(qvariant_cast<MusicResult>(done.last().at(2)))
+                 .artists.first()
+                 .id.value,
+             "4");
+    QVERIFY(f.likedSongIds());
+    QTRY_COMPARE(state->requests.load(), 8);
+    f.close();
+    QCOMPARE(f.myPlaylists(), 0);
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 5);
+    QVERIFY(std::holds_alternative<MusicFailure>(qvariant_cast<MusicResult>(done.last().at(2))));
+    QCOMPARE(qvariant_cast<domain::SessionToken>(done.last().at(1)), token);
+    QVERIFY(!wrongThread);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

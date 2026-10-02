@@ -1,6 +1,6 @@
 # 私人FM连续播放：接入现有听歌会话
 
-已交付离线后端闭环，未接UI或真实账号。复用[日推／FM供给](discovery-and-fm.md)、[官方单曲播放器](stream-resolution-and-playback.md)与[队列／六轨歌词时钟](queue-and-lyric-clock.md)；本包不新增operation、依赖、官方访问或账号写操作。业务registry仍为15项。
+已交付离线后端闭环，未接UI或真实账号。复用[日推／FM供给](discovery-and-fm.md)、[官方单曲播放器](stream-resolution-and-playback.md)与[队列／六轨歌词时钟](queue-and-lyric-clock.md)；本包不新增operation、依赖、官方访问或账号写操作。该包完成时业务registry为15项，后续[个人库包](personal-library.md)另有增量。
 
 ## 1. 一个播放命令生产者
 
@@ -65,7 +65,7 @@ session.replaceQueue({{"1"}, {"2"}}); // 普通队列接纳后才退出FM，示�
 | 合计 | **63** |
 | backend_runtime仅playbackThroughThread（queue／fm两行）、discoveryThroughThread、destructionStillDrains | **6** |
 
-首轮5套件通过后，补强等待态幂等暂停、拒绝命令的调度保留和同步Facade竞争，仅重建／重跑两个Listening套件及上述线程用例。随后又补上Source／Facade实例绑定校验，仅复跑FM套件（15 pass）及上述线程用例（6 pass）。上表使用各套件最新结果，不叠加重复运行，不是全量／Release结果。当前登记26个CTest套件。
+首轮5套件通过后，补强等待态幂等暂停、拒绝命令的调度保留和同步Facade竞争，仅重建／重跑两个Listening套件及上述线程用例。随后又补上Source／Facade实例绑定校验，仅复跑FM套件（15 pass）及上述线程用例（6 pass）。上表使用各套件最新结果，不叠加重复运行，不是全量／Release结果。该FM工作包完成时登记26个CTest套件，最新数量见[HANDOFF](../HANDOFF.md)。
 
 覆盖初始／等待／切歌暂停、自然End去重、普通循环不影响FM、供给失败保留余项／耗尽／空批次、手动失败停止、自动失败最多5首且Ready不刷新、满邮箱保留候选、模式切换提交边界、取消／换号／关闭、Source回调中新队列意图、停止旧FM时重入新FM以及直接Facade抢占。线程用例经过合成认证事务、真实原生音源与歌词解析、注入播放器和挂起补充请求，验证FM自然结束续播、终态观察者暂停下一曲以及关闭排空；没有真实网络、声卡或账号数据。
 
@@ -82,4 +82,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 仍未实现
 
-UI、个人库读取、持久播放历史／队列、实际收听区间累计、scrobble／startplay／不喜欢反馈及FM模式偏好均未因本包完成。FM批次取出、媒体位置或自然End都不是“实际已听时长”；本包没有任何上报，真实写入另行授权。下一业务包转个人库读取，实际已听累计／播放历史与上报另立契约。
+UI、个人库读取、持久播放历史／队列、实际收听区间累计、scrobble／startplay／不喜欢反馈及FM模式偏好均未因本包完成。FM批次取出、媒体位置或自然End都不是“实际已听时长”；本包没有任何上报，真实写入另行授权。后续[个人库四项读取](personal-library.md)已另包接入；下一步先做本地实际已听累计／历史契约，官方上报仍单列。

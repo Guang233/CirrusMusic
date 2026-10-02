@@ -140,6 +140,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/stream_resolver.h
     infrastructure/netease/music/lyric_parser.cpp
     infrastructure/netease/music/lyric_parser.h
+    infrastructure/netease/music/library_mapper.cpp
+    infrastructure/netease/music/library_mapper.h
     infrastructure/netease/music/discovery_mapper.cpp
     infrastructure/netease/music/discovery_mapper.h
     infrastructure/netease/music/catalog_mapper.cpp

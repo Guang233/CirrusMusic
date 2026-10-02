@@ -1,6 +1,7 @@
 #include "music_mapper.h"
 #include "catalog_mapper.h"
 #include "discovery_mapper.h"
+#include "library_mapper.h"
 #include "lyric_parser.h"
 #include "music_mapping.h"
 
@@ -144,6 +145,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (libraryQueryAccount(query))
+        return mapLibraryResponse(query, object);
     if (requiresAuthenticatedMusicQuery(query))
         return mapDiscoveryResponse(query, object);
     if (!std::holds_alternative<SongSearch>(query) && !std::holds_alternative<DetailQuery>(query))

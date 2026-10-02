@@ -119,6 +119,11 @@ target_link_libraries(tst_catalog PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME catalog COMMAND tst_catalog)
 set_tests_properties(catalog PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_library unit/library_test.cpp)
+target_link_libraries(tst_library PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME library COMMAND tst_library)
+set_tests_properties(library PROPERTIES TIMEOUT 20)
+
 qt_add_executable(tst_discovery unit/discovery_test.cpp)
 target_link_libraries(tst_discovery PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME discovery COMMAND tst_discovery)

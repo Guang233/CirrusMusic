@@ -136,6 +136,8 @@ QJsonObject pageParameters(const QString& id, CatalogPage page)
             {QStringLiteral("offset"), page.offset}};
 }
 } // namespace
+std::optional<Album> mapping::albumFrom(const QJsonObject& object) { return album(object); }
+QUrl mapping::imageFrom(const QJsonValue& value) { return image(value); }
 std::optional<CatalogRequest> catalogRequest(const MusicQuery& query)
 {
     if (!validMusicQuery(query))

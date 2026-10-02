@@ -31,6 +31,7 @@
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
 | [日推读取与私人FM供给](api/discovery-and-fm.md) | 独立日推、认证态读取、动态批次及失败／换号边界 |
+| [个人库只读查询](api/personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人的有界读取；不包含缓存／写入／播放历史 |
 | [FM连续播放](api/fm-continuous-playback.md) | ListeningSession的FM模式、暂停续播、失败预算及队列切换；仍无听歌上报 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |
 | [队列与六轨歌词时钟](api/queue-and-lyric-clock.md) | 最小听歌闭环：队列策略、暂停切歌、媒体位置与独立歌词游标的实现边界 |

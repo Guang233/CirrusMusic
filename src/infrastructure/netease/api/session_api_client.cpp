@@ -279,14 +279,12 @@ void SessionApiClient::start(quint64 id)
     }
     if (it->contract.protocol == Protocol::Weapi) {
         const bool identity = it->operation == ApiOperation::AccountIdentity;
-        const bool personal = it->operation == ApiOperation::DailyRecommendations ||
-                              it->operation == ApiOperation::PersonalFm;
         const auto musicU = m_cookies.value(it->context, it->origin, "MUSIC_U");
         const auto musicA = m_cookies.value(it->context, it->origin, "MUSIC_A");
         const auto csrf = m_cookies.value(it->context, it->origin, "__csrf");
         auto header = m_cookies.header(it->context, it->origin);
-        if (!musicU || !musicA || ((identity || personal) && musicU->isEmpty()) || !csrf ||
-            !csrf->isValidUtf8() || !header) {
+        if (!musicU || !musicA || (requiresAccountCookie(it->operation) && musicU->isEmpty()) ||
+            !csrf || !csrf->isValidUtf8() || !header) {
             finish(id, {ApiError::Cookie});
             return;
         }
@@ -323,7 +321,8 @@ void SessionApiClient::start(quint64 id)
     const auto musicU = m_cookies.value(it->context, it->origin, "MUSIC_U");
     const auto musicA = m_cookies.value(it->context, it->origin, "MUSIC_A");
     const auto nmtid = m_cookies.value(it->context, it->origin, "NMTID");
-    if (!csrf || !musicU || !musicA || !nmtid) {
+    if (!csrf || !musicU || !musicA || !nmtid ||
+        (requiresAccountCookie(it->operation) && musicU->isEmpty())) {
         finish(id, {ApiError::Cookie});
         return;
     }

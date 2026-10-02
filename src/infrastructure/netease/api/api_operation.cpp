@@ -24,6 +24,18 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::AlbumDetails:
     case ApiOperation::ArtistAlbums:
         return std::nullopt; // resolved only from a validated canonical ID above
+    case ApiOperation::MyPlaylists:
+        return ApiOperationContract{QStringLiteral("/api/user/playlist"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::LikedSongIds:
+        return ApiOperationContract{QStringLiteral("/api/song/like/get"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::SavedAlbums:
+        return ApiOperationContract{QStringLiteral("/api/album/sublist"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::SavedArtists:
+        return ApiOperationContract{QStringLiteral("/api/artist/sublist"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::DailyRecommendations:
         return ApiOperationContract{QStringLiteral("/api/v3/discovery/recommend/songs"),
                                     Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -65,6 +77,15 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     return std::nullopt;
 }
 
+bool requiresAccountCookie(ApiOperation operation)
+{
+    return operation == ApiOperation::AccountIdentity ||
+           operation == ApiOperation::DailyRecommendations ||
+           operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
+           operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
+           operation == ApiOperation::SavedArtists;
+}
+
 bool validQrKey(QStringView key)
 {
     if (key.isEmpty() || key.size() > 512) {
@@ -88,6 +109,32 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         if (!parameters.isEmpty())
             return std::nullopt;
         return QJsonObject{{QStringLiteral("afresh"), false}};
+    }
+    if (operation == ApiOperation::LikedSongIds) {
+        const auto uid = parameters.value(QStringLiteral("uid")).toString();
+        if (parameters.size() != 1 || !domain::validMusicId(uid))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("uid"), uid}};
+    }
+    if (operation == ApiOperation::MyPlaylists || operation == ApiOperation::SavedAlbums ||
+        operation == ApiOperation::SavedArtists) {
+        const bool playlists = operation == ApiOperation::MyPlaylists;
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto offset = parameters.value(QStringLiteral("offset"));
+        const domain::CatalogPage page{limit.toInt(-1), offset.toInt(-1)};
+        const auto uid = parameters.value(QStringLiteral("uid")).toString();
+        if (parameters.size() != (playlists ? 3 : 2) || !page.isValid() ||
+            limit != QJsonValue(page.limit) || offset != QJsonValue(page.offset) ||
+            (playlists && !domain::validMusicId(uid)))
+            return std::nullopt;
+        QJsonObject payload{{QStringLiteral("limit"), page.limit},
+                            {QStringLiteral("offset"), page.offset}};
+        if (playlists) {
+            payload.insert(QStringLiteral("uid"), uid);
+            payload.insert(QStringLiteral("includeVideo"), false); // product excludes video
+        } else
+            payload.insert(QStringLiteral("total"), true);
+        return payload;
     }
     if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistDetails ||
         operation == ApiOperation::PlaylistDetails) {
@@ -202,6 +249,10 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::PlaylistDetails:
     case ApiOperation::DailyRecommendations:
     case ApiOperation::PersonalFm:
+    case ApiOperation::MyPlaylists:
+    case ApiOperation::LikedSongIds:
+    case ApiOperation::SavedAlbums:
+    case ApiOperation::SavedArtists:
         break;
     }
     return std::nullopt;
@@ -232,6 +283,10 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::PlaylistDetails:
     case ApiOperation::DailyRecommendations:
     case ApiOperation::PersonalFm:
+    case ApiOperation::MyPlaylists:
+    case ApiOperation::LikedSongIds:
+    case ApiOperation::SavedAlbums:
+    case ApiOperation::SavedArtists:
         return false; // read-only metadata must not mutate verified account credentials
     }
     return false;

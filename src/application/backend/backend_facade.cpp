@@ -177,6 +177,22 @@ quint64 BackendFacade::dailyRecommendations()
 }
 quint64 BackendFacade::personalFmBatch() { return submitMusic(domain::PersonalFmQuery{}); }
 
+quint64 BackendFacade::myPlaylists(domain::CatalogPage page)
+{
+    return submitMusic(domain::MyPlaylistsQuery{m_snapshot.accountId, page});
+}
+quint64 BackendFacade::likedSongIds()
+{
+    return submitMusic(domain::LikedSongIdsQuery{m_snapshot.accountId});
+}
+quint64 BackendFacade::savedAlbums(domain::CatalogPage page)
+{
+    return submitMusic(domain::SavedAlbumsQuery{m_snapshot.accountId, page});
+}
+quint64 BackendFacade::savedArtists(domain::CatalogPage page)
+{
+    return submitMusic(domain::SavedArtistsQuery{m_snapshot.accountId, page});
+}
 quint64 BackendFacade::submitMusic(MusicQuery query)
 {
     Q_ASSERT(QThread::currentThread() == thread());

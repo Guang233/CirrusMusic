@@ -24,7 +24,11 @@ enum class ApiOperation {
     ArtistAlbums,
     PlaylistDetails,
     DailyRecommendations,
-    PersonalFm
+    PersonalFm,
+    MyPlaylists,
+    LikedSongIds,
+    SavedAlbums,
+    SavedArtists
 };
 
 struct ApiOperationContract {
@@ -36,6 +40,7 @@ struct ApiOperationContract {
 
 [[nodiscard]] std::optional<ApiOperationContract>
 operationContract(ApiOperation operation, const QJsonObject& parameters = {});
+[[nodiscard]] bool requiresAccountCookie(ApiOperation operation);
 [[nodiscard]] bool validQrKey(QStringView key);
 [[nodiscard]] std::optional<QJsonObject> operationPayload(ApiOperation operation,
                                                           const QJsonObject& parameters);

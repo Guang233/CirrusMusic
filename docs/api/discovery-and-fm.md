@@ -1,6 +1,6 @@
 # 每日推荐读取与私人FM条目供给
 
-本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。UI、日推持久缓存、个人库及真实已听累计／scrobble仍待后续。
+本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。后续[个人库四项读取](personal-library.md)也已接入；UI、日推持久缓存及真实已听累计／scrobble仍待后续。
 
 ## 1. 封闭请求与权限边界
 
@@ -11,7 +11,7 @@
 | DailyRecommendations | `/api/v3/discovery/recommend/songs` | `afresh:false` | 4MiB |
 | PersonalFm | `/api/v1/radio/get` | 空对象 | 1MiB |
 
-两者均为weapi／JSON，沿用受控网络与原会话Cookie。注册表现在有15项业务operation，公钥注册仍独立。路径中的radio不改变私人FM属于产品范围的约定。
+两者均为weapi／JSON，沿用受控网络与原会话Cookie。该读取包完成时注册表有15项业务operation，最新数量见[个人库包](personal-library.md)，公钥注册仍独立。路径中的radio不改变私人FM属于产品范围的约定。
 
 - `BackendFacade::dailyRecommendations()`／`personalFmBatch()`仅接受本地已验证的Authenticated状态；Guest、认证中、未Ready及满16槽返回0，不发送请求。
 - `MusicQueryService`再次校验原token／认证态；Guest得到异步`AuthenticationRequired`。Native weapi路径也要求非空MUSIC_U，不能用匿名token代替。基础API类不负责宣布账号已验证，仍以应用认证事务为准。

@@ -3,8 +3,10 @@
 #include "domain/account/session_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/discovery_types.h"
+#include "domain/music/library_types.h"
 
 #include <QObject>
+#include <type_traits>
 #include <variant>
 
 namespace cirrus::application
@@ -52,22 +54,40 @@ using MusicQuery =
     std::variant<domain::SongSearch, DetailQuery, LyricQuery, domain::AlbumQuery,
                  domain::ArtistQuery, domain::ArtistSongsQuery, domain::ArtistAlbumsQuery,
                  domain::PlaylistQuery, domain::PlaylistSongsQuery,
-                 domain::DailyRecommendationsQuery, domain::PersonalFmQuery>;
+                 domain::DailyRecommendationsQuery, domain::PersonalFmQuery,
+                 domain::MyPlaylistsQuery, domain::LikedSongIdsQuery, domain::SavedAlbumsQuery,
+                 domain::SavedArtistsQuery>;
 using MusicResult =
     std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
                  domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
                  domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
-                 domain::DailyRecommendations, domain::PersonalFmBatch>;
+                 domain::DailyRecommendations, domain::PersonalFmBatch, domain::MyPlaylistsPage,
+                 domain::LikedSongIds, domain::SavedAlbumsPage, domain::SavedArtistsPage>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
 }
 
+inline std::optional<QString> libraryQueryAccount(const MusicQuery& query)
+{
+    return std::visit(
+        [](const auto& value) -> std::optional<QString> {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, domain::MyPlaylistsQuery> ||
+                          std::is_same_v<T, domain::LikedSongIdsQuery> ||
+                          std::is_same_v<T, domain::SavedAlbumsQuery> ||
+                          std::is_same_v<T, domain::SavedArtistsQuery>)
+                return value.accountId;
+            return std::nullopt;
+        },
+        query);
+}
 inline bool requiresAuthenticatedMusicQuery(const MusicQuery& query)
 {
     return std::holds_alternative<domain::DailyRecommendationsQuery>(query) ||
-           std::holds_alternative<domain::PersonalFmQuery>(query);
+           std::holds_alternative<domain::PersonalFmQuery>(query) ||
+           libraryQueryAccount(query).has_value();
 }
 
 // Same-thread, deferred, value-only port; no arbitrary endpoints, JSON or Cookie.

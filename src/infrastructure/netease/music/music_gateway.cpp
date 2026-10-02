@@ -1,5 +1,6 @@
 #include "music_gateway.h"
 #include "catalog_mapper.h"
+#include "library_mapper.h"
 #include "music_mapper.h"
 
 #include <QJsonArray>
@@ -128,6 +129,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto library = libraryRequest(query)) {
+        operation = library->operation;
+        parameters = library->parameters;
     } else {
         const auto catalog = catalogRequest(query);
         if (!catalog) {
