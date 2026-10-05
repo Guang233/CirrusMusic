@@ -40,7 +40,12 @@ enum class ApiOperation {
     PremiumPlaylists,
     PlaylistCatalogue,
     HotPlaylistTags,
-    PremiumPlaylistTags
+    PremiumPlaylistTags,
+    SearchAlbums,
+    SearchArtists,
+    SearchPlaylists,
+    SearchPodcasts,
+    SearchVoices
 };
 
 struct ApiOperationContract {

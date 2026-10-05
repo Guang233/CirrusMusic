@@ -2,6 +2,7 @@
 
 #include "application/account/qr_login_service.h"
 #include "application/ports/music_gateway.h"
+#include "domain/music/entity_search_types.h"
 #include "domain/playback/listening_report.h"
 #include "domain/playback/playback_types.h"
 #include <QHash>
@@ -113,6 +114,11 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 cancel();
     [[nodiscard]] quint64 signOut();
     [[nodiscard]] quint64 searchSongs(domain::SongSearch query);
+    [[nodiscard]] quint64 searchAlbums(domain::SearchPage query);
+    [[nodiscard]] quint64 searchArtists(domain::SearchPage query);
+    [[nodiscard]] quint64 searchPlaylists(domain::SearchPage query);
+    [[nodiscard]] quint64 searchPodcasts(domain::SearchPage query);
+    [[nodiscard]] quint64 searchVoices(domain::SearchPage query);
     [[nodiscard]] quint64 songDetails(QList<domain::SongId> songs);
     [[nodiscard]] quint64 lyrics(domain::SongId song);
     [[nodiscard]] quint64 albumDetails(domain::AlbumId album);

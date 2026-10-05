@@ -199,6 +199,29 @@ quint64 BackendFacade::playlistTags(domain::PlaylistTagsKind kind)
     return submitMusic(domain::PlaylistTagsQuery{kind});
 }
 
+quint64 BackendFacade::searchAlbums(domain::SearchPage query)
+{
+    return submitMusic(domain::EntitySearchQuery{domain::MusicSearchKind::Album, std::move(query)});
+}
+quint64 BackendFacade::searchArtists(domain::SearchPage query)
+{
+    return submitMusic(
+        domain::EntitySearchQuery{domain::MusicSearchKind::Artist, std::move(query)});
+}
+quint64 BackendFacade::searchPlaylists(domain::SearchPage query)
+{
+    return submitMusic(
+        domain::EntitySearchQuery{domain::MusicSearchKind::Playlist, std::move(query)});
+}
+quint64 BackendFacade::searchPodcasts(domain::SearchPage query)
+{
+    return submitMusic(domain::PodcastSearchQuery{std::move(query)});
+}
+quint64 BackendFacade::searchVoices(domain::SearchPage query)
+{
+    return submitMusic(domain::VoiceSearchQuery{std::move(query)});
+}
+
 quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});

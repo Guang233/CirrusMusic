@@ -3,6 +3,7 @@
 #include "chart_mapper.h"
 #include "cloud_history_mapper.h"
 #include "discovery_mapper.h"
+#include "entity_search_mapper.h"
 #include "library_mapper.h"
 #include "lyric_parser.h"
 #include "music_mapping.h"
@@ -148,6 +149,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (isEntitySearchQuery(query))
+        return mapEntitySearchResponse(query, object);
     if (isPlaylistDiscoveryQuery(query))
         return mapPlaylistDiscoveryResponse(query, object);
     if (const auto* charts = std::get_if<ChartsQuery>(&query))

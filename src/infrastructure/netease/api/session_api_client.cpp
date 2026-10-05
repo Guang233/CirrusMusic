@@ -334,6 +334,7 @@ void SessionApiClient::start(quint64 id)
                                        guestMusicA(*musicU, *musicA),
                                        *nmtid};
     auto profile = metadata;
+    profile.encryptedResponse = it->operation == ApiOperation::SearchPodcasts;
     if (it->contract.destination == OfficialDestination::ListeningLog)
         profile.profile = EapiProfile::ListeningLogOsx;
     const auto prepared = prepareEapiRequest(it->contract.logicalPath, it->payload, profile);

@@ -4,7 +4,7 @@
 
 ## 1. 建模原则
 
-- 歌曲身份、账号身份、队列实例、媒体来源和本地文件身份分开。
+- 歌曲身份、账号身份、队列实例、媒体来源和本地文件身份分开。维护者新增播客／声音消费范围，PodcastId与PlaylistId、VoiceId与SongId各自独立，不通过mainSong／mainTrackId假装同一资源。
 - 官方大整数 ID 在边界转为**十进制字符串**，不得经 JavaScript `Number` 或 C++ `double` 往返。JSON 数字字段使用可保持整数精度的解析路径并校验范围，禁止先 `toDouble()` 再转字符串；超出所选解析器精确范围时保留数字字面量或报契约错误，不接受已舍入 ID。
 - 时长和位置统一使用带语义的 `qint64` 毫秒；墙上时间使用 UTC，调度／超时使用单调时钟。MPRIS 微秒只在适配器边界换算。
 - `null/unknown` 与 `0/false/empty` 不等价：未知时长不是零秒，未知权限不是允许，空歌词不一定是纯音乐。
@@ -17,6 +17,7 @@
 | --- | --- |
 | `TrackKey` | `{source, idText}`；source 首版为 netease、local、neteaseCloud；不表示已实现多平台聚合 |
 | `AlbumId / ArtistId / PlaylistId` | 独立强类型字符串，禁止拿歌单 ID 当歌曲 ID |
+| `PodcastId / VoiceId` | 独立强类型字符串；当前[实体搜索](api/entity-search-reads.md)已经实现，不转为PlaylistId／SongId或从内嵌音轨制造身份；后续播放另包 |
 | `AccountId` | 官方账号标识，仅用于账号逻辑，不用作可预测下载路径 |
 | `ProfileId` | 本地随机 UUID；guest 独立 profile；账号到 profile 的映射不含凭据 |
 | `QueueEntryId` | 随机 UUID；同一 TrackKey 可对应多个 entry |
@@ -34,6 +35,7 @@
 | Album | id、title、artists[] | releaseDate?、coverRef、trackCount?；日期可能只有年份，不能补造月日 |
 | Playlist | id、name、owner?、visibility | description、trackCount?、revision?、permissions、snapshotCompleteness |
 | PlaylistEntry | localEntryId、trackKey、position | 官方 entryId?、addedAt?；未知重复策略由 adapter 决定 |
+| Podcast / Voice | 独立PodcastId／VoiceId | 已实现消费搜索摘要／可选所属播客；Voice.providerDuration只保留原值，不声明单位、音源／时钟／报告或播放权益 |
 | AccountProfile | profileId、accountId?、displayName | avatar、权益快照、lastValidatedAt；不得含 Cookie |
 | Availability | state、reasonCode? | Unknown/Playable/PreviewOnly/Blocked；该值是快照，真正播放必须重新解析权限 |
 | ResourcePermissions | read、write、delete、download 等三态能力 | Unknown/Allowed/Denied；服务端最终裁决，不因 ownerId 一致就盲目允许 |

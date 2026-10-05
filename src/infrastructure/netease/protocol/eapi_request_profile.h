@@ -17,6 +17,7 @@ struct EapiRequestMetadata {
     QByteArray musicA;
     QByteArray nmtid;
     EapiProfile profile = EapiProfile::Pc;
+    bool encryptedResponse = false; // closed /api/search/voicelist/get branch only
 };
 
 struct PreparedEapiRequest {
@@ -27,7 +28,7 @@ struct PreparedEapiRequest {
     [[nodiscard]] bool ok() const { return error == CryptoError::None; }
 };
 
-// Explicit e_r=false / plaintext JSON response profile, as in pinned upstream.
+// Default e_r=false; only the closed podcast-search branch permits e_r=true.
 // Cookie/JSON credentials remain infrastructure-only. No arbitrary UA, host,
 // anti-cheat token, IP spoofing or response-encryption fallback is exposed.
 [[nodiscard]] PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payload,

@@ -35,6 +35,7 @@
 | [云端最近听过／听歌排行](api/cloud-history-reads.md) | 当前账号记录、一周／全部时间窗口；保留未知次数／分值，不推算时长，响应仅合成验证 |
 | [榜单列表／内容摘要](api/chart-reads.md) | 有界Guest／账号读取；展示预览不是Song，歌曲分页与显式选歌播放复用现有链，响应仅合成验证 |
 | [六项歌单发现读取](api/playlist-discovery-reads.md) | 推荐／普通／精品歌单与分类／热门／精品标签；不同分页／来源及原歌单／显式播放复用，仅合成验证 |
+| [音乐实体／播客／声音搜索](api/entity-search-reads.md) | 五类有界读、独立Podcast／Voice身份、公开结构证据、固定e_r单路径门禁；不含新播放或工作台 |
 | [FM连续播放](api/fm-continuous-playback.md) | ListeningSession的FM模式、暂停续播、失败预算及队列切换；仍无听歌上报 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |
 | [队列与六轨歌词时钟](api/queue-and-lyric-clock.md) | 最小听歌闭环：队列策略、暂停切歌、媒体位置与独立歌词游标的实现边界 |

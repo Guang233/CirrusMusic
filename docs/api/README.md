@@ -32,6 +32,7 @@
 | [cloud-history-reads.md](cloud-history-reads.md) | 当前账号最近听过、一周／全部时间听歌排行；原顺序、有界只读，不推算时长；仅合成响应验证 |
 | [chart-reads.md](chart-reads.md) | 榜单列表／内容摘要；展示预览不是可播放歌曲，复用歌单详情／分页与显式选歌播放，响应仅合成验证 |
 | [playlist-discovery-reads.md](playlist-discovery-reads.md) | 推荐、普通／精品歌单及分类／热门／精品标签6项；有界只读、不同分页／来源，原歌单／显式播放复用，仅合成验证 |
+| [entity-search-reads.md](entity-search-reads.md) | 已实现专辑／艺人／歌单、播客与全站声音搜索5项；独立ID、限定e_r门禁、无Cookie公开结构证据，消费端新增范围，不含声音播放／工作台 |
 | [fm-continuous-playback.md](fm-continuous-playback.md) | ListeningSession的FM连续播放、模式切换、候选保留与有界失败 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
@@ -52,9 +53,9 @@
 
 **每日推荐歌曲**独立建模：`recommend_songs` 不是 `playlist_detail`，不能虚构一个远程歌单 ID 后去请求普通歌单接口。相关不感兴趣反馈和历史日推也单独登记。
 
-**私人 FM**明确纳入：`personal_fm`、`personal_fm_mode`、`fm_trash`。虽然其官方路径含 `radio`，它不是本轮排除的电台／播客业务。歌曲喜欢接口也可能使用 `/radio/like`，不能靠 URL 单词过滤业务。
+**私人 FM**明确纳入：`personal_fm`、`personal_fm_mode`、`fm_trash`。虽然其官方路径含 `radio`，它不是固定审计当时排除的电台／播客业务。歌曲喜欢接口也可能使用 `/radio/like`，不能靠 URL 单词过滤业务。
 
-明确排除：视频／MV、电台／播客／有声内容、云贝／云豆、动态／话题、云小编及相关任务审核。购买支付、广告、音乐人后台、私信和账号资料编辑等非歌曲主路径也不顺带迁移。
+固定审计当时排除视频／MV、电台／播客／有声内容、云贝／云豆、动态／话题、云小编及相关任务审核。维护者随后明确新增播客／声音消费端范围，并交付[5项实体／播客／声音搜索](entity-search-reads.md)；inventory／selected-endpoints仍是原440模块、164／40／236决定的历史静态审计，不伪称已随产品增量重新分类。当前仍排除视频、云贝／云豆、动态、云小编与创作者上传／审核工作台；购买支付、广告、音乐人后台、私信和账号资料编辑等非消费主路径也不顺带迁移。
 
 `artist_detail_dynamic`、`playlist_detail_dynamic` 是实体计数／订阅等动态信息，不是用户动态 feed，保留。`album_detail` 实际访问 vipmall 产品详情，不能误认成普通专辑详情；普通专辑使用 `album` 等模块。
 

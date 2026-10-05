@@ -5,6 +5,7 @@
 #include "domain/music/chart_types.h"
 #include "domain/music/cloud_history_types.h"
 #include "domain/music/discovery_types.h"
+#include "domain/music/entity_search_types.h"
 #include "domain/music/library_types.h"
 #include "domain/music/playlist_discovery_types.h"
 
@@ -61,20 +62,28 @@ using MusicQuery =
                  domain::MyPlaylistsQuery, domain::LikedSongIdsQuery, domain::SavedAlbumsQuery,
                  domain::SavedArtistsQuery, domain::RecentSongsQuery, domain::ListeningRankingQuery,
                  domain::ChartsQuery, domain::RecommendedPlaylistsQuery, domain::PlaylistListQuery,
-                 domain::PremiumPlaylistsQuery, domain::PlaylistTagsQuery>;
-using MusicResult =
-    std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
-                 domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
-                 domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
-                 domain::DailyRecommendations, domain::PersonalFmBatch, domain::MyPlaylistsPage,
-                 domain::LikedSongIds, domain::SavedAlbumsPage, domain::SavedArtistsPage,
-                 domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts,
-                 domain::RecommendedPlaylists, domain::PlaylistListPage,
-                 domain::PremiumPlaylistsPage, domain::PlaylistTags>;
+                 domain::PremiumPlaylistsQuery, domain::PlaylistTagsQuery,
+                 domain::EntitySearchQuery, domain::PodcastSearchQuery, domain::VoiceSearchQuery>;
+using MusicResult = std::variant<
+    domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
+    domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage, domain::ArtistAlbumsPage,
+    domain::PlaylistDetails, domain::PlaylistSongsPage, domain::DailyRecommendations,
+    domain::PersonalFmBatch, domain::MyPlaylistsPage, domain::LikedSongIds, domain::SavedAlbumsPage,
+    domain::SavedArtistsPage, domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts,
+    domain::RecommendedPlaylists, domain::PlaylistListPage, domain::PremiumPlaylistsPage,
+    domain::PlaylistTags, domain::AlbumSearchPage, domain::ArtistSearchPage,
+    domain::PlaylistSearchPage, domain::PodcastSearchPage, domain::VoiceSearchPage>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool isEntitySearchQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::EntitySearchQuery>(query) ||
+           std::holds_alternative<domain::PodcastSearchQuery>(query) ||
+           std::holds_alternative<domain::VoiceSearchQuery>(query);
 }
 
 inline bool isPlaylistDiscoveryQuery(const MusicQuery& query)

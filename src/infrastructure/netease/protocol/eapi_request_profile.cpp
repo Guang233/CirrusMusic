@@ -46,7 +46,8 @@ PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payl
     }
     const bool log = metadata.profile == EapiProfile::ListeningLogOsx;
     if ((metadata.profile != EapiProfile::Pc && !log) ||
-        (log && logicalPath != u"/api/feedback/weblog"))
+        (log && logicalPath != u"/api/feedback/weblog") ||
+        (metadata.encryptedResponse && logicalPath != u"/api/search/voicelist/get"))
         return {CryptoError::InvalidInput};
     QJsonObject header{
         {QStringLiteral("osver"),
@@ -90,7 +91,7 @@ PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payl
     if (result.cookieHeader.size() > 16 * 1024) {
         return {CryptoError::InvalidInput};
     }
-    payload.insert(QStringLiteral("e_r"), false);
+    payload.insert(QStringLiteral("e_r"), metadata.encryptedResponse);
     payload.insert(QStringLiteral("header"), header);
     const auto encrypted = encodeEapi(logicalPath, payload);
     if (!encrypted.ok()) {

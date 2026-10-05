@@ -1,5 +1,6 @@
 #include "api_operation.h"
 #include "domain/music/catalog_types.h"
+#include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
 
 #include <QJsonArray>
@@ -94,9 +95,18 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/login/qrcode/client/login")};
     case ApiOperation::AccountIdentity:
         return ApiOperationContract{QStringLiteral("/api/w/nuser/account/get"), Protocol::Weapi};
+    case ApiOperation::SearchAlbums:
+    case ApiOperation::SearchArtists:
+    case ApiOperation::SearchPlaylists:
     case ApiOperation::SearchSongs:
         return ApiOperationContract{QStringLiteral("/api/search/get"), Protocol::Eapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::SearchVoices:
+        return ApiOperationContract{QStringLiteral("/api/search/voice/get"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::SearchPodcasts:
+        return ApiOperationContract{QStringLiteral("/api/search/voicelist/get"), Protocol::Eapi,
+                                    ResponseEncoding::EapiAutoJson, 2 * 1024 * 1024};
     case ApiOperation::SongDetails:
         return ApiOperationContract{QStringLiteral("/api/v3/song/detail"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -297,6 +307,31 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         payload.insert(QStringLiteral("work_type"), 1);
         return payload;
     }
+    if (operation == ApiOperation::SearchAlbums || operation == ApiOperation::SearchArtists ||
+        operation == ApiOperation::SearchPlaylists || operation == ApiOperation::SearchPodcasts ||
+        operation == ApiOperation::SearchVoices) {
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto offset = parameters.value(QStringLiteral("offset"));
+        const domain::SearchPage page{parameters.value(QStringLiteral("keywords")).toString(),
+                                      limit.toInt(-1), offset.toInt(-1)};
+        if (parameters.size() != 3 || !page.isValid() || limit != QJsonValue(page.limit) ||
+            offset != QJsonValue(page.offset))
+            return std::nullopt;
+        QJsonObject p{{QStringLiteral("limit"), page.limit},
+                      {QStringLiteral("offset"), page.offset}};
+        if (operation == ApiOperation::SearchPodcasts || operation == ApiOperation::SearchVoices) {
+            p.insert(QStringLiteral("keyword"), page.keywords.trimmed());
+            p.insert(QStringLiteral("scene"), QStringLiteral("normal"));
+            if (operation == ApiOperation::SearchPodcasts)
+                p.insert(QStringLiteral("e_r"), true);
+        } else {
+            p.insert(QStringLiteral("s"), page.keywords.trimmed());
+            p.insert(QStringLiteral("type"), operation == ApiOperation::SearchAlbums    ? 10
+                                             : operation == ApiOperation::SearchArtists ? 100
+                                                                                        : 1000);
+        }
+        return p;
+    }
     if (operation == ApiOperation::SearchSongs) {
         const auto limit = parameters.value(QStringLiteral("limit"));
         const auto offset = parameters.value(QStringLiteral("offset"));
@@ -371,6 +406,11 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     case ApiOperation::AccountIdentity:
     case ApiOperation::AnonymousRegister:
+    case ApiOperation::SearchAlbums:
+    case ApiOperation::SearchArtists:
+    case ApiOperation::SearchPlaylists:
+    case ApiOperation::SearchPodcasts:
+    case ApiOperation::SearchVoices:
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
@@ -420,6 +460,11 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::HotPlaylistTags:
     case ApiOperation::PremiumPlaylistTags:
     case ApiOperation::AnonymousRegister:
+    case ApiOperation::SearchAlbums:
+    case ApiOperation::SearchArtists:
+    case ApiOperation::SearchPlaylists:
+    case ApiOperation::SearchPodcasts:
+    case ApiOperation::SearchVoices:
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:
     case ApiOperation::SongLyrics:
