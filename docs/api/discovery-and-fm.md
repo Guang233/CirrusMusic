@@ -1,6 +1,6 @@
 # 每日推荐读取与私人FM条目供给
 
-本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。后续[个人库四项读取](personal-library.md)也已接入；UI、日推持久缓存及真实已听累计／scrobble仍待后续。
+本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。后续[个人库四项读取](personal-library.md)也已接入；[本地观测累计](local-listening-history.md)及[显式报告能力](explicit-listening-reports.md)也已另包接入；UI、日推缓存和自动报告时机／FM来源扩展仍待后续。
 
 ## 1. 封闭请求与权限边界
 
@@ -52,9 +52,9 @@ Gateway成功收到日推时附加本机UTC `receivedAtUtc`；它**不是服务�
 
 它**不接管播放命令**：没有自动将条目塞进PlaybackQueue、没有设置RepeatAll、没有发送“不喜欢”。后续[ListeningSession的FM模式](fm-continuous-playback.md)已接通媒体结束、暂停意图、错误预算和队列切换时stop供给；播放时不得再直接操作本Source。这里保留的是底层读取包证据，不将其冒充连续播放验证。
 
-## 4. 听歌上报仍未实现
+## 4. 本读取包不产生听歌上报
 
-没有加入scrobble、startplay、fm_trash、日推不感兴趣或任何业务写operation。FM条目的接纳／取出、日推读取、媒体位置都不是实际收听量。后续须按真实播放区间累计，排除暂停、缓冲和seek跳跃，保留播放来源与原账号并处理重复／未知写结果。真实账号上报仍需独立授权，不能承诺计入排行。
+本读取包没有加入scrobble、startplay、fm_trash、日推不感兴趣或任何业务写operation；后续[显式报告能力](explicit-listening-reports.md)已有独立port，但尚不支持FM来源或自动调用。FM条目的接纳／取出、日推读取、媒体位置都不是实际收听量。后续须按真实播放区间累计，排除暂停、缓冲和seek跳跃，保留播放来源与原账号并处理重复／未知写结果。真实账号上报仍需独立授权，不能承诺计入排行。
 
 ## 5. 定向验证
 

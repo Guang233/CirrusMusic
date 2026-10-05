@@ -333,13 +333,17 @@ void SessionApiClient::start(quint64 id)
                                        *musicU,
                                        guestMusicA(*musicU, *musicA),
                                        *nmtid};
-    const auto prepared = prepareEapiRequest(it->contract.logicalPath, it->payload, metadata);
+    auto profile = metadata;
+    if (it->contract.destination == OfficialDestination::ListeningLog)
+        profile.profile = EapiProfile::ListeningLogOsx;
+    const auto prepared = prepareEapiRequest(it->contract.logicalPath, it->payload, profile);
     if (!prepared.ok()) {
         finish(id, {ApiError::Crypto});
         return;
     }
     TransportRequest request;
     request.protocol = it->contract.protocol;
+    request.destination = it->contract.destination;
     request.logicalPath = it->contract.logicalPath;
     request.formBody = prepared.formBody;
     request.cookieHeader = prepared.cookieHeader;
@@ -490,6 +494,7 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
         result.decoded.object = {}; // never leak partial/stale provider data
         result.decoded.businessCode.reset();
     }
+    result.submittedToTransport = pending.transportId != 0;
     emit completed(id, pending.context, std::move(result));
 }
 

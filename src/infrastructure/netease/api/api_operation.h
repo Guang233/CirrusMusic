@@ -28,7 +28,9 @@ enum class ApiOperation {
     MyPlaylists,
     LikedSongIds,
     SavedAlbums,
-    SavedArtists
+    SavedArtists,
+    ListeningStart,
+    ListeningPlay
 };
 
 struct ApiOperationContract {
@@ -36,6 +38,7 @@ struct ApiOperationContract {
     Protocol protocol = Protocol::Eapi;
     ResponseEncoding responseEncoding = ResponseEncoding::Json;
     qsizetype responseLimit = 64 * 1024;
+    OfficialDestination destination = OfficialDestination::Default;
 };
 
 [[nodiscard]] std::optional<ApiOperationContract>

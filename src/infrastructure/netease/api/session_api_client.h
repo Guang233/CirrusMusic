@@ -36,6 +36,8 @@ struct ApiResult {
     QUuid credentialReceipt; // candidate snapshot handle, never itself proof of identity
     // AnonymousRegister with code 200 only: validated MUSIC_A, NOT adopted automatically.
     QByteArray anonymousToken;
+    // Conservative write boundary: submitted to transport, MAY have reached server.
+    bool submittedToTransport = false;
 };
 
 [[nodiscard]] bool validAnonymousToken(const QByteArray& token);

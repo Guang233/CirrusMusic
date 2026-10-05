@@ -127,7 +127,7 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         finish(id);
         return;
     }
-    const auto url = officialRequestUrl(request.protocol, request.logicalPath);
+    const auto url = officialRequestUrl(request.protocol, request.logicalPath, request.destination);
     if (!url || request.logicalPath.size() > 2048 || request.timeoutMs <= 0 ||
         request.timeoutMs > 120000 || request.responseLimit <= 0 ||
         request.responseLimit > 32 * 1024 * 1024 || request.formBody.size() > 2 * 1024 * 1024 ||

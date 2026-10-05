@@ -237,6 +237,7 @@ class BackendRuntimeTest : public QObject
     void musicQueriesThroughThread();
     void discoveryThroughThread();
     void libraryThroughThread();
+    void listeningReportThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -932,6 +933,66 @@ void BackendRuntimeTest::trackedStoreKeepsDeadRecipientsAccounted()
     QCOMPARE(idle.size(), 1);
     QVERIFY(!delivered);
     QVERIFY(fake->entries.contains(QStringLiteral("synthetic")));
+}
+
+void BackendRuntimeTest::listeningReportThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{Plan{R"({"code":200})"}, Plan{R"({"code":500})"}, Plan{"", 200, -1}});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);
+    QSignalSpy challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn);
+    QSignalSpy reports(&f, &BackendFacade::listeningReportCompleted);
+    connect(&f, &BackendFacade::listeningReportCompleted, this,
+            [&](quint64, domain::SessionToken, domain::ListeningReportResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    domain::ListeningReport r{
+        QUuid::createUuid(), {"1"}, {"2"}, domain::ListeningReportAction::StartPlay, 0};
+    QVERIFY(!f.reportListening(r));
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    QCOMPARE(state->requests.load(), 3); // startup/login do not automatically report
+    const auto context = f.snapshot().token;
+    QVERIFY(f.reportListening(r));
+    QTRY_COMPARE(reports.size(), 1);
+    QCOMPARE(qvariant_cast<domain::ListeningReportResult>(reports[0][2]).outcome,
+             domain::ReportOutcome::Acknowledged);
+    QCOMPARE(state->requests.load(), 4); // no implicit play action
+    r.action = domain::ListeningReportAction::Play;
+    r.playedSeconds = 35;
+    QVERIFY(f.reportListening(r));
+    QTRY_COMPARE(reports.size(), 2);
+    QCOMPARE(qvariant_cast<domain::ListeningReportResult>(reports[1][2]).outcome,
+             domain::ReportOutcome::Rejected);
+    QCOMPARE(qvariant_cast<domain::ListeningReportResult>(reports[0][2]).outcome,
+             domain::ReportOutcome::Acknowledged);
+    QCOMPARE(state->requests.load(), 5); // a failed play does not erase acknowledged start
+    r.eventId = QUuid::createUuid();
+    QVERIFY(f.reportListening(r));
+    QTRY_COMPARE(state->requests.load(), 6);
+    f.close();
+    QTRY_COMPARE(reports.size(), 3);
+    QTRY_COMPARE(stopped.size(), 1);
+    const auto last = qvariant_cast<domain::ListeningReportResult>(reports.last()[2]);
+    QCOMPARE(last.outcome, domain::ReportOutcome::Unknown);
+    QCOMPARE(last.error, domain::ReportError::Canceled);
+    QCOMPARE(qvariant_cast<domain::SessionToken>(reports.last()[1]), context);
+    QCOMPARE(state->requests.load(), 6); // close does not flush/retry reports
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
 }
 
 QTEST_GUILESS_MAIN(BackendRuntimeTest)

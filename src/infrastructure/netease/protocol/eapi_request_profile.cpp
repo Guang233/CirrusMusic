@@ -44,6 +44,10 @@ PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payl
         !validCookieValue(metadata.nmtid)) {
         return {CryptoError::InvalidInput};
     }
+    const bool log = metadata.profile == EapiProfile::ListeningLogOsx;
+    if ((metadata.profile != EapiProfile::Pc && !log) ||
+        (log && logicalPath != u"/api/feedback/weblog"))
+        return {CryptoError::InvalidInput};
     QJsonObject header{
         {QStringLiteral("osver"),
          QStringLiteral("Microsoft-Windows-10-Professional-build-19045-64bit")},
@@ -59,6 +63,11 @@ PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payl
         {QStringLiteral("requestId"), QStringLiteral("%1_%2")
                                           .arg(metadata.timestampMs)
                                           .arg(metadata.requestSuffix, 4, 10, QLatin1Char('0'))}};
+    if (log) {
+        header.insert(QStringLiteral("os"), QStringLiteral("osx"));
+        header.insert(QStringLiteral("osver"), QStringLiteral("15.5"));
+        header.insert(QStringLiteral("appver"), QStringLiteral("3.1.10.5100"));
+    }
     const auto insertCookie = [&header](const QString& name, const QByteArray& value) {
         if (!value.isEmpty()) {
             header.insert(name, QString::fromUtf8(value));
@@ -90,7 +99,9 @@ PreparedEapiRequest prepareEapiRequest(QStringView logicalPath, QJsonObject payl
     result.formBody = encodeForm(encrypted.fields);
     // Deliberately preserve the pinned reference's pc + api/iphone UA choice;
     // this is a compatibility profile, not a claim about the user's machine.
-    result.userAgent = "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)";
+    result.userAgent = log ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                           : "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)";
     return result;
 }
 

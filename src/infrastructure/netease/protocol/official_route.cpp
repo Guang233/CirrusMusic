@@ -33,7 +33,8 @@ bool isCanonicalPath(QStringView path)
 
 } // namespace
 
-std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPath)
+std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPath,
+                                       OfficialDestination destination)
 {
     if (!isCanonicalPath(logicalPath)) {
         return std::nullopt;
@@ -63,6 +64,12 @@ std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPat
         return std::nullopt;
     }
 
+    if (destination == OfficialDestination::ListeningLog) {
+        if (protocol != Protocol::Eapi || logicalPath != u"/api/feedback/weblog")
+            return std::nullopt;
+        host = u"clientlog.music.163.com"_s;
+    } else if (destination != OfficialDestination::Default)
+        return std::nullopt;
     QUrl url;
     url.setScheme(u"https"_s);
     url.setHost(host);

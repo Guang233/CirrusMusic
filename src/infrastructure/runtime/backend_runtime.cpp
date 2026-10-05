@@ -8,6 +8,7 @@
 #include "infrastructure/media/qt_playback_backend.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
+#include "infrastructure/netease/music/listening_report_gateway.h"
 #include "infrastructure/netease/music/music_gateway.h"
 #include "infrastructure/netease/music/stream_resolver.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
@@ -126,6 +127,31 @@ class BackendWorker final : public QObject
         }
     }
 
+    void reportListening(ListeningReportCommand command)
+    {
+        const auto id = m_ready && !m_closing && m_reports && command.generation == m_generation
+                            ? m_reports->submit(command.context, command.accountId, command.report)
+                            : 0;
+        if (!id)
+            emit reportDelivered({command.id,
+                                  command.generation,
+                                  command.context,
+                                  {command.report.eventId, command.report.action,
+                                   domain::ReportOutcome::NotSent, domain::ReportError::Busy}});
+        else
+            m_reportRequests.insert(id, command);
+    }
+    void cancelReport(quint64 id)
+    {
+        if (!m_reports)
+            return;
+        for (auto it = m_reportRequests.cbegin(); it != m_reportRequests.cend(); ++it)
+            if (it->id == id) {
+                m_reports->cancel(it.key());
+                return;
+            }
+    }
+
     void playback(PlaybackCommand command)
     {
         bool accepted = m_ready && !m_closing && m_playback && command.generation == m_generation &&
@@ -168,6 +194,8 @@ class BackendWorker final : public QObject
         m_playback.reset();
         m_streamResolver.reset();
         m_player.reset();
+        m_reports.reset();
+        m_reportRequests.clear();
         m_musicService.reset();
         m_musicGateway.reset();
         m_musicRequests.clear();
@@ -181,6 +209,7 @@ class BackendWorker final : public QObject
     void drained(bool persistenceFailed);
     void musicDelivered(cirrus::application::MusicDelivery delivery);
     void playbackDelivered(cirrus::application::PlaybackDelivery delivery);
+    void reportDelivered(cirrus::application::ListeningReportDelivery delivery);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -264,6 +293,15 @@ class BackendWorker final : public QObject
         m_service = std::make_unique<QrLoginService>(*m_session, *m_gateway);
         m_musicGateway = std::make_unique<netease::MusicGateway>(*m_client);
         m_musicService = std::make_unique<MusicQueryService>(*m_session, *m_musicGateway);
+        m_reports = std::make_unique<netease::ListeningReportGateway>(*m_session, *m_client);
+        connect(
+            m_reports.get(), &IListeningReportGateway::completed, this,
+            [this](quint64 id, domain::SessionToken context, domain::ListeningReportResult result) {
+                if (!m_reportRequests.contains(id))
+                    return;
+                const auto c = m_reportRequests.take(id);
+                emit reportDelivered({c.id, c.generation, context, result});
+            });
         m_player = m_factories.playback ? m_factories.playback()
                                         : std::make_unique<media::QtPlaybackBackend>();
         if (!m_player) {
@@ -382,6 +420,8 @@ class BackendWorker final : public QObject
     std::unique_ptr<netease::MusicGateway> m_musicGateway;
     std::unique_ptr<MusicQueryService> m_musicService;
     QHash<quint64, MusicCommand> m_musicRequests;
+    std::unique_ptr<netease::ListeningReportGateway> m_reports;
+    QHash<quint64, ListeningReportCommand> m_reportRequests;
     std::unique_ptr<IPlaybackBackend> m_player;
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;
@@ -413,6 +453,12 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             Qt::QueuedConnection);
     connect(worker, &BackendWorker::musicDelivered, m_facade, &BackendFacade::deliverMusic,
             Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::listeningReportRequested, worker,
+            &BackendWorker::reportListening, Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::listeningReportCancelRequested, worker,
+            &BackendWorker::cancelReport, Qt::QueuedConnection);
+    connect(worker, &BackendWorker::reportDelivered, m_facade,
+            &BackendFacade::deliverListeningReport, Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::playbackRequested, worker, &BackendWorker::playback,
             Qt::QueuedConnection);
     connect(worker, &BackendWorker::playbackDelivered, m_facade, &BackendFacade::deliverPlayback,

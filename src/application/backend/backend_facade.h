@@ -2,6 +2,7 @@
 
 #include "application/account/qr_login_service.h"
 #include "application/ports/music_gateway.h"
+#include "domain/playback/listening_report.h"
 #include "domain/playback/playback_types.h"
 #include <QHash>
 
@@ -33,6 +34,18 @@ struct MusicDelivery {
     quint64 generation = 0;
     domain::SessionToken context;
     MusicResult result;
+};
+
+struct ListeningReportCommand {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    QString accountId;
+    domain::ListeningReport report;
+};
+struct ListeningReportDelivery {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    domain::ListeningReportResult result;
 };
 
 enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume };
@@ -115,6 +128,9 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 savedAlbums(domain::CatalogPage page = {25, 0});
     [[nodiscard]] quint64 savedArtists(domain::CatalogPage page = {25, 0});
     void cancelMusic(quint64 id);
+    [[nodiscard]] quint64
+    reportListening(domain::ListeningReport report); // explicit write, NEVER called by playback
+    void cancelListeningReport(quint64 id);
     [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
     [[nodiscard]] quint64 playSong(domain::SongId song,
                                    domain::AudioQuality quality = domain::AudioQuality::Standard,
@@ -130,6 +146,7 @@ class BackendFacade final : public QObject
     void finishClose(bool persistenceFailed);
     void deliverMusic(MusicDelivery delivery);
     void deliverPlayback(PlaybackDelivery delivery);
+    void deliverListeningReport(ListeningReportDelivery delivery);
 
   signals:
     void stateChanged(cirrus::application::BackendState state);
@@ -151,6 +168,8 @@ class BackendFacade final : public QObject
     void musicCompleted(quint64 id, cirrus::domain::SessionToken context,
                         cirrus::application::MusicResult result);
 
+    void listeningReportCompleted(quint64 id, cirrus::domain::SessionToken context,
+                                  cirrus::domain::ListeningReportResult result);
     void playbackChanged(cirrus::domain::PlaybackSnapshot snapshot);
 
     // Composition wiring only; emitted on this object's thread.
@@ -160,8 +179,13 @@ class BackendFacade final : public QObject
     void musicRequested(cirrus::application::MusicCommand command);
     void musicCancelRequested(quint64 id);
     void playbackRequested(cirrus::application::PlaybackCommand command);
+    void listeningReportRequested(cirrus::application::ListeningReportCommand command);
+    void listeningReportCancelRequested(quint64 id);
 
   private:
+    void invalidateListeningReports(domain::ReportError error);
+    void cancelListeningReportWith(quint64 id, domain::ReportError error);
+    QHash<quint64, ListeningReportCommand> m_reports;
     quint64 submit(AccountAction action, QrLoginOptions options = {});
     void setState(BackendState state);
     quint64 submitMusic(MusicQuery query);
@@ -190,3 +214,5 @@ Q_DECLARE_METATYPE(cirrus::application::MusicCommand)
 Q_DECLARE_METATYPE(cirrus::application::MusicDelivery)
 Q_DECLARE_METATYPE(cirrus::application::PlaybackCommand)
 Q_DECLARE_METATYPE(cirrus::application::PlaybackDelivery)
+Q_DECLARE_METATYPE(cirrus::application::ListeningReportCommand)
+Q_DECLARE_METATYPE(cirrus::application::ListeningReportDelivery)

@@ -12,6 +12,7 @@ target_sources(cirrus_domain INTERFACE
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_history.h
+    domain/playback/listening_report.h
 )
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -29,6 +30,7 @@ add_library(cirrus_application STATIC
     application/ports/qr_login_gateway.h
     application/ports/music_gateway.h
     application/ports/playback.h
+    application/ports/listening_report_gateway.h
     application/playback/playback_queue.cpp
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
@@ -141,6 +143,8 @@ add_library(cirrus_netease_auth STATIC
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
 add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/listening_report_gateway.cpp
+    infrastructure/netease/music/listening_report_gateway.h
     infrastructure/netease/music/stream_resolver.cpp
     infrastructure/netease/music/stream_resolver.h
     infrastructure/netease/music/lyric_parser.cpp

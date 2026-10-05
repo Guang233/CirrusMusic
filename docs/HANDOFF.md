@@ -10,9 +10,9 @@
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 除少量公开查询／XEAPI音源／试听播放外的广泛官方兼容性 |
 | epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置；已登录账号凭据记忆／身份复核／恢复／退出清理 | 真实桌面密钥环／进程异常终止后的验收 |
-| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，加上专辑／艺人／歌单5项和日推／FM2项、[个人库4项读取](api/personal-library.md)，共19个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端；[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)及[FM连续播放](api/fm-continuous-playback.md)、[本地观测累计／会话历史](api/local-listening-history.md) | 目录／日推／FM／个人库账号实测、库缓存／同步、持久历史／听歌上报及声学计量验收、流式起播、云盘／下载、一起听 |
+| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，加上专辑／艺人／歌单5项和日推／FM2项、[个人库4项读取](api/personal-library.md)，加[两个显式上报action](api/explicit-listening-reports.md)，共21个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端；[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)及[FM连续播放](api/fm-continuous-playback.md)、[本地观测累计／会话历史](api/local-listening-history.md) | 目录／日推／FM／个人库账号实测、库缓存／同步、持久历史／自动上报时机与来源扩展、真实报告及声学计量验收、流式起播、云盘／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限；BackendRuntime后台装配、Core-only非阻塞Facade和关闭排空 | 模板入口接线、QML注册和UI |
-| 历史完整基线：13套件／329 pass；本地收听本轮6套件最新结果共82 pass、1默认音频skip；另3条线程数据用例共5 pass；现登记28套件，先前播放PoC证据单列（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；显式上报本轮6套件最新结果共125 pass；另4条线程数据用例共6 pass；现登记29套件，先前播放PoC证据单列（含数据行及 init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-当前 CTest 登记28个套件；少于28个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[本地收听工作包](api/local-listening-history.md)仅6个受影响套件最新结果共82 pass、1默认音频skip，另3条线程数据用例共5 pass；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
+当前 CTest 登记29个套件；少于29个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[显式上报工作包](api/explicit-listening-reports.md)仅6个受影响套件最新结果共125 pass，另4条线程数据用例共6 pass；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -106,7 +106,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/account/qr_login_service.*` | begin/poll/cancel、自动轮询与总时限、身份确认、精确 target 提交 |
 | `src/application/account/login_scheduler.*` | 单调时钟＋单次定时器窄接缝；测试替身在 `tests/support/fake_login_scheduler.h` |
 | `src/application/ports/qr_login_gateway.h` | 窄 port、按值结果、脱敏错误；无 JSON／Cookie |
-| `src/infrastructure/netease/api/api_operation.*` | 目前19项业务operation的封闭注册契约；动态路径只允许规范数字ID后缀 |
+| `src/infrastructure/netease/api/api_operation.*` | 目前21项业务operation的封闭注册契约；动态路径只允许规范数字ID后缀 |
 | `src/infrastructure/netease/api/session_api_client.*` | 捕获 token/origin、快照和一次性收据 |
 | `src/infrastructure/netease/auth/` | QR 映射、身份 schema、port 实现 |
 | `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
@@ -121,6 +121,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/music/personal_fm_source.*`、`netease/music/discovery_mapper.*` | [日推读取／FM条目供给](api/discovery-and-fm.md)；Runtime.fm()仅供给；[连续播放](api/fm-continuous-playback.md)由ListeningSession.startFm()独占驱动 |
 | `src/domain/music/library_types.h`、`netease/music/library_mapper.*`、`tests/unit/library_test.cpp` | [当前账号个人库](api/personal-library.md)：歌单／喜欢ID／收藏专辑及艺人，认证与账号绑定，无缓存／写入 |
 | `src/application/playback/observed_playback.*`、`listening_history.*` | 媒体进展计量值模型与256条会话账本；Qt采样在基础设施；无持久化／官方报告 |
+| `application/ports/listening_report_gateway.h`、`netease/music/listening_report_gateway.*` | [显式上报能力](api/explicit-listening-reports.md)：每调用一个action，clientlog/osx profile；无自动触发／重试 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
@@ -139,7 +140,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；下一步单独定义本地历史持久化与清除契约，scrobble上报仍未实现且与真实写入授权分开；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；[显式上报能力](api/explicit-listening-reports.md)也已接入；自动触发时机留到播放接线时讨论。最近听过／排行读取另包，本地保留时长计量，详细历史持久化按分析需求再定；真实报告另行授权；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |

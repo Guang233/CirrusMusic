@@ -34,6 +34,7 @@ void BackendFacade::close()
     ++m_generation;
     m_snapshot = {};
     invalidateMusic(MusicError::Canceled);
+    invalidateListeningReports(domain::ReportError::Canceled);
     invalidatePlayback();
     const auto pending = std::exchange(m_pending, {});
     setState(BackendState::Stopping);
@@ -57,6 +58,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
         ++m_generation;
         m_snapshot = {}; // immediate intent barrier, before backend processes the command
         invalidateMusic(MusicError::StaleContext);
+        invalidateListeningReports(domain::ReportError::StaleContext);
         invalidatePlayback();
     }
     emit commandRequested({id, m_generation, action, options});
@@ -109,6 +111,10 @@ void BackendFacade::deliver(BackendEvent event)
             invalidateMusic(MusicError::StaleContext);
             invalidatePlayback();
         }
+        if (m_snapshot.token != event.session.token ||
+            m_snapshot.accountId != event.session.accountId ||
+            event.session.phase != domain::SessionPhase::Authenticated)
+            invalidateListeningReports(domain::ReportError::StaleContext);
         m_snapshot = event.session;
         emit sessionChanged(m_snapshot);
         return;
@@ -244,6 +250,63 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
         m_state != BackendState::Ready)
         delivery.result = MusicFailure{MusicError::StaleContext};
     emit musicCompleted(expected.id, expected.context, std::move(delivery.result));
+}
+
+quint64 BackendFacade::reportListening(domain::ListeningReport report)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() ||
+        m_snapshot.phase != domain::SessionPhase::Authenticated ||
+        !domain::validMusicId(m_snapshot.accountId) || !report.isValid() || m_reports.size() >= 8)
+        return 0;
+    for (const auto& pending : std::as_const(m_reports))
+        if (pending.report.eventId == report.eventId && pending.report.action == report.action)
+            return 0;
+    const auto id = ++m_nextId;
+    const ListeningReportCommand command{id, m_generation, m_snapshot.token, m_snapshot.accountId,
+                                         report};
+    m_reports.insert(id, command);
+    emit listeningReportRequested(command);
+    return id;
+}
+void BackendFacade::cancelListeningReportWith(quint64 id, domain::ReportError error)
+{
+    if (!m_reports.contains(id))
+        return;
+    const auto command = m_reports.take(id);
+    emit listeningReportCancelRequested(id);
+    // The worker may already have sent it; do not claim cancellation undid a write.
+    const domain::ListeningReportResult result{command.report.eventId, command.report.action,
+                                               domain::ReportOutcome::Unknown, error};
+    QTimer::singleShot(0, this, [this, id, context = command.context, result] {
+        emit listeningReportCompleted(id, context, result);
+    });
+}
+void BackendFacade::cancelListeningReport(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    cancelListeningReportWith(id, domain::ReportError::Canceled);
+}
+void BackendFacade::invalidateListeningReports(domain::ReportError error)
+{
+    for (auto id : m_reports.keys())
+        cancelListeningReportWith(id, error);
+}
+void BackendFacade::deliverListeningReport(ListeningReportDelivery delivery)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_reports.contains(delivery.id))
+        return;
+    const auto expected = m_reports.take(delivery.id);
+    if (delivery.generation != expected.generation || delivery.context != expected.context ||
+        expected.generation != m_generation || expected.context != m_snapshot.token ||
+        expected.accountId != m_snapshot.accountId || m_state != BackendState::Ready) {
+        delivery.result = {expected.report.eventId, expected.report.action,
+                           domain::ReportOutcome::Unknown, domain::ReportError::StaleContext};
+    }
+    delivery.result.eventId = expected.report.eventId;
+    delivery.result.action = expected.report.action;
+    emit listeningReportCompleted(expected.id, expected.context, delivery.result);
 }
 
 void BackendFacade::invalidatePlayback()
