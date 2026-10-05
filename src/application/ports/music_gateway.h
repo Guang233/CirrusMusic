@@ -6,6 +6,7 @@
 #include "domain/music/cloud_history_types.h"
 #include "domain/music/discovery_types.h"
 #include "domain/music/library_types.h"
+#include "domain/music/playlist_discovery_types.h"
 
 #include <QObject>
 #include <type_traits>
@@ -59,18 +60,29 @@ using MusicQuery =
                  domain::DailyRecommendationsQuery, domain::PersonalFmQuery,
                  domain::MyPlaylistsQuery, domain::LikedSongIdsQuery, domain::SavedAlbumsQuery,
                  domain::SavedArtistsQuery, domain::RecentSongsQuery, domain::ListeningRankingQuery,
-                 domain::ChartsQuery>;
+                 domain::ChartsQuery, domain::RecommendedPlaylistsQuery, domain::PlaylistListQuery,
+                 domain::PremiumPlaylistsQuery, domain::PlaylistTagsQuery>;
 using MusicResult =
     std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
                  domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
                  domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
                  domain::DailyRecommendations, domain::PersonalFmBatch, domain::MyPlaylistsPage,
                  domain::LikedSongIds, domain::SavedAlbumsPage, domain::SavedArtistsPage,
-                 domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts>;
+                 domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts,
+                 domain::RecommendedPlaylists, domain::PlaylistListPage,
+                 domain::PremiumPlaylistsPage, domain::PlaylistTags>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool isPlaylistDiscoveryQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::RecommendedPlaylistsQuery>(query) ||
+           std::holds_alternative<domain::PlaylistListQuery>(query) ||
+           std::holds_alternative<domain::PremiumPlaylistsQuery>(query) ||
+           std::holds_alternative<domain::PlaylistTagsQuery>(query);
 }
 
 inline std::optional<QString> libraryQueryAccount(const MusicQuery& query)

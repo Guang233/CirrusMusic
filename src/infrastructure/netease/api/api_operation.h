@@ -34,7 +34,13 @@ enum class ApiOperation {
     RecentSongs,
     ListeningRanking,
     Charts,
-    ChartsWithPreviews
+    ChartsWithPreviews,
+    RecommendedPlaylists,
+    PlaylistList,
+    PremiumPlaylists,
+    PlaylistCatalogue,
+    HotPlaylistTags,
+    PremiumPlaylistTags
 };
 
 struct ApiOperationContract {

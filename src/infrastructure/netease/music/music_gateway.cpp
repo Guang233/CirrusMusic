@@ -4,6 +4,7 @@
 #include "cloud_history_mapper.h"
 #include "library_mapper.h"
 #include "music_mapper.h"
+#include "playlist_discovery_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -131,6 +132,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto discovery = playlistDiscoveryRequest(query)) {
+        operation = discovery->operation;
+        parameters = discovery->parameters;
     } else if (const auto chart = chartOperation(query)) {
         operation = *chart;
     } else if (const auto history = cloudHistoryRequest(query)) {

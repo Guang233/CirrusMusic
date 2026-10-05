@@ -6,6 +6,7 @@
 #include "library_mapper.h"
 #include "lyric_parser.h"
 #include "music_mapping.h"
+#include "playlist_discovery_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -147,6 +148,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (isPlaylistDiscoveryQuery(query))
+        return mapPlaylistDiscoveryResponse(query, object);
     if (const auto* charts = std::get_if<ChartsQuery>(&query))
         return mapChartsResponse(*charts, object);
     if (historyQueryAccount(query))

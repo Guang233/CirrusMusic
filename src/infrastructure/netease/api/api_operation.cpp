@@ -1,5 +1,6 @@
 #include "api_operation.h"
 #include "domain/music/catalog_types.h"
+#include "domain/music/playlist_discovery_types.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -30,6 +31,24 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
+    case ApiOperation::RecommendedPlaylists:
+        return ApiOperationContract{QStringLiteral("/api/personalized/playlist"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PlaylistList:
+        return ApiOperationContract{QStringLiteral("/api/playlist/list"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PremiumPlaylists:
+        return ApiOperationContract{QStringLiteral("/api/playlist/highquality/list"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PlaylistCatalogue:
+        return ApiOperationContract{QStringLiteral("/api/playlist/catalogue"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 1024 * 1024};
+    case ApiOperation::HotPlaylistTags:
+        return ApiOperationContract{QStringLiteral("/api/playlist/hottags"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 512 * 1024};
+    case ApiOperation::PremiumPlaylistTags:
+        return ApiOperationContract{QStringLiteral("/api/playlist/highquality/tags"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::Charts:
         return ApiOperationContract{QStringLiteral("/api/toplist"), Protocol::Eapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -121,6 +140,48 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (operation == ApiOperation::RecommendedPlaylists) {
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const domain::RecommendedPlaylistsQuery q{limit.toInt(-1)};
+        if (parameters.size() != 1 || !q.isValid() || limit != QJsonValue(q.limit))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("limit"), q.limit},
+                           {QStringLiteral("total"), true},
+                           {QStringLiteral("n"), 1000}};
+    }
+    if (operation == ApiOperation::PlaylistList) {
+        const auto cat = parameters.value(QStringLiteral("cat")).toString();
+        const auto order = parameters.value(QStringLiteral("order")).toString();
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto offset = parameters.value(QStringLiteral("offset"));
+        const domain::PlaylistListQuery q{cat,
+                                          {limit.toInt(-1), offset.toInt(-1)},
+                                          order == QStringLiteral("hot")
+                                              ? domain::PlaylistOrder::Hot
+                                              : domain::PlaylistOrder::New};
+        if (parameters.size() != 4 || !q.isValid() ||
+            (order != QStringLiteral("hot") && order != QStringLiteral("new")) ||
+            limit != QJsonValue(q.page.limit) || offset != QJsonValue(q.page.offset))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("cat"), cat},
+                           {QStringLiteral("order"), order},
+                           {QStringLiteral("limit"), q.page.limit},
+                           {QStringLiteral("offset"), q.page.offset},
+                           {QStringLiteral("total"), true}};
+    }
+    if (operation == ApiOperation::PremiumPlaylists) {
+        const auto cat = parameters.value(QStringLiteral("cat")).toString();
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto before = parameters.value(QStringLiteral("before"));
+        const domain::PremiumPlaylistsQuery q{cat, limit.toInt(-1), before.toInteger(-1)};
+        if (parameters.size() != 3 || !q.isValid() || limit != QJsonValue(q.limit) ||
+            before != QJsonValue(q.before))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("cat"), cat},
+                           {QStringLiteral("limit"), q.limit},
+                           {QStringLiteral("lasttime"), q.before},
+                           {QStringLiteral("total"), true}};
+    }
     if (operation == ApiOperation::RecentSongs) {
         const auto limit = parameters.value(QStringLiteral("limit"));
         const auto n = limit.toInt(-1);
@@ -289,6 +350,9 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     switch (operation) {
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
+    case ApiOperation::PlaylistCatalogue:
+    case ApiOperation::HotPlaylistTags:
+    case ApiOperation::PremiumPlaylistTags:
         if (parameters.isEmpty())
             return QJsonObject{};
         break;
@@ -326,6 +390,9 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::ListeningPlay:
     case ApiOperation::RecentSongs:
     case ApiOperation::ListeningRanking:
+    case ApiOperation::RecommendedPlaylists:
+    case ApiOperation::PlaylistList:
+    case ApiOperation::PremiumPlaylists:
         break;
     }
     return std::nullopt;
@@ -346,6 +413,12 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return *response.businessCode == 200; // staged only in its isolated request snapshot
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
+    case ApiOperation::RecommendedPlaylists:
+    case ApiOperation::PlaylistList:
+    case ApiOperation::PremiumPlaylists:
+    case ApiOperation::PlaylistCatalogue:
+    case ApiOperation::HotPlaylistTags:
+    case ApiOperation::PremiumPlaylistTags:
     case ApiOperation::AnonymousRegister:
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:

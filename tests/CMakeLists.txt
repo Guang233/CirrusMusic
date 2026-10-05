@@ -150,6 +150,11 @@ target_link_libraries(tst_listening_report PRIVATE cirrus_netease_music Qt6::Tes
 add_test(NAME listening_report COMMAND tst_listening_report)
 set_tests_properties(listening_report PROPERTIES TIMEOUT 20)
 
+qt_add_executable(tst_playlist_discovery unit/playlist_discovery_test.cpp)
+target_link_libraries(tst_playlist_discovery PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME playlist_discovery COMMAND tst_playlist_discovery)
+set_tests_properties(playlist_discovery PROPERTIES TIMEOUT 25)
+
 qt_add_executable(tst_charts unit/charts_test.cpp)
 target_link_libraries(tst_charts PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME charts COMMAND tst_charts)

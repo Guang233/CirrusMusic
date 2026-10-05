@@ -182,6 +182,23 @@ quint64 BackendFacade::charts(domain::ChartListKind kind)
     return submitMusic(domain::ChartsQuery{kind});
 }
 
+quint64 BackendFacade::recommendedPlaylists(int limit)
+{
+    return submitMusic(domain::RecommendedPlaylistsQuery{limit});
+}
+quint64 BackendFacade::playlistList(domain::PlaylistListQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::premiumPlaylists(domain::PremiumPlaylistsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::playlistTags(domain::PlaylistTagsKind kind)
+{
+    return submitMusic(domain::PlaylistTagsQuery{kind});
+}
+
 quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});
