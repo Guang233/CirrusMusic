@@ -30,6 +30,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
+    case ApiOperation::RecentSongs:
+        return ApiOperationContract{QStringLiteral("/api/play-record/song/list"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::ListeningRanking:
+        return ApiOperationContract{QStringLiteral("/api/v1/play/record"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::MyPlaylists:
         return ApiOperationContract{QStringLiteral("/api/user/playlist"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -90,7 +96,8 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
            operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
            operation == ApiOperation::SavedArtists || operation == ApiOperation::ListeningStart ||
-           operation == ApiOperation::ListeningPlay;
+           operation == ApiOperation::ListeningPlay || operation == ApiOperation::RecentSongs ||
+           operation == ApiOperation::ListeningRanking;
 }
 
 bool validQrKey(QStringView key)
@@ -108,6 +115,21 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (operation == ApiOperation::RecentSongs) {
+        const auto limit = parameters.value(QStringLiteral("limit"));
+        const auto n = limit.toInt(-1);
+        if (parameters.size() != 1 || n < 1 || n > 100 || limit != QJsonValue(n))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("limit"), n}};
+    }
+    if (operation == ApiOperation::ListeningRanking) {
+        const auto uid = parameters.value(QStringLiteral("uid")).toString();
+        const auto type = parameters.value(QStringLiteral("type"));
+        if (parameters.size() != 2 || !domain::validMusicId(uid) ||
+            (type != QJsonValue(0) && type != QJsonValue(1)))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("uid"), uid}, {QStringLiteral("type"), type}};
+    }
     if (operation == ApiOperation::ListeningStart || operation == ApiOperation::ListeningPlay) {
         const bool play = operation == ApiOperation::ListeningPlay;
         const auto id = parameters.value(QStringLiteral("id")).toString();
@@ -291,6 +313,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::SavedArtists:
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
+    case ApiOperation::RecentSongs:
+    case ApiOperation::ListeningRanking:
         break;
     }
     return std::nullopt;
@@ -327,6 +351,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SavedArtists:
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
+    case ApiOperation::RecentSongs:
+    case ApiOperation::ListeningRanking:
         return false; // business reads/writes must not mutate verified account credentials
     }
     return false;

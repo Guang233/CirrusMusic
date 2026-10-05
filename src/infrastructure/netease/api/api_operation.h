@@ -30,7 +30,9 @@ enum class ApiOperation {
     SavedAlbums,
     SavedArtists,
     ListeningStart,
-    ListeningPlay
+    ListeningPlay,
+    RecentSongs,
+    ListeningRanking
 };
 
 struct ApiOperationContract {

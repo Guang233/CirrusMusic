@@ -127,6 +127,9 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 likedSongIds();
     [[nodiscard]] quint64 savedAlbums(domain::CatalogPage page = {25, 0});
     [[nodiscard]] quint64 savedArtists(domain::CatalogPage page = {25, 0});
+    [[nodiscard]] quint64 recentSongs(int limit = 100);
+    [[nodiscard]] quint64
+    listeningRanking(domain::RankingPeriod period = domain::RankingPeriod::AllTime);
     void cancelMusic(quint64 id);
     [[nodiscard]] quint64
     reportListening(domain::ListeningReport report); // explicit write, NEVER called by playback

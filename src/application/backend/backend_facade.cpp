@@ -199,6 +199,14 @@ quint64 BackendFacade::savedArtists(domain::CatalogPage page)
 {
     return submitMusic(domain::SavedArtistsQuery{m_snapshot.accountId, page});
 }
+quint64 BackendFacade::recentSongs(int limit)
+{
+    return submitMusic(domain::RecentSongsQuery{m_snapshot.accountId, limit});
+}
+quint64 BackendFacade::listeningRanking(domain::RankingPeriod period)
+{
+    return submitMusic(domain::ListeningRankingQuery{m_snapshot.accountId, period});
+}
 quint64 BackendFacade::submitMusic(MusicQuery query)
 {
     Q_ASSERT(QThread::currentThread() == thread());

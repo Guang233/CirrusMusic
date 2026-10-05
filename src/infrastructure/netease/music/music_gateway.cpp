@@ -1,5 +1,6 @@
 #include "music_gateway.h"
 #include "catalog_mapper.h"
+#include "cloud_history_mapper.h"
 #include "library_mapper.h"
 #include "music_mapper.h"
 
@@ -129,6 +130,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto history = cloudHistoryRequest(query)) {
+        operation = history->operation;
+        parameters = history->parameters;
     } else if (const auto library = libraryRequest(query)) {
         operation = library->operation;
         parameters = library->parameters;

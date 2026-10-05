@@ -6,7 +6,7 @@
 
 ## 开发文档
 
-**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证；[队列与六轨歌词时钟](docs/api/queue-and-lyric-clock.md)也已完成后端最小闭环；[专辑／艺人／歌单只读目录](docs/api/catalog-queries.md)已接入并离线验证；[每日推荐读取与私人FM条目供给](docs/api/discovery-and-fm.md)也已接入，[FM连续播放接线](docs/api/fm-continuous-playback.md)已完成离线后端闭环，[个人库四项只读查询](docs/api/personal-library.md)也已离线接入；[本地可观测收听累计／有界会话历史](docs/api/local-listening-history.md)已接入，[显式听歌上报能力](docs/api/explicit-listening-reports.md)也已离线接入，自动上报时机／来源扩展尚未接线，持久历史仍未实现（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
+**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证；[队列与六轨歌词时钟](docs/api/queue-and-lyric-clock.md)也已完成后端最小闭环；[专辑／艺人／歌单只读目录](docs/api/catalog-queries.md)已接入并离线验证；[每日推荐读取与私人FM条目供给](docs/api/discovery-and-fm.md)也已接入，[FM连续播放接线](docs/api/fm-continuous-playback.md)已完成离线后端闭环，[个人库四项只读查询](docs/api/personal-library.md)也已离线接入；[本地可观测收听累计／有界会话历史](docs/api/local-listening-history.md)已接入，[显式听歌上报能力](docs/api/explicit-listening-reports.md)也已离线接入，[云端最近听过／一周与全部时间排行](docs/api/cloud-history-reads.md)已离线接入；自动上报时机／来源扩展尚未接线，本地历史持久化仍未实现（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
 
 - [产品范围与需求](docs/01-product-requirements.md)
 - [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)
@@ -33,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共29套件；显式上报增量的6个受影响 Debug 套件最新结果共125项通过，另4条后台线程数据用例共6项通过（含init/cleanup），不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共30套件；云端历史读取增量的6个受影响 Debug 套件各自最新结果共124项通过，另6条后台线程数据用例共8项通过（含init/cleanup），不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

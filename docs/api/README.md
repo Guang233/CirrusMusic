@@ -29,6 +29,7 @@
 | [personal-library.md](personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人；有界只读与账号校验，无库缓存／写入 |
 | [local-listening-history.md](local-listening-history.md) | 媒体线程的有界观测累计、Queue／FM会话历史、清空与账号隔离；无持久化／上报 |
 | [explicit-listening-reports.md](explicit-listening-reports.md) | StartPlay／Play显式报告、clientlog/osx profile、未知写入结果；无自动触发／重试 |
+| [cloud-history-reads.md](cloud-history-reads.md) | 当前账号最近听过、一周／全部时间听歌排行；原顺序、有界只读，不推算时长；仅合成响应验证 |
 | [fm-continuous-playback.md](fm-continuous-playback.md) | ListeningSession的FM连续播放、模式切换、候选保留与有界失败 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |
@@ -99,4 +100,4 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；[官方URL与单曲Qt播放](stream-resolution-and-playback.md)已接入并有公开试听静音实测，[队列／六轨歌词时钟](queue-and-lyric-clock.md)也已完成后端最小闭环，[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](discovery-and-fm.md)也已接入；[FM连续播放接线](fm-continuous-playback.md)已离线接通，[个人库四项读取](personal-library.md)也已接入，[本地可观测累计／会话历史](local-listening-history.md)已另包接入，[显式上报能力](explicit-listening-reports.md)也已接入；自动时机留待播放接线，最近记录／排行读取及详细本地历史分析另包；再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。
+已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；[官方URL与单曲Qt播放](stream-resolution-and-playback.md)已接入并有公开试听静音实测，[队列／六轨歌词时钟](queue-and-lyric-clock.md)也已完成后端最小闭环，[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](discovery-and-fm.md)也已接入；[FM连续播放接线](fm-continuous-playback.md)已离线接通，[个人库四项读取](personal-library.md)也已接入，[本地可观测累计／会话历史](local-listening-history.md)已另包接入，[显式上报能力](explicit-listening-reports.md)也已接入；[最近记录／排行读取](cloud-history-reads.md)也已另包离线接入；自动时机留待播放接线，详细本地历史分析按需求再定；再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

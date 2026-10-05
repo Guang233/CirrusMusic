@@ -74,4 +74,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 这四项读取不是完整个人中心：其他独立创建／收藏歌单接口、关注／喜欢／收藏写入、库缓存／同步、云盘／下载／评论／榜单仍未因本包完成。
 
-个人库读取本身不提供计量、持久播放历史或scrobble。后续[本地观测累计／有界会话历史](local-listening-history.md)已另包接入，[显式报告能力](explicit-listening-reports.md)也已接入，自动报告时机与持久历史仍未实现；不能以曲目时长或进度条代替实听，更不能从喜欢列表推断播放记录。官方上报及真实账号写入仍需单独授权，UI继续最后。
+个人库读取本身不提供计量、持久播放历史或scrobble。后续[本地观测累计／有界会话历史](local-listening-history.md)已另包接入，[显式报告能力](explicit-listening-reports.md)也已接入，自动报告时机与持久历史仍未实现；后续[云端最近听过／一周和全部时间排行](cloud-history-reads.md)已另包离线接入，仍无本地历史持久化，不与个人库schema混用；不能以曲目时长或进度条代替实听，更不能从喜欢列表推断播放记录。官方上报及真实账号写入仍需单独授权，UI继续最后。
