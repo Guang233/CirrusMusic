@@ -10,6 +10,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/catalog_types.h
     domain/music/discovery_types.h
     domain/music/cloud_history_types.h
+    domain/music/chart_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_history.h
@@ -150,6 +151,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/stream_resolver.h
     infrastructure/netease/music/lyric_parser.cpp
     infrastructure/netease/music/lyric_parser.h
+    infrastructure/netease/music/chart_mapper.cpp
+    infrastructure/netease/music/chart_mapper.h
     infrastructure/netease/music/cloud_history_mapper.cpp
     infrastructure/netease/music/cloud_history_mapper.h
     infrastructure/netease/music/library_mapper.cpp

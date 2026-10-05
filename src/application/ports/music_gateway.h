@@ -2,6 +2,7 @@
 
 #include "domain/account/session_types.h"
 #include "domain/music/catalog_types.h"
+#include "domain/music/chart_types.h"
 #include "domain/music/cloud_history_types.h"
 #include "domain/music/discovery_types.h"
 #include "domain/music/library_types.h"
@@ -51,19 +52,21 @@ struct LyricQuery {
     domain::SongId song;
     [[nodiscard]] bool isValid() const { return domain::validMusicId(song.value); }
 };
-using MusicQuery = std::variant<
-    domain::SongSearch, DetailQuery, LyricQuery, domain::AlbumQuery, domain::ArtistQuery,
-    domain::ArtistSongsQuery, domain::ArtistAlbumsQuery, domain::PlaylistQuery,
-    domain::PlaylistSongsQuery, domain::DailyRecommendationsQuery, domain::PersonalFmQuery,
-    domain::MyPlaylistsQuery, domain::LikedSongIdsQuery, domain::SavedAlbumsQuery,
-    domain::SavedArtistsQuery, domain::RecentSongsQuery, domain::ListeningRankingQuery>;
+using MusicQuery =
+    std::variant<domain::SongSearch, DetailQuery, LyricQuery, domain::AlbumQuery,
+                 domain::ArtistQuery, domain::ArtistSongsQuery, domain::ArtistAlbumsQuery,
+                 domain::PlaylistQuery, domain::PlaylistSongsQuery,
+                 domain::DailyRecommendationsQuery, domain::PersonalFmQuery,
+                 domain::MyPlaylistsQuery, domain::LikedSongIdsQuery, domain::SavedAlbumsQuery,
+                 domain::SavedArtistsQuery, domain::RecentSongsQuery, domain::ListeningRankingQuery,
+                 domain::ChartsQuery>;
 using MusicResult =
     std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
                  domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
                  domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
                  domain::DailyRecommendations, domain::PersonalFmBatch, domain::MyPlaylistsPage,
                  domain::LikedSongIds, domain::SavedAlbumsPage, domain::SavedArtistsPage,
-                 domain::CloudRecentSongs, domain::ListeningRanking>;
+                 domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {

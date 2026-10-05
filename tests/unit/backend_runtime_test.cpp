@@ -239,6 +239,7 @@ class BackendRuntimeTest : public QObject
     void libraryThroughThread();
     void listeningReportThroughThread();
     void cloudHistoryThroughThread();
+    void chartsToPlaylistPlaybackThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -1072,6 +1073,153 @@ void BackendRuntimeTest::cloudHistoryThroughThread()
     QCOMPARE(std::get<MusicFailure>(canceled).error, MusicError::Canceled);
     QVERIFY(reports.isEmpty());
     QCOMPARE(state->requests.load(), 7);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+void BackendRuntimeTest::chartsToPlaylistPlaybackThroughThread()
+{
+    // Synthetic decoder only. No real media backend/CDN, accounts or device audio.
+    class Player final : public IPlaybackBackend
+    {
+      public:
+        std::shared_ptr<SharedState> state;
+        domain::LoadToken token;
+        explicit Player(std::shared_ptr<SharedState> s) : state(std::move(s))
+        {
+            check();
+            ++state->created;
+        }
+        ~Player() override
+        {
+            check();
+            ++state->destroyed;
+        }
+        void check()
+        {
+            if (QThread::currentThread() == qApp->thread())
+                ++state->wrongThread;
+        }
+        void load(domain::StreamSource, domain::LoadToken t) override
+        {
+            check();
+            token = t;
+            QTimer::singleShot(0, this, [this, t] {
+                emit event({t, PlaybackEvent::Kind::Duration, {}, 3000});
+                emit event({t, PlaybackEvent::Kind::Seekable, {}, 1});
+                emit event({t, PlaybackEvent::Kind::Ready});
+            });
+        }
+        void play() override
+        {
+            check();
+            emit event({token, PlaybackEvent::Kind::State, domain::PlaybackState::Playing});
+        }
+        void pause() override { check(); }
+        void stop() override { check(); }
+        void seek(qint64) override { check(); }
+        void setVolume(float) override { check(); }
+    };
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    const Plan index{
+        R"({"code":200,"playlist":{"id":"9007199254740993","name":"synthetic chart","trackCount":3,"trackIds":[{"id":1},{"id":2},{"id":1}],"tracks":[{"id":1}]}})"};
+    const auto stream = netease::detail::aes(
+        R"({"code":200,"data":[{"id":2,"code":200,"url":"https:\/\/m802.music.126.net\/synthetic.mp3","level":"standard","type":"mp3","expi":1200,"size":8,"freeTrialInfo":null}]})",
+        "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
+    QVERIFY(stream);
+    auto options = factories(
+        state, gate,
+        {Plan{R"({"code":200,"list":[{"id":"9007199254740993","name":"synthetic chart"}]})"},
+         Plan{
+             R"({"code":200,"list":[{"id":"9007199254740993","updateFrequency":"provider label","tracks":[{"first":"display only, no song ID"}]}]})"},
+         index, index, Plan{R"({"code":200,"songs":[{"id":2},{"id":1}]})"}, Plan{*stream, 200, 10},
+         Plan{R"({"code":200,"lrc":{"lyric":"[00:00]synthetic"}})"}, Plan{"", 200, -1}});
+    options.playback = [state] { return std::make_unique<Player>(state); };
+    BackendRuntime runtime(config, std::move(options));
+    auto& f = runtime.facade();
+    auto& listening = runtime.listening();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        done(&f, &BackendFacade::musicCompleted),
+        reports(&f, &BackendFacade::listeningReportRequested),
+        play(&f, &BackendFacade::playbackRequested);
+    connect(&f, &BackendFacade::musicCompleted, this,
+            [&](quint64, domain::SessionToken, MusicResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QCOMPARE(f.snapshot().phase, domain::SessionPhase::Guest);
+    const auto context = f.snapshot().token;
+    QVERIFY(f.charts());
+    QTRY_COMPARE(done.size(), 1);
+    const auto overviewResult = qvariant_cast<MusicResult>(done[0][2]);
+    QVERIFY(std::holds_alternative<domain::Charts>(overviewResult));
+    const auto overview = std::get<domain::Charts>(overviewResult);
+    QCOMPARE(overview.charts.size(), 1);
+    const auto playlist = overview.charts.first().playlist;
+    QCOMPARE(playlist.value, "9007199254740993");
+    QVERIFY(!overview.charts.first().previews);
+    QVERIFY(f.charts(domain::ChartListKind::WithPreviews));
+    QTRY_COMPARE(done.size(), 2);
+    const auto previewResult = qvariant_cast<MusicResult>(done[1][2]);
+    QVERIFY(std::holds_alternative<domain::Charts>(previewResult));
+    const auto previews = std::get<domain::Charts>(previewResult);
+    QCOMPARE(previews.query.kind, domain::ChartListKind::WithPreviews);
+    QVERIFY(previews.charts.first().previews);
+    QCOMPARE(previews.charts.first().previews->first().primaryText, "display only, no song ID");
+    QVERIFY(f.playlistDetails(playlist));
+    QTRY_COMPARE(done.size(), 3);
+    const auto detailResult = qvariant_cast<MusicResult>(done[2][2]);
+    QVERIFY(std::holds_alternative<domain::PlaylistDetails>(detailResult));
+    const auto details = std::get<domain::PlaylistDetails>(detailResult);
+    QVERIFY(details.trackIdsComplete);
+    QCOMPARE(details.songs.size(), 1);
+    QVERIFY(f.playlistSongs({playlist, {3, 0}}));
+    QTRY_COMPARE(done.size(), 4);
+    const auto pageResult = qvariant_cast<MusicResult>(done[3][2]);
+    QVERIFY(std::holds_alternative<domain::PlaylistSongsPage>(pageResult));
+    const auto page = std::get<domain::PlaylistSongsPage>(pageResult);
+    QCOMPARE(page.query.playlist.value, playlist.value);
+    QCOMPARE(page.ids, (QList<domain::SongId>{{"1"}, {"2"}, {"1"}}));
+    QCOMPARE(page.songs.size(), 3);
+    QVERIFY(page.missing.isEmpty());
+    QCOMPARE(page.songs[0].id.value, "1");
+    QCOMPARE(page.songs[1].id.value, "2");
+    QCOMPARE(page.songs[2].id.value, "1");
+    QCOMPARE(state->requests.load(), 5);
+    QVERIFY(play.isEmpty());
+    QVERIFY(listening.queue().entries.isEmpty());
+    // Explicit caller selection only: real hydrated SongId, not playlist ID or preview text.
+    QVERIFY(listening.append({page.songs[1].id}));
+    QCOMPARE(listening.queue().entries.size(), 1);
+    QVERIFY(play.isEmpty());
+    QVERIFY(listening.select(listening.queue().entries.first().id));
+    QTRY_COMPARE(f.playback().state, domain::PlaybackState::Playing);
+    QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
+    QCOMPARE(f.playback().song.value, "2");
+    QCOMPARE(f.playback().token.session, context);
+    QCOMPARE(state->requests.load(), 7);
+    QVERIFY(reports.isEmpty());
+    const auto pending = f.charts(domain::ChartListKind::WithPreviews);
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 8);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 6);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<domain::SessionToken>(done.last()[1]), context);
+    const auto canceled = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<MusicFailure>(canceled));
+    QCOMPARE(std::get<MusicFailure>(canceled).error, MusicError::Canceled);
+    QCOMPARE(f.playback().state, domain::PlaybackState::Empty);
+    QVERIFY(listening.queue().entries.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QCOMPARE(state->requests.load(), 8);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

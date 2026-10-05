@@ -1,5 +1,6 @@
 #include "music_mapper.h"
 #include "catalog_mapper.h"
+#include "chart_mapper.h"
 #include "cloud_history_mapper.h"
 #include "discovery_mapper.h"
 #include "library_mapper.h"
@@ -146,6 +147,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (const auto* charts = std::get_if<ChartsQuery>(&query))
+        return mapChartsResponse(*charts, object);
     if (historyQueryAccount(query))
         return mapCloudHistoryResponse(query, object);
     if (libraryQueryAccount(query))

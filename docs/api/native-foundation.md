@@ -67,9 +67,11 @@ Core-only `PlaybackQueue`／`LyricTimeline`／`ListeningSession`已组成[队列
 
 [云端最近听过／听歌排行](cloud-history-reads.md)新增两项weapi原账号读取；保留重复与服务端顺序、未知计数／分值与原playTime字段，不推算实听时长／完整历史，仅合成响应验证。
 
+[榜单列表／内容摘要](chart-reads.md)新增eapi／weapi两项Guest或账号只读，保留未知元数据和无ID展示文本；歌曲分页和显式选歌播放复用已有歌单／队列链，仅合成响应与假后端验证。
+
 ## 测试与构建
 
-下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media、listening、catalog、discovery、personal_fm、fm_listening、library、listening_history、listening_report及cloud_history，当前登记30套件。本轮[云端历史验证](cloud-history-reads.md)6套件各自最新结果共124 pass，另6条线程数据用例共8 pass；此前[显式上报验证](explicit-listening-reports.md)6套件最新结果共125 pass，另4条线程数据用例共6 pass；此前[本地收听验证](local-listening-history.md)6套件最新结果共82 pass、1默认音频skip，另3条线程数据用例共5 pass；此前[个人库验证](personal-library.md)6套件最新成功结果共118 pass、另5条线程数据用例共7 pass；此前[FM播放验证](fm-continuous-playback.md)5套件最新成功结果共63 pass、另4条线程数据用例共6 pass；此前[发现验证](discovery-and-fm.md)6套件最新成功结果共108 pass、另3条线程用例共5 pass；此前[目录验证](catalog-queries.md)5套件共100 pass、另2条线程用例共4 pass；此前[队列／歌词验证](queue-and-lyric-clock.md)仅3套件各自最后一次结果共37 pass，另2条线程用例共4 pass；此前[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
+下表是密钥环增量时的13套件完整验证基线；随后新增bootstrap、account_restore和两个backend套件，再加music及stream/playback/media、listening、catalog、discovery、personal_fm、fm_listening、library、listening_history、listening_report、cloud_history及charts，当前登记31套件。本轮[榜单验证](chart-reads.md)6套件各自最新结果共128 pass，另6条线程数据用例共8 pass；此前[云端历史验证](cloud-history-reads.md)6套件各自最新结果共124 pass，另6条线程数据用例共8 pass；此前[显式上报验证](explicit-listening-reports.md)6套件最新结果共125 pass，另4条线程数据用例共6 pass；此前[本地收听验证](local-listening-history.md)6套件最新结果共82 pass、1默认音频skip，另3条线程数据用例共5 pass；此前[个人库验证](personal-library.md)6套件最新成功结果共118 pass、另5条线程数据用例共7 pass；此前[FM播放验证](fm-continuous-playback.md)5套件最新成功结果共63 pass、另4条线程数据用例共6 pass；此前[发现验证](discovery-and-fm.md)6套件最新成功结果共108 pass、另3条线程用例共5 pass；此前[目录验证](catalog-queries.md)5套件共100 pass、另2条线程用例共4 pass；此前[队列／歌词验证](queue-and-lyric-clock.md)仅3套件各自最后一次结果共37 pass，另2条线程用例共4 pass；此前[播放验证](stream-resolution-and-playback.md)仅4套件最后一次结果共49 pass、1默认skip，另4条线程用例和显式音频冒烟通过；此前音乐查询4套件／95 pass，另1条后台线程用例通过；此前后台装配7套件／158 pass、1默认skip，结果见[后台生命周期](backend-runtime.md)；此前账号恢复6套件／191 pass见[账号恢复记录](account-session-restore.md)；匿名启动的较早定向结果见[匿名启动记录](anonymous-bootstrap.md)，不声明重新完成完整矩阵：
 
 | 套件 | 范围 | Qt Test 汇总 |
 | --- | --- | --- |
@@ -101,6 +103,6 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 ## 未实现与下一步
 
-[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端和队列／歌词时钟，尚未实现模板入口／QML接线或真实账号验收。registry 当前23项业务operation（原8项认证／歌曲／播放加5项目录读取、2项发现、4项个人库、2个显式报告action及2项云端历史读取），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
+[匿名 bootstrap](anonymous-bootstrap.md)与[账号凭据持久化／恢复／退出](account-session-restore.md)已实现并有定向离线回归；后台线程与非视觉Facade也已实现；现有音乐查询已接入取消／上下文调度，已有单曲Qt播放后端和队列／歌词时钟，尚未实现模板入口／QML接线或真实账号验收。registry 当前25项业务operation（原8项认证／歌曲／播放加5项目录读取、2项日推/FM、4项个人库、2个显式报告action、2项云端历史及2项榜单读取），并非完整目录／播放业务；应用空窗口不变，后端尚未装配到产品入口。
 
-扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC、队列和歌词时钟已完成最小闭环，目录读取也已接入并离线验证，日推读取与FM条目供给也已接入；FM连续播放已离线接通，个人库四项读取也已离线接入；本地观测累计／会话历史已另包接入，显式上报已接入，但自动时机／来源扩展留待播放接线；[最近记录与排行读取](cloud-history-reads.md)已离线接入，后续可接榜单等发现读取；本地详细历史持久化按分析需求再定，真实写入另授权；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。
+扫码自动轮询与认证总时限已实现（[B-010 子任务](../tasks/B-010-qr-polling.md)）。XEAPI 编码、公钥注册与会话密钥已实现（[B-002 子任务](../tasks/B-002-xeapi.md)）。官方音源与静音试听PoC、队列和歌词时钟已完成最小闭环，目录读取也已接入并离线验证，日推读取与FM条目供给也已接入；FM连续播放已离线接通，个人库四项读取也已离线接入；本地观测累计／会话历史已另包接入，显式上报已接入，但自动时机／来源扩展留待播放接线；[最近记录与排行读取](cloud-history-reads.md)已离线接入，[榜单列表／摘要](chart-reads.md)也已离线接入；后续可接推荐／精品歌单等发现读取；本地详细历史持久化按分析需求再定，真实写入另授权；公开只读小样本验证已有维护者授权，真实账号／写入操作不在该授权范围内。浏览器 SDK 和一起听仍遵守[审计门禁](gaps-and-hazards.md)，不得以局部协议测试通过宣称这些业务已支持。

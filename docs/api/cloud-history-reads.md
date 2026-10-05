@@ -95,8 +95,8 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 13个变更C++文件的active LSP无诊断，format／diff检查通过；变更文档255个本地链接无断链；13个人工application编译单元加1个AUTOMOC的实际依赖均无基础设施／Network／Multimedia／Sql／Quick／Qml／Gui／JSON穿透。main.cpp／Main.qml无改动。
 
-当前登记30个CTest套件，不是30套全量验证；忽略日志 `build/workspace-checks/cloud-history-*.log`，最终为focused、final-cloud及final-thread与对应构建日志。新DTO头文件更新时的clangd旧member诊断，经active刷新消除，不删除必要include。
+本包完成时登记30个CTest套件，不是30套全量验证；最新数量见[接手指南](../HANDOFF.md)。忽略日志 `build/workspace-checks/cloud-history-*.log`，最终为focused、final-cloud及final-thread与对应构建日志。新DTO头文件更新时的clangd旧member诊断，经active刷新消除，不删除必要include。
 
 ## 5. 后续
 
-历史读取本包已闭环；后续可继续榜单等音乐发现读取。自动报告的来源、有效收听门槛、时机／终止字段、load去重与未知结果策略仍留待具体播放接线；本地详细历史／分析持久化按需求再定，UI继续最后。
+历史读取本包已闭环；后续[榜单列表／内容摘要](chart-reads.md)已另包离线接入，并复用歌单页与显式选歌播放链，仍无真实业务请求。自动报告的来源、有效收听门槛、时机／终止字段、load去重与未知结果策略仍留待具体播放接线；本地详细历史／分析持久化按需求再定，UI继续最后。

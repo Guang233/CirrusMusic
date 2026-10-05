@@ -30,6 +30,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
+    case ApiOperation::Charts:
+        return ApiOperationContract{QStringLiteral("/api/toplist"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::ChartsWithPreviews:
+        return ApiOperationContract{QStringLiteral("/api/toplist/detail"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentSongs:
         return ApiOperationContract{QStringLiteral("/api/play-record/song/list"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -281,6 +287,11 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
+    case ApiOperation::Charts:
+    case ApiOperation::ChartsWithPreviews:
+        if (parameters.isEmpty())
+            return QJsonObject{};
+        break;
     case ApiOperation::QrKey:
         if (parameters.isEmpty()) {
             return payload;
@@ -333,6 +344,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return *response.businessCode >= 801 && *response.businessCode <= 803;
     case ApiOperation::AccountIdentity:
         return *response.businessCode == 200; // staged only in its isolated request snapshot
+    case ApiOperation::Charts:
+    case ApiOperation::ChartsWithPreviews:
     case ApiOperation::AnonymousRegister:
     case ApiOperation::SearchSongs:
     case ApiOperation::SongDetails:

@@ -177,6 +177,11 @@ quint64 BackendFacade::playlistSongs(domain::PlaylistSongsQuery query)
     return submitMusic(std::move(query));
 }
 
+quint64 BackendFacade::charts(domain::ChartListKind kind)
+{
+    return submitMusic(domain::ChartsQuery{kind});
+}
+
 quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});
