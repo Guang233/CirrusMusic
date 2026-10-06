@@ -154,7 +154,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 5. 接下来做什么，什么时候需要询问
 
-**最新范围覆盖旧剩余清单**（接续acf822e）：维护者不要求专用下载API，未来下载优先复用播放音源接口；下载权利／试听限制／过期与文件恢复另验，临时缓冲不是下载交付。云盘后续API／音源／播放／写暂缓，原账号已有读取保留。一起听和整歌单收藏／取消明确加入待办：先一起听9 HTTP契约／接入，接收／seq／version／时钟／恢复未证不称完整同步；收藏另调查固定Watchman v2原生前置，不执行SDK／JS／Node／WebEngine、新库／实网，不以评论v3替代。需要改变这些边界再询问。声音Program/Voice与底层音轨关联、官方URL／权限／TTL／preview链本次只是解释，未默认开始实现。此次范围记录docs-only，registry82／CTest44不变，无新代码／build／LSP／测试或实网证据；搜索辅助631＋12仍独立历史，本地提交、不push。
+**最新范围覆盖旧剩余清单**（接续acf822e）：维护者明确未来下载以播放接口实际可听音源为准，不新增专用下载API、不额外查询下载资格／标志／加密下载文件支路；保留音源自身试听范围／TTL／实际访问限制，不扩可听范围，文件恢复另包，临时缓冲不是下载交付。云盘后续API／音源／播放／写暂缓，原账号已有读取保留。一起听随后经维护者明确搁置至最后，表示已逆向整套接口，待收到完整材料再核对；固定参考9 HTTP草稿已本地WIP保存并撤出主线，不计API／完整一起听交付。下一项优先整歌单收藏／取消，调查固定Watchman v2原生前置，不执行SDK／JS／Node／WebEngine、新库／实网，不以评论v3替代。需要改变这些边界再询问。声音Program/Voice与底层音轨关联、官方URL／权限／TTL／preview链本次只是解释，未默认开始实现。此次主线范围记录docs-only，registry82／CTest44不增，一起听草稿153／affected858＋thread13只是暂停前的合成历史，不能计入主线／FR-043验收；搜索辅助631＋12仍独立已交付证据，不重宣全量或实网兼容。本地WIP stash **9907ac4a9ad83b9cefb79fea9d3337b56b91ba6f** 保存8 tracked＋8新文件的完整草稿（含取消／generation／线程测试）；只在最后明确恢复且先核对新材料时以该固定对象识别，不能按浮动stash@{0}自动pop／drop。ignored together-*日志／旧build artefacts属草稿，已重配CMake／刷新编译数据库并定向构建主线facade/runtime，实查82ops／44注册且无together；8恢复及相邻C++路径fresh全server clean，14应用对象6963实际deps禁入0。仅恢复构建／检查，未重跑Qt测试，不凭草稿缓存45suite／91ops误报。新范围本地提交、不push。
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
@@ -165,7 +165,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | 安全存储实现与新增依赖 | QtKeychain 系统包（`qtkeychain-qt6`）已接入；无后端时只留内存，不明文 fallback |
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
-| v2 checktoken SDK、一起听接收链 | 整歌单收藏／取消固定链每次需v2 SDK，原生未接，经确认延期；SDK与一起听仍有证据／许可门禁，不暗加Node/WebEngine、不以v3／改协议替代v2 |
+| v2 checktoken SDK、一起听接收链 | 整歌单收藏／取消固定参考链每次需v2 SDK，原生未接，现用户要求补齐并优先调查；一起听用户明确暂停，最后待其整套材料；仍有证据／许可门禁，不暗加Node/WebEngine、不以v3／改协议替代v2 |
 | 播客／声音后续 | [补证决策](api/spoken-playback-contract.md)为docs-only，旧公开列表-462停止；传统mainTrackId文档路线已获证，v1实网／Voice关系仍未知，不换host／工作台或自动登录；账号／挑战／媒体验证另授权 |
 | 播放后端 | Qt Multimedia已明确获准接入；公开试听MP3／合成WAV PoC通过，完整缓冲后起播；流式、设备切换／打包等仍有门禁 |
 

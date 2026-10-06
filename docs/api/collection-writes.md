@@ -8,7 +8,7 @@
 
 完整核对固定 `a8c781fd64faab17fedfd46e0615a2609307f163` 的 `like.js`、`playlist_tracks.js`、`album_sub.js`、`artist_sub.js`、`dj_sub.js` 与对应home.md章节／TS签名，完整options、request和config；也核对 `playlist_subscribe.js`、`register_checktoken_v2.js`、`like_v1.js`、`song_like.js` 的不同门禁／路径。TS generic Response不是完整响应schema；参考不是官方文档或实网支持证明，440模块及164／40／236审计保持历史，不回写为运行注册表。
 
-**本包时点整歌单收藏／取消收藏明确延期，维护者先完成其余五类；接续搜索辅助包acf822e，维护者现重新明确要求补齐，两动作已排回后端待办。** 需求恢复不等于前置链已实现／SDK执行、新运行依赖或真实写入已获准；优先调查C++原生v2等价链可行性，未证前不假注册可用入口。 固定playlist_subscribe包装器两种动作均强制query.checkToken=v2，request每次先调用Watchman SDK，再把token置入eapi header；收藏动作另有body.checkToken的严格数字t分支。现有原生后端没有该SDK能力／许可和环境验收。本包未开放对应入口、注册对应operation、接收外部token、复制固定config token或空token假成功，不改为Weapi／旧接口、v3、Node／WebEngine／转发服务绕过。这是固定参考链的门禁，尚不是已证官方服务要求。
+**本包时点整歌单收藏／取消收藏明确延期，维护者先完成其余五类；接续搜索辅助包acf822e，维护者现重新明确要求补齐，两动作已排回后端待办。一起听随后经维护者明确暂停至最后，现优先本项原生v2调查。** 需求恢复不等于前置链已实现／SDK执行、新运行依赖或真实写入已获准；优先调查C++原生v2等价链可行性，未证前不假注册可用入口。 固定playlist_subscribe包装器两种动作均强制query.checkToken=v2，request每次先调用Watchman SDK，再把token置入eapi header；收藏动作另有body.checkToken的严格数字t分支。现有原生后端没有该SDK能力／许可和环境验收。本包未开放对应入口、注册对应operation、接收外部token、复制固定config token或空token假成功，不改为Weapi／旧接口、v3、Node／WebEngine／转发服务绕过。这是固定参考链的门禁，尚不是已证官方服务要求。
 
 旧红心like是Weapi `/api/radio/like`，其radio路径不等于私人FM反馈；新版like_v1是XEAPI `/api/v1/radio/like`加v3门禁，另song_like是带userid的不同默认接口，**都不作fallback／双发**。没有FM垃圾桶、评论点赞／写、账号评论历史／通知、歌单创建／删除／命名／排序、云盘上传／删除、声音播放或UI。
 
