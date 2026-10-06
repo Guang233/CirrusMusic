@@ -34,7 +34,7 @@
 | personal_fm_mode | `/api/v1/radio/get` | 默认 eapi；mode、subMode=query.submode、limit 默认 3 |
 | fm_trash | `/api/radio/trash/add` | weapi；songId、alg=RT、time 默认 25 |
 
-私人 FM 与电台／播客不同，后者仍不接入。不同 FM mode 是否都对当前账号开放、允许值、返回批量大小、time 单位和限流策略都未验证，不把源码默认值当服务器保证。
+私人 FM 与传统电台／消费播客是不同来源；消费播客／声音范围已由后续决策纳入并另包读取，不能将FM接口当节目播放协议。不同 FM mode 是否都对当前账号开放、允许值、返回批量大小、time 单位和限流策略都未验证，不把源码默认值当服务器保证。
 
 客户端规则：
 
@@ -47,6 +47,8 @@
 测试门禁：小批量／空批次／重复歌曲、连续快速跳过、喜欢失败、垃圾桶结果未知、账号失效、切出与切回、晚到续批不能污染普通队列。
 
 ## 3. 一起听：HTTP 模块不是完整同步协议
+
+接续搜索辅助包acf822e，维护者再次明确要求添加一起听；下一包先核对并接入已确认的HTTP请求契约，双端接收／状态同步仍独立门禁，无真实账号／服务访问、SDK／新依赖或UI授权。本次范围更新没有新增operation／实现／测试，不能把待办当9项已交付。
 
 共 9 个模块，全部列为采用目标但带 `together-receive-contract` 门禁。上游拼写为 **listentogether_heatbeat**，Cirrus 内部使用 Heartbeat，保留映射避免漏项。
 
