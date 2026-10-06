@@ -13,6 +13,7 @@
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/podcast_types.h"
 #include "domain/music/recent_entity_types.h"
+#include "domain/music/search_assist_types.h"
 
 #include <QObject>
 #include <type_traits>
@@ -72,7 +73,8 @@ using MusicQuery = std::variant<
     domain::CommentsQuery, domain::HotCommentsQuery, domain::SortedCommentsQuery,
     domain::CommentFloorQuery, domain::CommentInfoQuery, domain::SubscribedPodcastsQuery,
     domain::CloudSongsQuery, domain::CloudSongDetailsQuery, domain::ArtistIntroductionQuery,
-    domain::SongWikiQuery>;
+    domain::SongWikiQuery, domain::SearchSuggestionsQuery, domain::HotKeywordsQuery,
+    domain::HotKeywordDetailsQuery>;
 using MusicResult =
     std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
                  domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
@@ -88,11 +90,19 @@ using MusicResult =
                  domain::CloudRecentPodcasts, domain::CloudRecentVoices, domain::CommentsPage,
                  domain::HotCommentsPage, domain::SortedCommentsPage, domain::CommentFloorPage,
                  domain::CommentStatistics, domain::SubscribedPodcastsPage, domain::CloudSongsPage,
-                 domain::CloudSongDetails, domain::ArtistIntroduction, domain::SongWikiSummary>;
+                 domain::CloudSongDetails, domain::ArtistIntroduction, domain::SongWikiSummary,
+                 domain::SearchSuggestions, domain::HotKeywords, domain::HotKeywordDetails>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool isSearchAssistQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::SearchSuggestionsQuery>(query) ||
+           std::holds_alternative<domain::HotKeywordsQuery>(query) ||
+           std::holds_alternative<domain::HotKeywordDetailsQuery>(query);
 }
 
 inline bool isAccountLibraryQuery(const MusicQuery& query)

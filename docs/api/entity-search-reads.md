@@ -12,6 +12,8 @@ quint64 BackendFacade::searchPodcasts(SearchPage query);
 quint64 BackendFacade::searchVoices(SearchPage query);
 ```
 
+后续[搜索辅助](search-assistance-reads.md)web建议／简略及详细热搜3项已仅合成接入，预览独立四类ID与title而非完整搜索页，不自动调用本包搜索／目录／播放，不新增授权公开窗口或以本包样本证明建议schema；历史196＋8保留独立证据。
+
 原歌曲搜索保持不变。SearchPage为不含身份的参数值：关键词trim后非空、原长度≤256、合法UTF-16／无NUL，limit1～100、offset0～10000；共用SearchPage默认30／0，直接PodcastSearchQuery的默认页为10／0。Facade调用方可显式选10；不复制上游JS offset=0被 `||30`改为30的行为。查询保留原参数，wire只trim关键词，不本地过滤／排序／自动翻页或去重。
 
 沿用MusicQuery／MusicResult、16槽邮箱、原token／generation、取消、Guest／Authenticated与Runtime后台装配。ID非零仅受理；结果走musicCompleted，取消用cancelMusic；请求／响应不采纳Set-Cookie、认证／恢复、不抓图片。API registry由31到36；QML／模板入口仍不变。

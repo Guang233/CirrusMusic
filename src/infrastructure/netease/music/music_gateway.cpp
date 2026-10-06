@@ -10,6 +10,7 @@
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
 #include "recent_entity_mapper.h"
+#include "search_assist_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -137,6 +138,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto assist = searchAssistRequest(query)) {
+        operation = assist->operation;
+        parameters = assist->parameters;
     } else if (const auto comment = commentRequest(query)) {
         operation = comment->operation;
         parameters = comment->parameters;

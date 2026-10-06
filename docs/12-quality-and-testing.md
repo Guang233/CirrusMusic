@@ -117,6 +117,10 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 [完整契约／复现](api/comment-writes.md)：最终10受影响Debug套件760 pass＋9线程数据行11 pass，0fail/skip，登记43／registry79非全量／Release。新comment_writes134：23资源模式、17坏token、60响应、24cancel×logout、4096文本／Unicode／宽ID／strict keys、原Cookie／XEAPI、MUSIC_U／key前置、direct transport token双限制、两阶段client销毁、同token换账号／Guest／错gen／晚到、UUID／8槽及fresh token不复用。JSONP只严格解析候选不执行；不让密钥缺失／token失败发业务，不推断创建ID。线程完整合成登录→5动作独立（含unlike403）→坏token→并行挂起业务／issuer时close真排空，14请求／8结果，无自动read／collection／play／report。22fresh all-server CPP clean，14应用对象6957实编依赖／禁入0、UI0，无新库／网络／账号／JS。历史封面562＋11与初次129＋3单列不累加；新moc经构建／DB／fresh checks真实存在，真实包含问题修正／局部启发式精确复核，无suppression。ignored comment-write-final-{build,focused,thread}.log及boundaries／format／diff／fixed／links／secrets，不作真实协议／密钥环／声学／权限或全面秘密证明。
 
+### TC-SEARCH-ASSIST：搜索建议及两类热搜（FR-007部分）
+
+[契约／复跑](api/search-assistance-reads.md)：最终11 affected Debug套件631 pass＋10线程数据行12 pass，0fail/skip，registry82／CTest44不是全量／Release。新117含88坏schema、四类型同数字独立ID／20group-16order-100hot／256关键词、未知vs[]／unsupported过滤、6 Guest/Auth双请求native／实际hot Eapi解密及Pc e_r:false、6 cancel-stale、9拒绝／429／−462无fallback、16槽／迟到、2建议乱序query/id、3client销毁／3raw超限，无自动play/report/write。线程Guest热搜→完整合成登录→四型建议／热搜→坏schema→挂起close Caller Canceled及资源真排空，9请求／6结果，无隐式search/detail/image或cache/history。13changed CPP＋2adjacent fresh all-server clean，14应用对象6963真实依赖禁入0／UI0。初次4fixture失败单RetryAfter／closeCanceled修正，production／fatal／malformed不改，moc保留并生成／DB/fresh确认。ignored search-assist-final-{build,focused,thread}.log；不累加评论760＋11／初次115＋3，不作当前服务／完整搜索／schema／权限或全面秘密证明。
+
 ## 4. API fixture 规范
 
 目录建议 `tests/fixtures/netease/<operation>/<case>.json`，配套描述版本、采集方式和清理规则。必须使用合成或充分脱敏数据，保留字段形状／类型／边界，不提交 Cookie、手机号、真实私人歌单和有效签名 URL。

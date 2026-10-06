@@ -28,6 +28,8 @@ Cirrus 的接口审计参考：
 
 评论写增量完整参考固定comment_like／comment_add／comment_reply／comment_delete及旧comment／register_checktoken_v2-v3、home／TS／options／config／request：5固定路径／strict payload与两动作v3前置在comment_write_operation／comment_write_gateway／comment_v3_issuer／comment_v3_policy做窄C++改写。v3为经维护者明确批准的固定HTTPS GET与有界JSONP候选解析，**不执行JS／SDK**、不复制失败空token续发或接受外部Core／配置token；旧强制v2 SDK统一接口不采用，整歌单收藏v2延期保持。原MIT通知不改，不代表易盾／网易云服务／反作弊／内容许可已获授权；无真实服务请求／账号／评论，schema／TTL／权限／审核另验收，见[契约](../../docs/api/comment-writes.md)。
 
+搜索辅助增量完整参考固定search_suggest.js／search_hot.js／search_hot_detail.js、对照未采用search_suggest_pc.js，home与TS对应章节／enum／options／config／完整request链：web建议Weapi、简热默认Pc Eapi固定数值type1111、详细热Weapi路径及payload在api_operation／search_assist_mapper与原read链做封闭C++改写。无Node／SDK／JS执行／实网／UI／新运行库／搜索历史，typed4组预览与原token、strict候选schema仅合成，真实service返回／空结果／分值／许可不由MIT或generic Response证明。保留原通知及固定hash，见[契约](../../docs/api/search-assistance-reads.md)。
+
 后续[播客／声音身份与音源补证](../../docs/api/spoken-playback-contract.md)仅为静态研究：补核 `module/song_url.js`、`voice_detail.js`、`voicelist_detail.js`、`voicelist_trans.js`、`voice_lyric.js` 及home.md的mainTrackId音源说明，保留固定原始归属；没有增加C++改写、执行管理／解锁操作或分发外部播放器代码。外部SPlayer／ncm-api-rs及另行观察的当前api-enhanced快照只作为带版本引用的代码证据，不更新本项目固定锁，也不推定外部项目或服务都受此MIT许可覆盖。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。

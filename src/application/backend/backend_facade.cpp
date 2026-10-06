@@ -175,6 +175,12 @@ quint64 BackendFacade::songWikiSummary(domain::SongId song)
 {
     return submitMusic(domain::SongWikiQuery{std::move(song)});
 }
+quint64 BackendFacade::searchSuggestions(QString keywords)
+{
+    return submitMusic(domain::SearchSuggestionsQuery{std::move(keywords)});
+}
+quint64 BackendFacade::hotKeywords() { return submitMusic(domain::HotKeywordsQuery{}); }
+quint64 BackendFacade::hotKeywordDetails() { return submitMusic(domain::HotKeywordDetailsQuery{}); }
 quint64 BackendFacade::artistSongs(domain::ArtistSongsQuery query)
 {
     return submitMusic(std::move(query));

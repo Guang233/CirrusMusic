@@ -92,6 +92,10 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 [封面契约](playlist-cover-update.md)完全核对wrapper／plugin／fileHelper／home／TS／示例与默认请求链。imgSize／imgX／imgY未被wrapper使用，不复制裁剪承诺；Node入口multipart不是NOS raw JPEG POST。上游忽略NOS回执、外层总200不照抄。2固定Weapi、严格allocation／原账号MUSIC_U；固定NOS HTTPS／不带账号Cookie、不redirect／重试、strict code+size，再最终commit。显式JPEG内存1MiB／1024方形、批准Gui只基础设施／解码+新像素重编码，Core仍仅值；没有私人路径／新SDK。阶段Unknown／取消／切号／API销毁停止后续，不保证孤儿对象清理／回滚或Ack可见，真实schema／权限／元数据与codec接受范围另验收。
 
+## 增量：搜索建议不是完整实体页／热度或输入最新状态证明
+
+[搜索辅助](search-assistance-reads.md)3固定read仅web实体预览／简略与详细热搜，无默认SDK：suggest明示Weapi，简hot无crypto默认Eapi而非Weapi，详细hot明示Weapi；mobile/PC/default词/多重匹配未采用，不能互换payload/schema或降级。Generic Response没有字段证据，候选result/order与hots、data严格必需／有界，缺字段不伪空成功、unsupported不转发。四类typed ID/name不冒充Song权利／完整目录／声音绑定，score/iconType仅原值；同上下文并发requestId/query保留，UI后续需显式最新选择，不按最后到达覆盖输入。无自动search/detail/图/媒体/write/cache/history／实网或持久副本擦除保证；真实schema／空结果、免登录／分值／刷新频率与UI另验收，不恢复−462窗口。
+
 ## 横向缺口
 
 - 尚无官方返回 fixture：所有 required/optional/null、字符串／数字 ID、分页、权限和错误字段必须在实现相应 operation 前验证。

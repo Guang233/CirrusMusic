@@ -14,6 +14,7 @@
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
 #include "recent_entity_mapper.h"
+#include "search_assist_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -162,6 +163,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
     if (std::holds_alternative<ArtistIntroductionQuery>(query) ||
         std::holds_alternative<SongWikiQuery>(query))
         return mapIntroductionResponse(query, object);
+    if (isSearchAssistQuery(query))
+        return mapSearchAssistResponse(query, object);
     if (isCommentQuery(query))
         return mapCommentResponse(query, object);
     if (isPodcastQuery(query))

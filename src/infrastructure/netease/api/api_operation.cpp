@@ -5,6 +5,7 @@
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
+#include "domain/music/search_assist_types.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -33,6 +34,15 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::SearchSuggestions:
+        return ApiOperationContract{QStringLiteral("/api/search/suggest/web"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 512 * 1024};
+    case ApiOperation::HotKeywords:
+        return ApiOperationContract{QStringLiteral("/api/search/hot"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 512 * 1024};
+    case ApiOperation::HotKeywordDetails:
+        return ApiOperationContract{QStringLiteral("/api/hotsearchlist/get"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::CommentLike:
     case ApiOperation::CommentUnlike:
     case ApiOperation::CommentPublish:
@@ -239,6 +249,19 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         return collectionOperationPayload(operation, parameters);
     if (isCommentOperation(operation))
         return commentOperationPayload(operation, parameters);
+    if (operation == ApiOperation::SearchSuggestions) {
+        const auto value = parameters.value(QStringLiteral("keywords"));
+        const domain::SearchSuggestionsQuery query{value.toString()};
+        if (parameters.size() != 1 || !value.isString() || !query.isValid())
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("s"), query.keywords}};
+    }
+    if (operation == ApiOperation::HotKeywords || operation == ApiOperation::HotKeywordDetails) {
+        if (!parameters.isEmpty())
+            return std::nullopt;
+        return operation == ApiOperation::HotKeywords ? QJsonObject{{QStringLiteral("type"), 1111}}
+                                                      : QJsonObject{};
+    }
     if (operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs) {
         const auto limit = parameters.value(QStringLiteral("limit")),
                    offset = parameters.value(QStringLiteral("offset"));
@@ -530,6 +553,10 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
+    case ApiOperation::SearchSuggestions:
+    case ApiOperation::HotKeywords:
+    case ApiOperation::HotKeywordDetails:
+        break; // strict closed search-assist adapter above
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
     case ApiOperation::PlaylistCatalogue:
@@ -616,6 +643,9 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return *response.businessCode >= 801 && *response.businessCode <= 803;
     case ApiOperation::AccountIdentity:
         return *response.businessCode == 200; // staged only in its isolated request snapshot
+    case ApiOperation::SearchSuggestions:
+    case ApiOperation::HotKeywords:
+    case ApiOperation::HotKeywordDetails:
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:
     case ApiOperation::PlaylistComments:

@@ -54,7 +54,7 @@ flowchart LR
 | B-008 | SQLite worker、profile、migration、设置后端（M1/M4） | [DatabaseWorker、迁移校验、升级备份与设备 ID](tasks/B-008-storage-foundation.md) 已实现；音乐库 schema、设置后端未做 |
 | B-009 | 网络调度、主机策略、取消、重试和脱敏（M1） | 独立于 UI，含 mock 服务／故障注入 |
 | B-010 | SessionCoordinator、凭证保管、扫码／恢复／退出（M1） | 离线认证事务、[轮询与总时限](tasks/B-010-qr-polling.md)及[密钥环接缝](tasks/B-010-secret-store.md)及[匿名启动](api/anonymous-bootstrap.md)已实现；[账号记忆／恢复／退出](api/account-session-restore.md)也已实现；[后台线程和非视觉启动／关闭装配](api/backend-runtime.md)已完成；尚未接入模板入口／UI，未真实验收 |
-| B-011 | 搜索与目录 repositories/use cases（M2）；ViewModels（M5） | [歌曲搜索／详情](api/music-queries-and-lyrics.md)及[专辑／艺人／歌单只读目录](api/catalog-queries.md)已接入；[当前账号个人库四项读取](api/personal-library.md)也已离线接入；[四类资料／独立介绍](api/catalog-introduction-and-metadata-reads.md)也已连续合成补齐，复用原描述／optional扩充，原16槽与纯文本；广泛实测、复杂百科／UI及ViewModels未做 |
+| B-011 | 搜索与目录 repositories/use cases（M2）；ViewModels（M5） | [歌曲搜索／详情](api/music-queries-and-lyrics.md)及[专辑／艺人／歌单只读目录](api/catalog-queries.md)已接入；[当前账号个人库四项读取](api/personal-library.md)也已离线接入；[四类资料／独立介绍](api/catalog-introduction-and-metadata-reads.md)也已连续合成补齐，复用原描述／optional扩充，原16槽与纯文本；[搜索建议／简略及详细热搜](api/search-assistance-reads.md)3项辅助读取已合成接入，typed四型预览／strict schema／原token与16槽，117＋受影响631及线程12，无自动search/detail/image/play/cache/history；广泛实测、复杂百科／UI及ViewModels未做 |
 | B-012 | PlaybackCoordinator、后端、队列与 generation（M2） | [单曲协调器／旧事件隔离](api/stream-resolution-and-playback.md)已接入；[队列与有限自动续播](api/queue-and-lyric-clock.md)已实现；长期稳定性／设备与打包门禁待验证 |
 | B-013 | 歌词获取／解析／同步（M2） | [逐行／逐字、原文／翻译／罗马音独立解析](api/music-queries-and-lyrics.md)已实现；[媒体时钟／seek／试听偏移定位](api/queue-and-lyric-clock.md)已实现，声学延迟与UI动画未验证 |
 | B-014 | AppShell、路由、列表、迷你栏与沉浸页（M5） | 复用稳定后端；性能、键盘、无障碍 |

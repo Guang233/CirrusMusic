@@ -43,8 +43,8 @@
 | R-023 | 简介／百科文本被当可信富文本，公共creator当账号／owner、BPM／计数当事实保证或弱schema伪空成功 | 中／高 | 自动外链／图片／下游、data-or-root兜底、生成作者／叙事或全百科承诺 | [四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)：optional／纯文本／预算／白名单、原16槽／token，unsupported标记／严格必需容器；仅合成，不是权限／完整性／实时单位证明，UI另验收 | 后端/QA/UI / M2–M5 |
 | R-024 | 热门／任意文本被当官方可编辑标签、空串误清除或单向公开被许诺可逆／Ack即安全可见 | 中／高 | 自动分类刷新／重试公开、猜privacy10、creator作权限、改标签隐式公开 | [标签／单向公开](api/playlist-tags-and-publication-writes.md)：Catalogue成员工厂／原token／保序与本地预算、拒绝空／分号／all；公开固定numeric0，原8槽／账号／Unknown，不证明来源真实性／权限／远端效果或可逆，UI确认与实网另验收 | 后端/QA/UI / M3–M5 |
 | R-025 | 上传200被当封面已提交、账号凭据泄漏NOS、恶意图／元数据隐私／孤儿对象与跨号续传 | 中／高 | 透传URL／raw图／Cookie、跳过size校验、copy外层总200、超时重放／猜清理 | [封面契约](api/playlist-cover-update.md)：经批准Gui仅基础设施，有界JPEG全解码／新像素重编码，固定NOS无账号Cookie／redirect、严格allocation／size与阶段Unknown／原账号屏障；无真实上传／回滚／孤儿清理保证，codec部署与真实权限另验收 | 后端/QA/安全 / M3–M5 |
-
 | R-026 | 空／外部v3 token、误复用v2 SDK或账号Cookie泄漏易盾，200当审核／评论ID／删除效果，Unknown重发重复内容 | 中／高 | token失败仍发、跨号续链／自动重试／作者ID作owner、JSONP执行或宽regex尾随匹配、乐观评论／计数更新 | [评论写](api/comment-writes.md)：已明确获准固定原生v3 GET，无SDK／JS／Cookie／redirect，严格16KiB候选及2个XEAPI路径专用token；MUSIC_U/key与原account/token、8槽／business NotSent-Unknown、无创建ID／重试／隐式读；仅合成，真实issuer格式／TTL／绑定、权限／审核／删除效果与UI另授权验收，v2延期不绕过 | 后端/QA/安全/UI / M3–M5 |
+| R-027 | 建议预览被当完整可播Song／热词排名和分值误作保证，输入乱序跨号、未知组／富文本或URL变动作 | 中／高 | 全Song兜底／缺数组空成功／自动下游／最后响应覆盖新query／循环刷新与缓存 | [搜索辅助](api/search-assistance-reads.md)：typed4组／原16槽-token、requestId/query绑定、optional与strict order/20/16/100预算／纯文本、unsupported仅flag／图display-only，无自动搜索／cache／历史；3协议固定、不切mobile/PC，仅合成，真实空结果schema／分值意义／频率／UI另验收 | 后端/QA/UI / M2–M5 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 

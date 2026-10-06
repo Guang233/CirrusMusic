@@ -88,7 +88,10 @@ enum class ApiOperation {
     CommentUnlike,
     CommentPublish,
     CommentReply,
-    CommentDelete
+    CommentDelete,
+    SearchSuggestions,
+    HotKeywords,
+    HotKeywordDetails
 };
 
 struct ApiOperationContract {

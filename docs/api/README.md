@@ -39,6 +39,7 @@
 | [cloud-history-reads.md](cloud-history-reads.md) | 当前账号最近听过、一周／全部时间听歌排行；原顺序、有界只读，不推算时长；仅合成响应验证 |
 | [chart-reads.md](chart-reads.md) | 榜单列表／内容摘要；展示预览不是可播放歌曲，复用歌单详情／分页与显式选歌播放，响应仅合成验证 |
 | [playlist-discovery-reads.md](playlist-discovery-reads.md) | 推荐、普通／精品歌单及分类／热门／精品标签6项；有界只读、不同分页／来源，原歌单／显式播放复用，仅合成验证 |
+| [search-assistance-reads.md](search-assistance-reads.md) | web实体建议／简略及详细热搜3operation，独立四组预览ID／raw文本分值／strict order-20/16/100及未知；原16槽/token，纯文本，117＋affected631与线程12，仅合成，无mobile-PC降级／自动search/detail/image/cache/history/UI |
 | [entity-search-reads.md](entity-search-reads.md) | 已实现专辑／艺人／歌单、播客与全站声音搜索5项；独立ID、限定e_r门禁、无Cookie公开结构证据，消费端新增范围，不含声音播放／工作台 |
 | [podcast-and-recent-reads.md](podcast-and-recent-reads.md) | 消费端详情／节目3项与原账号recent4项，独立ProgramId／VoiceId；公开列表-462已停，其余候选schema仅合成，声音播放另包 |
 | [comment-writes.md](comment-writes.md) | 评论5action／operation，4variant／原account-token-generation／独立8槽及business NotSent-Unknown；明确批准固定原生v3 GET→2XEAPI动作，无SDK／JS／外部Core token／创建ID猜测／自动读／重试；仅合成760＋11／新134，无实网／UI |

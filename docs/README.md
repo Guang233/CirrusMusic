@@ -42,6 +42,7 @@
 | [云端最近听过／听歌排行](api/cloud-history-reads.md) | 当前账号记录、一周／全部时间窗口；保留未知次数／分值，不推算时长，响应仅合成验证 |
 | [榜单列表／内容摘要](api/chart-reads.md) | 有界Guest／账号读取；展示预览不是Song，歌曲分页与显式选歌播放复用现有链，响应仅合成验证 |
 | [六项歌单发现读取](api/playlist-discovery-reads.md) | 推荐／普通／精品歌单与分类／热门／精品标签；不同分页／来源及原歌单／显式播放复用，仅合成验证 |
+| [搜索建议／简略及详细热搜](api/search-assistance-reads.md) | 3封闭read、typed四组ID/name预览／optional／原16槽-token及乱序query/id；raw热搜文本、strict候选schema，仅合成117＋受影响631与线程12，无自动search／图／下游／cache／持久history或UI |
 | [音乐实体／播客／声音搜索](api/entity-search-reads.md) | 五类有界读、独立Podcast／Voice身份、公开结构证据、固定e_r单路径门禁；不含新播放或工作台 |
 | [消费端播客／节目与四类recent](api/podcast-and-recent-reads.md) | 七项有界读／原账号；ProgramId独立、公开列表-462停止，Voice对应／节目详情／真实recent待实证，不含声音播放 |
 | [评论点赞／取消／发布／回复／删除写](api/comment-writes.md) | 5封闭operation与获准原生v3前置GET，无SDK／JS／新依赖／实网／UI；独立8槽／原账号／Unknown、无评论ID猜测或自动重试／读，合成134＋受影响760与线程11 |
