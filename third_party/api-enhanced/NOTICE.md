@@ -34,4 +34,6 @@ Cirrus 的接口审计参考：
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。
 
+整歌单收藏恢复需求后再次完整静态核对playlist_subscribe／register_checktoken_v2／option／request／config及home／TS，见[原生v2前置调查](../../docs/api/playlist-subscription-v2-prerequisite.md)。只记录body/header token来源与Eapi Cookie／加密header、SDK生命周期及证据／许可门禁，未新增C++改写／variant／注册或fixture。公共Cocos游戏易盾文档仅作平台线索，不证明音乐Watchman/Linux等价；本次ncm-api-rs固定源码读取被工具内部地址检查拒绝，未取得相关源文件、未复制代码或绕过访问限制。外部项目／SDK不因本MIT获得使用或分发授权，原锁不更新。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

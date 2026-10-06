@@ -18,6 +18,8 @@
 
 同时，playlist_subscribe 用 `query.t == 1` 选路径，却用 `query.t === 1` 决定一个 payload 字段，字符串／整数输入会产生不同分支。C++ API 应暴露显式 bool/enum，不迁移这种歧义。后续[评论写契约](comment-writes.md)已完整核对新版add／reply的XEAPI+v3 default、like Weapi／delete XEAPI无需default token；维护者明确批准封闭原生v3 GET，只有候选JSONP严格解析、不执行SDK／JS，不复用旧统一comment的强制v2 SDK。失败／缺MUSIC_U或key不发业务、无外部Core token／空token／config token、只2条固定XEAPI路径允许专用header，整歌单收藏v2延期不改；真实issuer格式／TTL／绑定和服务权限待另授权验收。
 
+最新[整歌单v2前置调查](playlist-subscription-v2-prerequisite.md)完整区分body字段与新SDKtoken、Eapi加密header＋HTTP Cookie；TS取消0与home取消2、refresh声明未用于registrar也不直接照抄。原生issuer／绑定／许可未解，需维护者材料／架构决定，未注册／执行SDK；GitHub源码读取工具受内部地址限制，不绕过或当服务不支持证据。
+
 ## AUD-04：QR 检查异常分支
 
 `login_qr_check` 的 catch 引用 try 块内部声明的 result，发生异常时会再次失败。原生实现必须保留原始网络／协议错误，并将 QR 等待、扫码、授权成功和过期视为业务状态，不做通用 HTTP 错误吞并。
@@ -28,7 +30,7 @@
 
 ## AUD-06：下载不同于播放 URL
 
-`song_download_url_v1` 在 vivid 分支改变客户端 OS/appver；`song_cloud_download` 是云盘下载来源。不要把所有分支统一成播放 URL，也不要把设置客户端版本当作获得权限的保证。下载授权、会员限制、URL 过期和文件校验必须独立处理。
+`song_download_url_v1` 在 vivid 分支改变客户端 OS/appver；`song_cloud_download` 是云盘下载来源。不要把所有分支统一成播放 URL，也不要把设置客户端版本当作获得权限的保证。这是固定参考的分支差异，不是当前待接API任务：维护者已明确不新增专用下载源、未来以播放接口实际可听源为下载条件，不额外查询下载资格。保留音源自身试听／TTL／实际访问限制、不扩可听范围，文件／恢复另包；不采用加密下载文件支路。
 
 ## AUD-07：歌单曲目写重试
 

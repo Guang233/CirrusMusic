@@ -37,7 +37,7 @@
 | R-017 | 将节目／声音／底层音轨混为歌曲，污染播放身份、历史／报告；长节目超现有buffer限制 | 中／高 | 直接cast VoiceId、以program.id兜底音源或填父Podcast为PlaylistId | [身份／音源补证决策](api/spoken-playback-contract.md)：显式绑定、一个媒体owner，权益／TTL门禁；保持64MiB／45s，受限不绕过 | 后端/播放 / M2 |
 | R-018 | 评论资源身份／分页候选schema错误、外部内容被当富文本或跨号liked状态 | 中／高 | Voice强转Program、root缺字段空成功、自动楼层递归／打开URL | [只读契约](api/comment-reads.md)：类型白名单、bounded严格映射、纯文本／原token；仅合成，不推定真实schema，UI另安全验收 | 后端/QA/UI / M2–M5 |
 | R-019 | 将云盘资源／catalog引用混同为可播SongId，泄漏私有文件元数据或误解quota | 中／高 | cloud id兜底音源、fileName当路径、used/max推导权限、跨号共享缓存 | [账号读取契约](api/account-library-reads.md)：独立CloudSongId、原账号／MUSIC_U、纯文本、quota精度／未知；仅候选，不开放未验证云盘播放／写 | 后端/QA / M2–M4 |
-| R-020 | 收藏写Ack被当全批原子成功，512重复IDs重试或取消被当撤销，SDK缺失却开放整歌单收藏 | 中／高 | 自动改库／重放Unknown、复制wrapper总200、强制关SDK／改协议 | [收藏订阅写契约](api/collection-writes.md)：独立8槽／原账号／Unknown、无512重试或乐观库状态；整歌单收藏v2链经确认延期，真实权限／对账另验收 | 后端/QA / M3 |
+| R-020 | 收藏写Ack被当全批原子成功，512重复IDs重试或取消被当撤销，SDK缺失却开放整歌单收藏 | 中／高 | 自动改库／重放Unknown、复制wrapper总200、强制关SDK／改协议 | [收藏订阅写契约](api/collection-writes.md)：独立8槽／原账号／Unknown、无512重试或乐观库状态；整歌单收藏已恢复需求，原生v2前置待解，真实权限／对账另验收 | 后端/QA / M3 |
 | R-021 | 创建失联／码200缺身份被当没创建，同名当唯一ID或编辑被当原子且可编辑权已知 | 中／高 | 自动重放create、root.id兜底、跨号泄露创建ID、batch手拼JSON | [歌单基础写](api/playlist-management-writes.md)：候选root.playlist.id／echo一致、Unknown不重试，原账号／ID剥离／独立动作；真实schema／权限／隐私／可靠核验另验收 | 后端/QA / M3 |
 | R-022 | 分页／截断被当完整排序，旧来源跨号或CAS猜测／删除被当安全无副作用 | 中／高 | 部分页ID排序／自动补库、无源token、Ack就改库／重试 | [删除／排序](api/playlist-delete-and-order-writes.md)：完整索引／明确首末页工厂、唯一置换／预算、原token／账号；不证明权限／最新状态／CAS，不重试或自动刷新，真实范围另验收 | 后端/QA / M3 |
 | R-023 | 简介／百科文本被当可信富文本，公共creator当账号／owner、BPM／计数当事实保证或弱schema伪空成功 | 中／高 | 自动外链／图片／下游、data-or-root兜底、生成作者／叙事或全百科承诺 | [四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)：optional／纯文本／预算／白名单、原16槽／token，unsupported标记／严格必需容器；仅合成，不是权限／完整性／实时单位证明，UI另验收 | 后端/QA/UI / M2–M5 |
@@ -45,6 +45,8 @@
 | R-025 | 上传200被当封面已提交、账号凭据泄漏NOS、恶意图／元数据隐私／孤儿对象与跨号续传 | 中／高 | 透传URL／raw图／Cookie、跳过size校验、copy外层总200、超时重放／猜清理 | [封面契约](api/playlist-cover-update.md)：经批准Gui仅基础设施，有界JPEG全解码／新像素重编码，固定NOS无账号Cookie／redirect、严格allocation／size与阶段Unknown／原账号屏障；无真实上传／回滚／孤儿清理保证，codec部署与真实权限另验收 | 后端/QA/安全 / M3–M5 |
 | R-026 | 空／外部v3 token、误复用v2 SDK或账号Cookie泄漏易盾，200当审核／评论ID／删除效果，Unknown重发重复内容 | 中／高 | token失败仍发、跨号续链／自动重试／作者ID作owner、JSONP执行或宽regex尾随匹配、乐观评论／计数更新 | [评论写](api/comment-writes.md)：已明确获准固定原生v3 GET，无SDK／JS／Cookie／redirect，严格16KiB候选及2个XEAPI路径专用token；MUSIC_U/key与原account/token、8槽／business NotSent-Unknown、无创建ID／重试／隐式读；仅合成，真实issuer格式／TTL／绑定、权限／审核／删除效果与UI另授权验收，v2延期不绕过 | 后端/QA/安全/UI / M3–M5 |
 | R-027 | 建议预览被当完整可播Song／热词排名和分值误作保证，输入乱序跨号、未知组／富文本或URL变动作 | 中／高 | 全Song兜底／缺数组空成功／自动下游／最后响应覆盖新query／循环刷新与缓存 | [搜索辅助](api/search-assistance-reads.md)：typed4组／原16槽-token、requestId/query绑定、optional与strict order/20/16/100预算／纯文本、unsupported仅flag／图display-only，无自动搜索／cache／历史；3协议固定、不切mobile/PC，仅合成，真实空结果schema／分值意义／频率／UI另验收 | 后端/QA/UI / M2–M5 |
+
+| R-028 | SDK v2与body token混用、只加HTTP header漏Cookie／加密header，空token续发或未获许可却运行远程脚本 | 中／高 | 评论v3当v2／复制config token、TS取消0与home2混淆、SDK总200当注册成功、native标签当可用证明 | [v2前置调查](api/playlist-subscription-v2-prerequisite.md)：完整固定链分层、原生／绑定／body来源／许可／生命周期门禁，未解不注册；公共源码工具限制不绕过，需维护者材料／架构决定 | 后端/安全/维护者 / M3 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 
@@ -59,13 +61,13 @@
 | Q-005 | 正式 app ID、仓库命名空间、发布渠道 | 由维护者拥有的域名／组织确定 | M0 | 路径、D-Bus、安装包身份暂不能定稿 |
 | Q-006 | Cirrus 自身许可证与安全报告渠道 | 维护者决定，正式发布前必须完成 | M1～M4 | 可本地开发，不能宣称可按未知许可分发 |
 | Q-007 | 首版是否硬性要求 gapless、EQ、crossfade | 默认 P2，先可靠基础播放 | M0 | 若答案为是，需要重做播放器选型 |
-| Q-008 | 下载／离线的官方授权与失效规则 | 独立于流媒体权限；未知即不宣称永久离线 | M4 前 | 下载功能不能完成验收 |
+| Q-008 | 下载文件／离线恢复及音源自身失效规则 | 维护者规定以实际可听播放音源为准，不额外查询下载资格；保留试听／TTL／访问限制，文件／恢复另验收 | M4 前 | 下载功能不能完成验收 |
 | Q-009 | 视觉品牌、字体、图标、亮暗优先级和最小窗口 | 后端验收后再做视觉／Tokens／Gallery | M5 | 当前不启动 UI 实现 |
 | Q-010 | 是否需要首版原生 ARM64、DEB/RPM | 默认 x86_64 + Flatpak，AppImage 次选 | M0/M4 | 超出范围需增加测试和打包资源 |
 | Q-011 | 云盘／评论写／视频范围 | 云盘与评论写已纳入后端；视频明确排除，此范围问题关闭 | 已决定 | 仍需验证云盘／评论具体协议 |
 | Q-012 | 听歌上报、历史保留和隐私默认 | 官方必要协议如实执行；Cirrus 默认无遥测 | M2/M3 | 需明确用户说明与本地保留策略 |
-| Q-013 | v2 token 依赖浏览器 SDK，原生路径是否可用 | 先调查；不引入 Node/WebEngine；新增验证桥须询问 | M3 | 收藏歌单保持受限，不能拿 v3 直接替代 |
-| Q-014 | 一起听从机事件、时钟与恢复契约 | 9 个模块已盘点，需合法双账号补证 | M3 | 未验证前不开启完整一起听能力 |
+| Q-013 | v2 token 依赖浏览器 SDK，原生路径是否可用 | [调查](api/playlist-subscription-v2-prerequisite.md)证实固定SDK桥而非原生协议；需可核对原生资料或明确SDK例外评估决定，不引入Node/WebEngine／v3替代；尚未证明不可能 | M3 | 收藏歌单保持受限，不能拿 v3 直接替代 |
+| Q-014 | 一起听从机事件、时钟与恢复契约 | 维护者已明确暂停至最后、待其整套逆向材料；9 HTTP草稿本地保留不入主线，真实双账号访问另授权 | M3 | 未验证前不开启完整一起听能力 |
 | Q-015 | ProgramId／VoiceId对应、消费端音轨／v1权益与期限 | [补证](api/spoken-playback-contract.md)确认传统mainTrackId→旧url文档路线，v1只有第三方代码候选；Voice详情仍workbench，未实网确认。-462停止，账号／媒体另授权 | M2 | 不开放未验证播放；不以独立类型断言服务ID必不同，评论只读已合成接入，允许继续其他已确认小包 |
 
 维护者可以逐项采纳默认值；不需要先完成全部问题才能开始 M0/M1。未经确认的问题不得在发布文案中写成确定支持。

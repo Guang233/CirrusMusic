@@ -31,7 +31,8 @@
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
 | [日推读取与私人FM供给](api/discovery-and-fm.md) | 独立日推、认证态读取、动态批次及失败／换号边界 |
-| [收藏到歌单／红心／收藏订阅写](api/collection-writes.md) | 五类10动作、原账号／8槽／写结果Unknown，仅合成、不重试；整歌单收藏v2 SDK门禁经确认延期 |
+| [收藏到歌单／红心／收藏订阅写](api/collection-writes.md) | 五类10动作、原账号／8槽／写结果Unknown，仅合成、不重试；整歌单收藏现恢复需求、v2受限 |
+| [整歌单收藏v2原生前置调查](api/playlist-subscription-v2-prerequisite.md) | 固定body／header token与Cookie分层、SDK／原生／许可和待实现测试门禁，要求仍在、前置未解，无新增接口 |
 | [歌单创建／改名／描述写](api/playlist-management-writes.md) | 3封闭operation、创建ID候选／Unknown、独立资料动作，原8槽／账号屏障；仅合成，无删除／排序／上传／对账 |
 | [歌单删除／完整范围排序](api/playlist-delete-and-order-writes.md) | 3operation、完整索引／明确首末账号页置换、原来源token与Unknown；仅合成，不自动读／重试 |
 | [歌单封面更新](api/playlist-cover-update.md) | 显式内存JPEG／1MiB／1024方形／去元数据，批准Gui仅基础设施，NOS三阶段／原8槽／Unknown；合成57＋受影响562与线程11，无真实文件／上传／UI |

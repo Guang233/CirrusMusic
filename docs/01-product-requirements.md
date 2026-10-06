@@ -92,7 +92,7 @@ FR-007 技术进度：[搜索辅助](api/search-assistance-reads.md)web实体建
 
 FR-028／044 技术进度：[账号补充读取](api/account-library-reads.md)当前账号播客订阅、云盘列表／详情已合成接入；独立CloudSongId与可选catalog引用、分页／missing及原账号隔离。不是真实schema／UI／云盘或声音播放验收，下载／上传／删除／匹配与声音播放仍未交付；消费播客订阅写见下述独立增量。
 
-FR-009／012／013／014／044 技术进度：[收藏订阅写](api/collection-writes.md)红心、收藏到歌单／移除、专辑／艺人／播客五类十动作已合成接入，原账号／8槽／明确Unknown；无乐观库状态或自动刷新／重试／对账，Batch响应不证明逐项原子成功。整歌单收藏／取消此前因v2 SDK门禁经用户确认延期，现明确要求补齐并重新排入后端，原生前置仍待补证／未注册可用入口，不默认执行SDK或用v3替代；歌单基础编辑进度见下述独立小包，删除／排序进度见下述完整范围包，UI仍未交付，不能将上述FR整体标完成。真实账号／写入另授权。
+FR-009／012／013／014／044 技术进度：[收藏订阅写](api/collection-writes.md)红心、收藏到歌单／移除、专辑／艺人／播客五类十动作已合成接入，原账号／8槽／明确Unknown；无乐观库状态或自动刷新／重试／对账，Batch响应不证明逐项原子成功。整歌单收藏／取消此前因v2 SDK门禁经用户确认延期，现明确要求补齐并重新排入后端，[原生v2调查](api/playlist-subscription-v2-prerequisite.md)已核实固定SDK桥与body/header/Cookie分层及TS分歧，但原生issuer／绑定／许可资料仍缺，需维护者材料或架构决定；未注册可用入口，不默认执行SDK或用v3替代；歌单基础编辑进度见下述独立小包，删除／排序进度见下述完整范围包，UI仍未交付，不能将上述FR整体标完成。真实账号／写入另授权。
 
 FR-011 技术进度：[歌单基础写](api/playlist-management-writes.md)创建音乐歌单／单独改名／描述及显式清空已合成接入，复用原8槽和账号屏障，createdPlaylist仅合法创建Ack且上下文有效时交付；码200缺身份仍Unknown，不盲重试或同名唯一对账。候选schema／真实编辑权未实证；删除／排序见另包；[标签／单向公开](api/playlist-tags-and-publication-writes.md)已合成接入，Catalogue成员工厂／原token、非空1..3与128本地预算，共享8槽／原账号／Unknown、不自动读／重试。介绍仍独立修改／清空；[封面更新](api/playlist-cover-update.md)已合成接入，显式内存JPEG／有界重编码与去元数据、3阶段原账号／8槽／Unknown、无隐式读／重试；Gui仅基础设施获准，未真实上传。标签清空／公开转私密／格式扩展／可靠创建对账及UI未交付，不整体标完成FR。
 

@@ -29,6 +29,7 @@
 | TC-PODCAST-VOICE | FR-044 | 独立ID、voice≠mainSong、资源类型和父播客核对、当前context取消／切号；搜索44项合成Qt Test及有限公开结构验证见[实体搜索](api/entity-search-reads.md)，后续[消费／recent包](api/podcast-and-recent-reads.md)55项合成Qt Test及线程流通过，公开列表-462拒绝；ProgramId／VoiceId对应、节目详情／真实recent、播放及UI验收未完成 |
 | TC-CATALOG | FR-008/009 | 缺图、未知时长、多碟专辑、多艺人、下架、详情分页 |
 | TC-LIBRARY | FR-010 | 超大歌单、完整 ID 与首屏区分、失败续页、只读权限 |
+| TC-PLAYLIST-SUB-V2（待实现） | FR-014；Q-013／R-028／B-015 | [原生v2前置门禁](api/playlist-subscription-v2-prerequisite.md)：issuer失败零业务、body/header/Cookie分层、原账号／8槽／前后取消／Unknown与线程排空；无已实现测试或新增pass／CTest，真实issuer／权限／效果另授权 |
 | TC-SYNC | FR-011～014；NFR-007/014 | 双击喜欢、写超时已成功、批次部分成功、排序冲突、无 revision 对账 |
 | TC-DISCOVERY | FR-015/016 | 每日跨时区、旧推荐标记、FM 单次预取、断网耗尽、反馈语义 |
 | TC-PLAY | FR-017；NFR-004/006 | load/pause/seek、A→B→C 乱序、重复结束事件、坏源、停止时晚到事件 |
