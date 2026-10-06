@@ -332,7 +332,14 @@ class BackendWorker final : public QObject
                 const auto c = m_reportRequests.take(id);
                 emit reportDelivered({c.id, c.generation, context, result});
             });
-        m_collections = std::make_unique<netease::CollectionGateway>(*m_session, *m_client);
+        auto coverUpload = m_factories.coverUpload ? m_factories.coverUpload()
+                                                   : std::make_unique<netease::CoverUpload>();
+        if (!coverUpload) {
+            startup(StartupError::Configuration);
+            return;
+        }
+        m_collections = std::make_unique<netease::CollectionGateway>(*m_session, *m_client,
+                                                                     std::move(coverUpload));
         connect(m_collections.get(), &ICollectionGateway::completed, this,
                 [this](quint64 id, domain::SessionToken context, domain::CollectionResult result) {
                     if (!m_collectionRequests.contains(id))

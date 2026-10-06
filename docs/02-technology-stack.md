@@ -32,7 +32,8 @@ Qt 的浮动文档在本次检索时显示 6.11.2。已有模板的 `REQUIRES 6.
 | 模块 | 引入时间 | 职责 |
 | --- | --- | --- |
 | Core | M1 | 值类型、对象生命周期、事件循环、线程、设置 |
-| Gui / Qml / Quick | M1 | 窗口、图形、QML 运行时与场景图 |
+| Gui | M1 UI；封面基础设施已获准接入M3 | [封面JPEG解码／新像素重编码](api/playlist-cover-update.md)仅PRIVATE基础设施及图片测试，JPEG插件部署／许可另验收；不进入domain/application，不授权真实文件／上传 |
+| Qml / Quick | M1 | 窗口、图形、QML 运行时与场景图 |
 | QuickControls2 | M1 | 控件基础与样式集成；QML Templates/Layouts 也需正确部署 |
 | Network | M0/M2 | API、图片、下载 HTTP；不同信任域隔离管理器和 Cookie |
 | Multimedia | 已批准并接入M2 | [无界面Qt单曲播放](api/stream-resolution-and-playback.md)，默认输出；设备切换／完整发行门禁未做 |

@@ -84,7 +84,7 @@ add_test(NAME backend_facade COMMAND tst_backend_facade)
 set_tests_properties(backend_facade PROPERTIES TIMEOUT 15)
 
 qt_add_executable(tst_backend_runtime unit/backend_runtime_test.cpp)
-target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test)
+target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test Qt6::Gui)
 add_test(NAME backend_runtime COMMAND tst_backend_runtime)
 set_tests_properties(backend_runtime PROPERTIES TIMEOUT 30)
 
@@ -164,6 +164,11 @@ qt_add_executable(tst_playlist_writes unit/playlist_writes_test.cpp)
 target_link_libraries(tst_playlist_writes PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME playlist_writes COMMAND tst_playlist_writes)
 set_tests_properties(playlist_writes PROPERTIES TIMEOUT 40)
+
+qt_add_executable(tst_playlist_cover_writes unit/playlist_cover_writes_test.cpp support/synthetic_cover.h)
+target_link_libraries(tst_playlist_cover_writes PRIVATE cirrus_netease_music Qt6::Test Qt6::Gui)
+add_test(NAME playlist_cover_writes COMMAND tst_playlist_cover_writes)
+set_tests_properties(playlist_cover_writes PROPERTIES TIMEOUT 40)
 
 qt_add_executable(tst_playlist_tag_writes unit/playlist_tag_writes_test.cpp)
 target_link_libraries(tst_playlist_tag_writes PRIVATE cirrus_netease_music Qt6::Test)

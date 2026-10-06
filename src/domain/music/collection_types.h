@@ -2,6 +2,7 @@
 #include "catalog_types.h"
 #include "entity_search_types.h"
 #include "music_types.h"
+#include "playlist_cover_types.h"
 #include "playlist_order_types.h"
 #include "playlist_tag_edit_types.h"
 #include <QSet>
@@ -105,7 +106,7 @@ using CollectionChange =
     std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
                  PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription,
                  PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder, PlaylistTagEdit,
-                 PlaylistMakePublic>;
+                 PlaylistMakePublic, PlaylistCoverReplace>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;
@@ -152,6 +153,7 @@ struct CollectionResult {
     std::optional<int> providerCode;
     std::optional<qint64> retryAfterMs;        // information only; no automatic write retry
     std::optional<PlaylistId> createdPlaylist; // only valid creation Ack in the original context
+    std::optional<CoverStep> coverStep;        // last observed stage, not progress/effect proof
 };
 } // namespace cirrus::domain
 Q_DECLARE_METATYPE(cirrus::domain::CollectionResult)

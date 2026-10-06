@@ -8,7 +8,8 @@
 namespace cirrus::netease
 {
 class HttpTransport;
-}
+class CoverUpload;
+} // namespace cirrus::netease
 namespace cirrus::application
 {
 class IPlaybackBackend;
@@ -35,6 +36,7 @@ struct BackendFactories {
     std::function<std::unique_ptr<netease::HttpTransport>()> apiTransport;
     std::function<std::unique_ptr<netease::HttpTransport>()> keyTransport;
     std::function<std::unique_ptr<application::IPlaybackBackend>()> playback;
+    std::function<std::unique_ptr<netease::CoverUpload>()> coverUpload; // same-thread NOS test seam
 };
 
 // Composition root only; the template app does not instantiate it yet.

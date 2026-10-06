@@ -86,7 +86,11 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 ## 增量：标签及单向公开不是任意隐私转换
 
-[标签／单向公开](playlist-tags-and-publication-writes.md)固定独立wrapper默认Eapi、不启用SDK；标签采用综合文档的分号编码与Catalogue成员工厂／原token，但源DTO是结构而非真实性／权限证明，3标签及128预算只是本地限额。空选择拒绝，不假定独立接口清除；公开只固定numeric0，未提供public→private、owner／当前privacy推断或CAS。Ack不证明可见范围／传播完成，不自动读／重试／改库，介绍修改／清空仍独立；封面多阶段上传另包、整歌单收藏SDK门禁不变。
+[标签／单向公开](playlist-tags-and-publication-writes.md)固定独立wrapper默认Eapi、不启用SDK；标签采用综合文档的分号编码与Catalogue成员工厂／原token，但源DTO是结构而非真实性／权限证明，3标签及128预算只是本地限额。空选择拒绝，不假定独立接口清除；公开只固定numeric0，未提供public→private、owner／当前privacy推断或CAS。Ack不证明可见范围／传播完成，不自动读／重试／改库，介绍修改／清空仍独立；封面多阶段上传已另包合成接入、整歌单收藏SDK门禁不变。
+
+## 增量：封面上传不能把中间成功当提交
+
+[封面契约](playlist-cover-update.md)完全核对wrapper／plugin／fileHelper／home／TS／示例与默认请求链。imgSize／imgX／imgY未被wrapper使用，不复制裁剪承诺；Node入口multipart不是NOS raw JPEG POST。上游忽略NOS回执、外层总200不照抄。2固定Weapi、严格allocation／原账号MUSIC_U；固定NOS HTTPS／不带账号Cookie、不redirect／重试、strict code+size，再最终commit。显式JPEG内存1MiB／1024方形、批准Gui只基础设施／解码+新像素重编码，Core仍仅值；没有私人路径／新SDK。阶段Unknown／取消／切号／API销毁停止后续，不保证孤儿对象清理／回滚或Ack可见，真实schema／权限／元数据与codec接受范围另验收。
 
 ## 横向缺口
 

@@ -56,4 +56,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 clang-format dry-run、git diff --check、固定440模块hash通过；589个本地Markdown文件引用有效（排除inline／fenced code，不验证外链／anchor）；有限live-looking Cookie模式扫描0 findings，不是全面秘密保证。
 
-ignored日志playlist-order-{configure,build,first-focused,first-thread,boundaries,format,diff-check,fixed-hash,links}.log；本机cache不交付，本地完整提交不推送。没有真实业务／凭据／媒体／私人文件访问或继续−462窗口。真实schema／权限／范围／并发／删除保护、可靠对账／封面／标签清空／公开转私密／整歌单SDK和UI仍另验收；后续[标签编辑／隐私歌单单向公开](playlist-tags-and-publication-writes.md)已另包合成接入；第二包四类介绍资料独立记录。
+ignored日志playlist-order-{configure,build,first-focused,first-thread,boundaries,format,diff-check,fixed-hash,links}.log；本机cache不交付，本地完整提交不推送。没有真实业务／凭据／媒体／私人文件访问或继续−462窗口。真实schema／权限／范围／并发／删除保护、可靠对账／图片格式扩展／标签清空／公开转私密／整歌单SDK和UI仍另验收；后续[封面更新](playlist-cover-update.md)已独立合成接入，有界JPEG／批准Gui仅基础设施，3阶段与Unknown，不是真实上传；后续[标签编辑／隐私歌单单向公开](playlist-tags-and-publication-writes.md)已另包合成接入；第二包四类介绍资料独立记录。

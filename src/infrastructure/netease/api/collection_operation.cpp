@@ -26,6 +26,8 @@ bool isCollectionOperation(ApiOperation op)
     case ApiOperation::AccountPlaylistOrder:
     case ApiOperation::PlaylistTagsUpdate:
     case ApiOperation::PlaylistMakePublic:
+    case ApiOperation::CoverAllocate:
+    case ApiOperation::PlaylistCoverCommit:
         return true;
     default:
         return false;
@@ -90,6 +92,12 @@ std::optional<ApiOperationContract> collectionOperationContract(ApiOperation op)
         path = QStringLiteral("/api/playlist/update/privacy");
         protocol = Protocol::Eapi;
         break;
+    case ApiOperation::CoverAllocate:
+        path = QStringLiteral("/api/nos/token/alloc");
+        break;
+    case ApiOperation::PlaylistCoverCommit:
+        path = QStringLiteral("/api/playlist/cover/update");
+        break;
     default:
         return std::nullopt;
     }
@@ -99,6 +107,26 @@ std::optional<QJsonObject> collectionOperationPayload(ApiOperation op, const QJs
 {
     if (!isCollectionOperation(op))
         return std::nullopt;
+    if (op == ApiOperation::CoverAllocate) {
+        if (!p.isEmpty())
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("bucket"), QStringLiteral("yyimgs")},
+                           {QStringLiteral("ext"), QStringLiteral("jpg")},
+                           {QStringLiteral("filename"), QStringLiteral("cirrus-cover.jpg")},
+                           {QStringLiteral("local"), false},
+                           {QStringLiteral("nos_product"), 0},
+                           {QStringLiteral("return_body"),
+                            QStringLiteral("{\"code\":200,\"size\":\"$(ObjectSize)\"}")},
+                           {QStringLiteral("type"), QStringLiteral("other")}};
+    }
+    if (op == ApiOperation::PlaylistCoverCommit) {
+        if (p.size() != 2 || !p.value(QStringLiteral("id")).isString() ||
+            !p.value(QStringLiteral("coverImgId")).isString() ||
+            !domain::validMusicId(p.value(QStringLiteral("id")).toString()) ||
+            !domain::validMusicId(p.value(QStringLiteral("coverImgId")).toString()))
+            return std::nullopt;
+        return p;
+    }
     if (op == ApiOperation::PlaylistTagsUpdate || op == ApiOperation::PlaylistMakePublic) {
         const auto id = p.value(QStringLiteral("id"));
         const bool tags = op == ApiOperation::PlaylistTagsUpdate;

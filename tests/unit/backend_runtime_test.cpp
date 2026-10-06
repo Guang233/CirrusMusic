@@ -1,9 +1,11 @@
 #include "../support/fake_http.h"
 #include "../support/fake_secret_store.h"
+#include "../support/synthetic_cover.h"
 #include "application/music/personal_fm_source.h"
 #include "application/playback/listening_session.h"
 #include "application/ports/playback.h"
 #include "infrastructure/bootstrap/xeapi_key_vault.h"
+#include "infrastructure/netease/music/cover_upload.h"
 #include "infrastructure/netease/network/http_transport.h"
 #include "infrastructure/netease/protocol/openssl_primitives.h"
 #include "infrastructure/runtime/backend_runtime.h"
@@ -250,6 +252,7 @@ class BackendRuntimeTest : public QObject
     void playlistOrderThroughThread();
     void catalogMetadataThroughThread();
     void playlistTagsThroughThread();
+    void playlistCoverThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2190,6 +2193,105 @@ void BackendRuntimeTest::playlistTagsThroughThread()
     QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
     QCOMPARE(qvariant_cast<CollectionResult>(done.last()[2]).outcome, CollectionOutcome::Unknown);
     QCOMPARE(reads.size(), 1);
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+// Separate NOS manager: raw image bytes never go through the account API transport.
+class CountingCoverManager final : public SyntheticImageManager
+{
+  public:
+    explicit CountingCoverManager(std::shared_ptr<SharedState> state) : m_state(std::move(state))
+    {
+        if (QThread::currentThread() == qApp->thread())
+            ++m_state->wrongThread;
+        ++m_state->created;
+    }
+    ~CountingCoverManager() override
+    {
+        if (QThread::currentThread() == qApp->thread())
+            ++m_state->wrongThread;
+        ++m_state->destroyed;
+    }
+
+  protected:
+    QNetworkReply* createRequest(Operation op, const QNetworkRequest& request,
+                                 QIODevice* outgoing) override
+    {
+        if (QThread::currentThread() == qApp->thread())
+            ++m_state->wrongThread;
+        ++m_state->requests;
+        return SyntheticImageManager::createRequest(op, request, outgoing);
+    }
+
+  private:
+    std::shared_ptr<SharedState> m_state;
+};
+void BackendRuntimeTest::playlistCoverThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    const QByteArray allocation =
+        R"({"code":200,"result":{"objectKey":"synthetic/key","token":"synthetic-nos","docId":"9007199254740995"}})";
+    plans.append(QList<Plan>{Plan{allocation}, Plan{R"({"code":200})"}, Plan{allocation}});
+    auto factory = factories(state, gate, plans);
+    factory.coverUpload = [state] {
+        auto manager = std::make_unique<CountingCoverManager>(state);
+        manager->plans = {Plan{"auto"}, Plan{"", 200, -1}};
+        return std::make_unique<netease::CoverUpload>(std::move(manager));
+    };
+    BackendRuntime runtime(config, factory);
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::collectionCompleted), reads(&f, &BackendFacade::musicRequested),
+        play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested);
+    connect(&f, &BackendFacade::collectionCompleted, this,
+            [&](quint64, SessionToken, CollectionResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    const auto event = QUuid::createUuid();
+    const auto image = syntheticCover();
+    QVERIFY(!image.isEmpty());
+    QVERIFY(f.mutateCollection({event, PlaylistCoverReplace{{"9007199254740993"}, image}}));
+    QTRY_COMPARE(done.size(), 1);
+    auto result = qvariant_cast<CollectionResult>(done.last()[2]);
+    QCOMPARE(result.outcome, CollectionOutcome::Acknowledged);
+    QCOMPARE(result.coverStep, std::optional<CoverStep>(CoverStep::Committing));
+    QCOMPARE(result.eventId, event);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QVERIFY(!result.createdPlaylist);
+    QCOMPARE(state->requests.load(), 6); // login3 + alloc/upload/commit
+    const auto pending =
+        f.mutateCollection({QUuid::createUuid(), PlaylistCoverReplace{{"2"}, image}});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 8); // alloc + hanging upload; no commit
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 2);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    result = qvariant_cast<CollectionResult>(done.last()[2]);
+    QCOMPARE(result.outcome, CollectionOutcome::Unknown);
+    QCOMPARE(result.coverStep, std::optional<CoverStep>(CoverStep::Unobserved));
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QVERIFY(reads.isEmpty());
     QVERIFY(play.isEmpty());
     QVERIFY(reports.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());

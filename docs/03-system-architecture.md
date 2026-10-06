@@ -30,7 +30,7 @@ flowchart TD
 
 | 模块／建议 target | 内容 | 允许依赖 | 禁止 |
 | --- | --- | --- | --- |
-| `cirrus_domain` | ID、Track、Queue、权限、纯状态规则 | Qt Core 的值类型、C++ 标准库 | QML、Network、Sql、Multimedia、Widgets |
+| `cirrus_domain` | ID、Track、Queue、权限、纯状态规则 | Qt Core 的值类型、C++ 标准库 | JSON、Gui、QML、Network、Sql、Multimedia、Widgets |
 | `cirrus_application` | 用例、协调器、port、状态快照 | domain、Qt Core | 具体 Gateway、SQL、QMediaPlayer |
 | `cirrus_infrastructure` | 官方 API、签名、SQLite、下载、Qt 播放后端 | application、domain、必要 Qt 模块和加密库 | presentation、页面对象 |
 | `cirrus_platform` | 密钥环、MPRIS、portal、托盘适配器 | application、domain、Qt DBus 等 | 通过 UI 模拟点击来执行业务 |
@@ -38,6 +38,8 @@ flowchart TD
 | QML `Cirrus.Controls` | Tokens、自有控件、Gallery | QtQuick/Templates/Basic/Layout | 业务服务、API、播放器 |
 | QML `Cirrus.Components` | TrackRow、封面、歌词视图等展示组合 | Controls、明确的展示类型 | 自行拉取官方接口 |
 | `appCirrusMusic` | 启动、装配、根 QML 模块 `CirrusMusic` | 上述模块 | 业务规则集中在 main.cpp |
+
+[封面更新](api/playlist-cover-update.md)经维护者批准，`cirrus_netease_music` PRIVATE链接Qt6::Gui做有界JPEG解码／新像素重编码；domain/application只显式内存字节与阶段值，不带QImage／路径／JSON／NOS token。原8槽与后台线程装配，实际14 application对象6950依赖无Gui或其他禁止穿透，UI模板仍未接入。该例外不授权其他图片库／格式、私人文件或真实上传。
 
 Domain 可以使用 `QString`、`QDateTime` 等 Qt Core 值类型，不追求完全脱 Qt；但不以 QObject 信号和数据库对象表达歌曲实体。测试 port 允许使用 QObject 协调器，不能让领域状态依赖 UI 事件循环顺序。
 

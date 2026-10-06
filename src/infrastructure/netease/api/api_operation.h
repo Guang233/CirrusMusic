@@ -81,7 +81,9 @@ enum class ApiOperation {
     ArtistIntroduction,
     SongWikiSummary,
     PlaylistTagsUpdate,
-    PlaylistMakePublic
+    PlaylistMakePublic,
+    CoverAllocate,
+    PlaylistCoverCommit
 };
 
 struct ApiOperationContract {

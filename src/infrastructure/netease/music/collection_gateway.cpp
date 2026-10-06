@@ -60,6 +60,8 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                 return {ApiOperation::PlaylistTagsUpdate,
                         {{QStringLiteral("id"), c.playlist().value},
                          {QStringLiteral("tags"), QJsonArray::fromStringList(c.tags())}}};
+            else if constexpr (std::is_same_v<T, PlaylistCoverReplace>)
+                return {ApiOperation::CoverAllocate, {}};
             else if constexpr (std::is_same_v<T, PlaylistMakePublic>)
                 return {ApiOperation::PlaylistMakePublic,
                         {{QStringLiteral("id"), c.playlist.value}}};
@@ -140,14 +142,35 @@ CollectionResult collectionResult(const ApiResult& api, const CollectionMutation
 }
 CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
                                      SessionApiClient& client, QObject* parent)
-    : ICollectionGateway(parent), m_session(session), m_client(&client)
+    : CollectionGateway(session, client, std::make_unique<CoverUpload>(), parent)
 {
+}
+CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
+                                     SessionApiClient& client, std::unique_ptr<CoverUpload> upload,
+                                     QObject* parent)
+    : ICollectionGateway(parent), m_upload(std::move(upload)), m_session(session), m_client(&client)
+{
+    Q_ASSERT(m_upload && m_upload->thread() == thread());
+    connect(m_upload.get(), &CoverUpload::completed, this,
+            [this](quint64 uploadId, const ApiResult& api) {
+                const auto id = m_uploadIds.take(uploadId);
+                if (m_pending.contains(id)) {
+                    m_pending[id].uploadId = 0;
+                    coverCompleted(id, api);
+                }
+            });
     Q_ASSERT(session.thread() == thread() && client.thread() == thread());
     connect(&client, &SessionApiClient::completed, this,
             [this](quint64 apiId, SessionToken token, const ApiResult& api) {
                 const auto id = m_ids.value(apiId);
                 if (!m_pending.contains(id))
                     return;
+                if (std::holds_alternative<PlaylistCoverReplace>(m_pending[id].mutation.change)) {
+                    m_ids.remove(apiId);
+                    m_pending[id].apiId = 0;
+                    coverCompleted(id, api);
+                    return;
+                }
                 const auto& p = m_pending[id];
                 auto result = collectionResult(api, p.mutation);
                 if (p.context != token || !m_session.accepts(p.context) ||
@@ -165,11 +188,12 @@ CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
     connect(&session, &application::SessionCoordinator::changed, this, [this](SessionSnapshot s) {
         if (!m_client)
             return;
-        const auto pending = m_pending;
-        for (const auto& p : pending)
-            if (m_client && (p.context != s.token || s.phase != SessionPhase::Authenticated ||
-                             p.accountId != s.accountId))
-                m_client->cancel(p.apiId);
+        for (const auto id : m_pending.keys()) {
+            const auto p = m_pending.value(id);
+            if (p.context != s.token || s.phase != SessionPhase::Authenticated ||
+                p.accountId != s.accountId)
+                cancel(id);
+        }
     });
     connect(&client, &QObject::destroyed, this, [this] {
         for (const auto id : m_pending.keys())
@@ -216,18 +240,106 @@ quint64 CollectionGateway::submit(SessionToken context, QString accountId,
             0, this, [this, id, error] { finish(id, {{}, CollectionOutcome::NotSent, error}); });
         return id;
     }
+    if (std::holds_alternative<PlaylistCoverReplace>(mutation.change)) {
+        QTimer::singleShot(0, this, [this, id] {
+            if (!m_pending.contains(id))
+                return;
+            auto& p = m_pending[id];
+            if (p.canceled || !current(p)) {
+                finish(id,
+                       {{},
+                        CollectionOutcome::NotSent,
+                        p.canceled ? CollectionError::Canceled : CollectionError::StaleContext});
+                return;
+            }
+            p.prepared = prepareCoverJpeg(std::get<PlaylistCoverReplace>(p.mutation.change).jpeg);
+            if (p.prepared.isEmpty()) {
+                finish(id, {{}, CollectionOutcome::NotSent, CollectionError::InvalidRequest});
+                return;
+            }
+            p.step = CoverStep::Allocating;
+            p.apiId = m_client->submit(p.context, ApiOperation::CoverAllocate);
+            if (!p.apiId) {
+                finish(id, {{}, CollectionOutcome::NotSent, CollectionError::Busy});
+                return;
+            }
+            m_ids.insert(p.apiId, id);
+        });
+        return id;
+    }
     const auto request = collectionRequest(mutation);
     const auto apiId = m_client->submit(context, request->operation, request->parameters);
     m_pending[id].apiId = apiId;
     m_ids.insert(apiId, id);
     return id;
 }
+bool CollectionGateway::current(const Pending& p) const
+{
+    const auto s = m_session.snapshot();
+    return m_client && m_session.accepts(p.context) && s.phase == SessionPhase::Authenticated &&
+           s.accountId == p.accountId;
+}
+void CollectionGateway::coverCompleted(quint64 id, const ApiResult& api)
+{
+    if (!m_pending.contains(id))
+        return;
+    auto& p = m_pending[id];
+    p.anySent = p.anySent || api.submittedToTransport;
+    auto result = collectionResult(api);
+    if (!current(p) || p.canceled) {
+        result = {{},
+                  p.anySent ? CollectionOutcome::Unknown : CollectionOutcome::NotSent,
+                  !current(p) ? CollectionError::StaleContext : CollectionError::Canceled};
+        finish(id, result);
+        return;
+    }
+    if (result.outcome != CollectionOutcome::Acknowledged) {
+        finish(id, result);
+        return;
+    }
+    if (p.step == CoverStep::Allocating) {
+        const auto a = coverAllocation(api);
+        if (!a) {
+            result.outcome = CollectionOutcome::Unknown;
+            result.error = CollectionError::InvalidResponse;
+            finish(id, result);
+            return;
+        }
+        p.imageId = a->imageId;
+        p.step = CoverStep::Uploading;
+        p.uploadId = m_upload->post(*a, std::move(p.prepared));
+        if (!p.uploadId) {
+            finish(id, {{}, CollectionOutcome::Unknown, CollectionError::Busy});
+            return;
+        }
+        m_uploadIds.insert(p.uploadId, id);
+    } else if (p.step == CoverStep::Uploading) {
+        p.step = CoverStep::Committing;
+        p.apiId =
+            m_client->submit(p.context, ApiOperation::PlaylistCoverCommit,
+                             {{QStringLiteral("id"),
+                               std::get<PlaylistCoverReplace>(p.mutation.change).playlist.value},
+                              {QStringLiteral("coverImgId"), p.imageId}});
+        if (!p.apiId) {
+            finish(id, {{}, CollectionOutcome::Unknown, CollectionError::Busy});
+            return;
+        }
+        m_ids.insert(p.apiId, id);
+    } else {
+        finish(id, result); // only final commit may complete as Acknowledged
+    }
+}
 void CollectionGateway::cancel(quint64 id)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (!m_pending.contains(id))
         return;
+    m_pending[id].canceled = true;
     const auto p = m_pending.value(id);
+    if (p.uploadId) {
+        m_upload->cancel(p.uploadId);
+        return;
+    }
     if (p.apiId && m_client)
         m_client->cancel(p.apiId);
     else
@@ -241,6 +353,14 @@ void CollectionGateway::finish(quint64 id, CollectionResult result)
         return;
     const auto p = m_pending.take(id);
     m_ids.remove(p.apiId);
+    m_uploadIds.remove(p.uploadId);
+    if (p.uploadId)
+        m_upload->cancel(p.uploadId);
+    if (std::holds_alternative<PlaylistCoverReplace>(p.mutation.change)) {
+        result.coverStep = p.step;
+        if (p.anySent && result.outcome == CollectionOutcome::NotSent)
+            result.outcome = CollectionOutcome::Unknown;
+    }
     result.eventId = p.mutation.eventId;
     emit completed(id, p.context, result);
 }

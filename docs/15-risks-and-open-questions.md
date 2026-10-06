@@ -42,6 +42,7 @@
 | R-022 | 分页／截断被当完整排序，旧来源跨号或CAS猜测／删除被当安全无副作用 | 中／高 | 部分页ID排序／自动补库、无源token、Ack就改库／重试 | [删除／排序](api/playlist-delete-and-order-writes.md)：完整索引／明确首末页工厂、唯一置换／预算、原token／账号；不证明权限／最新状态／CAS，不重试或自动刷新，真实范围另验收 | 后端/QA / M3 |
 | R-023 | 简介／百科文本被当可信富文本，公共creator当账号／owner、BPM／计数当事实保证或弱schema伪空成功 | 中／高 | 自动外链／图片／下游、data-or-root兜底、生成作者／叙事或全百科承诺 | [四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)：optional／纯文本／预算／白名单、原16槽／token，unsupported标记／严格必需容器；仅合成，不是权限／完整性／实时单位证明，UI另验收 | 后端/QA/UI / M2–M5 |
 | R-024 | 热门／任意文本被当官方可编辑标签、空串误清除或单向公开被许诺可逆／Ack即安全可见 | 中／高 | 自动分类刷新／重试公开、猜privacy10、creator作权限、改标签隐式公开 | [标签／单向公开](api/playlist-tags-and-publication-writes.md)：Catalogue成员工厂／原token／保序与本地预算、拒绝空／分号／all；公开固定numeric0，原8槽／账号／Unknown，不证明来源真实性／权限／远端效果或可逆，UI确认与实网另验收 | 后端/QA/UI / M3–M5 |
+| R-025 | 上传200被当封面已提交、账号凭据泄漏NOS、恶意图／元数据隐私／孤儿对象与跨号续传 | 中／高 | 透传URL／raw图／Cookie、跳过size校验、copy外层总200、超时重放／猜清理 | [封面契约](api/playlist-cover-update.md)：经批准Gui仅基础设施，有界JPEG全解码／新像素重编码，固定NOS无账号Cookie／redirect、严格allocation／size与阶段Unknown／原账号屏障；无真实上传／回滚／孤儿清理保证，codec部署与真实权限另验收 | 后端/QA/安全 / M3–M5 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 

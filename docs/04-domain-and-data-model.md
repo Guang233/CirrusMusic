@@ -199,3 +199,7 @@ ArtistIntroduction保留可选briefDescription与有序IntroductionSection(title
 ## 15. 已接入标签编辑与单向公开值
 
 [契约](api/playlist-tags-and-publication-writes.md)：PlaylistTagEdit私有构造、fromCatalogue(originalToken, PlaylistId, PlaylistTags, selected)验证Catalogue种类／成员关系／特殊all／唯一1..3与128 UTF16本地预算；不接受空清除／分号，保序不规范化，只保留选择／目标ID／原token。来源是结构而非密码学真实性／当前官方标签或权限保证，Hot／Premium和详情tags不能替代；不自动读，换号需显式重读。PlaylistMakePublic只有PlaylistId，无privacy输入，数字0仅在基础设施生成、无反向动作；写variant11→13种，原8槽与账号／token／generation及Unknown共用，不新增结果状态／createdPlaylist或库乐观状态。旧PlaylistDescription修改／显式清空仍独立；Ack不证明远端可见性，UI确认另验收。
+
+## 16. 已接入有界封面更新值
+
+[契约](api/playlist-cover-update.md)：第14写variant PlaylistCoverReplace仅PlaylistId／显式内存JPEG≤1MiB、Core只校验envelope；完整marker／1024方形解码、新像素JPEG85与去元数据在基础设施QtGui，不把路径／token／docId／URL带进Core。CollectionResult新增optional CoverStep Preparing／Allocating／Uploading／Committing及失效Unobserved，阶段不是已发送或效果证据，Ack仅合法原上下文最终commit；原8槽与账号／token／generation、Unknown共用，不发布createdPlaylist。不自动文件读取、裁剪、重试／刷新／库更新；上传成功而commit失败可留未绑定对象，无清理／撤销契约。

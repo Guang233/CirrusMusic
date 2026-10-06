@@ -69,4 +69,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
   playbackThroughThread destructionStillDrains
 ```
 
-交接检查记录在ignored build/workspace-checks/playlist-tags-final-{build,focused,thread}.log、playlist-tags-{boundaries,format,diff-check,fixed-hash,links,secrets}.log；本机cache／真实凭据不交付，本地完整提交、不推送或打包发布。clang-format dry-run／git diff --check／固定440模块hash校验通过；639个本地Markdown文件引用有效（排除inline／fenced code，不验证外链／anchor）；有限live-looking Cookie模式扫描0 findings，不把有限扫描当全面秘密保证。真实标签名单／替换与清空语义／权限／保护歌单／可见性效果／并发／可靠核验仍待独立授权；封面流程不在本包，UI最后。需求FR-011部分、领域15、TC-PLAYLIST-TAGS及R-024同步索引，不整体标完成产品需求。
+交接检查记录在ignored build/workspace-checks/playlist-tags-final-{build,focused,thread}.log、playlist-tags-{boundaries,format,diff-check,fixed-hash,links,secrets}.log；本机cache／真实凭据不交付，本地完整提交、不推送或打包发布。clang-format dry-run／git diff --check／固定440模块hash校验通过；639个本地Markdown文件引用有效（排除inline／fenced code，不验证外链／anchor）；有限live-looking Cookie模式扫描0 findings，不把有限扫描当全面秘密保证。真实标签名单／替换与清空语义／权限／保护歌单／可见性效果／并发／可靠核验仍待独立授权；封面流程不在本包，后续[封面更新](playlist-cover-update.md)已独立合成接入／Gui仅基础设施；本页563＋11仍为原包时点，UI最后。需求FR-011部分、领域15、TC-PLAYLIST-TAGS及R-024同步索引，不整体标完成产品需求。

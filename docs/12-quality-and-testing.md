@@ -107,7 +107,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-PLAYLIST-TAGS：标签编辑／隐私歌单单向公开（FR-011）
 
-[契约](api/playlist-tags-and-publication-writes.md)：最新8受影响Debug套件563 pass（playlist_tag_writes41），选定9条线程数据行11 pass，0fail/skip，登记41非全量／Release／真实写验收。Catalogue／成员／all／1..3／128／source500／Unicode／分号／重复／空清除拒绝、固定2path／Eapi／numeric0／严格键／宽ID、4次native实际解密与原Cookie，28响应矩阵、Guest／MUSIC_A／跨号／旧source／前后cancel／Timeout、8槽／UUID／同token变化／晚到／无隐式动作；原介绍修改／清空继续回归。线程生产Catalogue显式读→工厂→6显式写／403／close Unknown真排空，共10请求，无自动查询／播放／报告。8 CPP fresh all-server LSP clean、14 application对象6940实际依赖无泄漏、UI0；旧PCH／enum误报由真实构建／DB／主动复查解决，不删必要include／moc／Q_OBJECT或抑制。日志playlist-tags-final-{build,focused,thread}.log单列，历史730＋11不累加。
+[契约](api/playlist-tags-and-publication-writes.md)：该包时点8受影响Debug套件563 pass（playlist_tag_writes41），选定9条线程数据行11 pass，0fail/skip，登记41非全量／Release／真实写验收。Catalogue／成员／all／1..3／128／source500／Unicode／分号／重复／空清除拒绝、固定2path／Eapi／numeric0／严格键／宽ID、4次native实际解密与原Cookie，28响应矩阵、Guest／MUSIC_A／跨号／旧source／前后cancel／Timeout、8槽／UUID／同token变化／晚到／无隐式动作；原介绍修改／清空继续回归。线程生产Catalogue显式读→工厂→6显式写／403／close Unknown真排空，共10请求，无自动查询／播放／报告。8 CPP fresh all-server LSP clean、14 application对象6940实际依赖无泄漏、UI0；旧PCH／enum误报由真实构建／DB／主动复查解决，不删必要include／moc／Q_OBJECT或抑制。日志playlist-tags-final-{build,focused,thread}.log单列，历史730＋11不累加。
+
+### TC-PLAYLIST-COVER：有界封面更新（FR-011）
+
+[契约](api/playlist-cover-update.md)：最新10受影响Debug套件562 pass（新playlist_cover_writes57）、9条线程数据行11 pass，0fail/skip，登记42非全量／Release。JPEG准备／方形／1MiB／1024／marker／去元数据、2Weapi固定路径／载荷／strict keys、31坏allocation、NOS固定raw host/query/header／无账号Cookie及8失败行、最终403／512／缺码／字符串200、4阶段cancel×logout8行、Guest／Cookie／容量／UUID／提前Ack／close；分配已完成但API id为0的NOS期间client销毁仍Unknown/Uploading、原token/eventId、NOS取消排空／不续发commit。线程完整登录→三阶段Ack，挂起NOSclose Unknown/Unobserved／资源真排空，原token、无自动读／播放／报告。15 CPP fresh all-server LSP clean、14 application对象6950真实依赖无泄漏、UI0，Gui仅PRIVATE基础设施及图片测试。初始fixture编译及恶意JPEG fatal已修：合法列表、生产marker预检；坏fixture／fatal保留、全组最终通过，不累加旧563＋11。ignored cover-final-{build,focused,thread}.log。
 
 ## 4. API fixture 规范
 

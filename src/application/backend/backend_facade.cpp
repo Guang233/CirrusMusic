@@ -469,8 +469,10 @@ void BackendFacade::cancelCollectionWith(quint64 id, domain::CollectionError err
         return;
     const auto command = m_collections.take(id);
     emit collectionCancelRequested(id);
-    const domain::CollectionResult result{command.mutation.eventId,
-                                          domain::CollectionOutcome::Unknown, error};
+    domain::CollectionResult result{command.mutation.eventId, domain::CollectionOutcome::Unknown,
+                                    error};
+    if (std::holds_alternative<domain::PlaylistCoverReplace>(command.mutation.change))
+        result.coverStep = domain::CoverStep::Unobserved;
     QTimer::singleShot(0, this, [this, id, context = command.context, result] {
         emit collectionCompleted(id, context, result);
     });
@@ -506,6 +508,20 @@ void BackendFacade::deliverCollection(CollectionDelivery delivery)
     }
     if (delivery.result.outcome != domain::CollectionOutcome::Acknowledged || !creation)
         delivery.result.createdPlaylist.reset();
+    const bool cover =
+        std::holds_alternative<domain::PlaylistCoverReplace>(expected.mutation.change);
+    if (cover) {
+        if (!delivery.result.coverStep ||
+            *delivery.result.coverStep < domain::CoverStep::Unobserved ||
+            *delivery.result.coverStep > domain::CoverStep::Committing)
+            delivery.result.coverStep = domain::CoverStep::Unobserved;
+        if (delivery.result.outcome == domain::CollectionOutcome::Acknowledged &&
+            delivery.result.coverStep != domain::CoverStep::Committing) {
+            delivery.result.outcome = domain::CollectionOutcome::Unknown;
+            delivery.result.error = domain::CollectionError::InvalidResponse;
+        }
+    } else
+        delivery.result.coverStep.reset();
     delivery.result.eventId = expected.mutation.eventId;
     emit collectionCompleted(expected.id, expected.context, delivery.result);
 }

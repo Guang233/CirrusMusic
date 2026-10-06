@@ -94,4 +94,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 clang-format dry-run、git diff --check及固定440模块hash校验通过；545个本地Markdown文件引用有效（排除fenced／inline code，不验证外链／anchor）。live-looking Cookie模式扫描0 findings，仅有限模式检查而非全面秘密保证。
 
-ignored日志 `build/workspace-checks/collections-final-{build,focused,thread}.log`及collections-{boundaries,format,diff-check,fixed-hash,links}.log，首轮／修复／中间结果单列、不累加；本机cache／凭据不交付，只本地提交、不推送。整歌单收藏checkToken-v2、真实服务兼容／权限／副作用／timestamp行为、自动／明确对账流程、歌单排序、库同步及UI仍未交付。后续[创建／单独改名／描述写](playlist-management-writes.md)已合成接入，候选创建身份缺失／矛盾仍Unknown，不以同名猜ID；共享原8槽，不扩大到真实写入或绕过门禁，可靠创建核验仍未交付。
+ignored日志 `build/workspace-checks/collections-final-{build,focused,thread}.log`及collections-{boundaries,format,diff-check,fixed-hash,links}.log，首轮／修复／中间结果单列、不累加；本机cache／凭据不交付，只本地提交、不推送。整歌单收藏checkToken-v2、真实服务兼容／权限／副作用／timestamp行为、自动／明确对账流程、歌单排序、库同步及UI仍未交付。后续[创建／单独改名／描述写](playlist-management-writes.md)已合成接入，候选创建身份缺失／矛盾仍Unknown，不以同名猜ID；共享原8槽，不扩大到真实写入或绕过门禁，可靠创建核验仍未交付。后续[封面更新](playlist-cover-update.md)也共享8槽／原账号／Unknown，显式JPEG字节／获准Gui仅基础设施，分配-NOS-提交及阶段值，不自动读／重试；本页335＋9仍原收藏包时点，不代表真实上传或全量。

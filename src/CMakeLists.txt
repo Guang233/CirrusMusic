@@ -1,6 +1,6 @@
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(ZLIB REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Network Sql Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Network Sql Multimedia Gui)
 
 add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
@@ -20,6 +20,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/collection_types.h
     domain/music/playlist_order_types.h
     domain/music/playlist_tag_edit_types.h
+    domain/music/playlist_cover_types.h
     domain/music/introduction_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
@@ -160,6 +161,8 @@ add_library(cirrus_netease_auth STATIC
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
 add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/cover_upload.cpp
+    infrastructure/netease/music/cover_upload.h
     infrastructure/netease/music/collection_gateway.cpp
     infrastructure/netease/music/collection_gateway.h
     infrastructure/netease/music/account_library_mapper.cpp
@@ -201,7 +204,7 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/music_gateway.cpp
     infrastructure/netease/music/music_gateway.h
 )
-target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_netease_api)
+target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_netease_api PRIVATE Qt6::Gui)
 
 add_library(cirrus_media STATIC
     infrastructure/media/media_source_policy.h
