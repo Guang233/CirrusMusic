@@ -84,6 +84,10 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 [四类资料／介绍](catalog-introduction-and-metadata-reads.md)只合成增量详情字段及艺人分节／歌曲四类基础百科文本，TS generic Response与第三方解析都不构成服务schema／完整性证明。root.data.blocks／root.introduction严格必需、纯文本／预算／原token；未知block明确unsupported，不递归资源／图片／外链、生成叙事／作者或用管理UGC替代资料读。全百科及登录UGC真实schema／权益／UI仍待补证；未恢复−462窗口。
 
+## 增量：标签及单向公开不是任意隐私转换
+
+[标签／单向公开](playlist-tags-and-publication-writes.md)固定独立wrapper默认Eapi、不启用SDK；标签采用综合文档的分号编码与Catalogue成员工厂／原token，但源DTO是结构而非真实性／权限证明，3标签及128预算只是本地限额。空选择拒绝，不假定独立接口清除；公开只固定numeric0，未提供public→private、owner／当前privacy推断或CAS。Ack不证明可见范围／传播完成，不自动读／重试／改库，介绍修改／清空仍独立；封面多阶段上传另包、整歌单收藏SDK门禁不变。
+
 ## 横向缺口
 
 - 尚无官方返回 fixture：所有 required/optional/null、字符串／数字 ID、分页、权限和错误字段必须在实现相应 operation 前验证。

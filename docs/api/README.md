@@ -29,6 +29,7 @@
 | [collection-writes.md](collection-writes.md) | 红心／收藏到歌单及移除／专辑／艺人／播客五类10动作、8operation，原账号／8槽／Unknown、不重试，仅合成；整歌单收藏v2 SDK门禁经确认延期 |
 | [playlist-management-writes.md](playlist-management-writes.md) | 创建／单独改名／描述3operation，固定NORMAL、创建ID候选与Unknown；共享原账号／8槽，仅合成、不重试／自动对账 |
 | [playlist-delete-and-order-writes.md](playlist-delete-and-order-writes.md) | 单目标删除／歌曲顺序／账号歌单顺序3operation，完整范围置换工厂／原来源token与Unknown，仅合成 |
+| [playlist-tags-and-publication-writes.md](playlist-tags-and-publication-writes.md) | 标签Catalogue成员工厂／原token／预算及单向公开固定numeric0，2operation／原8槽／Unknown，仅合成，无清空／反向转换／自动读 |
 | [catalog-introduction-and-metadata-reads.md](catalog-introduction-and-metadata-reads.md) | 四类详情optional资料扩充、独立艺人分节／歌曲百科基础2operation，原16槽／纯文本／token，候选schema、无自动下游 |
 | [account-library-reads.md](account-library-reads.md) | 当前账号播客订阅／云盘列表与详情三项；独立CloudSongId、MUSIC_U与原token、bounded候选schema，仅合成，无云盘音源／播放／写入 |
 | [personal-library.md](personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人；有界只读与账号校验，无库缓存／写入 |

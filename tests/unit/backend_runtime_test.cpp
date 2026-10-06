@@ -249,6 +249,7 @@ class BackendRuntimeTest : public QObject
     void playlistWritesThroughThread();
     void playlistOrderThroughThread();
     void catalogMetadataThroughThread();
+    void playlistTagsThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2114,6 +2115,83 @@ void BackendRuntimeTest::catalogMetadataThroughThread()
     QVERIFY(play.isEmpty());
     QVERIFY(reports.isEmpty());
     QVERIFY(writes.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+void BackendRuntimeTest::playlistTagsThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{
+        Plan{
+            R"({"code":200,"all":{"name":"全部"},"sub":[{"name":"synthetic-one"},{"name":"synthetic-two"}]})"},
+        Plan{R"({"code":200})"}, Plan{R"({"code":200})"}, Plan{R"({"code":200})"},
+        Plan{R"({"code":200})"}, Plan{R"({"code":403})"}, Plan{"", 200, -1}});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        reads(&f, &BackendFacade::musicCompleted), done(&f, &BackendFacade::collectionCompleted),
+        play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested);
+    connect(&f, &BackendFacade::collectionCompleted, this,
+            [&](quint64, SessionToken, CollectionResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(!f.mutateCollection({QUuid::createUuid(), PlaylistMakePublic{{"2"}}}));
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    QVERIFY(
+        f.playlistTags(PlaylistTagsKind::Catalogue)); // one explicit read, never hidden by a write
+    QTRY_COMPARE(reads.size(), 1);
+    const auto source = qvariant_cast<MusicResult>(reads.last()[2]);
+    QVERIFY(std::holds_alternative<PlaylistTags>(source));
+    const auto tags = PlaylistTagEdit::fromCatalogue(qvariant_cast<SessionToken>(reads.last()[1]),
+                                                     {"2"}, std::get<PlaylistTags>(source),
+                                                     {"synthetic-two", "synthetic-one"});
+    QVERIFY(tags);
+    const QList<CollectionChange> changes{
+        *tags, PlaylistMakePublic{{"2"}},
+        PlaylistDescription{{"2"}, "synthetic updated introduction"},
+        PlaylistDescription{{"2"}, ""}, *tags};
+    for (int i = 0; i < changes.size(); ++i) {
+        const auto event = QUuid::createUuid();
+        QVERIFY(f.mutateCollection({event, changes[i]}));
+        QTRY_COMPARE(done.size(), i + 1);
+        const auto result = qvariant_cast<CollectionResult>(done.last()[2]);
+        QCOMPARE(result.eventId, event);
+        QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+        QCOMPARE(result.outcome,
+                 i == 4 ? CollectionOutcome::Rejected : CollectionOutcome::Acknowledged);
+        QVERIFY(!result.createdPlaylist);
+        QCOMPARE(state->requests.load(), i + 5);
+        QCOMPARE(reads.size(), 1); // no implicit tag catalogue or playlist refresh
+    }
+    const auto pending = f.mutateCollection({QUuid::createUuid(), PlaylistMakePublic{{"2"}}});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 10);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 6);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QCOMPARE(qvariant_cast<CollectionResult>(done.last()[2]).outcome, CollectionOutcome::Unknown);
+    QCOMPARE(reads.size(), 1);
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());

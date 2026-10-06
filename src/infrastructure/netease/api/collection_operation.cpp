@@ -1,6 +1,7 @@
-// Fixed api-enhanced collection/playlist create/name/desc wrappers (MIT); see NOTICE.
+// Fixed api-enhanced collection/playlist write wrappers (MIT); see NOTICE.
 #include "collection_operation.h"
 #include "domain/music/collection_types.h"
+#include "domain/music/playlist_tag_edit_types.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSet>
@@ -23,6 +24,8 @@ bool isCollectionOperation(ApiOperation op)
     case ApiOperation::PlaylistDelete:
     case ApiOperation::PlaylistSongOrder:
     case ApiOperation::AccountPlaylistOrder:
+    case ApiOperation::PlaylistTagsUpdate:
+    case ApiOperation::PlaylistMakePublic:
         return true;
     default:
         return false;
@@ -79,6 +82,14 @@ std::optional<ApiOperationContract> collectionOperationContract(ApiOperation op)
     case ApiOperation::AccountPlaylistOrder:
         path = QStringLiteral("/api/playlist/order/update");
         break;
+    case ApiOperation::PlaylistTagsUpdate:
+        path = QStringLiteral("/api/playlist/tags/update");
+        protocol = Protocol::Eapi;
+        break;
+    case ApiOperation::PlaylistMakePublic:
+        path = QStringLiteral("/api/playlist/update/privacy");
+        protocol = Protocol::Eapi;
+        break;
     default:
         return std::nullopt;
     }
@@ -88,6 +99,27 @@ std::optional<QJsonObject> collectionOperationPayload(ApiOperation op, const QJs
 {
     if (!isCollectionOperation(op))
         return std::nullopt;
+    if (op == ApiOperation::PlaylistTagsUpdate || op == ApiOperation::PlaylistMakePublic) {
+        const auto id = p.value(QStringLiteral("id"));
+        const bool tags = op == ApiOperation::PlaylistTagsUpdate;
+        if (!id.isString() || !domain::validMusicId(id.toString()) || p.size() != (tags ? 2 : 1))
+            return std::nullopt;
+        if (!tags)
+            return QJsonObject{{QStringLiteral("id"), id}, {QStringLiteral("privacy"), 0}};
+        const auto raw = p.value(QStringLiteral("tags"));
+        if (!raw.isArray() || raw.toArray().isEmpty() || raw.toArray().size() > 3)
+            return std::nullopt;
+        QStringList selected;
+        for (const auto tag : raw.toArray()) {
+            if (!tag.isString())
+                return std::nullopt;
+            selected.append(tag.toString());
+        }
+        if (!domain::validEditablePlaylistTags(selected))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("id"), id},
+                           {QStringLiteral("tags"), selected.join(u';')}};
+    }
     if (op == ApiOperation::PlaylistDelete) {
         const auto id = p.value(QStringLiteral("id"));
         if (p.size() != 1 || !id.isString() || !domain::validMusicId(id.toString()))

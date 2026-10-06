@@ -1,5 +1,6 @@
 #include "collection_gateway.h"
 #include "domain/music/collection_types.h"
+#include "domain/music/playlist_tag_edit_types.h"
 #include "music_mapping.h"
 #include <QJsonArray>
 #include <QThread>
@@ -55,6 +56,13 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                 return {ApiOperation::PlaylistDescription,
                         {{QStringLiteral("id"), c.playlist.value},
                          {QStringLiteral("desc"), c.description}}};
+            else if constexpr (std::is_same_v<T, PlaylistTagEdit>)
+                return {ApiOperation::PlaylistTagsUpdate,
+                        {{QStringLiteral("id"), c.playlist().value},
+                         {QStringLiteral("tags"), QJsonArray::fromStringList(c.tags())}}};
+            else if constexpr (std::is_same_v<T, PlaylistMakePublic>)
+                return {ApiOperation::PlaylistMakePublic,
+                        {{QStringLiteral("id"), c.playlist.value}}};
             else if constexpr (std::is_same_v<T, PlaylistDelete>)
                 return {ApiOperation::PlaylistDelete, {{QStringLiteral("id"), c.playlist.value}}};
             else {

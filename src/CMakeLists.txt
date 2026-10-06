@@ -19,6 +19,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/account_library_types.h
     domain/music/collection_types.h
     domain/music/playlist_order_types.h
+    domain/music/playlist_tag_edit_types.h
     domain/music/introduction_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h

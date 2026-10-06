@@ -188,10 +188,14 @@ CREATE TABLE queue_entries (
 
 ## 13. 已接入删除与完整范围排序值
 
-[删除／排序](api/playlist-delete-and-order-writes.md)增加PlaylistDelete／PlaylistSongOrder／AccountPlaylistOrder，写variant合计11种。删除单个明确PlaylistId；排序由完整PlaylistDetails索引或明确total／hasMore=false且offset0的MyPlaylistsPage工厂生成，仅保留ID／原token／账号，不携带描述／封面等大DTO。唯一ID完整置换、1000／100预算与来源屏障拒绝截断／未知／跨号／旧token，不强转identity或承诺权限／并发原子性；工厂不是密码学origin证明，旧metadata不代表当前状态，无CAS／自动读／重试。
+[删除／排序](api/playlist-delete-and-order-writes.md)增加PlaylistDelete／PlaylistSongOrder／AccountPlaylistOrder，该包时点写variant合计11种。删除单个明确PlaylistId；排序由完整PlaylistDetails索引或明确total／hasMore=false且offset0的MyPlaylistsPage工厂生成，仅保留ID／原token／账号，不携带描述／封面等大DTO。唯一ID完整置换、1000／100预算与来源屏障拒绝截断／未知／跨号／旧token，不强转identity或承诺权限／并发原子性；工厂不是密码学origin证明，旧metadata不代表当前状态，无CAS／自动读／重试。
 
 ## 14. 已接入四类资料与独立介绍值
 
 [契约](api/catalog-introduction-and-metadata-reads.md)：Song／Album／ArtistDetails／PlaylistDetails追加optional别名／译名／发行／公司／类型／标签／公开creator／原计数，缺失unknown、显式[]保留空与重复；不改变旧description或完整索引。PlaylistCreator.publicUserId为展示身份而非AccountIdentity／owner权限，playCount允许提供方小数，不换成观测时长。
 
 ArtistIntroduction保留可选briefDescription与有序IntroductionSection(title可选／text必需)；SongWikiSummary保留SongId、四种SongWikiKind的card文本与unsupportedContent，不通用JSON或猜full prose。依赖Core，预算／纯文本／无URL／无生成，来源与schema仍候选。独立query/result通过原16槽／token／generation，不合并歌词／其他资源、不自动下游或播放。
+
+## 15. 已接入标签编辑与单向公开值
+
+[契约](api/playlist-tags-and-publication-writes.md)：PlaylistTagEdit私有构造、fromCatalogue(originalToken, PlaylistId, PlaylistTags, selected)验证Catalogue种类／成员关系／特殊all／唯一1..3与128 UTF16本地预算；不接受空清除／分号，保序不规范化，只保留选择／目标ID／原token。来源是结构而非密码学真实性／当前官方标签或权限保证，Hot／Premium和详情tags不能替代；不自动读，换号需显式重读。PlaylistMakePublic只有PlaylistId，无privacy输入，数字0仅在基础设施生成、无反向动作；写variant11→13种，原8槽与账号／token／generation及Unknown共用，不新增结果状态／createdPlaylist或库乐观状态。旧PlaylistDescription修改／显式清空仍独立；Ack不证明远端可见性，UI确认另验收。

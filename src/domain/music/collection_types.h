@@ -3,6 +3,7 @@
 #include "entity_search_types.h"
 #include "music_types.h"
 #include "playlist_order_types.h"
+#include "playlist_tag_edit_types.h"
 #include <QSet>
 #include <QUuid>
 #include <variant>
@@ -103,7 +104,8 @@ struct PlaylistDescription {
 using CollectionChange =
     std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
                  PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription,
-                 PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder>;
+                 PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder, PlaylistTagEdit,
+                 PlaylistMakePublic>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;
@@ -114,6 +116,8 @@ struct CollectionMutation {
 };
 inline std::optional<SessionToken> collectionSourceContext(const CollectionMutation& mutation)
 {
+    if (const auto* c = std::get_if<PlaylistTagEdit>(&mutation.change))
+        return c->sourceContext();
     if (const auto* c = std::get_if<PlaylistSongOrder>(&mutation.change))
         return c->sourceContext();
     if (const auto* c = std::get_if<AccountPlaylistOrder>(&mutation.change))

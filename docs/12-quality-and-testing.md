@@ -103,7 +103,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-CATALOG-METADATA：四类资料与独立介绍
 
-[契约](api/catalog-introduction-and-metadata-reads.md)：最新14受影响Debug套件730 pass，新catalog_metadata66含53行坏资料；选定9条线程数据行11 pass，0fail/skip，登记40非全量／Release／真实业务。四类型optional字段、unknown／显式空／重复／原计数／日期／完整索引不变；独立艺人64节／65536单段／256Ki总、歌曲四种百科白名单／unsupported标记／不Root fallback；路径／crypto／closed payload与4 Guest/account行两次native读／Cookie不轮换、实际百科Eapi解密，取消／旧token／429／−462／16槽／Facade晚到／无隐式动作。线程生产DTO六次显式读、无级联、200坏schema／close挂起读排空／原token，15CPP fresh LSP clean／14 application对象6935真实依赖无层泄漏、UI0。首轮test标签冲突只修fixture并保持fatal warnings，最后全组通过；历史结果不累加。
+[契约](api/catalog-introduction-and-metadata-reads.md)：该包时点14受影响Debug套件730 pass，新catalog_metadata66含53行坏资料；选定9条线程数据行11 pass，0fail/skip，登记40非全量／Release／真实业务。四类型optional字段、unknown／显式空／重复／原计数／日期／完整索引不变；独立艺人64节／65536单段／256Ki总、歌曲四种百科白名单／unsupported标记／不Root fallback；路径／crypto／closed payload与4 Guest/account行两次native读／Cookie不轮换、实际百科Eapi解密，取消／旧token／429／−462／16槽／Facade晚到／无隐式动作。线程生产DTO六次显式读、无级联、200坏schema／close挂起读排空／原token，15CPP fresh LSP clean／14 application对象6935真实依赖无层泄漏、UI0。首轮test标签冲突只修fixture并保持fatal warnings，最后全组通过；历史结果不累加。
+
+### TC-PLAYLIST-TAGS：标签编辑／隐私歌单单向公开（FR-011）
+
+[契约](api/playlist-tags-and-publication-writes.md)：最新8受影响Debug套件563 pass（playlist_tag_writes41），选定9条线程数据行11 pass，0fail/skip，登记41非全量／Release／真实写验收。Catalogue／成员／all／1..3／128／source500／Unicode／分号／重复／空清除拒绝、固定2path／Eapi／numeric0／严格键／宽ID、4次native实际解密与原Cookie，28响应矩阵、Guest／MUSIC_A／跨号／旧source／前后cancel／Timeout、8槽／UUID／同token变化／晚到／无隐式动作；原介绍修改／清空继续回归。线程生产Catalogue显式读→工厂→6显式写／403／close Unknown真排空，共10请求，无自动查询／播放／报告。8 CPP fresh all-server LSP clean、14 application对象6940实际依赖无泄漏、UI0；旧PCH／enum误报由真实构建／DB／主动复查解决，不删必要include／moc／Q_OBJECT或抑制。日志playlist-tags-final-{build,focused,thread}.log单列，历史730＋11不累加。
 
 ## 4. API fixture 规范
 

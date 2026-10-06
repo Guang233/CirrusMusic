@@ -79,7 +79,9 @@ enum class ApiOperation {
     PlaylistSongOrder,
     AccountPlaylistOrder,
     ArtistIntroduction,
-    SongWikiSummary
+    SongWikiSummary,
+    PlaylistTagsUpdate,
+    PlaylistMakePublic
 };
 
 struct ApiOperationContract {
