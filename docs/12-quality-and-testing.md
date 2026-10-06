@@ -83,7 +83,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-COMMENT-READ：当前只读验证
 
-最新受影响Debug七套件：comments149、podcast_reads55、entity_search44、catalog22、music26、session_api_client24、backend_facade8，共328 pass。另选comments／podcast／entity／playback（两数据行）／destruction共6条后台线程数据用例、8 pass；均无fail/skip，不是全35套件／Release／真实账号矩阵。构建／复跑命令及32个有效JSON坏schema、68条Guest／账号native替身行见[评论契约](api/comment-reads.md)；日志位于ignored build/workspace-checks/comments-final-{build,focused,thread}.log。初轮31个fixture预期失败已复核修正，不删除production profile或同步化完成通知。
+该评论包当时受影响Debug七套件：comments149、podcast_reads55、entity_search44、catalog22、music26、session_api_client24、backend_facade8，共328 pass。另选comments／podcast／entity／playback（两数据行）／destruction共6条后台线程数据用例、8 pass；均无fail/skip，不是全35套件／Release／真实账号矩阵。构建／复跑命令及32个有效JSON坏schema、68条Guest／账号native替身行见[评论契约](api/comment-reads.md)；日志位于ignored build/workspace-checks/comments-final-{build,focused,thread}.log。初轮31个fixture预期失败已复核修正，不删除production profile或同步化完成通知。
+
+### TC-ACCOUNT-LIBRARY-READ：当前补充读取验证
+
+最新受影响Debug七套件：account_library49、library21、podcast_reads55、comments149、music26、session_api_client24、backend_facade8，共332 pass。另accountLibrary／library／podcast／playback（queue/FM）／destruction六条线程数据行8 pass，无fail/skip；不是全36套件／Release／真实账号矩阵。[完整契约与命令](api/account-library-reads.md)含31个有效JSON坏schema行、独立CloudSongId／catalog引用、quota精度／未知／missing、MUSIC_U／异账号门禁、取消／晚到／429、16槽及后台close排空；无业务／账号／文件／媒体访问。最新ignored日志account-library-final-{build,focused,thread}.log。
 
 ## 4. API fixture 规范
 

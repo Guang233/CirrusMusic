@@ -1,4 +1,5 @@
 #include "music_mapper.h"
+#include "account_library_mapper.h"
 #include "catalog_mapper.h"
 #include "chart_mapper.h"
 #include "cloud_history_mapper.h"
@@ -166,6 +167,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
         return mapChartsResponse(*charts, object);
     if (historyQueryAccount(query))
         return mapCloudHistoryResponse(query, object);
+    if (isAccountLibraryQuery(query))
+        return mapAccountLibraryResponse(query, object);
     if (libraryQueryAccount(query))
         return mapLibraryResponse(query, object);
     if (requiresAuthenticatedMusicQuery(query))

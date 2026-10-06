@@ -278,6 +278,18 @@ quint64 BackendFacade::savedArtists(domain::CatalogPage page)
 {
     return submitMusic(domain::SavedArtistsQuery{m_snapshot.accountId, page});
 }
+quint64 BackendFacade::subscribedPodcasts(domain::CatalogPage page)
+{
+    return submitMusic(domain::SubscribedPodcastsQuery{m_snapshot.accountId, page});
+}
+quint64 BackendFacade::cloudSongs(domain::CatalogPage page)
+{
+    return submitMusic(domain::CloudSongsQuery{m_snapshot.accountId, page});
+}
+quint64 BackendFacade::cloudSongDetails(QList<domain::CloudSongId> songs)
+{
+    return submitMusic(domain::CloudSongDetailsQuery{m_snapshot.accountId, std::move(songs)});
+}
 quint64 BackendFacade::recentSongs(int limit)
 {
     return submitMusic(domain::RecentSongsQuery{m_snapshot.accountId, limit});

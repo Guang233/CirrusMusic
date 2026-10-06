@@ -60,7 +60,10 @@ enum class ApiOperation {
     HotComments,
     SortedComments,
     CommentFloor,
-    CommentInfo
+    CommentInfo,
+    SubscribedPodcasts,
+    CloudSongs,
+    CloudSongDetails
 };
 
 struct ApiOperationContract {

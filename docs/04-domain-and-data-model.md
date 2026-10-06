@@ -173,3 +173,7 @@ CREATE TABLE queue_entries (
 ## 9. 已接入资源评论值
 
 [comment_types.h与契约](api/comment-reads.md)定义CommentTarget（Song／Playlist／Album／Program／Podcast独立variant）和CommentId；不存在Voice／艺人／任意thread输入。普通评论拒绝Podcast；热门／新版／楼层／统计采用已确认通用命名空间。五种query／结果保留原目标、分页／排序／parent与provider次序，统计缺项为missing而非0；time、liked、计数未知保持optional，公开author ID不是认证AccountId。内容及引用纯文本、不可信、非递归预览有界；不抓头像／作者详情、无持久化、自动翻页、通知或写入。响应仅合成候选，JSON／provider type／thread／网络留在基础设施；调用方DTO副本不自动擦除。
+
+## 10. 已接入账号补充读取值
+
+[account_library_types.h与契约](api/account-library-reads.md)定义原accountId的SubscribedPodcasts／CloudSongs／CloudSongDetails查询与结果；独立CloudSongId，显式simpleSong.id仅作可选SongId catalogReference，不兜底或证明音轨绑定。列表保留顺序／重复／未知；详情按请求序并单列missing。fileName是私有展示文本而非路径，配额／文件大小／bitrate／time为原provider值，不推导权益、可播资产或剩余空间。无全库抓取／缓存、音源／播放／上传下载／写；JSON、Cookie留在基础设施，旧token／注销／关闭复用原屏障，已交付DTO副本不自动擦除。响应仅合成候选。

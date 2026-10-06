@@ -2,6 +2,7 @@
 
 #include "application/account/qr_login_service.h"
 #include "application/ports/music_gateway.h"
+#include "domain/music/account_library_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/podcast_types.h"
 #include "domain/playback/listening_report.h"
@@ -142,6 +143,9 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 likedSongIds();
     [[nodiscard]] quint64 savedAlbums(domain::CatalogPage page = {25, 0});
     [[nodiscard]] quint64 savedArtists(domain::CatalogPage page = {25, 0});
+    [[nodiscard]] quint64 subscribedPodcasts(domain::CatalogPage page = {30, 0});
+    [[nodiscard]] quint64 cloudSongs(domain::CatalogPage page = {30, 0});
+    [[nodiscard]] quint64 cloudSongDetails(QList<domain::CloudSongId> songs);
     [[nodiscard]] quint64 recentSongs(int limit = 100);
     [[nodiscard]] quint64 recentPlaylists(int limit = 100);
     [[nodiscard]] quint64 recentAlbums(int limit = 100);

@@ -16,6 +16,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/podcast_types.h
     domain/music/recent_entity_types.h
     domain/music/comment_types.h
+    domain/music/account_library_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_history.h
@@ -152,6 +153,8 @@ add_library(cirrus_netease_auth STATIC
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
 add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/account_library_mapper.cpp
+    infrastructure/netease/music/account_library_mapper.h
     infrastructure/netease/music/comment_mapper.cpp
     infrastructure/netease/music/comment_mapper.h
     infrastructure/netease/music/listening_report_gateway.cpp

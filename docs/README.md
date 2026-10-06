@@ -31,6 +31,7 @@
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
 | [日推读取与私人FM供给](api/discovery-and-fm.md) | 独立日推、认证态读取、动态批次及失败／换号边界 |
+| [账号补充读取](api/account-library-reads.md) | 当前账号播客订阅／云盘列表与详情；CloudSongId和catalog引用分离，仅合成候选，无云盘音源／播放／写入 |
 | [个人库只读查询](api/personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人的有界读取；不包含缓存／写入／播放历史 |
 | [云端最近听过／听歌排行](api/cloud-history-reads.md) | 当前账号记录、一周／全部时间窗口；保留未知次数／分值，不推算时长，响应仅合成验证 |
 | [榜单列表／内容摘要](api/chart-reads.md) | 有界Guest／账号读取；展示预览不是Song，歌曲分页与显式选歌播放复用现有链，响应仅合成验证 |

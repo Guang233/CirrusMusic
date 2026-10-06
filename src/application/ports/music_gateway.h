@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/account/session_types.h"
+#include "domain/music/account_library_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/chart_types.h"
 #include "domain/music/cloud_history_types.h"
@@ -68,7 +69,8 @@ using MusicQuery = std::variant<
     domain::PodcastSearchQuery, domain::VoiceSearchQuery, domain::PodcastDetailQuery,
     domain::PodcastProgramsQuery, domain::ProgramDetailQuery, domain::RecentEntitiesQuery,
     domain::CommentsQuery, domain::HotCommentsQuery, domain::SortedCommentsQuery,
-    domain::CommentFloorQuery, domain::CommentInfoQuery>;
+    domain::CommentFloorQuery, domain::CommentInfoQuery, domain::SubscribedPodcastsQuery,
+    domain::CloudSongsQuery, domain::CloudSongDetailsQuery>;
 using MusicResult = std::variant<
     domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
     domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage, domain::ArtistAlbumsPage,
@@ -81,11 +83,19 @@ using MusicResult = std::variant<
     domain::PodcastDetails, domain::PodcastProgramsPage, domain::ProgramDetails,
     domain::CloudRecentPlaylists, domain::CloudRecentAlbums, domain::CloudRecentPodcasts,
     domain::CloudRecentVoices, domain::CommentsPage, domain::HotCommentsPage,
-    domain::SortedCommentsPage, domain::CommentFloorPage, domain::CommentStatistics>;
+    domain::SortedCommentsPage, domain::CommentFloorPage, domain::CommentStatistics,
+    domain::SubscribedPodcastsPage, domain::CloudSongsPage, domain::CloudSongDetails>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool isAccountLibraryQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::SubscribedPodcastsQuery>(query) ||
+           std::holds_alternative<domain::CloudSongsQuery>(query) ||
+           std::holds_alternative<domain::CloudSongDetailsQuery>(query);
 }
 
 inline bool isCommentQuery(const MusicQuery& query)
@@ -127,7 +137,10 @@ inline std::optional<QString> libraryQueryAccount(const MusicQuery& query)
             if constexpr (std::is_same_v<T, domain::MyPlaylistsQuery> ||
                           std::is_same_v<T, domain::LikedSongIdsQuery> ||
                           std::is_same_v<T, domain::SavedAlbumsQuery> ||
-                          std::is_same_v<T, domain::SavedArtistsQuery>)
+                          std::is_same_v<T, domain::SavedArtistsQuery> ||
+                          std::is_same_v<T, domain::SubscribedPodcastsQuery> ||
+                          std::is_same_v<T, domain::CloudSongsQuery> ||
+                          std::is_same_v<T, domain::CloudSongDetailsQuery>)
                 return value.accountId;
             return std::nullopt;
         },

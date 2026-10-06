@@ -244,6 +244,7 @@ class BackendRuntimeTest : public QObject
     void entitySearchThroughThread();
     void podcastReadsThroughThread();
     void commentsThroughThread();
+    void accountLibraryThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -1680,6 +1681,92 @@ void BackendRuntimeTest::commentsThroughThread()
     QCOMPARE(state->created.load(), state->destroyed.load());
     QVERIFY(play.isEmpty());
     QVERIFY(report.isEmpty());
+}
+
+void BackendRuntimeTest::accountLibraryThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{
+        Plan{
+            R"({"code":200,"uid":101,"djRadios":[{"id":3,"name":"synthetic","programCount":2}],"count":5,"hasMore":true})"},
+        Plan{
+            R"({"code":200,"uid":101,"data":[{"songId":4,"simpleSong":{"id":99},"fileName":"synthetic.mp3"}],"hasMore":true,"count":5,"size":"0","maxSize":"1048"})"},
+        Plan{R"({"code":200,"uid":101,"data":[{"songId":4,"simpleSong":{"id":99}}]})"},
+        Plan{"", 200, -1}});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::musicCompleted), play(&f, &BackendFacade::playbackRequested),
+        report(&f, &BackendFacade::listeningReportRequested);
+    connect(&f, &BackendFacade::musicCompleted, this,
+            [&](quint64, domain::SessionToken, MusicResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(!f.subscribedPodcasts());
+    QVERIFY(!f.cloudSongs());
+    QVERIFY(!f.cloudSongDetails({{"4"}}));
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    QVERIFY(f.subscribedPodcasts({2, 0}));
+    QTRY_COMPARE(done.size(), 1);
+    const auto subscribed = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::SubscribedPodcastsPage>(subscribed));
+    const auto pods = std::get<domain::SubscribedPodcastsPage>(subscribed);
+    QCOMPARE(pods.query.accountId, "101");
+    QCOMPARE(pods.podcasts.first().id.value, "3");
+    QCOMPARE(pods.hasMore, std::optional<bool>(true));
+    QVERIFY(f.cloudSongs({2, 0}));
+    QTRY_COMPARE(done.size(), 2);
+    const auto cloud = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::CloudSongsPage>(cloud));
+    const auto page = std::get<domain::CloudSongsPage>(cloud);
+    QCOMPARE(page.query.accountId, "101");
+    QCOMPARE(page.providerUsedSpace, std::optional<qint64>(0));
+    const auto cloudId = page.songs.first().id;
+    QCOMPARE(cloudId.value, "4");
+    QCOMPARE(page.songs.first().catalogReference->value, "99");
+    QVERIFY(f.cloudSongDetails({cloudId, {"6"}}));
+    QTRY_COMPARE(done.size(), 3);
+    const auto details = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::CloudSongDetails>(details));
+    const auto result = std::get<domain::CloudSongDetails>(details);
+    QCOMPARE(result.query.accountId, "101");
+    QCOMPARE(result.songs.first().id.value, "4");
+    QCOMPARE(result.missing.first().value, "6");
+    QCOMPARE(state->requests.load(), 6); // three synthetic login requests, three explicit reads
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    for (const auto& row : done)
+        QCOMPARE(qvariant_cast<domain::SessionToken>(row[1]), token);
+    const auto pending = f.cloudSongs({2, 2});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 7);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 4);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<domain::SessionToken>(done.last()[1]), token);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
 }
 
 QTEST_GUILESS_MAIN(BackendRuntimeTest)

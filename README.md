@@ -33,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共35套件；最新[资源评论只读包](docs/api/comment-reads.md)7个受影响Debug套件共328项通过、另6条后台线程数据用例共8项通过，无fail/skip；只有合成候选schema，无实网／评论写／账号历史／通知。此前[播客消费／四类recent读取](docs/api/podcast-and-recent-reads.md)增量的7个受影响 Debug 套件共207项通过，另6条后台线程数据用例共8项通过（含init/cleanup）；该消费读取包的3次无Cookie公开metadata探测在节目列表code-462即停，节目详情／真实recent未实证；此前[实体搜索](docs/api/entity-search-reads.md)有限公开证据单列，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共36套件；最新[账号播客订阅／云盘读取](docs/api/account-library-reads.md)7个受影响Debug套件332项通过、另6条线程数据用例8项通过，无fail/skip；独立CloudSongId与原账号，仅合成候选，无云盘音源／播放／写入。此前[资源评论只读包](docs/api/comment-reads.md)7个受影响Debug套件共328项通过、另6条后台线程数据用例共8项通过，无fail/skip；只有合成候选schema，无实网／评论写／账号历史／通知。此前[播客消费／四类recent读取](docs/api/podcast-and-recent-reads.md)增量的7个受影响 Debug 套件共207项通过，另6条后台线程数据用例共8项通过（含init/cleanup）；该消费读取包的3次无Cookie公开metadata探测在节目列表code-462即停，节目详情／真实recent未实证；此前[实体搜索](docs/api/entity-search-reads.md)有限公开证据单列，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

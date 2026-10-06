@@ -26,6 +26,7 @@
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
 | [discovery-and-fm.md](discovery-and-fm.md) | 已实现的日推读取、FM动态条目供给、账号隔离；基础读取包证据，不等于听歌上报 |
+| [account-library-reads.md](account-library-reads.md) | 当前账号播客订阅／云盘列表与详情三项；独立CloudSongId、MUSIC_U与原token、bounded候选schema，仅合成，无云盘音源／播放／写入 |
 | [personal-library.md](personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人；有界只读与账号校验，无库缓存／写入 |
 | [local-listening-history.md](local-listening-history.md) | 媒体线程的有界观测累计、Queue／FM会话历史、清空与账号隔离；无持久化／上报 |
 | [explicit-listening-reports.md](explicit-listening-reports.md) | StartPlay／Play显式报告、clientlog/osx profile、未知写入结果；无自动触发／重试 |

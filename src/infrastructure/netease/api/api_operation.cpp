@@ -104,6 +104,15 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::SavedAlbums:
         return ApiOperationContract{QStringLiteral("/api/album/sublist"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::SubscribedPodcasts:
+        return ApiOperationContract{QStringLiteral("/api/djradio/get/subed"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::CloudSongs:
+        return ApiOperationContract{QStringLiteral("/api/v1/cloud/get"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::CloudSongDetails:
+        return ApiOperationContract{QStringLiteral("/api/v1/cloud/get/byids"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SavedArtists:
         return ApiOperationContract{QStringLiteral("/api/artist/sublist"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
@@ -167,7 +176,9 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::ListeningPlay || operation == ApiOperation::RecentSongs ||
            operation == ApiOperation::ListeningRanking ||
            operation == ApiOperation::RecentPlaylists || operation == ApiOperation::RecentAlbums ||
-           operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices;
+           operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices ||
+           operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs ||
+           operation == ApiOperation::CloudSongDetails;
 }
 
 bool validQrKey(QStringView key)
@@ -187,6 +198,32 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
 {
     if (isCommentOperation(operation))
         return commentOperationPayload(operation, parameters);
+    if (operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs) {
+        const auto limit = parameters.value(QStringLiteral("limit")),
+                   offset = parameters.value(QStringLiteral("offset"));
+        const domain::CatalogPage page{limit.toInt(-1), offset.toInt(-1)};
+        if (parameters.size() != 2 || !page.isValid() || limit != QJsonValue(page.limit) ||
+            offset != QJsonValue(page.offset))
+            return std::nullopt;
+        QJsonObject payload{{QStringLiteral("limit"), page.limit},
+                            {QStringLiteral("offset"), page.offset}};
+        if (operation == ApiOperation::SubscribedPodcasts)
+            payload.insert(QStringLiteral("total"), true);
+        return payload;
+    }
+    if (operation == ApiOperation::CloudSongDetails) {
+        const auto raw = parameters.value(QStringLiteral("ids"));
+        const auto ids = raw.toArray();
+        if (parameters.size() != 1 || !raw.isArray() || ids.isEmpty() || ids.size() > 100)
+            return std::nullopt;
+        QSet<QString> seen;
+        for (const auto v : ids) {
+            if (!v.isString() || !domain::validMusicId(v.toString()) || seen.contains(v.toString()))
+                return std::nullopt;
+            seen.insert(v.toString());
+        }
+        return QJsonObject{{QStringLiteral("songIds"), ids}}; // actual array, not CSV/JSON text
+    }
     if (operation == ApiOperation::RecommendedPlaylists) {
         const auto limit = parameters.value(QStringLiteral("limit"));
         const domain::RecommendedPlaylistsQuery q{limit.toInt(-1)};
@@ -471,6 +508,9 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::SortedComments:
     case ApiOperation::CommentFloor:
     case ApiOperation::CommentInfo:
+    case ApiOperation::SubscribedPodcasts:
+    case ApiOperation::CloudSongs:
+    case ApiOperation::CloudSongDetails:
     case ApiOperation::PodcastDetails:
     case ApiOperation::PodcastPrograms:
     case ApiOperation::ProgramDetails:
@@ -533,6 +573,9 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SortedComments:
     case ApiOperation::CommentFloor:
     case ApiOperation::CommentInfo:
+    case ApiOperation::SubscribedPodcasts:
+    case ApiOperation::CloudSongs:
+    case ApiOperation::CloudSongDetails:
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
     case ApiOperation::RecommendedPlaylists:

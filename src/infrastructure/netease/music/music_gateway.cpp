@@ -1,4 +1,5 @@
 #include "music_gateway.h"
+#include "account_library_mapper.h"
 #include "catalog_mapper.h"
 #include "chart_mapper.h"
 #include "cloud_history_mapper.h"
@@ -156,6 +157,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
     } else if (const auto history = cloudHistoryRequest(query)) {
         operation = history->operation;
         parameters = history->parameters;
+    } else if (const auto library = accountLibraryRequest(query)) {
+        operation = library->operation;
+        parameters = library->parameters;
     } else if (const auto library = libraryRequest(query)) {
         operation = library->operation;
         parameters = library->parameters;
