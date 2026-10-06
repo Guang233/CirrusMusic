@@ -89,4 +89,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 现登记34套件；不声明全量Debug／Release或真实认证／keyring矩阵。18个改动C++路径最终主动LSP清洁，format／diff通过，473个本地Markdown链接无断链（跳过代码标记），固定440模块hash核验通过且历史164／40／236决定不变；实际14个application编译条目（13手写＋AUTOMOC）的Ninja依赖无infrastructure／Network／Multimedia／Sql／Quick／Qml／Gui／JSON／OpenSSL泄漏，UI diff=0。忽略的podcast-reads-final-focused／final-thread日志为最新结果；先前失败记录不累加为通过数。
 
-下一包不能直接“把voice当song播”：先补ProgramId／VoiceId对应和消费端音源证据，明确权益、来源／最近记录／报告语义，再独立建模播放。若服务拒绝需要授权账号／挑战环境，停下确认；仍不接管理工作台／视频、自动报告、真实写入或UI。
+后续[身份／音源补证决策](spoken-playback-contract.md)已确认传统mainTrackId→旧song/url文档路线，并发现v1第三方代码候选；实际绑定、v1节目音源、VoiceId／ProgramId关系尚未实证，未新增播放代码。不能直接“把voice当song播”：底层音轨必须显式绑定且不替代逻辑身份，权益／TTL／来源／历史／报告门禁仍保留，再独立建模播放。若服务拒绝需要授权账号／挑战环境，停下确认；仍不接管理工作台／视频、自动报告、真实写入或UI。

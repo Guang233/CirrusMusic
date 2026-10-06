@@ -71,7 +71,7 @@ Core-only `PlaybackQueue`／`LyricTimeline`／`ListeningSession`已组成[队列
 
 [六项歌单发现](playlist-discovery-reads.md)成组接入推荐、普通／精品分页、分类／热门／精品标签；保留未知元数据、不同分页与标签来源，仍复用原歌单／显式选歌播放链，无自动翻页／入队／报告或实网证明。
 
-[实体／播客／声音搜索](entity-search-reads.md)已接入5个固定operation，复用原query生命周期，PodcastId／VoiceId保持独立；该搜索包20次无Cookie公开metadata探测只记录结构，5次最终样本通过新mapper。后续[消费端3项／recent4项](podcast-and-recent-reads.md)已合成接入，ProgramId独立、原账号有界读取；公开播客详情观察root.data，列表-462即停，节目详情／Voice对应／真实recent仍未实证，声音播放未交付；原静态inventory不冒充当前范围或registry。
+[实体／播客／声音搜索](entity-search-reads.md)已接入5个固定operation，复用原query生命周期，PodcastId／VoiceId保持独立；该搜索包20次无Cookie公开metadata探测只记录结构，5次最终样本通过新mapper。后续[消费端3项／recent4项](podcast-and-recent-reads.md)已合成接入，ProgramId独立、原账号有界读取；公开播客详情观察root.data，列表-462即停，节目详情／Voice对应／真实recent仍未实证，声音播放未交付；随后[身份／音源补证](spoken-playback-contract.md)仅记录传统mainTrackId路线、v1代码候选、媒体共享接缝与未获证门禁，未新增C++／operation／测试，207＋8仍是读取包结果；原静态inventory不冒充当前范围或registry。
 
 ## 测试与构建
 

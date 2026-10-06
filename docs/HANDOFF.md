@@ -145,7 +145,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；[显式上报能力](api/explicit-listening-reports.md)也已接入；自动触发时机留到播放接线时讨论。[最近听过／排行读取](api/cloud-history-reads.md)已离线接通，[榜单列表／摘要读取](api/chart-reads.md)也已接入并复用现有歌单选歌播放链；[推荐／普通／精品歌单及三类标签](api/playlist-discovery-reads.md)也已成组离线接入；[音乐实体、播客及全站声音搜索](api/entity-search-reads.md)已接入并有限公开验证，[消费详情／节目与4类recent](api/podcast-and-recent-reads.md)已合成接入，公开列表遇-462已停；ProgramId／VoiceId对应和节目详情／真实recent仍待实证，下一包先补消费音源／身份再独立声音播放，不直接当SongId；歌单内搜索／工作台仍待补证，不以本地过滤或管理接口代替；本地保留时长计量，详细历史持久化按分析需求再定；真实报告另行授权；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；[显式上报能力](api/explicit-listening-reports.md)也已接入；自动触发时机留到播放接线时讨论。[最近听过／排行读取](api/cloud-history-reads.md)已离线接通，[榜单列表／摘要读取](api/chart-reads.md)也已接入并复用现有歌单选歌播放链；[推荐／普通／精品歌单及三类标签](api/playlist-discovery-reads.md)也已成组离线接入；[音乐实体、播客及全站声音搜索](api/entity-search-reads.md)已接入并有限公开验证，[消费详情／节目与4类recent](api/podcast-and-recent-reads.md)已合成接入，公开列表遇-462已停；ProgramId／VoiceId对应和节目详情／真实recent仍待实证，[音源／身份补证](api/spoken-playback-contract.md)已记录传统mainTrackId路线、v1第三方代码候选和独立身份／媒体／历史设计，但实际binding／v1权益仍未实证，没有新增播放入口；受限时继续评论等已确认小包，不直接当SongId；歌单内搜索／工作台仍待补证，不以本地过滤或管理接口代替；本地保留时长计量，详细历史持久化按分析需求再定；真实报告另行授权；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
@@ -153,7 +153,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
 | v2 checktoken SDK、一起听接收链 | SDK 与一起听有证据门禁，不暗加 Node/WebEngine，不以 v3 替代 v2 |
-| 播客／声音后续 | 公开列表-462拒绝已停止，不换host／工作台或自动登录；ProgramId／VoiceId对应及消费音源必须补证，真实账号／挑战环境另行授权 |
+| 播客／声音后续 | [补证决策](api/spoken-playback-contract.md)为docs-only，旧公开列表-462停止；传统mainTrackId文档路线已获证，v1实网／Voice关系仍未知，不换host／工作台或自动登录；账号／挑战／媒体验证另授权 |
 | 播放后端 | Qt Multimedia已明确获准接入；公开试听MP3／合成WAV PoC通过，完整缓冲后起播；流式、设备切换／打包等仍有门禁 |
 
 当前没有指定新的接手人／问题负责人；由维护者分配。详见[风险与决策](15-risks-and-open-questions.md)。
