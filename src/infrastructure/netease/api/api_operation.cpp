@@ -84,6 +84,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
+    case ApiOperation::DailyRecommendedPlaylists:
+        return ApiOperationContract{QStringLiteral("/api/v1/discovery/recommend/resource"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::RecommendedPlaylists:
         return ApiOperationContract{QStringLiteral("/api/personalized/playlist"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -217,6 +220,7 @@ bool requiresAccountCookie(ApiOperation operation)
     return isCommentWriteOperation(operation) || isCollectionOperation(operation) ||
            operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
+           operation == ApiOperation::DailyRecommendedPlaylists ||
            operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
            operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
            operation == ApiOperation::SavedArtists || operation == ApiOperation::ListeningStart ||
@@ -559,6 +563,7 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         break; // strict closed search-assist adapter above
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
+    case ApiOperation::DailyRecommendedPlaylists:
     case ApiOperation::PlaylistCatalogue:
     case ApiOperation::HotPlaylistTags:
     case ApiOperation::PremiumPlaylistTags:
@@ -659,6 +664,7 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::CloudSongDetails:
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
+    case ApiOperation::DailyRecommendedPlaylists:
     case ApiOperation::RecommendedPlaylists:
     case ApiOperation::PlaylistList:
     case ApiOperation::PremiumPlaylists:

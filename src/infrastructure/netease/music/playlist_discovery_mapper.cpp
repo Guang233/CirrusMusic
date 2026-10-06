@@ -34,7 +34,7 @@ bool pageInfo(const QJsonObject& o, qsizetype size, std::optional<qint64>& total
            flag(o.value(QStringLiteral("more")), more) && (!total || *total >= size);
 }
 std::optional<QList<DiscoveryPlaylist>> playlists(const QJsonValue& values, int limit,
-                                                  bool recommended)
+                                                  bool recommended, bool daily = false)
 {
     if (!values.isArray() || values.toArray().size() > limit)
         return std::nullopt;
@@ -48,7 +48,8 @@ std::optional<QList<DiscoveryPlaylist>> playlists(const QJsonValue& values, int 
         const auto name = row.value(QStringLiteral("name"));
         const auto summary =
             row.value(recommended ? QStringLiteral("copywriter") : QStringLiteral("description"));
-        if (item.id.value.isEmpty() || !textField(name) || !textField(summary) ||
+        if (item.id.value.isEmpty() || !textField(name) || (daily && !name.isString()) ||
+            !textField(summary) ||
             !number(row.value(QStringLiteral("trackCount")), item.trackCount) ||
             !number(row.value(QStringLiteral("updateTime")), item.providerUpdateTime))
             return std::nullopt;
@@ -57,7 +58,8 @@ std::optional<QList<DiscoveryPlaylist>> playlists(const QJsonValue& values, int 
             item.summary = summary.toString();
         item.cover = imageFrom(
             row.value(recommended ? QStringLiteral("picUrl") : QStringLiteral("coverImgUrl")));
-        const auto plays = row.value(QStringLiteral("playCount"));
+        const auto plays =
+            row.value(daily ? QStringLiteral("playcount") : QStringLiteral("playCount"));
         if (!absent(plays)) {
             if (!plays.isDouble() || !std::isfinite(plays.toDouble()) || plays.toDouble() < 0 ||
                 plays.toDouble() > double(MaximumPlaylistCursor))
@@ -87,6 +89,8 @@ std::optional<PlaylistDiscoveryRequest> playlistDiscoveryRequest(const MusicQuer
 {
     if (!validMusicQuery(query))
         return std::nullopt;
+    if (std::holds_alternative<DailyRecommendedPlaylistsQuery>(query))
+        return PlaylistDiscoveryRequest{ApiOperation::DailyRecommendedPlaylists, {}};
     if (const auto* q = std::get_if<RecommendedPlaylistsQuery>(&query))
         return PlaylistDiscoveryRequest{ApiOperation::RecommendedPlaylists,
                                         {{QStringLiteral("limit"), q->limit}}};
@@ -117,6 +121,12 @@ MusicResult mapPlaylistDiscoveryResponse(const MusicQuery& query, const QJsonObj
     if (!isPlaylistDiscoveryQuery(query) || !validMusicQuery(query) ||
         object.value(QStringLiteral("code")) != QJsonValue(200))
         return invalid;
+    if (const auto* q = std::get_if<DailyRecommendedPlaylistsQuery>(&query)) {
+        const auto rows = playlists(object.value(QStringLiteral("recommend")), 100, true, true);
+        if (!rows)
+            return invalid;
+        return DailyRecommendedPlaylists{*q, *rows};
+    }
     if (const auto* q = std::get_if<RecommendedPlaylistsQuery>(&query)) {
         const auto rows = playlists(object.value(QStringLiteral("result")), q->limit, true);
         if (!rows)

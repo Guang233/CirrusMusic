@@ -186,6 +186,7 @@ class BackendFacade final : public QObject
     listeningRanking(domain::RankingPeriod period = domain::RankingPeriod::AllTime);
     [[nodiscard]] quint64 charts(domain::ChartListKind kind = domain::ChartListKind::Overview);
     [[nodiscard]] quint64 recommendedPlaylists(int limit = 30);
+    [[nodiscard]] quint64 dailyRecommendedPlaylists();
     [[nodiscard]] quint64 playlistList(domain::PlaylistListQuery query = {});
     [[nodiscard]] quint64 premiumPlaylists(domain::PremiumPlaylistsQuery query = {});
     [[nodiscard]] quint64

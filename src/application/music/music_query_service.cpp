@@ -25,7 +25,11 @@ MusicQueryService::MusicQueryService(SessionCoordinator& session, IMusicGateway&
     });
     connect(&session, &SessionCoordinator::changed, this, [this](domain::SessionSnapshot snapshot) {
         for (auto id : m_pending.keys()) {
-            if (m_pending.value(id).context == snapshot.token)
+            const auto pending = m_pending.value(id);
+            if (pending.context == snapshot.token &&
+                (!pending.authenticatedAccount ||
+                 (snapshot.phase == domain::SessionPhase::Authenticated &&
+                  *pending.authenticatedAccount == snapshot.accountId)))
                 continue;
             rejectLater(id, MusicError::StaleContext);
             if (m_gateway)
@@ -49,8 +53,12 @@ quint64 MusicQueryService::request(domain::SessionToken context, MusicQuery quer
     if (m_pending.size() >= 16)
         return 0;
     const auto id = ++m_nextId;
-    m_pending.insert(id, {context});
     const auto snapshot = m_session.snapshot();
+    const auto account = requiresAuthenticatedMusicQuery(query) &&
+                                 snapshot.phase == domain::SessionPhase::Authenticated
+                             ? std::optional<QString>(snapshot.accountId)
+                             : std::nullopt;
+    m_pending.insert(id, {context, 0, std::nullopt, account});
     if (!m_session.accepts(context))
         rejectLater(id, MusicError::StaleContext);
     else if (snapshot.phase != domain::SessionPhase::Guest &&
@@ -98,7 +106,10 @@ void MusicQueryService::finish(quint64 id, MusicResult result)
         return;
     const auto pending = m_pending.take(id);
     m_ids.remove(pending.gatewayId);
-    if (!m_session.accepts(pending.context))
+    const auto snapshot = m_session.snapshot();
+    if (!m_session.accepts(pending.context) ||
+        (pending.authenticatedAccount && (snapshot.phase != domain::SessionPhase::Authenticated ||
+                                          *pending.authenticatedAccount != snapshot.accountId)))
         result = MusicFailure{MusicError::StaleContext};
     else if (pending.forced)
         result = MusicFailure{*pending.forced};

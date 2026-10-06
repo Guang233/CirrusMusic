@@ -28,6 +28,7 @@ class MusicQueryService final : public QObject
         domain::SessionToken context;
         quint64 gatewayId = 0;
         std::optional<MusicError> forced;
+        std::optional<QString> authenticatedAccount; // private read's original verified scope
     };
     void rejectLater(quint64 id, MusicError error);
     void finish(quint64 id, MusicResult result);

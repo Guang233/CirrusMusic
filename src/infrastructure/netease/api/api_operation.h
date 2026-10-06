@@ -91,7 +91,8 @@ enum class ApiOperation {
     CommentDelete,
     SearchSuggestions,
     HotKeywords,
-    HotKeywordDetails
+    HotKeywordDetails,
+    DailyRecommendedPlaylists
 };
 
 struct ApiOperationContract {

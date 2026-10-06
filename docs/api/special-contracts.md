@@ -14,7 +14,7 @@
 | recommend_songs_dislike | 日推不感兴趣 | `/api/v2/discovery/recommend/dislike`，resId、resType=4、sceneType=1；属于写操作 |
 | history_recommend_songs | 历史日推索引 | 账号权益／可查询日期待实际验证 |
 | history_recommend_songs_detail | 指定历史日推内容 | 不通过普通歌单 ID 请求 |
-| recommend_resource | 推荐歌单 | 推荐的对象是歌单，不是“每日推荐歌曲”的替代接口 |
+| recommend_resource | 每日推荐歌单 | [独立原账号读取](daily-recommended-playlists.md)已合成接入，Weapi空业务；不是每日歌曲／普通personalized替代，root.recommend候选，无日期cache／自动下游 |
 
 客户端规则：
 
@@ -48,7 +48,7 @@
 
 ## 3. 一起听：HTTP 模块不是完整同步协议
 
-接续搜索辅助包acf822e，维护者先要求一起听，现明确因固定接口不全**搁置至最后**，表示已逆向整套接口；收到完整材料再重新核对接收／同步／身份／序号契约，不自动恢复不全参考。已编写但未提交的9 HTTP候选草稿完整保存在本地WIP stash，撤出主线，**未作为API或完整一起听交付**。主线82 business operation／44 CTest不变；没有真实账号／服务／SDK／JS／新依赖／UI授权。草稿曾153新suite／10受影响858＋11线程数据行13 pass（0fail/skip），仅草稿历史，不挪作主线／FR-043证明；后续材料不能仅凭“整套”推已兼容／授权。
+接续搜索辅助包acf822e，维护者先要求一起听，现明确因固定接口不全**搁置至最后**，表示已逆向整套接口；收到完整材料再重新核对接收／同步／身份／序号契约，不自动恢复不全参考。已编写但未提交的9 HTTP候选草稿完整保存在本地WIP stash，撤出主线，**未作为API或完整一起听交付**。该暂停时点主线82 business operation／44 CTest不变（最新每日歌单包独立增至83／45，非一起听恢复）；没有真实账号／服务／SDK／JS／新依赖／UI授权。草稿曾153新suite／10受影响858＋11线程数据行13 pass（0fail/skip），仅草稿历史，不挪作主线／FR-043证明；后续材料不能仅凭“整套”推已兼容／授权。
 
 共 9 个模块，全部列为采用目标但带 `together-receive-contract` 门禁。上游拼写为 **listentogether_heatbeat**，Cirrus 内部使用 Heartbeat，保留映射避免漏项。
 

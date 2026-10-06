@@ -36,4 +36,6 @@ Cirrus 的接口审计参考：
 
 整歌单收藏恢复需求后再次完整静态核对playlist_subscribe／register_checktoken_v2／option／request／config及home／TS，见[原生v2前置调查](../../docs/api/playlist-subscription-v2-prerequisite.md)。只记录body/header token来源与Eapi Cookie／加密header、SDK生命周期及证据／许可门禁，未新增C++改写／variant／注册或fixture。公共Cocos游戏易盾文档仅作平台线索，不证明音乐Watchman/Linux等价；本次ncm-api-rs固定源码读取被工具内部地址检查拒绝，未取得相关源文件、未复制代码或绕过访问限制。外部项目／SDK不因本MIT获得使用或分发授权，原锁不更新。
 
+每日推荐歌单增量完整参考固定 `module/recommend_resource.js`、home对应章节／TS genericResponse及options／config／完整request默认链，显式Weapi `/api/v1/discovery/recommend/resource` 与空业务载荷在 `api/api_operation.cpp` 做窄C++改写，`music/playlist_discovery_mapper.cpp` 复用原摘要映射及账号查询链。推荐歌单与普通personalized／每日歌曲区分，root.recommend／name／小写playcount等是客户端严格合成候选，不由generic Response／MIT证明真实schema／账号支持／日期／权限。没有新JS／SDK／服务／真实库内容或凭据fixture，原MIT与固定hash保留；维护者暂无v2资料，整歌单收藏调查保留但现明确暂缓，不自动恢复，见[契约](../../docs/api/daily-recommended-playlists.md)。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

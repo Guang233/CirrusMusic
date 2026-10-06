@@ -2,6 +2,8 @@
 
 本读取包（`7794bd1`）仅交付账号态读取和动态条目供给，后续已另包接入[FM连续播放／普通队列模式切换与失败预算](fm-continuous-playback.md)。后续[个人库四项读取](personal-library.md)也已接入；[本地观测累计](local-listening-history.md)及[显式报告能力](explicit-listening-reports.md)也已另包接入；UI、日推缓存和自动报告时机／FM来源扩展仍待后续。
 
+后续[每日推荐歌单独立读取](daily-recommended-playlists.md)已合成接入，`recommend_resource`与本包每日歌曲及普通 `personalized` 分开，原账号／空Weapi业务／read16；候选root.recommend／100／1MiB、无日期cache／自动详情或播放。同时补强Facade／Service同token变化账号／认证态时的所有私有音乐读取屏障，原日推／FM读取保持独立；本包108＋5是历史，最新受影响753＋thread14见新契约。
+
 ## 1. 封闭请求与权限边界
 
 固定参考版本仍为 `a8c781fd64faab17fedfd46e0615a2609307f163`，只读取 `module/recommend_songs.js`、`personal_fm.js` 及 `public/docs/home.md`；不运行上游服务，不增加依赖。

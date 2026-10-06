@@ -24,9 +24,10 @@
 | [inventory.json](inventory.json) | 全部 440 个模块的机器可读决定，含排除理由和源码观察 |
 | [upstream-lock.json](upstream-lock.json) | 固定版本、module tree、公共文件校验值与许可来源 |
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
+| [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
 | [discovery-and-fm.md](discovery-and-fm.md) | 已实现的日推读取、FM动态条目供给、账号隔离；基础读取包证据，不等于听歌上报 |
-| [collection-writes.md](collection-writes.md) | 红心／收藏到歌单及移除／专辑／艺人／播客五类10动作、8operation，原账号／8槽／Unknown、不重试，仅合成；整歌单收藏现恢复需求，v2仍受限 |
+| [collection-writes.md](collection-writes.md) | 红心／收藏到歌单及移除／专辑／艺人／播客五类10动作、8operation，原账号／8槽／Unknown、不重试，仅合成；整歌单收藏需求保留、维护者暂无v2资料明确暂缓 |
 | [playlist-subscription-v2-prerequisite.md](playlist-subscription-v2-prerequisite.md) | 整歌单收藏v2前置静态调查：body/header来源分离与Cookie携带、SDK／原生／许可门禁和待实现TC，无新增API／测试或实网 |
 | [playlist-management-writes.md](playlist-management-writes.md) | 创建／单独改名／描述3operation，固定NORMAL、创建ID候选与Unknown；共享原账号／8槽，仅合成、不重试／自动对账 |
 | [playlist-delete-and-order-writes.md](playlist-delete-and-order-writes.md) | 单目标删除／歌曲顺序／账号歌单顺序3operation，完整范围置换工厂／原来源token与Unknown，仅合成 |

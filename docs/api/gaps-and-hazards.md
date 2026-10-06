@@ -60,7 +60,7 @@ search/cloudsearch、首页 block、通用评论和用户评论历史可能涉�
 
 ## AUD-12：每日推荐与推荐歌单不可混淆
 
-recommend_songs、recommend_resource、history_recommend_songs 系列不是同一资源。日推登录要求、日期／时区、afresh 行为、历史权益及 dislike 后替换均需补实测，见[独立契约](special-contracts.md)。
+recommend_songs、recommend_resource、history_recommend_songs 系列不是同一资源。后续[每日推荐歌单](daily-recommended-playlists.md)已用独立原账号／Weapi空业务接入，root.recommend／100／1MiB／mandatory name／小写playcount为有界合成候选，不是personalized或每日歌曲替代、无推荐日期或cache；Facade／Service同token变账号-认证态私有读屏障已补强。日推登录服务支持、日期／时区、afresh 行为、历史权益及 dislike 后替换均需补实测，见[独立契约](special-contracts.md)。
 
 ## AUD-13：FM 是流式来源，垃圾桶是写操作
 

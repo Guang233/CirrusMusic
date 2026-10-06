@@ -14,6 +14,11 @@ inline bool validPlaylistCategory(const QString& value)
             return false;
     return true;
 }
+// Distinct authenticated daily supply; no date, pagination or forced refresh parameters.
+struct DailyRecommendedPlaylistsQuery {
+    QString accountId;
+    [[nodiscard]] bool isValid() const { return validMusicId(accountId); }
+};
 struct RecommendedPlaylistsQuery {
     int limit = 30;
     [[nodiscard]] bool isValid() const { return limit >= 1 && limit <= 100; }
@@ -59,6 +64,10 @@ struct DiscoveryPlaylist {
 struct RecommendedPlaylists {
     RecommendedPlaylistsQuery query;
     QList<DiscoveryPlaylist> playlists; // no offset/hasMore/implicit details
+};
+struct DailyRecommendedPlaylists {
+    DailyRecommendedPlaylistsQuery query;
+    QList<DiscoveryPlaylist> playlists; // original order/duplicates; no inferred provider day
 };
 struct PlaylistListPage {
     PlaylistListQuery query;

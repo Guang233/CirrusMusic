@@ -114,6 +114,11 @@ void BackendFacade::deliver(BackendEvent event)
         if (m_snapshot.token != event.session.token) {
             invalidateMusic(MusicError::StaleContext);
             invalidatePlayback();
+        } else if (m_snapshot.accountId != event.session.accountId ||
+                   m_snapshot.phase != event.session.phase) {
+            for (auto id : m_music.keys())
+                if (requiresAuthenticatedMusicQuery(m_music.value(id).query))
+                    cancelMusicWith(id, MusicError::StaleContext);
         }
         if (m_snapshot.token != event.session.token ||
             m_snapshot.accountId != event.session.accountId ||
@@ -203,6 +208,10 @@ quint64 BackendFacade::charts(domain::ChartListKind kind)
     return submitMusic(domain::ChartsQuery{kind});
 }
 
+quint64 BackendFacade::dailyRecommendedPlaylists()
+{
+    return submitMusic(domain::DailyRecommendedPlaylistsQuery{m_snapshot.accountId});
+}
 quint64 BackendFacade::recommendedPlaylists(int limit)
 {
     return submitMusic(domain::RecommendedPlaylistsQuery{limit});
@@ -387,7 +396,11 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
     const auto expected = m_music.take(delivery.id);
     if (delivery.generation != expected.generation || delivery.context != expected.context ||
         expected.generation != m_generation || expected.context != m_snapshot.token ||
-        m_state != BackendState::Ready)
+        m_state != BackendState::Ready ||
+        (requiresAuthenticatedMusicQuery(expected.query) &&
+         m_snapshot.phase != domain::SessionPhase::Authenticated) ||
+        (musicQueryAccount(expected.query) &&
+         *musicQueryAccount(expected.query) != m_snapshot.accountId))
         delivery.result = MusicFailure{MusicError::StaleContext};
     emit musicCompleted(expected.id, expected.context, std::move(delivery.result));
 }

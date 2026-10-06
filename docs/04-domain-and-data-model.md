@@ -211,3 +211,7 @@ ArtistIntroduction保留可选briefDescription与有序IntroductionSection(title
 ## 18. 已接入搜索辅助预览值
 
 [契约](api/search-assistance-reads.md)：SearchSuggestionsQuery{keywords}与HotKeywordsQuery／HotKeywordDetailsQuery为空值请求，3query/result扩展原MusicQuery／Result。四类SearchSuggestion<ID>仅独立Song／Artist／Album／Playlist ID及必需title，非完整歌曲／rights／音轨；optional数组区分未知／[]，typed SuggestionGroup保留支持order／重复，unsupportedGroups只flag不发布未知内容。HotKeyword只外部keyword，HotKeywordDetail保留optional raw providerScore／providerIconType／description及display icon（不授权fetch），不按列表位置生成排名／热度或动作URL。256/4096文字与20/16/100预算、纯文本／规范宽ID，原16槽／token与requestId-query乱序绑定，无自动搜索／详情／媒体／cache／持久历史；仅合成，不推定真实schema／完整性／权限。
+
+## 19. 已接入独立每日推荐歌单值
+
+[契约](api/daily-recommended-playlists.md)：DailyRecommendedPlaylistsQuery仅原verified accountId，DailyRecommendedPlaylists保留query及有序DiscoveryPlaylist摘要／重复宽PlaylistId，扩展原MusicQuery／Result；不是普通RecommendedPlaylists或DailyRecommendations，无虚构PlaylistId／日期／offset／total／hasMore或刷新参数。root.recommend100／1MiB、name必须string、copywriter optional／picUrl display-only／小写playcount原聚合显示数仅在基础设施映射，不把JSON、token或协议放进Core。query.accountId不进业务payload，read16／原token-generation复用；Service pending为私有读捕获optional authenticatedAccount，snapshot通知与finish及Facade同token变账号-认证态取消／deliver再次核对，不把late结果迁到新身份。不生成日期cache／权限／订阅状态、自动详情／图片／play／report／写或新owner。仅合成，真实schema／日期与完整性／频率／权益及UI另验收。
