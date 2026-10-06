@@ -2,6 +2,7 @@
 #include "catalog_mapper.h"
 #include "chart_mapper.h"
 #include "cloud_history_mapper.h"
+#include "comment_mapper.h"
 #include "discovery_mapper.h"
 #include "entity_search_mapper.h"
 #include "library_mapper.h"
@@ -151,6 +152,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (isCommentQuery(query))
+        return mapCommentResponse(query, object);
     if (isPodcastQuery(query))
         return mapPodcastResponse(query, object);
     if (std::holds_alternative<RecentEntitiesQuery>(query))

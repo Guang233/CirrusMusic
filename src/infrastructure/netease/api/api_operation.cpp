@@ -1,4 +1,5 @@
 #include "api_operation.h"
+#include "comment_operation.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
@@ -13,6 +14,8 @@ namespace cirrus::netease
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
 {
+    if (isCommentOperation(operation))
+        return commentOperationContract(operation, parameters);
     if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistAlbums) {
         const auto id = parameters.value(QStringLiteral("id")).toString();
         if (!domain::validMusicId(id))
@@ -24,6 +27,15 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::SongComments:
+    case ApiOperation::AlbumComments:
+    case ApiOperation::PlaylistComments:
+    case ApiOperation::ProgramComments:
+    case ApiOperation::HotComments:
+    case ApiOperation::SortedComments:
+    case ApiOperation::CommentFloor:
+    case ApiOperation::CommentInfo:
+        return std::nullopt; // handled by the closed comment adapter above
     case ApiOperation::AlbumDetails:
     case ApiOperation::ArtistAlbums:
         return std::nullopt; // resolved only from a validated canonical ID above
@@ -173,6 +185,8 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (isCommentOperation(operation))
+        return commentOperationPayload(operation, parameters);
     if (operation == ApiOperation::RecommendedPlaylists) {
         const auto limit = parameters.value(QStringLiteral("limit"));
         const domain::RecommendedPlaylistsQuery q{limit.toInt(-1)};
@@ -449,6 +463,14 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         }
         break;
     }
+    case ApiOperation::SongComments:
+    case ApiOperation::AlbumComments:
+    case ApiOperation::PlaylistComments:
+    case ApiOperation::ProgramComments:
+    case ApiOperation::HotComments:
+    case ApiOperation::SortedComments:
+    case ApiOperation::CommentFloor:
+    case ApiOperation::CommentInfo:
     case ApiOperation::PodcastDetails:
     case ApiOperation::PodcastPrograms:
     case ApiOperation::ProgramDetails:
@@ -503,6 +525,14 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return *response.businessCode >= 801 && *response.businessCode <= 803;
     case ApiOperation::AccountIdentity:
         return *response.businessCode == 200; // staged only in its isolated request snapshot
+    case ApiOperation::SongComments:
+    case ApiOperation::AlbumComments:
+    case ApiOperation::PlaylistComments:
+    case ApiOperation::ProgramComments:
+    case ApiOperation::HotComments:
+    case ApiOperation::SortedComments:
+    case ApiOperation::CommentFloor:
+    case ApiOperation::CommentInfo:
     case ApiOperation::Charts:
     case ApiOperation::ChartsWithPreviews:
     case ApiOperation::RecommendedPlaylists:

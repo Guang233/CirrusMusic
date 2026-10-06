@@ -169,3 +169,7 @@ CREATE TABLE queue_entries (
 ```
 
 `current_entry_id` 必须属于同一 queue，此跨行约束在应用事务及完整性检查中校验。重排采用同事务内删除／重建位置或经过验证的两阶段重排，不能在唯一索引下逐行互换 position 导致中途冲突。`metadata_json` 用于非查询型快照扩展，不把所有业务查询退化为全表 JSON 扫描。
+
+## 9. 已接入资源评论值
+
+[comment_types.h与契约](api/comment-reads.md)定义CommentTarget（Song／Playlist／Album／Program／Podcast独立variant）和CommentId；不存在Voice／艺人／任意thread输入。普通评论拒绝Podcast；热门／新版／楼层／统计采用已确认通用命名空间。五种query／结果保留原目标、分页／排序／parent与provider次序，统计缺项为missing而非0；time、liked、计数未知保持optional，公开author ID不是认证AccountId。内容及引用纯文本、不可信、非递归预览有界；不抓头像／作者详情、无持久化、自动翻页、通知或写入。响应仅合成候选，JSON／provider type／thread／网络留在基础设施；调用方DTO副本不自动擦除。

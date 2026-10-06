@@ -52,7 +52,15 @@ enum class ApiOperation {
     RecentPlaylists,
     RecentAlbums,
     RecentPodcasts,
-    RecentVoices
+    RecentVoices,
+    SongComments,
+    AlbumComments,
+    PlaylistComments,
+    ProgramComments,
+    HotComments,
+    SortedComments,
+    CommentFloor,
+    CommentInfo
 };
 
 struct ApiOperationContract {

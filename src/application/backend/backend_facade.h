@@ -123,6 +123,11 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 podcastDetails(domain::PodcastId podcast);
     [[nodiscard]] quint64 podcastPrograms(domain::PodcastProgramsQuery query);
     [[nodiscard]] quint64 programDetails(domain::ProgramId program);
+    [[nodiscard]] quint64 comments(domain::CommentsQuery query);
+    [[nodiscard]] quint64 hotComments(domain::HotCommentsQuery query);
+    [[nodiscard]] quint64 sortedComments(domain::SortedCommentsQuery query);
+    [[nodiscard]] quint64 commentFloor(domain::CommentFloorQuery query);
+    [[nodiscard]] quint64 commentInfo(domain::CommentInfoQuery query);
     [[nodiscard]] quint64 songDetails(QList<domain::SongId> songs);
     [[nodiscard]] quint64 lyrics(domain::SongId song);
     [[nodiscard]] quint64 albumDetails(domain::AlbumId album);

@@ -243,6 +243,7 @@ class BackendRuntimeTest : public QObject
     void playlistDiscoveryThroughThread();
     void entitySearchThroughThread();
     void podcastReadsThroughThread();
+    void commentsThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -1594,6 +1595,87 @@ void BackendRuntimeTest::podcastReadsThroughThread()
     const auto c = qvariant_cast<MusicResult>(done.last()[2]);
     QVERIFY(std::holds_alternative<MusicFailure>(c));
     QCOMPARE(std::get<MusicFailure>(c).error, MusicError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+}
+
+void BackendRuntimeTest::commentsThroughThread()
+{
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    const QList<Plan> plans{
+        Plan{
+            R"({"code":200,"comments":[{"commentId":10,"content":"synthetic","time":100}],"total":2,"more":true})"},
+        Plan{R"({"code":200,"hotComments":[]})"},
+        Plan{
+            R"({"code":200,"data":{"comments":[],"cursor":"normalHot#0","sortType":2,"hasMore":true}})"},
+        Plan{
+            R"({"code":200,"data":{"comments":[{"commentId":11,"time":42}],"ownerComment":{"commentId":10},"totalCount":2,"hasMore":true}})"},
+        Plan{
+            R"({"code":200,"data":[{"resourceId":3,"threadId":"A_PL_0_3","resourceType":0,"commentCount":0,"liked":false}]})"},
+        Plan{"", 200, -1}};
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        done(&f, &BackendFacade::musicCompleted), play(&f, &BackendFacade::playbackRequested),
+        report(&f, &BackendFacade::listeningReportRequested);
+    connect(&f, &BackendFacade::musicCompleted, this,
+            [&](quint64, domain::SessionToken, MusicResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    const auto t = f.snapshot().token;
+    QVERIFY(!f.comments({domain::PodcastId{"5"}}));
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.comments({domain::SongId{"1"}, {2, 0}}));
+    QTRY_COMPARE(done.size(), 1);
+    const auto ordinary = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::CommentsPage>(ordinary));
+    QCOMPARE(std::get<domain::CommentsPage>(ordinary).nextBefore, std::optional<qint64>(100));
+    QVERIFY(f.hotComments({domain::PodcastId{"5"}}));
+    QTRY_COMPARE(done.size(), 2);
+    QVERIFY(std::holds_alternative<domain::HotCommentsPage>(
+        qvariant_cast<MusicResult>(done.last()[2])));
+    QVERIFY(f.sortedComments({domain::AlbumId{"2"}, 2, 1, domain::CommentOrder::Hot, 0, false}));
+    QTRY_COMPARE(done.size(), 3);
+    const auto sorted = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::SortedCommentsPage>(sorted));
+    QVERIFY(!std::get<domain::SortedCommentsPage>(sorted).query.showInner);
+    QCOMPARE(std::get<domain::SortedCommentsPage>(sorted).providerCursor,
+             std::optional<QString>("normalHot#0"));
+    QVERIFY(f.commentFloor({domain::ProgramId{"4"}, {"10"}, 2, 0}));
+    QTRY_COMPARE(done.size(), 4);
+    const auto floor = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::CommentFloorPage>(floor));
+    QCOMPARE(std::get<domain::CommentFloorPage>(floor).nextTime, std::optional<qint64>(42));
+    QVERIFY(f.commentInfo({{domain::PlaylistId{"3"}, domain::PlaylistId{"6"}}}));
+    QTRY_COMPARE(done.size(), 5);
+    const auto info = qvariant_cast<MusicResult>(done.last()[2]);
+    QVERIFY(std::holds_alternative<domain::CommentStatistics>(info));
+    QCOMPARE(std::get<domain::CommentStatistics>(info).missing.size(), 1);
+    QCOMPARE(state->requests.load(), 5); // no automatic page/floor/statistic request
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    for (const auto& row : done)
+        QCOMPARE(qvariant_cast<domain::SessionToken>(row[1]), t);
+    const auto pending = f.commentFloor({domain::ProgramId{"4"}, {"10"}});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 6);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 6);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<domain::SessionToken>(done.last()[1]), t);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
     QVERIFY(play.isEmpty());

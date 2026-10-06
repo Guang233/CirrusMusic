@@ -235,6 +235,27 @@ quint64 BackendFacade::programDetails(domain::ProgramId program)
     return submitMusic(domain::ProgramDetailQuery{std::move(program)});
 }
 
+quint64 BackendFacade::comments(domain::CommentsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::hotComments(domain::HotCommentsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::sortedComments(domain::SortedCommentsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::commentFloor(domain::CommentFloorQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::commentInfo(domain::CommentInfoQuery query)
+{
+    return submitMusic(std::move(query));
+}
+
 quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});

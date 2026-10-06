@@ -37,6 +37,7 @@
 | [六项歌单发现读取](api/playlist-discovery-reads.md) | 推荐／普通／精品歌单与分类／热门／精品标签；不同分页／来源及原歌单／显式播放复用，仅合成验证 |
 | [音乐实体／播客／声音搜索](api/entity-search-reads.md) | 五类有界读、独立Podcast／Voice身份、公开结构证据、固定e_r单路径门禁；不含新播放或工作台 |
 | [消费端播客／节目与四类recent](api/podcast-and-recent-reads.md) | 七项有界读／原账号；ProgramId独立、公开列表-462停止，Voice对应／节目详情／真实recent待实证，不含声音播放 |
+| [资源评论只读](api/comment-reads.md) | 普通／热门／新版／楼层／统计五类入口、八operation及严格资源身份；仅合成验证，无写入／账号评论历史／通知 |
 | [播客／声音身份与音源补证](api/spoken-playback-contract.md) | 传统底层音轨路线、Voice对应／v1实证门禁、媒体共享和历史／报告隔离；仅研究决策，没有新播放实现 |
 | [FM连续播放](api/fm-continuous-playback.md) | ListeningSession的FM模式、暂停续播、失败预算及队列切换；仍无听歌上报 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |

@@ -39,7 +39,7 @@
 | TC-DOWNLOAD | FR-025/026；NFR-007 | Range 200/206/416、URL 过期换源、暂停、磁盘满、崩溃于 rename 前后、权限失效 |
 | TC-LOCAL | FR-027 | 目录授权、坏标签、巨型封面、符号链接环、同名不同文件、文件移动与目录离线 |
 | TC-CLOUD | FR-028/029 | 私有元数据隔离、列表分页、上传阶段失败、传完未入库、删除确认 |
-| TC-COMMENT | FR-030/031 | 不可信文本、分页、点赞重试、审核态、发帖超时不重复 |
+| TC-COMMENT | FR-030/031 | [读取包](api/comment-reads.md)：严格资源、cursor／showInner:false、楼层／missing、坏schema／纯文本、取消／换号／429；点赞／审核／发帖未知结果属后续写验证 |
 | TC-VIDEO | FR-032（撤销） | 视频明确排除，此测试族不进入验收集合 |
 | TC-LINUX | FR-033～036；NFR-010 | MPRIS 单位与事件、无托盘退出、portal 版本／拒绝、媒体键不双触发 |
 | TC-A11Y | FR-037；NFR-009/013 | 键盘完整主路径、Orca、名称／状态、焦点归还、主题和 200% 缩放 |
@@ -80,6 +80,10 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 ### TC-QUEUE-PROPERTY-001：随机操作性质测试
 
 固定随机种子生成至少 10,000 次增删、播放、重排、切换随机／循环和结束事件；每步验证 entry 唯一、current 存在、shuffle 为排列、无越界、无无限循环。失败输出最小可复现序列，不输出用户数据。
+
+### TC-COMMENT-READ：当前只读验证
+
+最新受影响Debug七套件：comments149、podcast_reads55、entity_search44、catalog22、music26、session_api_client24、backend_facade8，共328 pass。另选comments／podcast／entity／playback（两数据行）／destruction共6条后台线程数据用例、8 pass；均无fail/skip，不是全35套件／Release／真实账号矩阵。构建／复跑命令及32个有效JSON坏schema、68条Guest／账号native替身行见[评论契约](api/comment-reads.md)；日志位于ignored build/workspace-checks/comments-final-{build,focused,thread}.log。初轮31个fixture预期失败已复核修正，不删除production profile或同步化完成通知。
 
 ## 4. API fixture 规范
 

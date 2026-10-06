@@ -15,6 +15,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/entity_search_types.h
     domain/music/podcast_types.h
     domain/music/recent_entity_types.h
+    domain/music/comment_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_history.h
@@ -97,6 +98,8 @@ target_link_libraries(cirrus_netease_session PUBLIC cirrus_domain Qt6::Network)
 add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/api_operation.cpp
     infrastructure/netease/api/api_operation.h
+    infrastructure/netease/api/comment_operation.cpp
+    infrastructure/netease/api/comment_operation.h
     infrastructure/netease/api/session_api_client.cpp
     infrastructure/netease/api/session_api_client.h
     infrastructure/netease/api/xeapi_key_registrar.cpp
@@ -149,6 +152,8 @@ add_library(cirrus_netease_auth STATIC
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
 add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/comment_mapper.cpp
+    infrastructure/netease/music/comment_mapper.h
     infrastructure/netease/music/listening_report_gateway.cpp
     infrastructure/netease/music/listening_report_gateway.h
     infrastructure/netease/music/stream_resolver.cpp
