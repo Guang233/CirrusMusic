@@ -17,7 +17,8 @@
 | --- | --- |
 | `TrackKey` | `{source, idText}`；source 首版为 netease、local、neteaseCloud；不表示已实现多平台聚合 |
 | `AlbumId / ArtistId / PlaylistId` | 独立强类型字符串，禁止拿歌单 ID 当歌曲 ID |
-| `PodcastId / VoiceId` | 独立强类型字符串；当前[实体搜索](api/entity-search-reads.md)已经实现，不转为PlaylistId／SongId或从内嵌音轨制造身份；后续播放另包 |
+| `PodcastId / VoiceId` | 独立强类型字符串；[实体搜索](api/entity-search-reads.md)及[消费／recent读取](api/podcast-and-recent-reads.md)已接入，不转为PlaylistId／SongId或从内嵌音轨制造身份；后续播放另包 |
+| `ProgramId` | 传统消费端节目列表／详情的独立类型，不从VoiceId直接转换；两者实际对应尚未验证，不能用mainSong.id制造节目身份 |
 | `AccountId` | 官方账号标识，仅用于账号逻辑，不用作可预测下载路径 |
 | `ProfileId` | 本地随机 UUID；guest 独立 profile；账号到 profile 的映射不含凭据 |
 | `QueueEntryId` | 随机 UUID；同一 TrackKey 可对应多个 entry |

@@ -1,7 +1,7 @@
 #include "entity_search_mapper.h"
 #include "music_mapping.h"
+#include "spoken_mapping.h"
 #include <QJsonArray>
-#include <cmath>
 
 namespace cirrus::netease
 {
@@ -41,20 +41,6 @@ std::optional<QJsonArray> rows(const QJsonValue& v, int limit, std::optional<qin
         return std::nullopt;
     return v.toArray();
 }
-std::optional<Podcast> podcast(const QJsonObject& o)
-{
-    Podcast p;
-    p.id = {providerId(o.value(QStringLiteral("id")))};
-    const auto title = o.value(QStringLiteral("name")), desc = o.value(QStringLiteral("desc"));
-    if (p.id.value.isEmpty() || !textField(title) || !textField(desc) ||
-        !number(o.value(QStringLiteral("programCount")), p.voiceCount))
-        return std::nullopt;
-    p.title = title.toString();
-    if (!absent(desc))
-        p.description = desc.toString();
-    p.cover = imageFrom(o.value(QStringLiteral("picUrl")));
-    return p;
-}
 std::optional<QJsonObject> resource(const QJsonValue& v, QStringView type)
 {
     if (!v.isObject())
@@ -71,27 +57,6 @@ std::optional<QJsonObject> resource(const QJsonValue& v, QStringView type)
         (!absent(kind) && kind != QJsonValue(type.toString())))
         return std::nullopt;
     return p;
-}
-std::optional<Voice> voice(const QJsonObject& o)
-{
-    Voice v;
-    v.id = {providerId(o.value(QStringLiteral("id")))};
-    const auto title = o.value(QStringLiteral("name"));
-    if (v.id.value.isEmpty() || !textField(title) ||
-        !number(o.value(QStringLiteral("duration")), v.providerDuration))
-        return std::nullopt;
-    v.title = title.toString();
-    v.cover = imageFrom(o.value(QStringLiteral("coverUrl")));
-    const auto radio = o.value(QStringLiteral("radio"));
-    if (!absent(radio)) {
-        if (!radio.isObject())
-            return std::nullopt;
-        v.podcast = podcast(radio.toObject());
-        if (!v.podcast)
-            return std::nullopt;
-    }
-    // mainSong/mainTrackId, action URLs, creator profiles and rights are NOT Voice identity.
-    return v;
 }
 QJsonObject parameters(const SearchPage& p)
 {
@@ -165,25 +130,10 @@ MusicResult mapEntitySearchResponse(const MusicQuery& query, const QJsonObject& 
                 a.portrait = imageFrom(row.value(QStringLiteral("picUrl")));
                 artists.artists.append(a);
             } else {
-                DiscoveryPlaylist p;
-                p.id = {providerId(row.value(QStringLiteral("id")))};
-                const auto name = row.value(QStringLiteral("name")),
-                           desc = row.value(QStringLiteral("description"));
-                if (p.id.value.isEmpty() || !textField(name) || !textField(desc) ||
-                    !number(row.value(QStringLiteral("trackCount")), p.trackCount))
+                const auto p = discoveryPlaylistFrom(row);
+                if (!p)
                     return invalid;
-                p.title = name.toString();
-                if (!absent(desc))
-                    p.summary = desc.toString();
-                p.cover = imageFrom(row.value(QStringLiteral("coverImgUrl")));
-                const auto plays = row.value(QStringLiteral("playCount"));
-                if (!absent(plays)) {
-                    if (!plays.isDouble() || !std::isfinite(plays.toDouble()) ||
-                        plays.toDouble() < 0 || plays.toDouble() > double(MaximumPlaylistCursor))
-                        return invalid;
-                    p.playCount = plays.toDouble();
-                }
-                playlists.playlists.append(p);
+                playlists.playlists.append(*p);
             }
         }
         if (q->kind == MusicSearchKind::Album)
@@ -219,12 +169,12 @@ MusicResult mapEntitySearchResponse(const MusicQuery& query, const QJsonObject& 
         if (!base)
             return invalid;
         if (pod) {
-            const auto p = podcast(*base);
+            const auto p = podcastFrom(*base);
             if (!p)
                 return invalid;
             podcasts.podcasts.append(*p);
         } else {
-            const auto p = voice(*base);
+            const auto p = voiceFrom(*base);
             if (!p)
                 return invalid;
             voices.voices.append(*p);

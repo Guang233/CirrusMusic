@@ -99,4 +99,6 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 后续
 
+后续[歌单／专辑／播客／声音4类recent](podcast-and-recent-reads.md)已另包合成接入，复用原账号／token检查，未访问真实账号；不改变本页歌曲／排行原始时间／计数未知语义。
+
 历史读取本包已闭环；后续[榜单列表／内容摘要](chart-reads.md)已另包离线接入，并复用歌单页与显式选歌播放链，仍无真实业务请求。自动报告的来源、有效收听门槛、时机／终止字段、load去重与未知结果策略仍留待具体播放接线；本地详细历史／分析持久化按需求再定，UI继续最后。

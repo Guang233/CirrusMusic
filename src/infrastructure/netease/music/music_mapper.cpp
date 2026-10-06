@@ -8,6 +8,8 @@
 #include "lyric_parser.h"
 #include "music_mapping.h"
 #include "playlist_discovery_mapper.h"
+#include "podcast_mapper.h"
+#include "recent_entity_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -149,6 +151,10 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (isPodcastQuery(query))
+        return mapPodcastResponse(query, object);
+    if (std::holds_alternative<RecentEntitiesQuery>(query))
+        return mapRecentEntityResponse(query, object);
     if (isEntitySearchQuery(query))
         return mapEntitySearchResponse(query, object);
     if (isPlaylistDiscoveryQuery(query))

@@ -26,7 +26,7 @@
 | TC-AUTH | FR-002～004；NFR-008 | 游客、二维码过期／取消晚到、密钥环失败、会话恢复、登出后响应、A→B 切号 |
 | TC-RIGHTS | FR-005/018 | 非会员、不同权益、试听、不可播、目标与实际质量不一致、权限变动 |
 | TC-SEARCH | FR-006/007 | IME、防抖、A/B 请求逆序、分类切换、未知总数、空态、超大 ID |
-| TC-PODCAST-VOICE | FR-044 | 独立ID、voice≠mainSong、资源类型和父播客核对、当前context取消／切号；搜索44项合成Qt Test及有限公开结构验证见[实体搜索](api/entity-search-reads.md)，详情／内容／最近／播放及UI验收未完成 |
+| TC-PODCAST-VOICE | FR-044 | 独立ID、voice≠mainSong、资源类型和父播客核对、当前context取消／切号；搜索44项合成Qt Test及有限公开结构验证见[实体搜索](api/entity-search-reads.md)，后续[消费／recent包](api/podcast-and-recent-reads.md)55项合成Qt Test及线程流通过，公开列表-462拒绝；ProgramId／VoiceId对应、节目详情／真实recent、播放及UI验收未完成 |
 | TC-CATALOG | FR-008/009 | 缺图、未知时长、多碟专辑、多艺人、下架、详情分页 |
 | TC-LIBRARY | FR-010 | 超大歌单、完整 ID 与首屏区分、失败续页、只读权限 |
 | TC-SYNC | FR-011～014；NFR-007/014 | 双击喜欢、写超时已成功、批次部分成功、排序冲突、无 revision 对账 |

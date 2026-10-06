@@ -56,6 +56,27 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::ChartsWithPreviews:
         return ApiOperationContract{QStringLiteral("/api/toplist/detail"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::PodcastDetails:
+        return ApiOperationContract{QStringLiteral("/api/djradio/v2/get"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::PodcastPrograms:
+        return ApiOperationContract{QStringLiteral("/api/dj/program/byradio"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::ProgramDetails:
+        return ApiOperationContract{QStringLiteral("/api/dj/program/detail"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::RecentPlaylists:
+        return ApiOperationContract{QStringLiteral("/api/play-record/playlist/list"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::RecentAlbums:
+        return ApiOperationContract{QStringLiteral("/api/play-record/album/list"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::RecentPodcasts:
+        return ApiOperationContract{QStringLiteral("/api/play-record/djradio/list"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::RecentVoices:
+        return ApiOperationContract{QStringLiteral("/api/play-record/voice/list"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentSongs:
         return ApiOperationContract{QStringLiteral("/api/play-record/song/list"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
@@ -132,7 +153,9 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
            operation == ApiOperation::SavedArtists || operation == ApiOperation::ListeningStart ||
            operation == ApiOperation::ListeningPlay || operation == ApiOperation::RecentSongs ||
-           operation == ApiOperation::ListeningRanking;
+           operation == ApiOperation::ListeningRanking ||
+           operation == ApiOperation::RecentPlaylists || operation == ApiOperation::RecentAlbums ||
+           operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices;
 }
 
 bool validQrKey(QStringView key)
@@ -192,7 +215,29 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
                            {QStringLiteral("lasttime"), q.before},
                            {QStringLiteral("total"), true}};
     }
-    if (operation == ApiOperation::RecentSongs) {
+    if (operation == ApiOperation::PodcastDetails || operation == ApiOperation::ProgramDetails) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        if (parameters.size() != 1 || !domain::validMusicId(id))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("id"), id}};
+    }
+    if (operation == ApiOperation::PodcastPrograms) {
+        const auto id = parameters.value(QStringLiteral("radioId")).toString();
+        const auto limit = parameters.value(QStringLiteral("limit")),
+                   offset = parameters.value(QStringLiteral("offset"));
+        const domain::CatalogPage page{limit.toInt(-1), offset.toInt(-1)};
+        const auto asc = parameters.value(QStringLiteral("asc"));
+        if (parameters.size() != 4 || !domain::validMusicId(id) || !page.isValid() ||
+            limit != QJsonValue(page.limit) || offset != QJsonValue(page.offset) || !asc.isBool())
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("radioId"), id},
+                           {QStringLiteral("limit"), page.limit},
+                           {QStringLiteral("offset"), page.offset},
+                           {QStringLiteral("asc"), asc}};
+    }
+    if (operation == ApiOperation::RecentSongs || operation == ApiOperation::RecentPlaylists ||
+        operation == ApiOperation::RecentAlbums || operation == ApiOperation::RecentPodcasts ||
+        operation == ApiOperation::RecentVoices) {
         const auto limit = parameters.value(QStringLiteral("limit"));
         const auto n = limit.toInt(-1);
         if (parameters.size() != 1 || n < 1 || n > 100 || limit != QJsonValue(n))
@@ -404,6 +449,13 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         }
         break;
     }
+    case ApiOperation::PodcastDetails:
+    case ApiOperation::PodcastPrograms:
+    case ApiOperation::ProgramDetails:
+    case ApiOperation::RecentPlaylists:
+    case ApiOperation::RecentAlbums:
+    case ApiOperation::RecentPodcasts:
+    case ApiOperation::RecentVoices:
     case ApiOperation::AccountIdentity:
     case ApiOperation::AnonymousRegister:
     case ApiOperation::SearchAlbums:
@@ -459,6 +511,13 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::PlaylistCatalogue:
     case ApiOperation::HotPlaylistTags:
     case ApiOperation::PremiumPlaylistTags:
+    case ApiOperation::PodcastDetails:
+    case ApiOperation::PodcastPrograms:
+    case ApiOperation::ProgramDetails:
+    case ApiOperation::RecentPlaylists:
+    case ApiOperation::RecentAlbums:
+    case ApiOperation::RecentPodcasts:
+    case ApiOperation::RecentVoices:
     case ApiOperation::AnonymousRegister:
     case ApiOperation::SearchAlbums:
     case ApiOperation::SearchArtists:

@@ -222,6 +222,19 @@ quint64 BackendFacade::searchVoices(domain::SearchPage query)
     return submitMusic(domain::VoiceSearchQuery{std::move(query)});
 }
 
+quint64 BackendFacade::podcastDetails(domain::PodcastId podcast)
+{
+    return submitMusic(domain::PodcastDetailQuery{std::move(podcast)});
+}
+quint64 BackendFacade::podcastPrograms(domain::PodcastProgramsQuery query)
+{
+    return submitMusic(std::move(query));
+}
+quint64 BackendFacade::programDetails(domain::ProgramId program)
+{
+    return submitMusic(domain::ProgramDetailQuery{std::move(program)});
+}
+
 quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});
@@ -247,6 +260,26 @@ quint64 BackendFacade::savedArtists(domain::CatalogPage page)
 quint64 BackendFacade::recentSongs(int limit)
 {
     return submitMusic(domain::RecentSongsQuery{m_snapshot.accountId, limit});
+}
+quint64 BackendFacade::recentPlaylists(int limit)
+{
+    return submitMusic(domain::RecentEntitiesQuery{m_snapshot.accountId,
+                                                   domain::RecentEntityKind::Playlist, limit});
+}
+quint64 BackendFacade::recentAlbums(int limit)
+{
+    return submitMusic(
+        domain::RecentEntitiesQuery{m_snapshot.accountId, domain::RecentEntityKind::Album, limit});
+}
+quint64 BackendFacade::recentPodcasts(int limit)
+{
+    return submitMusic(domain::RecentEntitiesQuery{m_snapshot.accountId,
+                                                   domain::RecentEntityKind::Podcast, limit});
+}
+quint64 BackendFacade::recentVoices(int limit)
+{
+    return submitMusic(
+        domain::RecentEntitiesQuery{m_snapshot.accountId, domain::RecentEntityKind::Voice, limit});
 }
 quint64 BackendFacade::listeningRanking(domain::RankingPeriod period)
 {

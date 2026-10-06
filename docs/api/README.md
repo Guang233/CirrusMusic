@@ -33,6 +33,7 @@
 | [chart-reads.md](chart-reads.md) | 榜单列表／内容摘要；展示预览不是可播放歌曲，复用歌单详情／分页与显式选歌播放，响应仅合成验证 |
 | [playlist-discovery-reads.md](playlist-discovery-reads.md) | 推荐、普通／精品歌单及分类／热门／精品标签6项；有界只读、不同分页／来源，原歌单／显式播放复用，仅合成验证 |
 | [entity-search-reads.md](entity-search-reads.md) | 已实现专辑／艺人／歌单、播客与全站声音搜索5项；独立ID、限定e_r门禁、无Cookie公开结构证据，消费端新增范围，不含声音播放／工作台 |
+| [podcast-and-recent-reads.md](podcast-and-recent-reads.md) | 消费端详情／节目3项与原账号recent4项，独立ProgramId／VoiceId；公开列表-462已停，其余候选schema仅合成，声音播放另包 |
 | [fm-continuous-playback.md](fm-continuous-playback.md) | ListeningSession的FM连续播放、模式切换、候选保留与有界失败 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |
 | [migration-plan.md](migration-plan.md) | 后端优先、UI 最后的实施顺序与门禁 |

@@ -13,6 +13,8 @@ target_sources(cirrus_domain INTERFACE
     domain/music/chart_types.h
     domain/music/playlist_discovery_types.h
     domain/music/entity_search_types.h
+    domain/music/podcast_types.h
+    domain/music/recent_entity_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_history.h
@@ -153,6 +155,12 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/stream_resolver.h
     infrastructure/netease/music/lyric_parser.cpp
     infrastructure/netease/music/lyric_parser.h
+    infrastructure/netease/music/podcast_mapper.cpp
+    infrastructure/netease/music/podcast_mapper.h
+    infrastructure/netease/music/recent_entity_mapper.cpp
+    infrastructure/netease/music/recent_entity_mapper.h
+    infrastructure/netease/music/spoken_mapping.cpp
+    infrastructure/netease/music/spoken_mapping.h
     infrastructure/netease/music/entity_search_mapper.cpp
     infrastructure/netease/music/entity_search_mapper.h
     infrastructure/netease/music/playlist_discovery_mapper.cpp

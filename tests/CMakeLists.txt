@@ -150,6 +150,11 @@ target_link_libraries(tst_listening_report PRIVATE cirrus_netease_music Qt6::Tes
 add_test(NAME listening_report COMMAND tst_listening_report)
 set_tests_properties(listening_report PROPERTIES TIMEOUT 20)
 
+qt_add_executable(tst_podcast_reads unit/podcast_reads_test.cpp)
+target_link_libraries(tst_podcast_reads PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME podcast_reads COMMAND tst_podcast_reads)
+set_tests_properties(podcast_reads PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_entity_search unit/entity_search_test.cpp)
 target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME entity_search COMMAND tst_entity_search)

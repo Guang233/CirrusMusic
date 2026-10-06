@@ -33,7 +33,7 @@ ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
 
 在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共33套件；[实体／播客／声音搜索](docs/api/entity-search-reads.md)增量的7个受影响 Debug 套件最新结果共196项通过，另6条后台线程数据用例共8项通过（含init/cleanup）；本轮20次无Cookie公开metadata读取仅记录结构摘要，最后5次通过实际mapper，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。当前共34套件；[播客消费／四类recent读取](docs/api/podcast-and-recent-reads.md)增量的7个受影响 Debug 套件最新结果共207项通过，另6条后台线程数据用例共8项通过（含init/cleanup）；本轮3次无Cookie公开metadata探测在节目列表code-462即停，节目详情／真实recent未实证；此前[实体搜索](docs/api/entity-search-reads.md)有限公开证据单列，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
 
 ## 边界
 

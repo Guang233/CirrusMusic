@@ -45,7 +45,14 @@ enum class ApiOperation {
     SearchArtists,
     SearchPlaylists,
     SearchPodcasts,
-    SearchVoices
+    SearchVoices,
+    PodcastDetails,
+    PodcastPrograms,
+    ProgramDetails,
+    RecentPlaylists,
+    RecentAlbums,
+    RecentPodcasts,
+    RecentVoices
 };
 
 struct ApiOperationContract {

@@ -86,4 +86,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 现登记33套件，不声明全量Debug／Release或真实认证／keyring矩阵。15个改动C++路径最终active LSP清洁，format／diff无问题；实际14个application编译条目（13手写TU＋AUTOMOC）的Ninja依赖没有infrastructure／Network／Multimedia／Sql／Quick／Qml／Gui／JSON／OpenSSL泄漏，模板UI diff=0，456个本地Markdown链接无失效目标（跳过代码标记）。固定清单440项hash验证通过，仍164／40／236历史审计决定；未移除必要include或写压制注释。分步头文件更新的SearchPage／SearchPodcasts／encryptedResponse诊断经真实构建与刷新复核；真正缺失的test profile include已添加，.moc由AUTOMOC生成；scoped enum／inline方法被no-bit-fields误报已记录false-positive。
 
-忽略的 `entity-search-*.log`为configure／build／定向／线程记录，`search-public-*-schema.log`为结构摘要。应用入口不接后端，public probe不是产品UI。下一包再核对公开消费端详情／内容列表与歌单／专辑／播客／声音最近播放；播客声音播放另包。工作台、歌单内搜索仍待契约补证，不用本地过滤冒充服务端搜索，不自动下载整歌单或开启任何报告。
+忽略的 `entity-search-*.log`为configure／build／定向／线程记录，`search-public-*-schema.log`为结构摘要。应用入口不接后端，public probe不是产品UI。后续[消费端详情／节目及4类recent](podcast-and-recent-reads.md)已另包合成接入：详情观察root.data，列表公开probe在-462停下；ProgramId独立，VoiceId对应／节目详情／真实recent尚未实证；播客声音播放另包。工作台、歌单内搜索仍待契约补证，不用本地过滤冒充服务端搜索，不自动下载整歌单或开启任何报告。

@@ -3,6 +3,7 @@
 #include "application/account/qr_login_service.h"
 #include "application/ports/music_gateway.h"
 #include "domain/music/entity_search_types.h"
+#include "domain/music/podcast_types.h"
 #include "domain/playback/listening_report.h"
 #include "domain/playback/playback_types.h"
 #include <QHash>
@@ -119,6 +120,9 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 searchPlaylists(domain::SearchPage query);
     [[nodiscard]] quint64 searchPodcasts(domain::SearchPage query);
     [[nodiscard]] quint64 searchVoices(domain::SearchPage query);
+    [[nodiscard]] quint64 podcastDetails(domain::PodcastId podcast);
+    [[nodiscard]] quint64 podcastPrograms(domain::PodcastProgramsQuery query);
+    [[nodiscard]] quint64 programDetails(domain::ProgramId program);
     [[nodiscard]] quint64 songDetails(QList<domain::SongId> songs);
     [[nodiscard]] quint64 lyrics(domain::SongId song);
     [[nodiscard]] quint64 albumDetails(domain::AlbumId album);
@@ -134,6 +138,10 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 savedAlbums(domain::CatalogPage page = {25, 0});
     [[nodiscard]] quint64 savedArtists(domain::CatalogPage page = {25, 0});
     [[nodiscard]] quint64 recentSongs(int limit = 100);
+    [[nodiscard]] quint64 recentPlaylists(int limit = 100);
+    [[nodiscard]] quint64 recentAlbums(int limit = 100);
+    [[nodiscard]] quint64 recentPodcasts(int limit = 100);
+    [[nodiscard]] quint64 recentVoices(int limit = 100);
     [[nodiscard]] quint64
     listeningRanking(domain::RankingPeriod period = domain::RankingPeriod::AllTime);
     [[nodiscard]] quint64 charts(domain::ChartListKind kind = domain::ChartListKind::Overview);
