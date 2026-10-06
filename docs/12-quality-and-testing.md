@@ -87,7 +87,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-ACCOUNT-LIBRARY-READ：当前补充读取验证
 
-最新受影响Debug七套件：account_library49、library21、podcast_reads55、comments149、music26、session_api_client24、backend_facade8，共332 pass。另accountLibrary／library／podcast／playback（queue/FM）／destruction六条线程数据行8 pass，无fail/skip；不是全36套件／Release／真实账号矩阵。[完整契约与命令](api/account-library-reads.md)含31个有效JSON坏schema行、独立CloudSongId／catalog引用、quota精度／未知／missing、MUSIC_U／异账号门禁、取消／晚到／429、16槽及后台close排空；无业务／账号／文件／媒体访问。最新ignored日志account-library-final-{build,focused,thread}.log。
+该账号读取包当时受影响Debug七套件：account_library49、library21、podcast_reads55、comments149、music26、session_api_client24、backend_facade8，共332 pass。另accountLibrary／library／podcast／playback（queue/FM）／destruction六条线程数据行8 pass，无fail/skip；不是全36套件／Release／真实账号矩阵。[完整契约与命令](api/account-library-reads.md)含31个有效JSON坏schema行、独立CloudSongId／catalog引用、quota精度／未知／missing、MUSIC_U／异账号门禁、取消／晚到／429、16槽及后台close排空；无业务／账号／文件／媒体访问。最新ignored日志account-library-final-{build,focused,thread}.log。
+
+### TC-COLLECTION-WRITE：当前收藏订阅写验证
+
+最新受影响Debug七套件collections189、listening_report18、library21、account_library49、music26、session_api_client24、backend_facade8，共335 pass；另collections／accountLibrary／library／listeningReport／playback（queue/FM）／destruction七条线程数据行9 pass，无fail/skip，不是全37／Release／真实账号／SDK验收。[契约与命令](api/collection-writes.md)含10动作固定路径／payload、140行响应矩阵、20次native显式写、原Cookie／实际Eapi解密、8槽／UUID、Guest／异账号／旧token、client销毁／同token认证失效、发送前后cancel与Unknown、512／429不重试、close排空。只有合成，整歌单收藏v2门禁延期。初轮11项fixture差异经既有decoder/classifier复核，只修预期／样本而非生产协议；日志collections-final-{build,focused,thread}.log单列，不累加。
 
 ## 4. API fixture 规范
 

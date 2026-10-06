@@ -14,6 +14,8 @@ Cirrus 的接口审计参考：
 
 账号补充读取还参考固定 `module/dj_sublist.js`、`user_cloud.js`、`user_cloud_detail.js` 的完整Weapi路径、limit／offset／total:true／songIds数组及对应home.md章节、TS通用签名；改写位于 `src/infrastructure/netease/api/api_operation.cpp`、`music/account_library_mapper.cpp` 和原查询链。没有响应schema样本证据，候选djRadios／data及quota规则仅合成；独立CloudSongId与可选catalog引用，不移植隐式空白清理、任意crypto/domain覆盖或旧song/url播放建议。无真实账号／业务服务／私人文件／媒体访问、订阅或云盘写／上传／删除／匹配，未引入上游Node服务。范围与证据见[账号读取契约](../../docs/api/account-library-reads.md)，保留原许可及440模块历史审计。
 
+五类收藏订阅写还参考固定 `module/like.js`、`playlist_tracks.js`、`album_sub.js`、`artist_sub.js`、`dj_sub.js` 完整路径／字段与home.md／TS签名、options／request／config的显式Weapi及默认Eapi；C++改写位于 `src/infrastructure/netease/api/collection_operation.cpp`、`music/collection_gateway.cpp` 及独立Core port／facade／runtime链。未复制playlist_tracks的512重复IDs重试或HTTP200错误包装；保留纯文本wide IDs及artistIds固定数字JSON文本，不引入JS数字转换。`playlist_subscribe.js`／`register_checktoken_v2.js`与`like_v1.js`／`song_like.js`仅为范围／门禁调查，未引入SDK、v3／新心接口fallback、config token／外部服务。整歌单收藏／取消v2 SDK经用户确认延期。只有合成响应／Cookie fixtures，未执行真实账号写／SDK／业务访问或复制上游Node服务；[完整契约](../../docs/api/collection-writes.md)记录Unknown／不自动重试，保留原MIT通知，不回写440模块历史审计。
+
 后续[播客／声音身份与音源补证](../../docs/api/spoken-playback-contract.md)仅为静态研究：补核 `module/song_url.js`、`voice_detail.js`、`voicelist_detail.js`、`voicelist_trans.js`、`voice_lyric.js` 及home.md的mainTrackId音源说明，保留固定原始归属；没有增加C++改写、执行管理／解锁操作或分发外部播放器代码。外部SPlayer／ncm-api-rs及另行观察的当前api-enhanced快照只作为带版本引用的代码证据，不更新本项目固定锁，也不推定外部项目或服务都受此MIT许可覆盖。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。

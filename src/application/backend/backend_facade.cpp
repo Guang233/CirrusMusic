@@ -35,6 +35,7 @@ void BackendFacade::close()
     m_snapshot = {};
     invalidateMusic(MusicError::Canceled);
     invalidateListeningReports(domain::ReportError::Canceled);
+    invalidateCollections(domain::CollectionError::Canceled);
     invalidatePlayback();
     const auto pending = std::exchange(m_pending, {});
     setState(BackendState::Stopping);
@@ -59,6 +60,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
         m_snapshot = {}; // immediate intent barrier, before backend processes the command
         invalidateMusic(MusicError::StaleContext);
         invalidateListeningReports(domain::ReportError::StaleContext);
+        invalidateCollections(domain::CollectionError::StaleContext);
         invalidatePlayback();
     }
     emit commandRequested({id, m_generation, action, options});
@@ -113,8 +115,10 @@ void BackendFacade::deliver(BackendEvent event)
         }
         if (m_snapshot.token != event.session.token ||
             m_snapshot.accountId != event.session.accountId ||
-            event.session.phase != domain::SessionPhase::Authenticated)
+            event.session.phase != domain::SessionPhase::Authenticated) {
             invalidateListeningReports(domain::ReportError::StaleContext);
+            invalidateCollections(domain::CollectionError::StaleContext);
+        }
         m_snapshot = event.session;
         emit sessionChanged(m_snapshot);
         return;
@@ -426,6 +430,62 @@ void BackendFacade::deliverListeningReport(ListeningReportDelivery delivery)
     delivery.result.eventId = expected.report.eventId;
     delivery.result.action = expected.report.action;
     emit listeningReportCompleted(expected.id, expected.context, delivery.result);
+}
+
+quint64 BackendFacade::mutateCollection(domain::CollectionMutation mutation)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() ||
+        m_snapshot.phase != domain::SessionPhase::Authenticated ||
+        !domain::validMusicId(m_snapshot.accountId) || !mutation.isValid() ||
+        m_collections.size() >= 8)
+        return 0;
+    for (const auto& pending : std::as_const(m_collections))
+        if (pending.mutation.eventId == mutation.eventId)
+            return 0;
+    const auto id = ++m_nextId;
+    const CollectionCommand command{id, m_generation, m_snapshot.token, m_snapshot.accountId,
+                                    std::move(mutation)};
+    m_collections.insert(id, command);
+    emit collectionRequested(command);
+    return id;
+}
+void BackendFacade::cancelCollectionWith(quint64 id, domain::CollectionError error)
+{
+    if (!m_collections.contains(id))
+        return;
+    const auto command = m_collections.take(id);
+    emit collectionCancelRequested(id);
+    const domain::CollectionResult result{command.mutation.eventId,
+                                          domain::CollectionOutcome::Unknown, error};
+    QTimer::singleShot(0, this, [this, id, context = command.context, result] {
+        emit collectionCompleted(id, context, result);
+    });
+}
+void BackendFacade::cancelCollection(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    cancelCollectionWith(id, domain::CollectionError::Canceled);
+}
+void BackendFacade::invalidateCollections(domain::CollectionError error)
+{
+    for (const auto id : m_collections.keys())
+        cancelCollectionWith(id, error);
+}
+void BackendFacade::deliverCollection(CollectionDelivery delivery)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_collections.contains(delivery.id))
+        return;
+    const auto expected = m_collections.take(delivery.id);
+    if (delivery.generation != expected.generation || delivery.context != expected.context ||
+        expected.generation != m_generation || expected.context != m_snapshot.token ||
+        expected.accountId != m_snapshot.accountId || m_state != BackendState::Ready ||
+        m_snapshot.phase != domain::SessionPhase::Authenticated)
+        delivery.result = {expected.mutation.eventId, domain::CollectionOutcome::Unknown,
+                           domain::CollectionError::StaleContext};
+    delivery.result.eventId = expected.mutation.eventId;
+    emit collectionCompleted(expected.id, expected.context, delivery.result);
 }
 
 void BackendFacade::invalidatePlayback()

@@ -1,0 +1,97 @@
+#pragma once
+#include "catalog_types.h"
+#include "entity_search_types.h"
+#include "music_types.h"
+#include <QSet>
+#include <QUuid>
+#include <variant>
+
+namespace cirrus::domain
+{
+// Product wording: Collect adds songs to a selected playlist; heart is independent.
+enum class CollectionAction { Collect, Remove };
+struct SongHeart {
+    SongId song;
+    bool liked = true;
+    [[nodiscard]] bool isValid() const { return validMusicId(song.value); }
+};
+struct PlaylistCollection {
+    PlaylistId playlist;
+    QList<SongId> songs;
+    CollectionAction action = CollectionAction::Collect;
+    [[nodiscard]] bool isValid() const
+    {
+        if (!validMusicId(playlist.value) || songs.isEmpty() || songs.size() > 100 ||
+            (action != CollectionAction::Collect && action != CollectionAction::Remove))
+            return false;
+        QSet<QString> seen;
+        for (const auto& id : songs) {
+            if (!validMusicId(id.value) || seen.contains(id.value))
+                return false;
+            seen.insert(id.value);
+        }
+        return true;
+    }
+};
+struct AlbumCollection {
+    AlbumId album;
+    CollectionAction action = CollectionAction::Collect;
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(album.value) &&
+               (action == CollectionAction::Collect || action == CollectionAction::Remove);
+    }
+};
+struct ArtistCollection {
+    ArtistId artist;
+    CollectionAction action = CollectionAction::Collect;
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(artist.value) &&
+               (action == CollectionAction::Collect || action == CollectionAction::Remove);
+    }
+};
+struct PodcastSubscription {
+    PodcastId podcast;
+    CollectionAction action = CollectionAction::Collect;
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(podcast.value) &&
+               (action == CollectionAction::Collect || action == CollectionAction::Remove);
+    }
+};
+// No whole-playlist subscription (checkToken-v2 gate), CloudSong/Program/Voice casts or JSON.
+using CollectionChange = std::variant<SongHeart, PlaylistCollection, AlbumCollection,
+                                      ArtistCollection, PodcastSubscription>;
+struct CollectionMutation {
+    QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
+    CollectionChange change;
+    [[nodiscard]] bool isValid() const
+    {
+        return !eventId.isNull() && std::visit([](const auto& c) { return c.isValid(); }, change);
+    }
+};
+enum class CollectionOutcome { NotSent, Acknowledged, Rejected, Unknown };
+enum class CollectionError {
+    None,
+    InvalidRequest,
+    AuthenticationRequired,
+    StaleContext,
+    Busy,
+    Canceled,
+    Network,
+    Timeout,
+    RateLimited,
+    InvalidResponse,
+    ProviderRejected,
+    ProtocolFailure
+};
+struct CollectionResult {
+    QUuid eventId;
+    CollectionOutcome outcome = CollectionOutcome::NotSent;
+    CollectionError error = CollectionError::None;
+    std::optional<int> providerCode;
+    std::optional<qint64> retryAfterMs; // information only; no automatic write retry
+};
+} // namespace cirrus::domain
+Q_DECLARE_METATYPE(cirrus::domain::CollectionResult)

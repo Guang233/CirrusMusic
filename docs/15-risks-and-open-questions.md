@@ -37,6 +37,7 @@
 | R-017 | 将节目／声音／底层音轨混为歌曲，污染播放身份、历史／报告；长节目超现有buffer限制 | 中／高 | 直接cast VoiceId、以program.id兜底音源或填父Podcast为PlaylistId | [身份／音源补证决策](api/spoken-playback-contract.md)：显式绑定、一个媒体owner，权益／TTL门禁；保持64MiB／45s，受限不绕过 | 后端/播放 / M2 |
 | R-018 | 评论资源身份／分页候选schema错误、外部内容被当富文本或跨号liked状态 | 中／高 | Voice强转Program、root缺字段空成功、自动楼层递归／打开URL | [只读契约](api/comment-reads.md)：类型白名单、bounded严格映射、纯文本／原token；仅合成，不推定真实schema，UI另安全验收 | 后端/QA/UI / M2–M5 |
 | R-019 | 将云盘资源／catalog引用混同为可播SongId，泄漏私有文件元数据或误解quota | 中／高 | cloud id兜底音源、fileName当路径、used/max推导权限、跨号共享缓存 | [账号读取契约](api/account-library-reads.md)：独立CloudSongId、原账号／MUSIC_U、纯文本、quota精度／未知；仅候选，不开放未验证云盘播放／写 | 后端/QA / M2–M4 |
+| R-020 | 收藏写Ack被当全批原子成功，512重复IDs重试或取消被当撤销，SDK缺失却开放整歌单收藏 | 中／高 | 自动改库／重放Unknown、复制wrapper总200、强制关SDK／改协议 | [收藏订阅写契约](api/collection-writes.md)：独立8槽／原账号／Unknown、无512重试或乐观库状态；整歌单收藏v2链经确认延期，真实权限／对账另验收 | 后端/QA / M3 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 

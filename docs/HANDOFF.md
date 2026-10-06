@@ -10,9 +10,9 @@
 | --- | --- |
 | C++20／Qt 分层 targets、weapi/eapi/XEAPI、form、路由、HTTP、gzip／JSON 解码、XEAPI 公钥注册与会话密钥 | 除少量公开查询／XEAPI音源／试听播放外的广泛官方兼容性 |
 | epoch 隔离、内存 Cookie、取消及晚到结果保护；SQLite 与稳定设备 ID；QtKeychain、XEAPI 公钥持久化、匿名 token 启动／恢复／重置；已登录账号凭据记忆／身份复核／恢复／退出清理 | 真实桌面密钥环／进程异常终止后的验收 |
-| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，加上专辑／艺人／歌单5项和日推／FM2项、[个人库4项读取](api/personal-library.md)，加[两个显式上报action](api/explicit-listening-reports.md)，加[云端历史两项读取](api/cloud-history-reads.md)，加[榜单两项读取](api/chart-reads.md)，加[歌单发现6项读取](api/playlist-discovery-reads.md)，加[实体／播客／声音搜索5项](api/entity-search-reads.md)，加[播客消费／4类recent读取7项](api/podcast-and-recent-reads.md)，加[资源评论8项读取](api/comment-reads.md)，加[播客订阅／云盘3项账号读取](api/account-library-reads.md)，共54个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端；[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)及[FM连续播放](api/fm-continuous-playback.md)、[本地观测累计／会话历史](api/local-listening-history.md) | 目录／日推／FM／个人库／云端历史／榜单／歌单发现实网验收、库缓存／同步、持久历史／自动上报时机与来源扩展、真实报告及声学计量验收、流式起播、云盘播放／写入／下载、一起听 |
+| eapi QR key／QR check、weapi AccountIdentity、XEAPI AnonymousRegister，及搜索／歌曲详情／歌词和官方SongStream，加上专辑／艺人／歌单5项和日推／FM2项、[个人库4项读取](api/personal-library.md)，加[两个显式上报action](api/explicit-listening-reports.md)，加[云端历史两项读取](api/cloud-history-reads.md)，加[榜单两项读取](api/chart-reads.md)，加[歌单发现6项读取](api/playlist-discovery-reads.md)，加[实体／播客／声音搜索5项](api/entity-search-reads.md)，加[播客消费／4类recent读取7项](api/podcast-and-recent-reads.md)，加[资源评论8项读取](api/comment-reads.md)，加[播客订阅／云盘3项账号读取](api/account-library-reads.md)，加[五类收藏订阅8项write operation](api/collection-writes.md)，共62个业务operation，另有独立公钥注册链；单曲协调器、受控CDN缓冲及Qt播放后端；[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)及[FM连续播放](api/fm-continuous-playback.md)、[本地观测累计／会话历史](api/local-listening-history.md) | 目录／日推／FM／个人库／云端历史／榜单／歌单发现实网验收、库缓存／同步、持久历史／自动上报时机与来源扩展、真实报告及声学计量验收、流式起播、整歌单收藏v2 SDK／真实收藏写／对账、云盘播放／写入／下载、一起听 |
 | `QrLoginService` 身份验证、快照收据、两阶段凭据交接、可选自动轮询与认证总时限；BackendRuntime后台装配、Core-only非阻塞Facade和关闭排空 | 模板入口接线、QML注册和UI |
-| 历史完整基线：13套件／329 pass；最新账号补充读取包7套件共332 pass（其中account_library49）；另6条线程数据用例共8 pass，无fail/skip；现登记36套件，评论328／消费recent207及播放PoC是此前独立证据（含data rows及init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
+| 历史完整基线：13套件／329 pass；最新收藏订阅包7套件335 pass（其中collections189）；另7条线程数据用例9 pass，无fail/skip；现登记37套件，账号读取332＋8／评论328＋8／消费recent207及播放PoC是此前独立证据（含data rows及init/cleanup） | CI、发布包、跨发行版兼容性、真实账号验收 |
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计，维护者新批的播客／声音消费范围与5项搜索在增量契约中记录，不回写审计为实时支持列表；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
@@ -63,7 +63,7 @@ cmake --build --preset linux-release --parallel 4
 ctest --test-dir build/linux-release --output-on-failure --no-tests=error
 ```
 
-当前 CTest 登记36个套件；少于36个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[账号补充读取](api/account-library-reads.md)仅7个受影响套件共332 pass、另6条线程数据用例共8 pass，无fail/skip；此前[评论只读包](api/comment-reads.md)7套件328＋8 pass；此前[消费／recent工作包](api/podcast-and-recent-reads.md)共207 pass，另6条线程数据用例共8 pass；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
+当前 CTest 登记37个套件；少于37个先排查错误目录／`BUILD_TESTING`，不要把“无测试”当成功。13套件／329 pass为历史完整基线，最新[收藏订阅写](api/collection-writes.md)仅7个受影响套件335 pass、另7条线程数据用例9 pass，无fail/skip；此前[账号补充读取](api/account-library-reads.md)7套件332＋8 pass；此前[评论只读包](api/comment-reads.md)7套件328＋8 pass；此前[消费／recent工作包](api/podcast-and-recent-reads.md)共207 pass，另6条线程数据用例共8 pass；不自动累加为新的完整验证报告。真实密钥环往返也默认跳过。首次接手可执行上述完整命令；日常小增量优先编译／测试受影响目标，不必每次重复整套 Debug/Release。
 
 VS Code：按 [17](17-vscode-development.md) 创建私有 preset，选择匹配的 configure/build preset；`Ctrl+Shift+B` 现构建 `all`，`Cirrus: test` 先构建再跑 CTest。后端没有链接到空壳 app，**只构建 `appCirrusMusic` 不能验收后端改动**。
 
@@ -106,7 +106,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/account/qr_login_service.*` | begin/poll/cancel、自动轮询与总时限、身份确认、精确 target 提交 |
 | `src/application/account/login_scheduler.*` | 单调时钟＋单次定时器窄接缝；测试替身在 `tests/support/fake_login_scheduler.h` |
 | `src/application/ports/qr_login_gateway.h` | 窄 port、按值结果、脱敏错误；无 JSON／Cookie |
-| `src/infrastructure/netease/api/api_operation.*` | 目前54项业务operation的封闭注册契约；评论adapter为comment_operation.*；动态路径只允许规范数字ID后缀 |
+| `src/infrastructure/netease/api/api_operation.*` | 目前62项业务operation的封闭注册契约；评论adapter为comment_operation.*；动态路径只允许规范数字ID后缀 |
 | `src/infrastructure/netease/api/session_api_client.*` | 捕获 token/origin、快照和一次性收据 |
 | `src/infrastructure/netease/auth/` | QR 映射、身份 schema、port 实现 |
 | `tests/unit/qr_login_service_test.cpp` | Core-only fake port 与虚拟时钟用例 |
@@ -129,6 +129,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `domain/music/podcast_types.h`、`recent_entity_types.h`、`netease/music/podcast_mapper.*`、`recent_entity_mapper.*`、`spoken_mapping.*` | [消费3项／recent4项](api/podcast-and-recent-reads.md)：ProgramId独立，原账号／MUSIC_U／候选schema；列表公开-462停止，Voice对应／节目详情／recent实证未完成 |
 | `domain/music/comment_types.h`、`api/comment_operation.*`、`music/comment_mapper.*`、`tests/unit/comments_test.cpp` | [资源评论](api/comment-reads.md)：普通4资源＋通用5资源的热门／新版／楼层／统计，Voice／艺人无已确认绑定；无写入／历史／通知，候选schema仅合成 |
 | `domain/music/account_library_types.h`、`music/account_library_mapper.*`、`tests/unit/account_library_test.cpp` | [账号补充读取](api/account-library-reads.md)：订阅播客／云盘列表／详情，CloudSongId与catalog引用分开、原账号／MUSIC_U；候选schema，无云盘播放／写入 |
+| `domain/music/collection_types.h`、`application/ports/collection_gateway.h`、`netease/api/collection_operation.*`、`music/collection_gateway.*` | [收藏订阅写](api/collection-writes.md)：红心／收藏到歌单／专辑／艺人／播客5类10动作；8槽、原账号／Unknown、无重试／自动读，整歌单收藏v2门禁延期 |
 | `tests/support/` | fake HTTP、解码测试辅助；不是产品运行组件 |
 
 ## 4. 不可破坏的设计约束
@@ -147,14 +148,14 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 [B-010 子任务：扫码轮询与总时限](tasks/B-010-qr-polling.md)已实现并离线验收，可作为任务契约写法的范例。
 
-[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；[显式上报能力](api/explicit-listening-reports.md)也已接入；自动触发时机留到播放接线时讨论。[最近听过／排行读取](api/cloud-history-reads.md)已离线接通，[榜单列表／摘要读取](api/chart-reads.md)也已接入并复用现有歌单选歌播放链；[推荐／普通／精品歌单及三类标签](api/playlist-discovery-reads.md)也已成组离线接入；[音乐实体、播客及全站声音搜索](api/entity-search-reads.md)已接入并有限公开验证，[消费详情／节目与4类recent](api/podcast-and-recent-reads.md)已合成接入，公开列表遇-462已停；ProgramId／VoiceId对应和节目详情／真实recent仍待实证，[音源／身份补证](api/spoken-playback-contract.md)已记录传统mainTrackId路线、v1第三方代码候选和独立身份／媒体／历史设计，但实际binding／v1权益仍未实证，没有新增播放入口；[资源评论五类／八operation](api/comment-reads.md)已成组只读接入并合成验证，普通读取不含播客容器，Voice／艺人不强转；写入／历史／通知未接入，实网另授权；[播客订阅／云盘列表与详情](api/account-library-reads.md)三项原账号读取已合成接入，独立CloudSongId与可选catalogReference，不自动音源／播放／写入；下一包可调查喜欢／收藏／订阅写及不确定结果，实网另授权；受限时继续其他已确认小包，不直接当SongId；歌单内搜索／工作台仍待补证，不以本地过滤或管理接口代替；本地保留时长计量，详细历史持久化按分析需求再定；真实报告另行授权；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
+[XEAPI 编码与公钥状态](tasks/B-002-xeapi.md)已实现。[存储基础与设备 ID](tasks/B-008-storage-foundation.md)已实现。[密钥环与 XEAPI 公钥持久化](tasks/B-010-secret-store.md)已实现。[匿名 bootstrap](api/anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](api/account-session-restore.md)已实现；默认新扫码登录仅本次，记住需显式选择。[后台线程／非阻塞facade与启动／关闭排空](api/backend-runtime.md)也已完成。[搜索／歌曲详情／三语言歌词](api/music-queries-and-lyrics.md)已接入，有少量官方公开只读实测。[官方URL／受控CDN／Qt单曲播放](api/stream-resolution-and-playback.md)已完成基础闭环和静音试听PoC，[队列与六轨歌词时钟](api/queue-and-lyric-clock.md)也已完成，[专辑／艺人／歌单目录](api/catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](api/discovery-and-fm.md)已接入；[FM播放接线](api/fm-continuous-playback.md)已完成，[个人库四项读取](api/personal-library.md)也已离线接入；[本地观测累计／会话历史](api/local-listening-history.md)已接入；[显式上报能力](api/explicit-listening-reports.md)也已接入；自动触发时机留到播放接线时讨论。[最近听过／排行读取](api/cloud-history-reads.md)已离线接通，[榜单列表／摘要读取](api/chart-reads.md)也已接入并复用现有歌单选歌播放链；[推荐／普通／精品歌单及三类标签](api/playlist-discovery-reads.md)也已成组离线接入；[音乐实体、播客及全站声音搜索](api/entity-search-reads.md)已接入并有限公开验证，[消费详情／节目与4类recent](api/podcast-and-recent-reads.md)已合成接入，公开列表遇-462已停；ProgramId／VoiceId对应和节目详情／真实recent仍待实证，[音源／身份补证](api/spoken-playback-contract.md)已记录传统mainTrackId路线、v1第三方代码候选和独立身份／媒体／历史设计，但实际binding／v1权益仍未实证，没有新增播放入口；[资源评论五类／八operation](api/comment-reads.md)已成组只读接入并合成验证，普通读取不含播客容器，Voice／艺人不强转；写入／历史／通知未接入，实网另授权；[播客订阅／云盘列表与详情](api/account-library-reads.md)三项原账号读取已合成接入，独立CloudSongId与可选catalogReference，不自动音源／播放／写入；[红心／收藏到歌单／专辑／艺人／播客收藏订阅](api/collection-writes.md)五类已成组离线接入，8条在途与写入Unknown、不自动读／重试；整歌单收藏／取消的v2 SDK门禁经用户确认延期，没有绕过入口；下一包可核对自建歌单创建／元数据写与显式核验，实网另授权；受限时继续其他已确认小包，不直接当SongId；歌单内搜索／工作台仍待补证，不以本地过滤或管理接口代替；本地保留时长计量，详细历史持久化按分析需求再定；真实报告另行授权；真实认证／密钥环验证另行授权。详细顺序见[路线图](14-roadmap-and-backlog.md)。不要一次把这些全部塞进一个 Manager 或单次提交。
 
 | 待决事项 | 安全默认／询问时机 |
 | --- | --- |
 | 安全存储实现与新增依赖 | QtKeychain 系统包（`qtkeychain-qt6`）已接入；无后端时只留内存，不明文 fallback |
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
-| v2 checktoken SDK、一起听接收链 | SDK 与一起听有证据门禁，不暗加 Node/WebEngine，不以 v3 替代 v2 |
+| v2 checktoken SDK、一起听接收链 | 整歌单收藏／取消固定链每次需v2 SDK，原生未接，经确认延期；SDK与一起听仍有证据／许可门禁，不暗加Node/WebEngine、不以v3／改协议替代v2 |
 | 播客／声音后续 | [补证决策](api/spoken-playback-contract.md)为docs-only，旧公开列表-462停止；传统mainTrackId文档路线已获证，v1实网／Voice关系仍未知，不换host／工作台或自动登录；账号／挑战／媒体验证另授权 |
 | 播放后端 | Qt Multimedia已明确获准接入；公开试听MP3／合成WAV PoC通过，完整缓冲后起播；流式、设备切换／打包等仍有门禁 |
 

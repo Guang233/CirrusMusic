@@ -14,6 +14,8 @@
 
 `register_checktoken_v2` 下载浏览器 SDK 并在 jsdom 中执行；列为待定。`playlist_subscribe` 强制使用 v2，因此收藏歌单保留需求但暂不承诺可用。`register_checktoken_v3` 是另一条 HTTP/JSONP 链，不能假定二者互换。
 
+后续[五类收藏订阅写](collection-writes.md)经用户选择先接入其他已确认项；整歌单subscribe／unsubscribe固定链都调用v2 SDK，原生均未注册／开放。本轮没有下载／执行／分发SDK或引入Node／WebEngine、外部token／空token／改协议降级。参考链的SDK调用并非当前服务必须token的实测证明。
+
 同时，playlist_subscribe 用 `query.t == 1` 选路径，却用 `query.t === 1` 决定一个 payload 字段，字符串／整数输入会产生不同分支。C++ API 应暴露显式 bool/enum，不迁移这种歧义。`comment_add`/`comment_reply` 的 token 需求也要按源文件与公共 options 逐条确认。
 
 ## AUD-04：QR 检查异常分支
@@ -31,6 +33,8 @@
 ## AUD-07：歌单曲目写重试
 
 `playlist_tracks` 对业务码 512 有重复 trackIds 后再请求的逻辑，且返回包装特殊。不要直接复制。请求超时、业务拒绝、重复曲目和服务器实际成功必须区分；不确定时回读歌单，而不是继续添加或删除。
+
+后续[收藏到歌单写契约](collection-writes.md)已明确单次发送／Unknown，512保留Rejected，不复制重复IDs重试或总HTTP200包装；本包不自动回读／刷新库，显式有界读也不能证明整批原子效果。
 
 ## AUD-08：track_all 并不等于真正的 all
 

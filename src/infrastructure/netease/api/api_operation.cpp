@@ -1,4 +1,5 @@
 #include "api_operation.h"
+#include "collection_operation.h"
 #include "comment_operation.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
@@ -14,6 +15,8 @@ namespace cirrus::netease
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
 {
+    if (isCollectionOperation(operation))
+        return collectionOperationContract(operation);
     if (isCommentOperation(operation))
         return commentOperationContract(operation, parameters);
     if (operation == ApiOperation::AlbumDetails || operation == ApiOperation::ArtistAlbums) {
@@ -27,6 +30,15 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::SongHeart:
+    case ApiOperation::PlaylistCollectSongs:
+    case ApiOperation::AlbumSubscribe:
+    case ApiOperation::AlbumUnsubscribe:
+    case ApiOperation::ArtistSubscribe:
+    case ApiOperation::ArtistUnsubscribe:
+    case ApiOperation::PodcastSubscribe:
+    case ApiOperation::PodcastUnsubscribe:
+        return std::nullopt; // handled by the closed collection adapter above
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:
     case ApiOperation::PlaylistComments:
@@ -168,7 +180,7 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
 
 bool requiresAccountCookie(ApiOperation operation)
 {
-    return operation == ApiOperation::AccountIdentity ||
+    return isCollectionOperation(operation) || operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
            operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
            operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
@@ -196,6 +208,8 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (isCollectionOperation(operation))
+        return collectionOperationPayload(operation, parameters);
     if (isCommentOperation(operation))
         return commentOperationPayload(operation, parameters);
     if (operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs) {

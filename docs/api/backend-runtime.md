@@ -37,6 +37,8 @@ Ready以后支持beginLogin(options)、restore、poll、cancel、signOut。默�
 - `snapshot()`只读本线程缓存；权威新状态由sessionChanged到达。未得到有效token时不可发起私有业务。
 - deliver／finishClose及Requested信号仅为装配接线，不是UI命令。不要从对象自身信号槽同步删除Runtime／Facade，使用deleteLater并保持正常所有权。
 
+后续[五类收藏订阅写](collection-writes.md)新增独立Core port／8槽mutateCollection／completion，原账号／token／generation跨线程值传递；取消／切号／close保守Unknown并异步保留原token。gateway在线程内构造，先于client/session销毁，无新线程／运行依赖或自动查询／播放／报告。整歌单收藏v2 SDK门禁经维护者确认延期，不装配未验证SDK。本文158＋1是原后台包历史，最新335＋9见写入契约，不累加为全量。
+
 ## 3. close不是signOut
 
 正常程序关闭保留账号记忆、匿名token和公钥。先signOut再close才会请求删除账号记录；不调用匿名reset，不因程序退出删除安装级身份。
@@ -44,7 +46,7 @@ Ready以后支持beginLogin(options)、restore、poll、cancel、signOut。默�
 关闭顺序：
 
 1. Facade进入Stopping，立刻拒绝新命令并过滤旧成功事件。
-2. 后台先退役单曲播放协调器／resolver／Qt媒体实例和临时设备，再销毁查询／匿名bootstrap／公钥registrar／账号service和gateway，取消自己的网络工作，停止定时器和新的存储生产者。
+2. 后台先退役单曲播放协调器／resolver／Qt媒体实例和临时设备，再销毁报告／收藏写gateway与查询／匿名bootstrap／公钥registrar／账号service和gateway，取消自己的网络工作，停止定时器和新的存储生产者。
 3. 保留client、两个vault、tracked store及其后端。已排队但未发出的vault写入仍会flush；接收者销毁不等于后端写入取消。
 4. 等待tracked store实际pending归零、account vault的read／dirty／busy为空、key vault的dirty／busy为空；完成回调所派生的新写／删除也纳入屏障。检查在下一事件循环轮次执行，不从完成信号里同步删除vault。
 5. 销毁vault/client/ring/session/store，关闭DatabaseWorker，排空其已有SQL工作并释放进程锁。SQL join发生在后台线程，**不是GUI线程**。

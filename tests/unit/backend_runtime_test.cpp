@@ -245,6 +245,7 @@ class BackendRuntimeTest : public QObject
     void podcastReadsThroughThread();
     void commentsThroughThread();
     void accountLibraryThroughThread();
+    void collectionsThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -1679,6 +1680,85 @@ void BackendRuntimeTest::commentsThroughThread()
              MusicError::Canceled);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+}
+
+void BackendRuntimeTest::collectionsThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    for (int i = 0; i < 10; ++i)
+        plans.append(Plan{i == 2 ? QByteArray(R"({"code":512})") : QByteArray(R"({"code":200})")});
+    plans.append(Plan{"", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::collectionCompleted), music(&f, &BackendFacade::musicRequested),
+        play(&f, &BackendFacade::playbackRequested),
+        report(&f, &BackendFacade::listeningReportRequested);
+    connect(&f, &BackendFacade::collectionCompleted, this,
+            [&](quint64, SessionToken, CollectionResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(!f.mutateCollection({QUuid::createUuid(), SongHeart{{"1"}, true}}));
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    const QList<CollectionChange> changes{
+        SongHeart{{"1"}, true},
+        SongHeart{{"1"}, false},
+        PlaylistCollection{{"2"}, {{"1"}, {"3"}}, CollectionAction::Collect},
+        PlaylistCollection{{"2"}, {{"1"}}, CollectionAction::Remove},
+        AlbumCollection{{"4"}, CollectionAction::Collect},
+        AlbumCollection{{"4"}, CollectionAction::Remove},
+        ArtistCollection{{"5"}, CollectionAction::Collect},
+        ArtistCollection{{"5"}, CollectionAction::Remove},
+        PodcastSubscription{{"6"}, CollectionAction::Collect},
+        PodcastSubscription{{"6"}, CollectionAction::Remove}};
+    for (int i = 0; i < changes.size(); ++i) {
+        const auto event = QUuid::createUuid();
+        const auto id = f.mutateCollection({event, changes[i]});
+        QVERIFY(id);
+        QTRY_COMPARE(done.size(), i + 1);
+        const auto r = qvariant_cast<CollectionResult>(done.last()[2]);
+        QCOMPARE(done.last()[0].toULongLong(), id);
+        QCOMPARE(r.eventId, event);
+        QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+        QCOMPARE(r.outcome, i == 2 ? CollectionOutcome::Rejected : CollectionOutcome::Acknowledged);
+        if (i == 2)
+            QCOMPARE(r.providerCode, std::optional<int>(512));
+        QCOMPARE(state->requests.load(), i + 4); // one explicit write, no duplicate-ID 512 retry
+    }
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QVERIFY(music.isEmpty());
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    const auto pending = f.mutateCollection({QUuid::createUuid(), PodcastSubscription{{"6"}}});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 14);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 11);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QCOMPARE(qvariant_cast<CollectionResult>(done.last()[2]).outcome, CollectionOutcome::Unknown);
+    QCOMPARE(qvariant_cast<CollectionResult>(done.last()[2]).error, CollectionError::Canceled);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+    QVERIFY(music.isEmpty());
     QVERIFY(play.isEmpty());
     QVERIFY(report.isEmpty());
 }

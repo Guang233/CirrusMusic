@@ -177,3 +177,7 @@ CREATE TABLE queue_entries (
 ## 10. 已接入账号补充读取值
 
 [account_library_types.h与契约](api/account-library-reads.md)定义原accountId的SubscribedPodcasts／CloudSongs／CloudSongDetails查询与结果；独立CloudSongId，显式simpleSong.id仅作可选SongId catalogReference，不兜底或证明音轨绑定。列表保留顺序／重复／未知；详情按请求序并单列missing。fileName是私有展示文本而非路径，配额／文件大小／bitrate／time为原provider值，不推导权益、可播资产或剩余空间。无全库抓取／缓存、音源／播放／上传下载／写；JSON、Cookie留在基础设施，旧token／注销／关闭复用原屏障，已交付DTO副本不自动擦除。响应仅合成候选。
+
+## 11. 已接入收藏订阅写值
+
+[collection_types.h与契约](api/collection-writes.md)：CollectionMutation以非空本地eventId关联五variant SongHeart／PlaylistCollection／AlbumCollection／ArtistCollection／PodcastSubscription；红心bool与收藏到选定歌单的Collect／Remove分开，1..100唯一SongId有界批次不拆分。CollectionResult仅NotSent／Acknowledged／Rejected／Unknown、脱敏error／providerCode／RetryAfter；原账号与token由facade捕获，无原JSON／Cookie／URL／权限或本地库状态。UUID不保证服务幂等，Ack不保证逐项原子提交，发送后cancel不能推断撤销；整歌单收藏无SDK入口，CloudSong／Program／Voice不强转；无自动读取／刷新／报告／播放／持久outbox。此为独立Core写port，非只读MusicQuery扩展。

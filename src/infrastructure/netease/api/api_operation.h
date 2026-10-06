@@ -63,7 +63,15 @@ enum class ApiOperation {
     CommentInfo,
     SubscribedPodcasts,
     CloudSongs,
-    CloudSongDetails
+    CloudSongDetails,
+    SongHeart,
+    PlaylistCollectSongs,
+    AlbumSubscribe,
+    AlbumUnsubscribe,
+    ArtistSubscribe,
+    ArtistUnsubscribe,
+    PodcastSubscribe,
+    PodcastUnsubscribe
 };
 
 struct ApiOperationContract {
