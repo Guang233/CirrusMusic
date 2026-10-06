@@ -71,7 +71,10 @@ enum class ApiOperation {
     ArtistSubscribe,
     ArtistUnsubscribe,
     PodcastSubscribe,
-    PodcastUnsubscribe
+    PodcastUnsubscribe,
+    PlaylistCreate,
+    PlaylistRename,
+    PlaylistDescription
 };
 
 struct ApiOperationContract {

@@ -60,9 +60,48 @@ struct PodcastSubscription {
                (action == CollectionAction::Collect || action == CollectionAction::Remove);
     }
 };
+// Budgets are local UTF-16 limits, not claims about provider maxima. Never normalize text.
+inline bool validPlaylistText(const QString& text, qsizetype maximum, bool description)
+{
+    if (text.size() > maximum || !text.isValidUtf16() || (!description && text.trimmed().isEmpty()))
+        return false;
+    for (const auto ch : text) {
+        const auto n = ch.unicode();
+        if (n == 0x7f || (n < 0x20 && !(description && (n == 9 || n == 10 || n == 13))))
+            return false;
+    }
+    return true;
+}
+enum class PlaylistPrivacy { Public, Private };
+struct PlaylistCreate {
+    QString name;
+    PlaylistPrivacy privacy = PlaylistPrivacy::Public;
+    [[nodiscard]] bool isValid() const
+    {
+        return validPlaylistText(name, 128, false) &&
+               (privacy == PlaylistPrivacy::Public || privacy == PlaylistPrivacy::Private);
+    }
+};
+struct PlaylistRename {
+    PlaylistId playlist;
+    QString name;
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(playlist.value) && validPlaylistText(name, 128, false);
+    }
+};
+struct PlaylistDescription {
+    PlaylistId playlist;
+    QString description; // explicit empty text clears; not an omitted field/default update
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(playlist.value) && validPlaylistText(description, 4096, true);
+    }
+};
 // No whole-playlist subscription (checkToken-v2 gate), CloudSong/Program/Voice casts or JSON.
-using CollectionChange = std::variant<SongHeart, PlaylistCollection, AlbumCollection,
-                                      ArtistCollection, PodcastSubscription>;
+using CollectionChange =
+    std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
+                 PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;
@@ -91,7 +130,8 @@ struct CollectionResult {
     CollectionOutcome outcome = CollectionOutcome::NotSent;
     CollectionError error = CollectionError::None;
     std::optional<int> providerCode;
-    std::optional<qint64> retryAfterMs; // information only; no automatic write retry
+    std::optional<qint64> retryAfterMs;        // information only; no automatic write retry
+    std::optional<PlaylistId> createdPlaylist; // only valid creation Ack in the original context
 };
 } // namespace cirrus::domain
 Q_DECLARE_METATYPE(cirrus::domain::CollectionResult)

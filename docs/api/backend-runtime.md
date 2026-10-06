@@ -37,7 +37,7 @@ Ready以后支持beginLogin(options)、restore、poll、cancel、signOut。默�
 - `snapshot()`只读本线程缓存；权威新状态由sessionChanged到达。未得到有效token时不可发起私有业务。
 - deliver／finishClose及Requested信号仅为装配接线，不是UI命令。不要从对象自身信号槽同步删除Runtime／Facade，使用deleteLater并保持正常所有权。
 
-后续[五类收藏订阅写](collection-writes.md)新增独立Core port／8槽mutateCollection／completion，原账号／token／generation跨线程值传递；取消／切号／close保守Unknown并异步保留原token。gateway在线程内构造，先于client/session销毁，无新线程／运行依赖或自动查询／播放／报告。整歌单收藏v2 SDK门禁经维护者确认延期，不装配未验证SDK。本文158＋1是原后台包历史，最新335＋9见写入契约，不累加为全量。
+后续[五类收藏订阅写](collection-writes.md)新增独立Core port／8槽mutateCollection／completion，原账号／token／generation跨线程值传递；取消／切号／close保守Unknown并异步保留原token。gateway在线程内构造，先于client/session销毁，无新线程／运行依赖或自动查询／播放／报告。整歌单收藏v2 SDK门禁经维护者确认延期，不装配未验证SDK。本文158＋1是原后台包历史，收藏包335＋9是其历史；后续[歌单创建／改名／描述写](playlist-management-writes.md)仍共享该port／8槽／线程与关闭屏障，只有合法原账号创建Ack交付ID。最新404＋9见新契约，不累加为全量；无创建自动重试／同名读对账或新运行依赖。
 
 ## 3. close不是signOut
 

@@ -38,6 +38,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::ArtistUnsubscribe:
     case ApiOperation::PodcastSubscribe:
     case ApiOperation::PodcastUnsubscribe:
+    case ApiOperation::PlaylistCreate:
+    case ApiOperation::PlaylistRename:
+    case ApiOperation::PlaylistDescription:
         return std::nullopt; // handled by the closed collection adapter above
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:

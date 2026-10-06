@@ -180,4 +180,8 @@ CREATE TABLE queue_entries (
 
 ## 11. 已接入收藏订阅写值
 
-[collection_types.h与契约](api/collection-writes.md)：CollectionMutation以非空本地eventId关联五variant SongHeart／PlaylistCollection／AlbumCollection／ArtistCollection／PodcastSubscription；红心bool与收藏到选定歌单的Collect／Remove分开，1..100唯一SongId有界批次不拆分。CollectionResult仅NotSent／Acknowledged／Rejected／Unknown、脱敏error／providerCode／RetryAfter；原账号与token由facade捕获，无原JSON／Cookie／URL／权限或本地库状态。UUID不保证服务幂等，Ack不保证逐项原子提交，发送后cancel不能推断撤销；整歌单收藏无SDK入口，CloudSong／Program／Voice不强转；无自动读取／刷新／报告／播放／持久outbox。此为独立Core写port，非只读MusicQuery扩展。
+[collection_types.h与契约](api/collection-writes.md)：原收藏包CollectionMutation以非空本地eventId关联五variant SongHeart／PlaylistCollection／AlbumCollection／ArtistCollection／PodcastSubscription；红心bool与收藏到选定歌单的Collect／Remove分开，1..100唯一SongId有界批次不拆分。CollectionResult仅NotSent／Acknowledged／Rejected／Unknown、脱敏error／providerCode／RetryAfter；原账号与token由facade捕获，无原JSON／Cookie／URL／权限或本地库状态。UUID不保证服务幂等，Ack不保证逐项原子提交，发送后cancel不能推断撤销；整歌单收藏无SDK入口，CloudSong／Program／Voice不强转；无自动读取／刷新／报告／播放／持久outbox。此为独立Core写port，非只读MusicQuery扩展。
+
+## 12. 已接入歌单基础写值
+
+[歌单基础写](api/playlist-management-writes.md)在同一闭合写variant增加PlaylistCreate／PlaylistRename／PlaylistDescription，合计8种。创建Privacy仅Public／Private且固定NORMAL；名称128、描述4096 UTF16预算，合法字符、保留原文本，显式空描述清空。CollectionResult新增可选createdPlaylist，仅合法创建Ack携带规范PlaylistId；candidate root.playlist.id及可选root.id一致性在基础设施校验，缺失／矛盾Unknown保留providerCode200。其他动作／失效不发布ID，身份不是所有权／隐私／可编辑权证明。原账号／token／generation和8槽共用；不按同名判唯一、不自动创建重试／读对账／更新库，多动作不是原子事务。无JSON／Cookie／SDK进入Core，无删除／排序／封面／UI。

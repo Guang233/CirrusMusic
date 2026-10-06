@@ -11,6 +11,8 @@ struct CollectionRequest {
 [[nodiscard]] std::optional<CollectionRequest>
 collectionRequest(const domain::CollectionMutation& mutation);
 [[nodiscard]] domain::CollectionResult collectionResult(const ApiResult& api);
+[[nodiscard]] domain::CollectionResult collectionResult(const ApiResult& api,
+                                                        const domain::CollectionMutation& mutation);
 class CollectionGateway final : public application::ICollectionGateway
 {
     Q_OBJECT

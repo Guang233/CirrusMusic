@@ -4,7 +4,7 @@
 
 维护者确认：**歌曲加入指定歌单沿用官方“收藏到歌单”文案**；红心是另一种方式，不把二者混成同一操作。单曲从歌单移除不删除歌曲本身；收藏整个歌单也不是编辑其歌曲。
 
-本包接入五类十种正反动作：红心／取消红心、收藏歌曲到指定歌单／从该歌单移除、收藏／取消收藏专辑、收藏／取消收藏艺人、订阅／退订消费端传统播客。只有离线合成验证，**没有真实账号或服务端写入验收**。
+本包时点接入五类十种正反动作：红心／取消红心、收藏歌曲到指定歌单／从该歌单移除、收藏／取消收藏专辑、收藏／取消收藏艺人、订阅／退订消费端传统播客。只有离线合成验证，**没有真实账号或服务端写入验收**。
 
 完整核对固定 `a8c781fd64faab17fedfd46e0615a2609307f163` 的 `like.js`、`playlist_tracks.js`、`album_sub.js`、`artist_sub.js`、`dj_sub.js` 与对应home.md章节／TS签名，完整options、request和config；也核对 `playlist_subscribe.js`、`register_checktoken_v2.js`、`like_v1.js`、`song_like.js` 的不同门禁／路径。TS generic Response不是完整响应schema；参考不是官方文档或实网支持证明，440模块及164／40／236审计保持历史，不回写为运行注册表。
 
@@ -19,7 +19,7 @@
 `domain/music/collection_types.h`：
 
 - `CollectionMutation{eventId, CollectionChange}`；非空UUID由调用方显式提供，仅本地关联，不是服务端幂等键。
-- `CollectionChange`是独立SongHeart、PlaylistCollection、AlbumCollection、ArtistCollection、PodcastSubscription五variant。各自使用SongId／PlaylistId／AlbumId／ArtistId／PodcastId，不接受ProgramId、VoiceId、CloudSongId、任意resourceType／URL／JSON或uid。类型独立不证明服务端数字值一定不同。
+- 该增量时点`CollectionChange`是独立SongHeart、PlaylistCollection、AlbumCollection、ArtistCollection、PodcastSubscription五variant。各自使用SongId／PlaylistId／AlbumId／ArtistId／PodcastId，不接受ProgramId、VoiceId、CloudSongId、任意resourceType／URL／JSON或uid。类型独立不证明服务端数字值一定不同。
 - `SongHeart`明确bool liked，false保留；其他四项使用仅Collect／Remove有效的枚举，不采用上游“任意其他t→取消”或JS真假值默认。
 - 所有ID为规范正signed64十进制文本。PlaylistCollection显式playlist与1..100个唯一SongId，保持次序／wide文本；空、重复、非规范／溢出ID或未知action拒绝，不静默去重、全歌单抓取或自动拆批。100是Cirrus预算，不是已验证服务上限。
 
@@ -51,7 +51,7 @@ home.md对playlist/tracks另有包装请求timestamp警告；wrapper与TS没有�
 
 ## 4. 写结果、取消与不确定性
 
-`CollectionResult`仅eventId、outcome、error、可选providerCode／retryAfterMs，没有raw JSON／provider msg、Cookie／URL／权限数据。
+该包`CollectionResult`含eventId、outcome、error、可选providerCode／retryAfterMs，没有raw JSON／provider msg、Cookie／URL／权限数据。后续[歌单基础写](playlist-management-writes.md)新增三个typed variant及创建专属可选createdPlaylist，其他动作／非Ack／失效不发布该ID；旧五类语义不变。
 
 | outcome | 语义 |
 | --- | --- |
@@ -70,7 +70,7 @@ home.md对playlist/tracks另有包装请求timestamp警告；wrapper与TS没有�
 
 ## 5. 离线验证与交接
 
-Qt6.11.2 Debug，`LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1`。最新七个受影响套件：collections189、listening_report18、library21、account_library49、music26、session_api_client24、backend_facade8，**335 pass**；另collections／accountLibrary／library／listeningReport／playback（queue/FM）／destruction七条线程数据行，**9 pass**（含init/cleanup），无fail/skip。登记36→37套件，不是全37／Release／真实账号／SDK／UI验收。
+该收藏包时点Qt6.11.2 Debug，`LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1`。七个受影响套件：collections189、listening_report18、library21、account_library49、music26、session_api_client24、backend_facade8，**335 pass**；另collections／accountLibrary／library／listeningReport／playback（queue/FM）／destruction七条线程数据行，**9 pass**（含init/cleanup），无fail/skip。登记36→37套件，不是全37／Release／真实账号／SDK／UI验收。
 
 新suite包括10种正反动作的独立路径／固定payload／响应限额断言、20个native显式写请求及原Cookie不轮换；歌单歌曲实际Eapi wire解密并核对原Pc e_r:false，其他Weapi核对实际固定路由／form，payload另有独立固定期望；不声称独立解密每条Weapi业务payload，原密码向量仍是既有证据。140行响应矩阵覆盖Ack／validated字符串码／201／512／−462／403、坏码／JSON／root、HTTP与业务429、502无重试；10组Guest／MUSIC_A不足／异账号／旧token、10组发送前后cancel／失效，100项／重复／wide／多余字段、8槽／在途UUID、client销毁、同token Guest／Committing／异账号、晚到／伪generation、无自动读／播放／报告。
 
@@ -94,4 +94,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 clang-format dry-run、git diff --check及固定440模块hash校验通过；545个本地Markdown文件引用有效（排除fenced／inline code，不验证外链／anchor）。live-looking Cookie模式扫描0 findings，仅有限模式检查而非全面秘密保证。
 
-ignored日志 `build/workspace-checks/collections-final-{build,focused,thread}.log`及collections-{boundaries,format,diff-check,fixed-hash,links}.log，首轮／修复／中间结果单列、不累加；本机cache／凭据不交付，只本地提交、不推送。整歌单收藏checkToken-v2、真实服务兼容／权限／副作用／timestamp行为、自动／明确对账流程、歌单创建／修改／排序、库同步及UI仍未交付。下一独立小包可核对自建歌单创建／元数据写与Unknown后的显式核验契约，不扩大到真实写入或绕过门禁。
+ignored日志 `build/workspace-checks/collections-final-{build,focused,thread}.log`及collections-{boundaries,format,diff-check,fixed-hash,links}.log，首轮／修复／中间结果单列、不累加；本机cache／凭据不交付，只本地提交、不推送。整歌单收藏checkToken-v2、真实服务兼容／权限／副作用／timestamp行为、自动／明确对账流程、歌单排序、库同步及UI仍未交付。后续[创建／单独改名／描述写](playlist-management-writes.md)已合成接入，候选创建身份缺失／矛盾仍Unknown，不以同名猜ID；共享原8槽，不扩大到真实写入或绕过门禁，可靠创建核验仍未交付。

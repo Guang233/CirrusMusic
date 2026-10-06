@@ -16,6 +16,8 @@ Cirrus 的接口审计参考：
 
 五类收藏订阅写还参考固定 `module/like.js`、`playlist_tracks.js`、`album_sub.js`、`artist_sub.js`、`dj_sub.js` 完整路径／字段与home.md／TS签名、options／request／config的显式Weapi及默认Eapi；C++改写位于 `src/infrastructure/netease/api/collection_operation.cpp`、`music/collection_gateway.cpp` 及独立Core port／facade／runtime链。未复制playlist_tracks的512重复IDs重试或HTTP200错误包装；保留纯文本wide IDs及artistIds固定数字JSON文本，不引入JS数字转换。`playlist_subscribe.js`／`register_checktoken_v2.js`与`like_v1.js`／`song_like.js`仅为范围／门禁调查，未引入SDK、v3／新心接口fallback、config token／外部服务。整歌单收藏／取消v2 SDK经用户确认延期。只有合成响应／Cookie fixtures，未执行真实账号写／SDK／业务访问或复制上游Node服务；[完整契约](../../docs/api/collection-writes.md)记录Unknown／不自动重试，保留原MIT通知，不回写440模块历史审计。
 
+歌单基础写还参考固定 `module/playlist_create.js`、`playlist_name_update.js`、`playlist_desc_update.js`及home.md／TS、options／request／config链；C++改写继续位于collection_operation／collection_gateway与既有Core port链，完整契约见[歌单管理写](../../docs/api/playlist-management-writes.md)。`playlist_update.js`仅用于核对batch与手拼JSON风险，未移植其组合调用；创建固定NORMAL、privacy文本0／10，无SHARED／VIDEO／SDK／文件上传或真实服务访问。创建响应身份是明确的合成候选，不声称上游TS或MIT许可证明真实schema／服务权限；保留原MIT与音乐／服务／商标／SDK权利边界。
+
 后续[播客／声音身份与音源补证](../../docs/api/spoken-playback-contract.md)仅为静态研究：补核 `module/song_url.js`、`voice_detail.js`、`voicelist_detail.js`、`voicelist_trans.js`、`voice_lyric.js` 及home.md的mainTrackId音源说明，保留固定原始归属；没有增加C++改写、执行管理／解锁操作或分发外部播放器代码。外部SPlayer／ncm-api-rs及另行观察的当前api-enhanced快照只作为带版本引用的代码证据，不更新本项目固定锁，也不推定外部项目或服务都受此MIT许可覆盖。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。

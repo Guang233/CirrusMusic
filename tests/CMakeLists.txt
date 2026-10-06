@@ -155,6 +155,11 @@ target_link_libraries(tst_collections PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME collections COMMAND tst_collections)
 set_tests_properties(collections PROPERTIES TIMEOUT 60)
 
+qt_add_executable(tst_playlist_writes unit/playlist_writes_test.cpp)
+target_link_libraries(tst_playlist_writes PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME playlist_writes COMMAND tst_playlist_writes)
+set_tests_properties(playlist_writes PROPERTIES TIMEOUT 40)
+
 qt_add_executable(tst_account_library unit/account_library_test.cpp)
 target_link_libraries(tst_account_library PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME account_library COMMAND tst_account_library)

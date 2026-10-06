@@ -58,7 +58,7 @@ flowchart LR
 | B-012 | PlaybackCoordinator、后端、队列与 generation（M2） | [单曲协调器／旧事件隔离](api/stream-resolution-and-playback.md)已接入；[队列与有限自动续播](api/queue-and-lyric-clock.md)已实现；长期稳定性／设备与打包门禁待验证 |
 | B-013 | 歌词获取／解析／同步（M2） | [逐行／逐字、原文／翻译／罗马音独立解析](api/music-queries-and-lyrics.md)已实现；[媒体时钟／seek／试听偏移定位](api/queue-and-lyric-clock.md)已实现，声学延迟与UI动画未验证 |
 | B-014 | AppShell、路由、列表、迷你栏与沉浸页（M5） | 复用稳定后端；性能、键盘、无障碍 |
-| B-015 | 喜欢、收藏、歌单编辑和写对账（M3） | [五类收藏订阅写](api/collection-writes.md)已合成接入：红心／收藏到歌单及移除／专辑／艺人／播客，8槽与Unknown、不自动重试／对账；整歌单收藏／取消v2 SDK经确认延期，创建／元数据／排序／同步及实网仍未交付 |
+| B-015 | 喜欢、收藏、歌单编辑和写对账（M3） | [五类收藏订阅写](api/collection-writes.md)已合成接入：红心／收藏到歌单及移除／专辑／艺人／播客，8槽与Unknown、不自动重试／对账；整歌单收藏／取消v2 SDK经确认延期；[创建／改名／描述](api/playlist-management-writes.md)已合成接入，共享8槽／创建ID候选及Unknown，不猜同名唯一；删除／排序／标签／封面／对账／同步及实网仍未交付 |
 | B-016 | 推荐、独立每日歌曲、榜单、FM、历史（M2/M3） | [日推读取与FM有界供给](api/discovery-and-fm.md)已接入；[FM连续播放／模式切换／失败预算](api/fm-continuous-playback.md)已离线接通，服务端跨日语义／缓存仍未交付；[推荐／普通／精品歌单与三类标签](api/playlist-discovery-reads.md)6项已成组离线接入，原歌单／显式播放复用；[本地观测累计／256条会话历史](api/local-listening-history.md)已接入，[显式报告能力](api/explicit-listening-reports.md)已接入；自动时机／来源扩展与持久历史未接入，禁止用进度条位置代替已听时长；真实上报另授权 |
 | B-017 | MPRIS 等非视觉服务（M4）；托盘／通知入口（M5） | GNOME/KDE Wayland 实测，不耦合页面 |
 | B-018 | 下载、Range/hash、离线、空间管理（M4） | 权限、到期 URL、崩溃恢复 |
@@ -83,7 +83,7 @@ flowchart LR
 4. XEAPI 编码与密钥流程已有离线向量；设备 ID 已入 `state.sqlite`，XEAPI 公钥已入密钥环；匿名 token 启动／恢复／重置已实现，[账号凭据恢复／退出清理](api/account-session-restore.md)已有离线回归，后台启动／关闭也已装配，业务调度随对应查询需求实现，不先造通用框架。真实验证需要授权环境，不把凭据放进对话或仓库。
 5. 搜索、歌曲详情、三语言歌词、官方音源与单曲Qt播放已接入；队列／歌词时钟与有限自动跳过已接入；URL刷新／流式起播等恢复另立小包，元数据成功不代表播放权限，试听不代表整曲授权。
 6. 专辑／艺人／歌单只读详情及分页、每日推荐读取／FM动态供给已接入；FM播放接线已完成；个人库四项与云端最近听过／一周和全部时间排行读取已完成离线闭环；榜单列表／内容摘要及复用歌单选歌播放链也已离线接通；推荐／普通／精品歌单及分类／热门／精品标签6项也已成组离线接入；专辑／艺人／歌单、播客与全站声音5项搜索已接入并有有限公开结构证据；[消费3项／recent4项](api/podcast-and-recent-reads.md)已合成接入，公开列表-462停止，ProgramId独立、Voice对应／节目详情／真实recent未实证；[身份／音源补证决策](api/spoken-playback-contract.md)已记录mainTrackId底层音轨路线、v1代码候选与独立媒体／历史接缝；真实binding／v1权益仍未验证，不能先开放声音播放；[资源评论五类／八operation](api/comment-reads.md)已合成接入，完整只读包不含写／账号历史／通知／Voice或艺人绑定；[原账号播客订阅／云盘列表与详情](api/account-library-reads.md)三项已合成接入，CloudSongId与catalog引用分开，无音源／播放／写；受限时继续其他已确认小包，使用CLI／测试harness贯通；本地观测累计已有独立会话包，显式报告已有独立能力包，自动时机／来源扩展仍单列，详细本地历史持久化按分析需求再定。
-7. 当前三项订阅／云盘读取与[五类收藏订阅写](api/collection-writes.md)已成组离线接入；写入保留Unknown、不乐观覆盖／自动重试／刷新；整歌单收藏／取消因固定checkToken-v2 SDK经用户选择延期。下一小包可核对自建歌单创建／元数据写与Unknown后的显式核验契约（先读固定模块／门禁，不承诺均可接通）；不自动访问真实账号／发送写入；评论点赞／发布／回复／删除与账号历史／通知均未授权为本轮实现。再做写操作、一起听补证和文件相关后端；遇到需要新运行依赖或协议缺失时停下询问。
+7. 当前三项订阅／云盘读取与[五类收藏订阅写](api/collection-writes.md)已成组离线接入；写入保留Unknown、不乐观覆盖／自动重试／刷新；整歌单收藏／取消因固定checkToken-v2 SDK经用户选择延期。[自建歌单创建／单独改名／描述](api/playlist-management-writes.md)已离线接入，候选创建ID与Unknown不混为没创建，不按同名重放／对账；删除／排序／标签／封面／可见性转换及可靠创建核验仍需独立核对和确认；不自动访问真实账号／发送写入；评论点赞／发布／回复／删除与账号历史／通知均未授权为本轮实现。再做写操作、一起听补证和文件相关后端；遇到需要新运行依赖或协议缺失时停下询问。
 8. 后端完成或受限项明确获批后，再启动全部 UI 工作。
 
 详细门禁见 [API 移植计划](api/migration-plan.md)。

@@ -484,6 +484,15 @@ void BackendFacade::deliverCollection(CollectionDelivery delivery)
         m_snapshot.phase != domain::SessionPhase::Authenticated)
         delivery.result = {expected.mutation.eventId, domain::CollectionOutcome::Unknown,
                            domain::CollectionError::StaleContext};
+    const bool creation = std::holds_alternative<domain::PlaylistCreate>(expected.mutation.change);
+    if (creation && delivery.result.outcome == domain::CollectionOutcome::Acknowledged &&
+        (!delivery.result.createdPlaylist ||
+         !domain::validMusicId(delivery.result.createdPlaylist->value))) {
+        delivery.result.outcome = domain::CollectionOutcome::Unknown;
+        delivery.result.error = domain::CollectionError::InvalidResponse;
+    }
+    if (delivery.result.outcome != domain::CollectionOutcome::Acknowledged || !creation)
+        delivery.result.createdPlaylist.reset();
     delivery.result.eventId = expected.mutation.eventId;
     emit collectionCompleted(expected.id, expected.context, delivery.result);
 }

@@ -91,7 +91,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-COLLECTION-WRITE：当前收藏订阅写验证
 
-最新受影响Debug七套件collections189、listening_report18、library21、account_library49、music26、session_api_client24、backend_facade8，共335 pass；另collections／accountLibrary／library／listeningReport／playback（queue/FM）／destruction七条线程数据行9 pass，无fail/skip，不是全37／Release／真实账号／SDK验收。[契约与命令](api/collection-writes.md)含10动作固定路径／payload、140行响应矩阵、20次native显式写、原Cookie／实际Eapi解密、8槽／UUID、Guest／异账号／旧token、client销毁／同token认证失效、发送前后cancel与Unknown、512／429不重试、close排空。只有合成，整歌单收藏v2门禁延期。初轮11项fixture差异经既有decoder/classifier复核，只修预期／样本而非生产协议；日志collections-final-{build,focused,thread}.log单列，不累加。
+该收藏包时点受影响Debug七套件collections189、listening_report18、library21、account_library49、music26、session_api_client24、backend_facade8，共335 pass；另collections／accountLibrary／library／listeningReport／playback（queue/FM）／destruction七条线程数据行9 pass，无fail/skip，不是全37／Release／真实账号／SDK验收。[契约与命令](api/collection-writes.md)含10动作固定路径／payload、140行响应矩阵、20次native显式写、原Cookie／实际Eapi解密、8槽／UUID、Guest／异账号／旧token、client销毁／同token认证失效、发送前后cancel与Unknown、512／429不重试、close排空。只有合成，整歌单收藏v2门禁延期。初轮11项fixture差异经既有decoder/classifier复核，只修预期／样本而非生产协议；日志collections-final-{build,focused,thread}.log单列，不累加。
+
+### TC-PLAYLIST-WRITE：歌单创建与资料编辑
+
+[契约](api/playlist-management-writes.md)：最新受影响7套件playlist_writes122、collections189、catalog22、library21、listening_report18、session_api_client24、backend_facade8，共404 pass；选定7条线程数据行9 pass，0fail/skip，当前38套件而非全量／Release／真实写验收。覆盖固定NORMAL与privacy文本、名称／描述UTF16预算／显式清空／escaping、独立name与descEapi解密、10 native单次动作／Cookie不轮换、70响应矩阵／22有效JSON坏创建schema、宽ID／回显、Guest／异账号／旧token、取消／同token变化／晚到ID／缺失与坏delivery、8槽／UUID、无自动读／播放／报告。线程合成登录／两个同名不同ID、不猜创建关联、码200缺身份Unknown、403拒绝、close挂起创建排空。fresh9 C++ LSP clean／14 application对象6924实际依赖、UI0；保留moc与Q_OBJECT，旧诊断由构建／DB刷新／主动复查解决。日志playlist-writes-final-{build,focused,thread}.log单列，不累加历史结果。
 
 ## 4. API fixture 规范
 

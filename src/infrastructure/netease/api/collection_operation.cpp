@@ -1,6 +1,6 @@
-// Fixed api-enhanced like/playlist_tracks/album_sub/artist_sub/dj_sub (MIT); see NOTICE.
+// Fixed api-enhanced collection/playlist create/name/desc wrappers (MIT); see NOTICE.
 #include "collection_operation.h"
-#include "domain/music/music_types.h"
+#include "domain/music/collection_types.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSet>
@@ -17,6 +17,9 @@ bool isCollectionOperation(ApiOperation op)
     case ApiOperation::ArtistUnsubscribe:
     case ApiOperation::PodcastSubscribe:
     case ApiOperation::PodcastUnsubscribe:
+    case ApiOperation::PlaylistCreate:
+    case ApiOperation::PlaylistRename:
+    case ApiOperation::PlaylistDescription:
         return true;
     default:
         return false;
@@ -52,6 +55,17 @@ std::optional<ApiOperationContract> collectionOperationContract(ApiOperation op)
     case ApiOperation::PodcastUnsubscribe:
         path = QStringLiteral("/api/djradio/unsub");
         break;
+    case ApiOperation::PlaylistCreate:
+        path = QStringLiteral("/api/playlist/create");
+        break;
+    case ApiOperation::PlaylistRename:
+        path = QStringLiteral("/api/playlist/update/name");
+        protocol = Protocol::Eapi;
+        break;
+    case ApiOperation::PlaylistDescription:
+        path = QStringLiteral("/api/playlist/desc/update");
+        protocol = Protocol::Eapi;
+        break;
     default:
         return std::nullopt;
     }
@@ -61,6 +75,29 @@ std::optional<QJsonObject> collectionOperationPayload(ApiOperation op, const QJs
 {
     if (!isCollectionOperation(op))
         return std::nullopt;
+    if (op == ApiOperation::PlaylistCreate) {
+        const auto name = p.value(QStringLiteral("name"));
+        const auto privacy = p.value(QStringLiteral("privacy"));
+        if (p.size() != 2 || !name.isString() ||
+            !domain::validPlaylistText(name.toString(), 128, false) || !privacy.isString() ||
+            (privacy.toString() != QStringLiteral("0") &&
+             privacy.toString() != QStringLiteral("10")))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("name"), name},
+                           {QStringLiteral("privacy"), privacy},
+                           {QStringLiteral("type"), QStringLiteral("NORMAL")}};
+    }
+    if (op == ApiOperation::PlaylistRename || op == ApiOperation::PlaylistDescription) {
+        const auto id = p.value(QStringLiteral("id"));
+        const bool description = op == ApiOperation::PlaylistDescription;
+        const auto key = description ? QStringLiteral("desc") : QStringLiteral("name");
+        const auto text = p.value(key);
+        if (p.size() != 2 || !id.isString() || !domain::validMusicId(id.toString()) ||
+            !text.isString() ||
+            !domain::validPlaylistText(text.toString(), description ? 4096 : 128, description))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("id"), id}, {key, text}};
+    }
     if (op == ApiOperation::PlaylistCollectSongs) {
         const auto pid = p.value(QStringLiteral("pid"));
         const auto action = p.value(QStringLiteral("op")).toString();

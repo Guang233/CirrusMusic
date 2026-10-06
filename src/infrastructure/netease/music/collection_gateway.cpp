@@ -1,4 +1,5 @@
 #include "collection_gateway.h"
+#include "music_mapping.h"
 #include <QJsonArray>
 #include <QThread>
 #include <QTimer>
@@ -35,10 +36,24 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                 return {c.action == CollectionAction::Collect ? ApiOperation::ArtistSubscribe
                                                               : ApiOperation::ArtistUnsubscribe,
                         {{QStringLiteral("id"), c.artist.value}}};
-            else
+            else if constexpr (std::is_same_v<T, PodcastSubscription>)
                 return {c.action == CollectionAction::Collect ? ApiOperation::PodcastSubscribe
                                                               : ApiOperation::PodcastUnsubscribe,
                         {{QStringLiteral("id"), c.podcast.value}}};
+            else if constexpr (std::is_same_v<T, PlaylistCreate>)
+                return {ApiOperation::PlaylistCreate,
+                        {{QStringLiteral("name"), c.name},
+                         {QStringLiteral("privacy"), c.privacy == PlaylistPrivacy::Private
+                                                         ? QStringLiteral("10")
+                                                         : QStringLiteral("0")}}};
+            else if constexpr (std::is_same_v<T, PlaylistRename>)
+                return {
+                    ApiOperation::PlaylistRename,
+                    {{QStringLiteral("id"), c.playlist.value}, {QStringLiteral("name"), c.name}}};
+            else
+                return {ApiOperation::PlaylistDescription,
+                        {{QStringLiteral("id"), c.playlist.value},
+                         {QStringLiteral("desc"), c.description}}};
         },
         mutation.change);
 }
@@ -80,6 +95,27 @@ CollectionResult collectionResult(const ApiResult& api)
     }
     return result;
 }
+CollectionResult collectionResult(const ApiResult& api, const CollectionMutation& mutation)
+{
+    auto result = collectionResult(api);
+    if (result.outcome != CollectionOutcome::Acknowledged ||
+        !std::holds_alternative<PlaylistCreate>(mutation.change))
+        return result;
+    // Candidate schema only: a response code alone cannot identify a created resource.
+    const auto root = api.decoded.object;
+    const auto playlist = root.value(QStringLiteral("playlist"));
+    const auto id = playlist.isObject()
+                        ? mapping::providerId(playlist.toObject().value(QStringLiteral("id")))
+                        : QString{};
+    const auto echo = root.value(QStringLiteral("id"));
+    if (id.isEmpty() || (!echo.isUndefined() && mapping::providerId(echo) != id)) {
+        result.outcome = CollectionOutcome::Unknown;
+        result.error = CollectionError::InvalidResponse;
+    } else {
+        result.createdPlaylist = PlaylistId{id};
+    }
+    return result;
+}
 CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
                                      SessionApiClient& client, QObject* parent)
     : ICollectionGateway(parent), m_session(session), m_client(&client)
@@ -90,8 +126,8 @@ CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
                 const auto id = m_ids.value(apiId);
                 if (!m_pending.contains(id))
                     return;
-                auto result = collectionResult(api);
                 const auto& p = m_pending[id];
+                auto result = collectionResult(api, p.mutation);
                 if (p.context != token || !m_session.accepts(p.context) ||
                     m_session.snapshot().phase != SessionPhase::Authenticated ||
                     m_session.snapshot().accountId != p.accountId) {
@@ -100,6 +136,7 @@ CollectionGateway::CollectionGateway(application::SessionCoordinator& session,
                     result.error = CollectionError::StaleContext;
                     result.providerCode.reset();
                     result.retryAfterMs.reset();
+                    result.createdPlaylist.reset();
                 }
                 finish(id, result);
             });

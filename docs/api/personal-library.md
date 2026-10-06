@@ -40,7 +40,7 @@
 
 具体映射和载荷构造位于 `src/infrastructure/netease/music/library_mapper.*`；`catalog_mapper.cpp`只导出已有专辑／图片映射供复用。Native API保留封闭参数白名单。
 
-后续[五类收藏订阅写](collection-writes.md)独立接入红心／收藏到歌单及移除／专辑／艺人／播客，非本只读port变体，无自动读刷新／库缓存。整歌单收藏／取消的v2 SDK链经确认延期；写后明确读取只能查看当前有界结果，不推定全批原子提交，Unknown不得盲目重试。本文保持旧读取包证据。
+后续[五类收藏订阅写](collection-writes.md)独立接入红心／收藏到歌单及移除／专辑／艺人／播客，非本只读port变体，无自动读刷新／库缓存。整歌单收藏／取消的v2 SDK链经确认延期；写后明确读取只能查看当前有界结果，不推定全批原子提交，Unknown不得盲目重试。后续[歌单基础写](playlist-management-writes.md)创建／改名／描述也独立使用原写port；候选创建ID不是库完整性／所有权证明，码200缺身份Unknown，不按同名猜唯一，不自动刷新本读取。本文保持旧读取包证据。
 
 ## 4. 离线验证
 

@@ -46,6 +46,8 @@
 
 `playlist_order_update` 和 `song_order_update` 对 ids 形态要求不同；输入 schema 不能仅写“ID 列表”。`playlist_privacy` 固定 privacy=0，只说明公开隐私歌单，不能据此宣称支持任意公开↔私有切换。创建时隐私参数与修改隐私是不同契约。
 
+后续[歌单基础写](playlist-management-writes.md)已仅合成接入创建及单独改名／描述，固定NORMAL／privacy0或10，不采用batch、手拼JSON或伪原子更新。创建响应无固定完整schema证据，候选root.playlist.id及可选root.id一致性严格校验；码200缺身份仍Unknown，不自动重试或按同名核验。可见性转换／标签／排序／封面／删除未纳入本包，整歌单收藏SDK门禁不变。
+
 ## AUD-10：可用性失败不等于无版权
 
 `check_music` 基于旧音源接口并把失败简化为“暂无版权”。原生错误模型至少区分认证失效、会员／版权限制、区域限制、限流、过期 URL、网络和解析错误；不能因请求异常给用户错误版权结论。
