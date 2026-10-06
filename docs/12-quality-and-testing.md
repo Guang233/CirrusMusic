@@ -99,7 +99,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-PLAYLIST-ORDER：删除与完整范围排序
 
-[契约](api/playlist-delete-and-order-writes.md)：最新8套件463 pass（playlist_order59），8条线程数据行10 pass，0fail/skip，当前39非全量／Release。工厂源完整性／置换／重复／未知／预算、固定3path/payload/crypto/64KiB、6 native单次动作／Cookie不轮换、排序实际Eapi解密、42响应矩阵、Guest／错来源token／账号、发送前后cancel、8槽／UUID／晚到、无自动读／播放／报告覆盖。线程生产mapper两次显式读取→工厂→显式写与close挂起排空；完整性／权限／范围仅合成。9 C++ fresh LSP clean、14 application对象6929实际依赖无层泄漏、UI0；历史463+10与此前404+9不累加。
+[契约](api/playlist-delete-and-order-writes.md)：该包时点8套件463 pass（playlist_order59），8条线程数据行10 pass，0fail/skip，该包39非全量／Release。工厂源完整性／置换／重复／未知／预算、固定3path/payload/crypto/64KiB、6 native单次动作／Cookie不轮换、排序实际Eapi解密、42响应矩阵、Guest／错来源token／账号、发送前后cancel、8槽／UUID／晚到、无自动读／播放／报告覆盖。线程生产mapper两次显式读取→工厂→显式写与close挂起排空；完整性／权限／范围仅合成。9 C++ fresh LSP clean、14 application对象6929实际依赖无层泄漏、UI0；历史463+10与此前404+9不累加。
+
+### TC-CATALOG-METADATA：四类资料与独立介绍
+
+[契约](api/catalog-introduction-and-metadata-reads.md)：最新14受影响Debug套件730 pass，新catalog_metadata66含53行坏资料；选定9条线程数据行11 pass，0fail/skip，登记40非全量／Release／真实业务。四类型optional字段、unknown／显式空／重复／原计数／日期／完整索引不变；独立艺人64节／65536单段／256Ki总、歌曲四种百科白名单／unsupported标记／不Root fallback；路径／crypto／closed payload与4 Guest/account行两次native读／Cookie不轮换、实际百科Eapi解密，取消／旧token／429／−462／16槽／Facade晚到／无隐式动作。线程生产DTO六次显式读、无级联、200坏schema／close挂起读排空／原token，15CPP fresh LSP clean／14 application对象6935真实依赖无层泄漏、UI0。首轮test标签冲突只修fixture并保持fatal warnings，最后全组通过；历史结果不累加。
 
 ## 4. API fixture 规范
 

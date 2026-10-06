@@ -49,6 +49,8 @@ struct Song {
     QList<ArtistCredit> artists;
     std::optional<AlbumReference> album;
     std::optional<qint64> durationMs;
+    std::optional<QStringList> aliases, translatedTitles;
+    std::optional<qint64> publishedAtMs;
     // Metadata is NOT proof of playback/download entitlement or URL availability.
 };
 

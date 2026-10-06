@@ -40,6 +40,7 @@
 | R-020 | 收藏写Ack被当全批原子成功，512重复IDs重试或取消被当撤销，SDK缺失却开放整歌单收藏 | 中／高 | 自动改库／重放Unknown、复制wrapper总200、强制关SDK／改协议 | [收藏订阅写契约](api/collection-writes.md)：独立8槽／原账号／Unknown、无512重试或乐观库状态；整歌单收藏v2链经确认延期，真实权限／对账另验收 | 后端/QA / M3 |
 | R-021 | 创建失联／码200缺身份被当没创建，同名当唯一ID或编辑被当原子且可编辑权已知 | 中／高 | 自动重放create、root.id兜底、跨号泄露创建ID、batch手拼JSON | [歌单基础写](api/playlist-management-writes.md)：候选root.playlist.id／echo一致、Unknown不重试，原账号／ID剥离／独立动作；真实schema／权限／隐私／可靠核验另验收 | 后端/QA / M3 |
 | R-022 | 分页／截断被当完整排序，旧来源跨号或CAS猜测／删除被当安全无副作用 | 中／高 | 部分页ID排序／自动补库、无源token、Ack就改库／重试 | [删除／排序](api/playlist-delete-and-order-writes.md)：完整索引／明确首末页工厂、唯一置换／预算、原token／账号；不证明权限／最新状态／CAS，不重试或自动刷新，真实范围另验收 | 后端/QA / M3 |
+| R-023 | 简介／百科文本被当可信富文本，公共creator当账号／owner、BPM／计数当事实保证或弱schema伪空成功 | 中／高 | 自动外链／图片／下游、data-or-root兜底、生成作者／叙事或全百科承诺 | [四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)：optional／纯文本／预算／白名单、原16槽／token，unsupported标记／严格必需容器；仅合成，不是权限／完整性／实时单位证明，UI另验收 | 后端/QA/UI / M2–M5 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 

@@ -146,6 +146,8 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 lyrics(domain::SongId song);
     [[nodiscard]] quint64 albumDetails(domain::AlbumId album);
     [[nodiscard]] quint64 artistDetails(domain::ArtistId artist);
+    [[nodiscard]] quint64 artistIntroduction(domain::ArtistId artist);
+    [[nodiscard]] quint64 songWikiSummary(domain::SongId song);
     [[nodiscard]] quint64 artistSongs(domain::ArtistSongsQuery query);
     [[nodiscard]] quint64 artistAlbums(domain::ArtistAlbumsQuery query);
     [[nodiscard]] quint64 playlistDetails(domain::PlaylistId playlist);

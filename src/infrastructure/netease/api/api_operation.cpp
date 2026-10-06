@@ -140,6 +140,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::PersonalFm:
         return ApiOperationContract{QStringLiteral("/api/v1/radio/get"), Protocol::Weapi,
                                     ResponseEncoding::Json, 1024 * 1024};
+    case ApiOperation::ArtistIntroduction:
+        return ApiOperationContract{QStringLiteral("/api/artist/introduction"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::SongWikiSummary:
+        return ApiOperationContract{QStringLiteral("/api/song/play/about/block/page"),
+                                    Protocol::Eapi, ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::ArtistDetails:
         return ApiOperationContract{QStringLiteral("/api/artist/head/info/get"), Protocol::Eapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
@@ -285,6 +291,16 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
                            {QStringLiteral("limit"), q.limit},
                            {QStringLiteral("lasttime"), q.before},
                            {QStringLiteral("total"), true}};
+    }
+    if (operation == ApiOperation::ArtistIntroduction ||
+        operation == ApiOperation::SongWikiSummary) {
+        const auto id = parameters.value(QStringLiteral("id")).toString();
+        if (parameters.size() != 1 || !domain::validMusicId(id))
+            return std::nullopt;
+        return QJsonObject{{operation == ApiOperation::ArtistIntroduction
+                                ? QStringLiteral("id")
+                                : QStringLiteral("songId"),
+                            id}};
     }
     if (operation == ApiOperation::PodcastDetails || operation == ApiOperation::ProgramDetails) {
         const auto id = parameters.value(QStringLiteral("id")).toString();

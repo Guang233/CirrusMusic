@@ -248,6 +248,7 @@ class BackendRuntimeTest : public QObject
     void collectionsThroughThread();
     void playlistWritesThroughThread();
     void playlistOrderThroughThread();
+    void catalogMetadataThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2016,6 +2017,106 @@ void BackendRuntimeTest::accountLibraryThroughThread()
     QVERIFY(play.isEmpty());
     QVERIFY(report.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());
+}
+
+void BackendRuntimeTest::catalogMetadataThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{
+        Plan{
+            R"({"code":200,"songs":[{"id":1,"alia":["synthetic alias"],"tns":[],"publishTime":0}]})"},
+        Plan{
+            R"({"code":200,"album":{"id":2,"description":"synthetic album intro","company":"synthetic label","type":"EP","size":0},"songs":[]})"},
+        Plan{
+            R"({"code":200,"data":{"artist":{"id":3,"briefDesc":"synthetic brief","alias":["synthetic alias"]}}})"},
+        Plan{
+            R"({"code":200,"playlist":{"id":4,"description":"synthetic playlist intro","tags":["synthetic tag"],"creator":{"userId":7,"nickname":"synthetic creator"},"playCount":1.5,"trackCount":0,"trackIds":[]}})"},
+        Plan{
+            R"({"code":200,"briefDesc":"synthetic brief","introduction":[{"ti":"synthetic section","txt":"synthetic long intro"}]})"},
+        Plan{
+            R"({"code":200,"data":{"songId":1,"blocks":[{"code":"SONG_PLAY_ABOUT_SONG_BASIC","creatives":[{"creativeType":"bpm","uiElement":{"mainTitle":{"title":"synthetic tempo"},"textLinks":[{"text":"120","url":"ignored"}]}}]},{"code":"SONG_PLAY_ABOUT_SIMILAR_SONG"}]}})"},
+        Plan{R"({"code":200,"data":{}})"}, Plan{"", 200, -1}});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::musicCompleted), play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested),
+        writes(&f, &BackendFacade::collectionRequested);
+    connect(&f, &BackendFacade::musicCompleted, this, [&](quint64, SessionToken, MusicResult) {
+        QCOMPARE(QThread::currentThread(), qApp->thread());
+    });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    QVERIFY(!f.songWikiSummary({"0"}));
+    QVERIFY(!f.artistIntroduction({"01"}));
+    QVERIFY(f.songDetails({{"1"}}));
+    QTRY_COMPARE(done.size(), 1);
+    const auto song =
+        std::get<SongDetails>(qvariant_cast<MusicResult>(done.last()[2])).songs.first();
+    QCOMPARE(song.aliases, std::optional<QStringList>({"synthetic alias"}));
+    QCOMPARE(song.publishedAtMs, std::optional<qint64>(0));
+    QVERIFY(f.albumDetails({"2"}));
+    QTRY_COMPARE(done.size(), 2);
+    const auto album = std::get<AlbumDetails>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(album.album.description, "synthetic album intro");
+    QCOMPARE(album.album.company, std::optional<QString>("synthetic label"));
+    QVERIFY(f.artistDetails({"3"}));
+    QTRY_COMPARE(done.size(), 3);
+    const auto artist = std::get<ArtistDetails>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(artist.description, "synthetic brief");
+    QCOMPARE(artist.aliases, std::optional<QStringList>({"synthetic alias"}));
+    QVERIFY(f.playlistDetails({"4"}));
+    QTRY_COMPARE(done.size(), 4);
+    const auto playlist = std::get<PlaylistDetails>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(playlist.description, "synthetic playlist intro");
+    QCOMPARE(playlist.creator->publicUserId, std::optional<QString>("7")); // NOT logged account 101
+    QCOMPARE(playlist.playCount, std::optional<double>(1.5));
+    QVERIFY(f.artistIntroduction({"3"}));
+    QTRY_COMPARE(done.size(), 5);
+    const auto introduction =
+        std::get<ArtistIntroduction>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(introduction.sections.first().text, "synthetic long intro");
+    QVERIFY(f.songWikiSummary({"1"}));
+    QTRY_COMPARE(done.size(), 6);
+    const auto wiki = std::get<SongWikiSummary>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(wiki.cards.first().kind, SongWikiKind::Bpm);
+    QCOMPARE(wiki.cards.first().values, QStringList{"120"});
+    QVERIFY(wiki.unsupportedContent);
+    QCOMPARE(state->requests.load(), 9); // three login, six explicit reads; no metadata cascades
+    QVERIFY(f.songWikiSummary({"1"}));
+    QTRY_COMPARE(done.size(), 7);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::InvalidResponse);
+    const auto pending = f.artistIntroduction({"3"});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 11);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 8);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
+    for (const auto& row : done)
+        QCOMPARE(qvariant_cast<SessionToken>(row[1]), token);
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QVERIFY(writes.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
 }
 
 QTEST_GUILESS_MAIN(BackendRuntimeTest)

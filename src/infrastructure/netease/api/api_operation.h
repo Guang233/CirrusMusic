@@ -77,7 +77,9 @@ enum class ApiOperation {
     PlaylistDescription,
     PlaylistDelete,
     PlaylistSongOrder,
-    AccountPlaylistOrder
+    AccountPlaylistOrder,
+    ArtistIntroduction,
+    SongWikiSummary
 };
 
 struct ApiOperationContract {

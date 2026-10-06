@@ -80,6 +80,10 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 9 个模块已登记，不能因而宣称“完整一起听可用”。从机事件通道、心跳／时间单位、权限、seq/version 和恢复方案尚待证据。详见[一起听契约](special-contracts.md)，未验证前 capability 保持关闭。
 
+## 增量：资料与百科的复杂结构不是透明JSON通道
+
+[四类资料／介绍](catalog-introduction-and-metadata-reads.md)只合成增量详情字段及艺人分节／歌曲四类基础百科文本，TS generic Response与第三方解析都不构成服务schema／完整性证明。root.data.blocks／root.introduction严格必需、纯文本／预算／原token；未知block明确unsupported，不递归资源／图片／外链、生成叙事／作者或用管理UGC替代资料读。全百科及登录UGC真实schema／权益／UI仍待补证；未恢复−462窗口。
+
 ## 横向缺口
 
 - 尚无官方返回 fixture：所有 required/optional/null、字符串／数字 ID、分页、权限和错误字段必须在实现相应 operation 前验证。

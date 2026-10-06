@@ -2,7 +2,7 @@
 
 ## 1. 本包与固定证据
 
-维护者确认连续任务第一包：删除自建歌单、调整歌单歌曲顺序、调整当前账号歌单列表顺序。仅离线合成接入，无真实账号／写入／当前服务权限或效果验证；第二包歌曲／歌单／艺人／专辑介绍资料随后独立交付，UI最后。
+维护者确认连续任务第一包：删除自建歌单、调整歌单歌曲顺序、调整当前账号歌单列表顺序。仅离线合成接入，无真实账号／写入／当前服务权限或效果验证；第二包[歌曲／歌单／艺人／专辑资料与介绍](catalog-introduction-and-metadata-reads.md)已另行合成接入（本页验证仍为第一包时点），UI最后。
 
 完整核对固定 `a8c781fd64faab17fedfd46e0615a2609307f163` 的playlist_delete／song_order_update／playlist_order_update wrappers、home.md与TS，复用此前完整核对的options／request／config：删除与账号顺序显式Weapi，歌曲顺序默认Eapi，没有固定SDK启用。TS generic Response／路径存在不证明当前服务支持、权限、排序范围／原子性。原440／164／40／236静态审计不改为实时支持表。整歌单收藏v2门禁仍延期，不执行SDK、换协议或注入token。
 

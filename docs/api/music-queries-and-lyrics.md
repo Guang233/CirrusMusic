@@ -2,6 +2,8 @@
 
 > 已实现歌曲搜索、歌曲详情、歌词的原生请求→应用用例→后台Facade闭环。模板UI不变；没有播放器、音源URL、歌词高亮／对齐器或缓存。本轮按维护者授权做了少量官方公开只读探测，不使用账号或本机凭据。
 
+后续[四类资料／独立介绍](catalog-introduction-and-metadata-reads.md)在Song追加optional别名／译名／发行原值，复用songFrom及本原生命周期；歌曲百科基础为独立显式读，不生成通用歌曲description／完整作者署名，不替换六轨歌词或自动下游。本文7项和早期验证仍是本歌曲包时点。
+
 ## 1. 固定参考与请求契约
 
 参考固定commit `a8c781fd64faab17fedfd46e0615a2609307f163` 的 `module/search.js`、`song_detail.js`、`lyric_new.js`、`util/option.js`及`public/docs/home.md`歌词格式说明。它们是实现参考，不是网易云官方规范；MIT来源保留于[NOTICE](../../third_party/api-enhanced/NOTICE.md)。
@@ -14,7 +16,7 @@
 
 详情请求的`c`使用JSON字符串中的整数原文，不经double。client新增一般weapi分支；只有AccountIdentity仍要求MUSIC_U并创建一次性凭据收据。公开详情允许guest，已有匿名token时加入受限MUSIC_A。新音乐查询不采纳响应Cookie，不凭歌曲元数据更新已核验账号凭据；没有协议降级、自动重试或任意端点转发。
 
-registry现为7项业务operation（另有独立XEAPI公钥注册）；不因此修改440模块静态清单为“全已实现”。
+本歌曲首次接入时registry为7项业务operation（另有独立XEAPI公钥注册）；不因此修改440模块静态清单为“全已实现”。
 
 ## 2. 领域与应用边界
 

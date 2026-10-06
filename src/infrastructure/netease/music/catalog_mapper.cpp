@@ -1,8 +1,10 @@
 #include "catalog_mapper.h"
+#include "metadata_mapping.h"
 #include "music_mapping.h"
 #include <QJsonArray>
 #include <QSet>
 #include <QVariant>
+#include <cmath>
 
 namespace cirrus::netease
 {
@@ -74,7 +76,11 @@ std::optional<Album> album(const QJsonObject& o)
     if (a.id.value.isEmpty() || !textField(o.value(QStringLiteral("name"))) ||
         !description(o.value(QStringLiteral("description"))) ||
         !number(o, QStringLiteral("size"), a.trackCount) ||
-        !number(o, QStringLiteral("publishTime"), a.publishedAtMs, true))
+        !number(o, QStringLiteral("publishTime"), a.publishedAtMs, true) ||
+        !metadataList(o.value(QStringLiteral("alias")), a.aliases) ||
+        !metadataText(o.value(QStringLiteral("company")), a.company) ||
+        !metadataText(o.value(QStringLiteral("type")), a.type) ||
+        !metadataText(o.value(QStringLiteral("subType")), a.subType))
         return std::nullopt;
     auto raw = o.value(QStringLiteral("artists"));
     if (absent(raw)) {
@@ -142,6 +148,10 @@ std::optional<CatalogRequest> catalogRequest(const MusicQuery& query)
 {
     if (!validMusicQuery(query))
         return std::nullopt;
+    if (const auto* q = std::get_if<ArtistIntroductionQuery>(&query))
+        return CatalogRequest{ApiOperation::ArtistIntroduction, idParameter(q->artist.value)};
+    if (const auto* q = std::get_if<SongWikiQuery>(&query))
+        return CatalogRequest{ApiOperation::SongWikiSummary, idParameter(q->song.value)};
     if (const auto* q = std::get_if<AlbumQuery>(&query))
         return CatalogRequest{ApiOperation::AlbumDetails, idParameter(q->album.value)};
     if (const auto* q = std::get_if<ArtistQuery>(&query))
@@ -183,7 +193,9 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         if (a.id.value != q->artist.value || !textField(o.value(QStringLiteral("name"))) ||
             !description(o.value(QStringLiteral("briefDesc"))) ||
             !number(o, QStringLiteral("musicSize"), a.songCount) ||
-            !number(o, QStringLiteral("albumSize"), a.albumCount))
+            !number(o, QStringLiteral("albumSize"), a.albumCount) ||
+            !metadataList(o.value(QStringLiteral("alias")), a.aliases) ||
+            !metadataList(o.value(QStringLiteral("transNames")), a.translatedNames))
             return invalid;
         a.name = o.value(QStringLiteral("name")).toString();
         a.description = o.value(QStringLiteral("briefDesc")).toString();
@@ -229,11 +241,36 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         if (p.id.value != q->playlist.value || !textField(o.value(QStringLiteral("name"))) ||
             !description(o.value(QStringLiteral("description"))) ||
             !number(o, QStringLiteral("trackCount"), p.trackCount) ||
-            !number(o, QStringLiteral("updateTime"), p.updatedAtMs))
+            !number(o, QStringLiteral("updateTime"), p.updatedAtMs) ||
+            !metadataList(o.value(QStringLiteral("tags")), p.tags) ||
+            !number(o, QStringLiteral("createTime"), p.createdAtMs) ||
+            !number(o, QStringLiteral("subscribedCount"), p.subscriberCount) ||
+            !number(o, QStringLiteral("commentCount"), p.commentCount) ||
+            !number(o, QStringLiteral("shareCount"), p.shareCount))
             return invalid;
         p.title = o.value(QStringLiteral("name")).toString();
         p.description = o.value(QStringLiteral("description")).toString();
         p.cover = image(o.value(QStringLiteral("coverImgUrl")));
+        const auto count = o.value(QStringLiteral("playCount"));
+        if (!absent(count)) {
+            if (!count.isDouble() || !std::isfinite(count.toDouble()) || count.toDouble() < 0 ||
+                count.toDouble() > 9007199254740991.0)
+                return invalid;
+            p.playCount = count.toDouble();
+        }
+        const auto creator = o.value(QStringLiteral("creator"));
+        if (!absent(creator)) {
+            if (!creator.isObject())
+                return invalid;
+            const auto user = creator.toObject();
+            const auto raw = user.value(QStringLiteral("userId"));
+            const auto id = providerId(raw);
+            if ((!unknownId(raw) && id.isEmpty()) ||
+                !textField(user.value(QStringLiteral("nickname"))))
+                return invalid;
+            p.creator = PlaylistCreator{id.isEmpty() ? std::nullopt : std::optional<QString>(id),
+                                        user.value(QStringLiteral("nickname")).toString()};
+        }
         const auto ids = o.value(QStringLiteral("trackIds"));
         QSet<QString> known;
         if (!absent(ids)) {

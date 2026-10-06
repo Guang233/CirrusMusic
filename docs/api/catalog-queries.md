@@ -15,6 +15,8 @@
 
 完成事件仍为 `musicCompleted(id, originalContext, MusicResult)`，目录DTO加入原有variant；共享16条查询容量与cancelMusic。只接纳当前Guest／Authenticated会话；不自动记住目录内容，不自动建队列／播放。拿到某页不等于“全部播放”，需要上层明确处理完整索引、缺失条目和队列10000条上限。
 
+后续[歌曲／歌单／艺人／专辑资料与独立介绍](catalog-introduction-and-metadata-reads.md)已合成增量补齐：保留本描述／完整索引，追加optional字段、公开creator摘要非owner权限；独立艺人分节长介绍／歌曲百科基础沿原16槽，未自动请求或缓存。本文13operation及原测试保留首次目录包时点，不覆盖全局最新计数。
+
 ## 2. 封闭协议
 
 参考固定api-enhanced `a8c781fd64faab17fedfd46e0615a2609307f163` 的album、artist_detail、artist_songs、artist_album、playlist_detail、playlist_track_all模块及其文档；默认createOption结合request/config解析为eapi，显式weapi保持weapi。这是兼容依据，不是官方规范；不运行Node或接受调用方crypto／domain／headers参数。
@@ -27,7 +29,7 @@
 | ArtistAlbums | `/api/artist/albums/<id>` | weapi；limit、offset、total=true | 8MiB |
 | PlaylistDetails | `/api/v6/playlist/detail` | eapi；id、n=100000、s=8 | 16MiB |
 
-路径后缀只由规范正signed64十进制ID构造，不能注入路径、查询或主机。API载荷按字段精确白名单验证；分页limit为1–100、offset为0–100000。读响应不采纳Cookie，也不发布原始JSON／用户profile／收藏者等无关数据。现在共**13项业务operation**，另有独立公钥注册；playlistSongs不是第14项远端接口，而是已有两项请求的原生编排。静态440模块清单保持审计时点状态。
+路径后缀只由规范正signed64十进制ID构造，不能注入路径、查询或主机。API载荷按字段精确白名单验证；分页limit为1–100、offset为0–100000。读响应不采纳Cookie，也不发布原始JSON／用户profile／收藏者等无关数据。本目录首次接入时共**13项业务operation**，另有独立公钥注册；playlistSongs不是第14项远端接口，而是已有两项请求的原生编排。静态440模块清单保持审计时点状态。
 
 ## 3. 映射与完整性
 

@@ -6,8 +6,10 @@
 #include "comment_mapper.h"
 #include "discovery_mapper.h"
 #include "entity_search_mapper.h"
+#include "introduction_mapper.h"
 #include "library_mapper.h"
 #include "lyric_parser.h"
+#include "metadata_mapping.h"
 #include "music_mapping.h"
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
@@ -110,6 +112,10 @@ std::optional<Song> songFrom(const QJsonObject& object)
         if (!song.durationMs || *song.durationMs > 7LL * 24 * 60 * 60 * 1000)
             return std::nullopt;
     }
+    if (!metadataList(object.value(QStringLiteral("alia")), song.aliases) ||
+        !metadataList(object.value(QStringLiteral("tns")), song.translatedTitles) ||
+        !metadataTimestamp(object.value(QStringLiteral("publishTime")), song.publishedAtMs))
+        return std::nullopt;
     return song;
 }
 
@@ -153,6 +159,9 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
             document.instrumental = pure.toBool();
         return document;
     }
+    if (std::holds_alternative<ArtistIntroductionQuery>(query) ||
+        std::holds_alternative<SongWikiQuery>(query))
+        return mapIntroductionResponse(query, object);
     if (isCommentQuery(query))
         return mapCommentResponse(query, object);
     if (isPodcastQuery(query))

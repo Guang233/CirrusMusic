@@ -164,6 +164,14 @@ quint64 BackendFacade::artistDetails(domain::ArtistId artist)
 {
     return submitMusic(domain::ArtistQuery{std::move(artist)});
 }
+quint64 BackendFacade::artistIntroduction(domain::ArtistId artist)
+{
+    return submitMusic(domain::ArtistIntroductionQuery{std::move(artist)});
+}
+quint64 BackendFacade::songWikiSummary(domain::SongId song)
+{
+    return submitMusic(domain::SongWikiQuery{std::move(song)});
+}
 quint64 BackendFacade::artistSongs(domain::ArtistSongsQuery query)
 {
     return submitMusic(std::move(query));

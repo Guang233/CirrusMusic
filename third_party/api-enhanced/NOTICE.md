@@ -20,6 +20,8 @@ Cirrus 的接口审计参考：
 
 删除／排序增量参考固定playlist_delete／song_order_update／playlist_order_update完整wrapper、home.md／TS及固定options链，C++继续在collection_operation／collection_gateway，Core仅剥离ID的范围／原token值。数字JSON文本由规范ID构造，不转double、不复制批删／任意op／SDK或Node服务，只有合成fixtures；[契约](../../docs/api/playlist-delete-and-order-writes.md)记录完整范围／Unknown与实证边界，原MIT通知不变。
 
+四类资料／介绍增量完整核对固定song_detail／playlist_detail／artist_detail／album及artist_desc／song_wiki_summary，UGC三种get和song_wiki_info只用于区分边界。独立C++introduction_mapper与metadata_mapping及Core值增量参考上述协议／schema候选，不执行Node／SDK，只有合成fixture；[契约](../../docs/api/catalog-introduction-and-metadata-reads.md)记录unknown、纯文本预算和未实证范围。另参考公开SPlayer固定40d9ec606cc1e323c964ffea7bf0ab02f137e93b的wiki.vue及song／artist API路径作字段形状证据，不复制Vue／TS代码或运行其解锁／代理；外部代码不自动受本MIT覆盖，未升级lock或获取服务／音乐／SDK权利。
+
 后续[播客／声音身份与音源补证](../../docs/api/spoken-playback-contract.md)仅为静态研究：补核 `module/song_url.js`、`voice_detail.js`、`voicelist_detail.js`、`voicelist_trans.js`、`voice_lyric.js` 及home.md的mainTrackId音源说明，保留固定原始归属；没有增加C++改写、执行管理／解锁操作或分发外部播放器代码。外部SPlayer／ncm-api-rs及另行观察的当前api-enhanced快照只作为带版本引用的代码证据，不更新本项目固定锁，也不推定外部项目或服务都受此MIT许可覆盖。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。
