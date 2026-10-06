@@ -440,6 +440,11 @@ quint64 BackendFacade::mutateCollection(domain::CollectionMutation mutation)
         !domain::validMusicId(m_snapshot.accountId) || !mutation.isValid() ||
         m_collections.size() >= 8)
         return 0;
+    const auto sourceContext = domain::collectionSourceContext(mutation);
+    const auto sourceAccount = domain::collectionSourceAccount(mutation);
+    if ((sourceContext && *sourceContext != m_snapshot.token) ||
+        (sourceAccount && *sourceAccount != m_snapshot.accountId))
+        return 0;
     for (const auto& pending : std::as_const(m_collections))
         if (pending.mutation.eventId == mutation.eventId)
             return 0;

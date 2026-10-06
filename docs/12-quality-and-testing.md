@@ -95,7 +95,11 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 
 ### TC-PLAYLIST-WRITE：歌单创建与资料编辑
 
-[契约](api/playlist-management-writes.md)：最新受影响7套件playlist_writes122、collections189、catalog22、library21、listening_report18、session_api_client24、backend_facade8，共404 pass；选定7条线程数据行9 pass，0fail/skip，当前38套件而非全量／Release／真实写验收。覆盖固定NORMAL与privacy文本、名称／描述UTF16预算／显式清空／escaping、独立name与descEapi解密、10 native单次动作／Cookie不轮换、70响应矩阵／22有效JSON坏创建schema、宽ID／回显、Guest／异账号／旧token、取消／同token变化／晚到ID／缺失与坏delivery、8槽／UUID、无自动读／播放／报告。线程合成登录／两个同名不同ID、不猜创建关联、码200缺身份Unknown、403拒绝、close挂起创建排空。fresh9 C++ LSP clean／14 application对象6924实际依赖、UI0；保留moc与Q_OBJECT，旧诊断由构建／DB刷新／主动复查解决。日志playlist-writes-final-{build,focused,thread}.log单列，不累加历史结果。
+[契约](api/playlist-management-writes.md)：该包时点受影响7套件playlist_writes122、collections189、catalog22、library21、listening_report18、session_api_client24、backend_facade8，共404 pass；选定7条线程数据行9 pass，0fail/skip，当前38套件而非全量／Release／真实写验收。覆盖固定NORMAL与privacy文本、名称／描述UTF16预算／显式清空／escaping、独立name与descEapi解密、10 native单次动作／Cookie不轮换、70响应矩阵／22有效JSON坏创建schema、宽ID／回显、Guest／异账号／旧token、取消／同token变化／晚到ID／缺失与坏delivery、8槽／UUID、无自动读／播放／报告。线程合成登录／两个同名不同ID、不猜创建关联、码200缺身份Unknown、403拒绝、close挂起创建排空。fresh9 C++ LSP clean／14 application对象6924实际依赖、UI0；保留moc与Q_OBJECT，旧诊断由构建／DB刷新／主动复查解决。日志playlist-writes-final-{build,focused,thread}.log单列，不累加历史结果。
+
+### TC-PLAYLIST-ORDER：删除与完整范围排序
+
+[契约](api/playlist-delete-and-order-writes.md)：最新8套件463 pass（playlist_order59），8条线程数据行10 pass，0fail/skip，当前39非全量／Release。工厂源完整性／置换／重复／未知／预算、固定3path/payload/crypto/64KiB、6 native单次动作／Cookie不轮换、排序实际Eapi解密、42响应矩阵、Guest／错来源token／账号、发送前后cancel、8槽／UUID／晚到、无自动读／播放／报告覆盖。线程生产mapper两次显式读取→工厂→显式写与close挂起排空；完整性／权限／范围仅合成。9 C++ fresh LSP clean、14 application对象6929实际依赖无层泄漏、UI0；历史463+10与此前404+9不累加。
 
 ## 4. API fixture 规范
 

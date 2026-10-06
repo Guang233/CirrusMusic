@@ -184,4 +184,8 @@ CREATE TABLE queue_entries (
 
 ## 12. 已接入歌单基础写值
 
-[歌单基础写](api/playlist-management-writes.md)在同一闭合写variant增加PlaylistCreate／PlaylistRename／PlaylistDescription，合计8种。创建Privacy仅Public／Private且固定NORMAL；名称128、描述4096 UTF16预算，合法字符、保留原文本，显式空描述清空。CollectionResult新增可选createdPlaylist，仅合法创建Ack携带规范PlaylistId；candidate root.playlist.id及可选root.id一致性在基础设施校验，缺失／矛盾Unknown保留providerCode200。其他动作／失效不发布ID，身份不是所有权／隐私／可编辑权证明。原账号／token／generation和8槽共用；不按同名判唯一、不自动创建重试／读对账／更新库，多动作不是原子事务。无JSON／Cookie／SDK进入Core，无删除／排序／封面／UI。
+[歌单基础写](api/playlist-management-writes.md)在同一闭合写variant增加PlaylistCreate／PlaylistRename／PlaylistDescription，该包时点合计8种。创建Privacy仅Public／Private且固定NORMAL；名称128、描述4096 UTF16预算，合法字符、保留原文本，显式空描述清空。CollectionResult新增可选createdPlaylist，仅合法创建Ack携带规范PlaylistId；candidate root.playlist.id及可选root.id一致性在基础设施校验，缺失／矛盾Unknown保留providerCode200。其他动作／失效不发布ID，身份不是所有权／隐私／可编辑权证明。原账号／token／generation和8槽共用；不按同名判唯一、不自动创建重试／读对账／更新库，多动作不是原子事务。无JSON／Cookie／SDK进入Core，该包不含删除／排序／封面／UI。
+
+## 13. 已接入删除与完整范围排序值
+
+[删除／排序](api/playlist-delete-and-order-writes.md)增加PlaylistDelete／PlaylistSongOrder／AccountPlaylistOrder，写variant合计11种。删除单个明确PlaylistId；排序由完整PlaylistDetails索引或明确total／hasMore=false且offset0的MyPlaylistsPage工厂生成，仅保留ID／原token／账号，不携带描述／封面等大DTO。唯一ID完整置换、1000／100预算与来源屏障拒绝截断／未知／跨号／旧token，不强转identity或承诺权限／并发原子性；工厂不是密码学origin证明，旧metadata不代表当前状态，无CAS／自动读／重试。

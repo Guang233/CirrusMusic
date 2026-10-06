@@ -20,6 +20,9 @@ bool isCollectionOperation(ApiOperation op)
     case ApiOperation::PlaylistCreate:
     case ApiOperation::PlaylistRename:
     case ApiOperation::PlaylistDescription:
+    case ApiOperation::PlaylistDelete:
+    case ApiOperation::PlaylistSongOrder:
+    case ApiOperation::AccountPlaylistOrder:
         return true;
     default:
         return false;
@@ -66,6 +69,16 @@ std::optional<ApiOperationContract> collectionOperationContract(ApiOperation op)
         path = QStringLiteral("/api/playlist/desc/update");
         protocol = Protocol::Eapi;
         break;
+    case ApiOperation::PlaylistDelete:
+        path = QStringLiteral("/api/playlist/remove");
+        break;
+    case ApiOperation::PlaylistSongOrder:
+        path = QStringLiteral("/api/playlist/manipulate/tracks");
+        protocol = Protocol::Eapi;
+        break;
+    case ApiOperation::AccountPlaylistOrder:
+        path = QStringLiteral("/api/playlist/order/update");
+        break;
     default:
         return std::nullopt;
     }
@@ -75,6 +88,38 @@ std::optional<QJsonObject> collectionOperationPayload(ApiOperation op, const QJs
 {
     if (!isCollectionOperation(op))
         return std::nullopt;
+    if (op == ApiOperation::PlaylistDelete) {
+        const auto id = p.value(QStringLiteral("id"));
+        if (p.size() != 1 || !id.isString() || !domain::validMusicId(id.toString()))
+            return std::nullopt;
+        return QJsonObject{
+            {QStringLiteral("ids"), QStringLiteral("[") + id.toString() + QStringLiteral("]")}};
+    }
+    if (op == ApiOperation::PlaylistSongOrder || op == ApiOperation::AccountPlaylistOrder) {
+        const bool songs = op == ApiOperation::PlaylistSongOrder;
+        const auto raw = p.value(QStringLiteral("ids"));
+        const auto pid = p.value(QStringLiteral("pid"));
+        if (p.size() != (songs ? 2 : 1) || !raw.isArray() || raw.toArray().isEmpty() ||
+            raw.toArray().size() > (songs ? domain::PlaylistSongOrder::MaximumIds
+                                          : domain::AccountPlaylistOrder::MaximumIds) ||
+            (songs && (!pid.isString() || !domain::validMusicId(pid.toString()))))
+            return std::nullopt;
+        QSet<QString> seen;
+        QStringList ids;
+        for (const auto id : raw.toArray()) {
+            if (!id.isString() || !domain::validMusicId(id.toString()) ||
+                seen.contains(id.toString()))
+                return std::nullopt;
+            seen.insert(id.toString());
+            ids.append(id.toString());
+        }
+        const auto text = QStringLiteral("[") + ids.join(u',') + QStringLiteral("]");
+        if (songs)
+            return QJsonObject{{QStringLiteral("pid"), pid},
+                               {QStringLiteral("trackIds"), text},
+                               {QStringLiteral("op"), QStringLiteral("update")}};
+        return QJsonObject{{QStringLiteral("ids"), text}};
+    }
     if (op == ApiOperation::PlaylistCreate) {
         const auto name = p.value(QStringLiteral("name"));
         const auto privacy = p.value(QStringLiteral("privacy"));

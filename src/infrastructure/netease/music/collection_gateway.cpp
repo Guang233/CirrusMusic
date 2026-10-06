@@ -1,4 +1,5 @@
 #include "collection_gateway.h"
+#include "domain/music/collection_types.h"
 #include "music_mapping.h"
 #include <QJsonArray>
 #include <QThread>
@@ -50,10 +51,23 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                 return {
                     ApiOperation::PlaylistRename,
                     {{QStringLiteral("id"), c.playlist.value}, {QStringLiteral("name"), c.name}}};
-            else
+            else if constexpr (std::is_same_v<T, PlaylistDescription>)
                 return {ApiOperation::PlaylistDescription,
                         {{QStringLiteral("id"), c.playlist.value},
                          {QStringLiteral("desc"), c.description}}};
+            else if constexpr (std::is_same_v<T, PlaylistDelete>)
+                return {ApiOperation::PlaylistDelete, {{QStringLiteral("id"), c.playlist.value}}};
+            else {
+                QJsonArray ids;
+                for (const auto& id : c.ids())
+                    ids.append(id.value);
+                if constexpr (std::is_same_v<T, PlaylistSongOrder>)
+                    return {ApiOperation::PlaylistSongOrder,
+                            {{QStringLiteral("pid"), c.playlist().value},
+                             {QStringLiteral("ids"), ids}}};
+                else
+                    return {ApiOperation::AccountPlaylistOrder, {{QStringLiteral("ids"), ids}}};
+            }
         },
         mutation.change);
 }
@@ -178,11 +192,14 @@ quint64 CollectionGateway::submit(SessionToken context, QString accountId,
     m_pending.insert(id, {context, accountId, mutation});
     const auto snapshot = m_session.snapshot();
     auto error = CollectionError::None;
-    if (!m_session.accepts(context))
+    const auto sourceContext = collectionSourceContext(mutation);
+    const auto sourceAccount = collectionSourceAccount(mutation);
+    if (!m_session.accepts(context) || (sourceContext && *sourceContext != context))
         error = CollectionError::StaleContext;
     else if (snapshot.phase != SessionPhase::Authenticated)
         error = CollectionError::AuthenticationRequired;
-    else if (!mutation.isValid() || accountId != snapshot.accountId || !validMusicId(accountId))
+    else if (!mutation.isValid() || accountId != snapshot.accountId || !validMusicId(accountId) ||
+             (sourceAccount && *sourceAccount != accountId))
         error = CollectionError::InvalidRequest;
     else if (!m_client)
         error = CollectionError::Network;

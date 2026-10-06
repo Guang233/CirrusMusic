@@ -41,6 +41,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::PlaylistCreate:
     case ApiOperation::PlaylistRename:
     case ApiOperation::PlaylistDescription:
+    case ApiOperation::PlaylistDelete:
+    case ApiOperation::PlaylistSongOrder:
+    case ApiOperation::AccountPlaylistOrder:
         return std::nullopt; // handled by the closed collection adapter above
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:

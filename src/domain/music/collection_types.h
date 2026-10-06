@@ -2,6 +2,7 @@
 #include "catalog_types.h"
 #include "entity_search_types.h"
 #include "music_types.h"
+#include "playlist_order_types.h"
 #include <QSet>
 #include <QUuid>
 #include <variant>
@@ -101,7 +102,8 @@ struct PlaylistDescription {
 // No whole-playlist subscription (checkToken-v2 gate), CloudSong/Program/Voice casts or JSON.
 using CollectionChange =
     std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
-                 PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription>;
+                 PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription,
+                 PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;
@@ -110,6 +112,20 @@ struct CollectionMutation {
         return !eventId.isNull() && std::visit([](const auto& c) { return c.isValid(); }, change);
     }
 };
+inline std::optional<SessionToken> collectionSourceContext(const CollectionMutation& mutation)
+{
+    if (const auto* c = std::get_if<PlaylistSongOrder>(&mutation.change))
+        return c->sourceContext();
+    if (const auto* c = std::get_if<AccountPlaylistOrder>(&mutation.change))
+        return c->sourceContext();
+    return std::nullopt;
+}
+inline std::optional<QString> collectionSourceAccount(const CollectionMutation& mutation)
+{
+    if (const auto* c = std::get_if<AccountPlaylistOrder>(&mutation.change))
+        return c->sourceAccount();
+    return std::nullopt;
+}
 enum class CollectionOutcome { NotSent, Acknowledged, Rejected, Unknown };
 enum class CollectionError {
     None,

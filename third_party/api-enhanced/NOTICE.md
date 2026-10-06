@@ -18,6 +18,8 @@ Cirrus 的接口审计参考：
 
 歌单基础写还参考固定 `module/playlist_create.js`、`playlist_name_update.js`、`playlist_desc_update.js`及home.md／TS、options／request／config链；C++改写继续位于collection_operation／collection_gateway与既有Core port链，完整契约见[歌单管理写](../../docs/api/playlist-management-writes.md)。`playlist_update.js`仅用于核对batch与手拼JSON风险，未移植其组合调用；创建固定NORMAL、privacy文本0／10，无SHARED／VIDEO／SDK／文件上传或真实服务访问。创建响应身份是明确的合成候选，不声称上游TS或MIT许可证明真实schema／服务权限；保留原MIT与音乐／服务／商标／SDK权利边界。
 
+删除／排序增量参考固定playlist_delete／song_order_update／playlist_order_update完整wrapper、home.md／TS及固定options链，C++继续在collection_operation／collection_gateway，Core仅剥离ID的范围／原token值。数字JSON文本由规范ID构造，不转double、不复制批删／任意op／SDK或Node服务，只有合成fixtures；[契约](../../docs/api/playlist-delete-and-order-writes.md)记录完整范围／Unknown与实证边界，原MIT通知不变。
+
 后续[播客／声音身份与音源补证](../../docs/api/spoken-playback-contract.md)仅为静态研究：补核 `module/song_url.js`、`voice_detail.js`、`voicelist_detail.js`、`voicelist_trans.js`、`voice_lyric.js` 及home.md的mainTrackId音源说明，保留固定原始归属；没有增加C++改写、执行管理／解锁操作或分发外部播放器代码。外部SPlayer／ncm-api-rs及另行观察的当前api-enhanced快照只作为带版本引用的代码证据，不更新本项目固定锁，也不推定外部项目或服务都受此MIT许可覆盖。
 
 这里的 MIT 文件仅适用于该参考项目的相应材料，不是 Cirrus 自身许可证。它也不授予网易云商标、曲库、账号、接口服务或独立第三方 SDK 的使用权。

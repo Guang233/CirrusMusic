@@ -70,4 +70,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 clang-format dry-run、git diff --check、固定440模块hash校验通过；569个本地Markdown文件引用有效（排除inline／fenced code，不验证外链／anchor）。live-looking Cookie有限模式扫描0 findings，不是全面秘密保证。
 
-ignored日志 `build/workspace-checks/playlist-writes-final-{build,focused,thread}.log`及playlist-writes-{boundaries,format,diff-check,fixed-hash,links}.log、生成／DB检查单列；本机cache／凭据不交付，只本地完整提交，不推送。未交付删除／排序／封面／标签／可见性转换／整歌单收藏SDK、可靠创建对账／同步、真实响应／权限／隐私／副作用和UI验收；后续建议仅是路线，不自动授权实现或真实访问。
+ignored日志 `build/workspace-checks/playlist-writes-final-{build,focused,thread}.log`及playlist-writes-{boundaries,format,diff-check,fixed-hash,links}.log、生成／DB检查单列；本机cache／凭据不交付，只本地完整提交，不推送。后续[删除／完整范围排序](playlist-delete-and-order-writes.md)已另包合成接入；封面／标签／可见性转换／整歌单收藏SDK仍未交付、可靠创建对账／同步、真实响应／权限／隐私／副作用和UI验收；后续建议仅是路线，不自动授权实现或真实访问。
