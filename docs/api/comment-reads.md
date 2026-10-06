@@ -96,4 +96,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
   commentsThroughThread podcastReadsThroughThread entitySearchThroughThread playbackThroughThread destructionStillDrains
 ```
 
-未交付：真实评论schema／权限／时间单位／完整分页证据、Voice／艺人评论绑定、UI、持久化、账号评论历史／通知、所有评论点赞／发布／回复／删除／抱抱写。实网和真实账号验证必须另行授权，不沿用已停−462窗口，不读取记忆凭据，也不为了测试自动登录。后续可推进已确认的订阅／云盘只读或显式收藏／歌单写设计小包；未知写入结果／协议门禁另立契约，不由本包读取成功推导。
+随后[五动作独立写](comment-writes.md)已明确批准原生v3前置并合成接入，不改变本读取包／数字type／原149与328＋8历史证据；独立8槽、原account-token-generation与Unknown，不自动刷新读取结果／计数、从author推断owner或生成创建ID。未交付：真实评论schema／权限／时间单位／完整分页证据、Voice／艺人评论绑定、UI、持久化、账号评论历史／通知、抱抱写及Podcast发布／回复；真实issuer格式／TTL／绑定、审核／删除效果也另验收。实网和真实账号验证必须另行授权，不沿用已停−462窗口，不读取记忆凭据，也不为了测试自动登录。后续可推进已确认的订阅／云盘只读或显式收藏／歌单写设计小包；未知写入结果／协议门禁另立契约，不由本包读取成功推导。

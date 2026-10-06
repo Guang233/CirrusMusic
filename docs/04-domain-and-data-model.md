@@ -203,3 +203,7 @@ ArtistIntroduction保留可选briefDescription与有序IntroductionSection(title
 ## 16. 已接入有界封面更新值
 
 [契约](api/playlist-cover-update.md)：第14写variant PlaylistCoverReplace仅PlaylistId／显式内存JPEG≤1MiB、Core只校验envelope；完整marker／1024方形解码、新像素JPEG85与去元数据在基础设施QtGui，不把路径／token／docId／URL带进Core。CollectionResult新增optional CoverStep Preparing／Allocating／Uploading／Committing及失效Unobserved，阶段不是已发送或效果证据，Ack仅合法原上下文最终commit；原8槽与账号／token／generation、Unknown共用，不发布createdPlaylist。不自动文件读取、裁剪、重试／刷新／库更新；上传成功而commit失败可留未绑定对象，无清理／撤销契约。
+
+## 17. 已接入评论显式五动作值
+
+[契约](api/comment-writes.md)：CommentChange四variant（Reaction含like/unlike、Publish、Reply、Delete）与非空UUID CommentMutation，复用严格CommentTarget／CommentId；发布／回复仅Song／Playlist／Album／Program，点赞／删除另含Podcast，Voice／Artist不强转。文本合法非空≤4096 UTF16本地预算／不归一化，单个显式目标不依作者ID猜权限。CommentWriteResult仅eventId／四outcome／Token-Writing-Unobserved阶段／error及optional providerCode、retryAfterMs，无创建ID／正文／secret或状态推断。独立Core port／五动作共用8槽，原account/token/generation、UUID冲突、取消／晚到屏障；Token可能已GET但业务未发时NotSent，业务发送后Unknown，Facade未知阶段保守Unknown。不与collection／report合并原子事务，无自动读取／库更新／重试／outbox，token及JSONP parsing／XEAPI／HTTP只在基础设施，域与应用仍Core-only；结构值不是真实权限／发布效果证明。

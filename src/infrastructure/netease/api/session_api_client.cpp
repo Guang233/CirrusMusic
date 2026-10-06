@@ -1,4 +1,6 @@
 #include "session_api_client.h"
+#include "comment_write_operation.h"
+#include "infrastructure/netease/protocol/comment_v3_policy.h"
 
 #include "infrastructure/netease/protocol/eapi_request_profile.h"
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
@@ -225,17 +227,35 @@ bool SessionApiClient::promoteReceipt(domain::SessionToken from, domain::Session
     return accepts(to); // a reentrant logout invalidates the acknowledgement
 }
 
+ApiError SessionApiClient::commentPrerequisite(domain::SessionToken context, ApiOperation op) const
+{
+    if (!isCommentWriteOperation(op))
+        return ApiError::InvalidRequest;
+    if (!accepts(context))
+        return ApiError::StaleContext;
+    const auto contract = commentWriteContract(op);
+    const auto origin = officialRequestUrl(contract->protocol, contract->logicalPath);
+    const auto musicU = m_cookies.value(context, *origin, "MUSIC_U");
+    if (!musicU || musicU->isEmpty())
+        return ApiError::Cookie;
+    if (contract->protocol == Protocol::Xeapi && (!m_xeapiKeys || !m_xeapiKeys->current()))
+        return ApiError::MissingProtocolKey;
+    return ApiError::None;
+}
 quint64 SessionApiClient::submit(domain::SessionToken context, ApiOperation operation,
-                                 QJsonObject parameters)
+                                 QJsonObject parameters, QByteArray commentV3Token)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     const quint64 id = ++m_nextId;
     Pending pending;
     pending.context = context;
     pending.operation = operation;
+    pending.commentV3Token = std::move(commentV3Token);
     const auto contract = operationContract(operation, parameters);
     const auto payload = operationPayload(operation, parameters);
-    if (!contract || !payload ||
+    if ((requiresCommentV3(operation) ? !validCommentV3Token(pending.commentV3Token)
+                                      : !pending.commentV3Token.isEmpty()) ||
+        !contract || !payload ||
         (contract->protocol != Protocol::Eapi && contract->protocol != Protocol::Weapi &&
          contract->protocol != Protocol::Xeapi)) {
         pending.forcedError = ApiError::InvalidRequest;
@@ -367,7 +387,8 @@ void SessionApiClient::startXeapi(quint64 id, Pending& pending)
     const auto musicU = m_cookies.value(pending.context, pending.origin, "MUSIC_U");
     const auto musicA = m_cookies.value(pending.context, pending.origin, "MUSIC_A");
     const auto nmtid = m_cookies.value(pending.context, pending.origin, "NMTID");
-    if (!csrf || !musicU || !musicA || !nmtid) {
+    if (!csrf || !musicU || !musicA || !nmtid ||
+        (requiresAccountCookie(pending.operation) && musicU->isEmpty())) {
         finish(id, {ApiError::Cookie});
         return;
     }
@@ -391,6 +412,7 @@ void SessionApiClient::startXeapi(quint64 id, Pending& pending)
     request.cookieHeader = prepared.cookieHeader;
     request.userAgent = prepared.userAgent;
     request.xeapiHeaders = prepared.headers;
+    request.commentV3Token = std::move(pending.commentV3Token);
     request.responseLimit = pending.contract.responseLimit;
     pending.transportId = m_transport->post(std::move(request));
     m_transportIds.insert(pending.transportId, id);

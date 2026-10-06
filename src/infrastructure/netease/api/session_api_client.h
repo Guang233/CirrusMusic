@@ -58,7 +58,10 @@ class SessionApiClient final : public QObject
     [[nodiscard]] bool advanceTo(const domain::SessionToken& context);
     [[nodiscard]] bool accepts(const domain::SessionToken& context) const;
     [[nodiscard]] quint64 submit(domain::SessionToken context, ApiOperation operation,
-                                 QJsonObject parameters = {});
+                                 QJsonObject parameters = {}, QByteArray commentV3Token = {});
+    // Closed comment prerequisites only; no credentials exposed. Called before issuer HTTP.
+    [[nodiscard]] ApiError commentPrerequisite(domain::SessionToken context,
+                                               ApiOperation operation) const;
     void cancel(quint64 requestId);
     // Infrastructure-only: auth adapter must validate identity before handing
     // this one-use request-bound snapshot to the prepared session token.
@@ -90,6 +93,7 @@ class SessionApiClient final : public QObject
         ApiOperationContract contract;
         QUrl origin;
         QJsonObject payload;
+        QByteArray commentV3Token; // infrastructure-only; exactly add/reply, never caller JSON
         quint64 transportId = 0;
         ApiError forcedError{};
         std::shared_ptr<SessionCookieStore> credentials;

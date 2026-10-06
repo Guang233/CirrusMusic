@@ -44,6 +44,8 @@
 | R-024 | 热门／任意文本被当官方可编辑标签、空串误清除或单向公开被许诺可逆／Ack即安全可见 | 中／高 | 自动分类刷新／重试公开、猜privacy10、creator作权限、改标签隐式公开 | [标签／单向公开](api/playlist-tags-and-publication-writes.md)：Catalogue成员工厂／原token／保序与本地预算、拒绝空／分号／all；公开固定numeric0，原8槽／账号／Unknown，不证明来源真实性／权限／远端效果或可逆，UI确认与实网另验收 | 后端/QA/UI / M3–M5 |
 | R-025 | 上传200被当封面已提交、账号凭据泄漏NOS、恶意图／元数据隐私／孤儿对象与跨号续传 | 中／高 | 透传URL／raw图／Cookie、跳过size校验、copy外层总200、超时重放／猜清理 | [封面契约](api/playlist-cover-update.md)：经批准Gui仅基础设施，有界JPEG全解码／新像素重编码，固定NOS无账号Cookie／redirect、严格allocation／size与阶段Unknown／原账号屏障；无真实上传／回滚／孤儿清理保证，codec部署与真实权限另验收 | 后端/QA/安全 / M3–M5 |
 
+| R-026 | 空／外部v3 token、误复用v2 SDK或账号Cookie泄漏易盾，200当审核／评论ID／删除效果，Unknown重发重复内容 | 中／高 | token失败仍发、跨号续链／自动重试／作者ID作owner、JSONP执行或宽regex尾随匹配、乐观评论／计数更新 | [评论写](api/comment-writes.md)：已明确获准固定原生v3 GET，无SDK／JS／Cookie／redirect，严格16KiB候选及2个XEAPI路径专用token；MUSIC_U/key与原account/token、8槽／business NotSent-Unknown、无创建ID／重试／隐式读；仅合成，真实issuer格式／TTL／绑定、权限／审核／删除效果与UI另授权验收，v2延期不绕过 | 后端/QA/安全/UI / M3–M5 |
+
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 
 ## 3. 待确认决策

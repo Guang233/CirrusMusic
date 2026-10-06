@@ -185,6 +185,11 @@ target_link_libraries(tst_account_library PRIVATE cirrus_netease_music Qt6::Test
 add_test(NAME account_library COMMAND tst_account_library)
 set_tests_properties(account_library PROPERTIES TIMEOUT 30)
 
+qt_add_executable(tst_comment_writes unit/comment_writes_test.cpp support/comment_write_support.h)
+target_link_libraries(tst_comment_writes PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME comment_writes COMMAND tst_comment_writes)
+set_tests_properties(comment_writes PROPERTIES TIMEOUT 45)
+
 qt_add_executable(tst_comments unit/comments_test.cpp)
 target_link_libraries(tst_comments PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME comments COMMAND tst_comments)

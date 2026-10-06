@@ -39,7 +39,7 @@
 | TC-DOWNLOAD | FR-025/026；NFR-007 | Range 200/206/416、URL 过期换源、暂停、磁盘满、崩溃于 rename 前后、权限失效 |
 | TC-LOCAL | FR-027 | 目录授权、坏标签、巨型封面、符号链接环、同名不同文件、文件移动与目录离线 |
 | TC-CLOUD | FR-028/029 | 私有元数据隔离、列表分页、上传阶段失败、传完未入库、删除确认 |
-| TC-COMMENT | FR-030/031 | [读取包](api/comment-reads.md)：严格资源、cursor／showInner:false、楼层／missing、坏schema／纯文本、取消／换号／429；点赞／审核／发帖未知结果属后续写验证 |
+| TC-COMMENT | FR-030/031 | [读取包](api/comment-reads.md)：严格资源、cursor／showInner:false、楼层／missing、坏schema／纯文本、取消／换号／429；[独立写族](api/comment-writes.md)见TC-COMMENT-WRITE，真实审核／UI仍独立验收 |
 | TC-VIDEO | FR-032（撤销） | 视频明确排除，此测试族不进入验收集合 |
 | TC-LINUX | FR-033～036；NFR-010 | MPRIS 单位与事件、无托盘退出、portal 版本／拒绝、媒体键不双触发 |
 | TC-A11Y | FR-037；NFR-009/013 | 键盘完整主路径、Orca、名称／状态、焦点归还、主题和 200% 缩放 |
@@ -112,6 +112,10 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 ### TC-PLAYLIST-COVER：有界封面更新（FR-011）
 
 [契约](api/playlist-cover-update.md)：最新10受影响Debug套件562 pass（新playlist_cover_writes57）、9条线程数据行11 pass，0fail/skip，登记42非全量／Release。JPEG准备／方形／1MiB／1024／marker／去元数据、2Weapi固定路径／载荷／strict keys、31坏allocation、NOS固定raw host/query/header／无账号Cookie及8失败行、最终403／512／缺码／字符串200、4阶段cancel×logout8行、Guest／Cookie／容量／UUID／提前Ack／close；分配已完成但API id为0的NOS期间client销毁仍Unknown/Uploading、原token/eventId、NOS取消排空／不续发commit。线程完整登录→三阶段Ack，挂起NOSclose Unknown/Unobserved／资源真排空，原token、无自动读／播放／报告。15 CPP fresh all-server LSP clean、14 application对象6950真实依赖无泄漏、UI0，Gui仅PRIVATE基础设施及图片测试。初始fixture编译及恶意JPEG fatal已修：合法列表、生产marker预检；坏fixture／fatal保留、全组最终通过，不累加旧563＋11。ignored cover-final-{build,focused,thread}.log。
+
+### TC-COMMENT-WRITE：评论五动作与获准原生v3链（FR-030/031）
+
+[完整契约／复现](api/comment-writes.md)：最终10受影响Debug套件760 pass＋9线程数据行11 pass，0fail/skip，登记43／registry79非全量／Release。新comment_writes134：23资源模式、17坏token、60响应、24cancel×logout、4096文本／Unicode／宽ID／strict keys、原Cookie／XEAPI、MUSIC_U／key前置、direct transport token双限制、两阶段client销毁、同token换账号／Guest／错gen／晚到、UUID／8槽及fresh token不复用。JSONP只严格解析候选不执行；不让密钥缺失／token失败发业务，不推断创建ID。线程完整合成登录→5动作独立（含unlike403）→坏token→并行挂起业务／issuer时close真排空，14请求／8结果，无自动read／collection／play／report。22fresh all-server CPP clean，14应用对象6957实编依赖／禁入0、UI0，无新库／网络／账号／JS。历史封面562＋11与初次129＋3单列不累加；新moc经构建／DB／fresh checks真实存在，真实包含问题修正／局部启发式精确复核，无suppression。ignored comment-write-final-{build,focused,thread}.log及boundaries／format／diff／fixed／links／secrets，不作真实协议／密钥环／声学／权限或全面秘密证明。
 
 ## 4. API fixture 规范
 

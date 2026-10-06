@@ -36,6 +36,7 @@ void BackendFacade::close()
     invalidateMusic(MusicError::Canceled);
     invalidateListeningReports(domain::ReportError::Canceled);
     invalidateCollections(domain::CollectionError::Canceled);
+    invalidateCommentWrites(domain::CommentWriteError::Canceled);
     invalidatePlayback();
     const auto pending = std::exchange(m_pending, {});
     setState(BackendState::Stopping);
@@ -61,6 +62,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
         invalidateMusic(MusicError::StaleContext);
         invalidateListeningReports(domain::ReportError::StaleContext);
         invalidateCollections(domain::CollectionError::StaleContext);
+        invalidateCommentWrites(domain::CommentWriteError::StaleContext);
         invalidatePlayback();
     }
     emit commandRequested({id, m_generation, action, options});
@@ -118,6 +120,7 @@ void BackendFacade::deliver(BackendEvent event)
             event.session.phase != domain::SessionPhase::Authenticated) {
             invalidateListeningReports(domain::ReportError::StaleContext);
             invalidateCollections(domain::CollectionError::StaleContext);
+            invalidateCommentWrites(domain::CommentWriteError::StaleContext);
         }
         m_snapshot = event.session;
         emit sessionChanged(m_snapshot);
@@ -524,6 +527,68 @@ void BackendFacade::deliverCollection(CollectionDelivery delivery)
         delivery.result.coverStep.reset();
     delivery.result.eventId = expected.mutation.eventId;
     emit collectionCompleted(expected.id, expected.context, delivery.result);
+}
+
+quint64 BackendFacade::mutateComment(domain::CommentMutation mutation)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() ||
+        m_snapshot.phase != domain::SessionPhase::Authenticated ||
+        !domain::validMusicId(m_snapshot.accountId) || !mutation.isValid() ||
+        m_commentWrites.size() >= 8)
+        return 0;
+    for (const auto& p : std::as_const(m_commentWrites))
+        if (p.mutation.eventId == mutation.eventId)
+            return 0;
+    const auto id = ++m_nextId;
+    const CommentWriteCommand c{id, m_generation, m_snapshot.token, m_snapshot.accountId,
+                                std::move(mutation)};
+    m_commentWrites.insert(id, c);
+    emit commentWriteRequested(c);
+    return id;
+}
+void BackendFacade::cancelCommentWith(quint64 id, domain::CommentWriteError error)
+{
+    if (!m_commentWrites.contains(id))
+        return;
+    const auto c = m_commentWrites.take(id);
+    emit commentWriteCancelRequested(id);
+    const domain::CommentWriteResult r{c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
+                                       error};
+    QTimer::singleShot(0, this, [this, id, context = c.context, r] {
+        emit commentWriteCompleted(id, context, r);
+    });
+}
+void BackendFacade::cancelComment(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    cancelCommentWith(id, domain::CommentWriteError::Canceled);
+}
+void BackendFacade::invalidateCommentWrites(domain::CommentWriteError error)
+{
+    for (const auto id : m_commentWrites.keys())
+        cancelCommentWith(id, error);
+}
+void BackendFacade::deliverCommentWrite(CommentWriteDelivery d)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_commentWrites.contains(d.id))
+        return;
+    const auto c = m_commentWrites.take(d.id);
+    if (d.generation != c.generation || d.context != c.context || c.generation != m_generation ||
+        c.context != m_snapshot.token || c.accountId != m_snapshot.accountId ||
+        m_state != BackendState::Ready || m_snapshot.phase != domain::SessionPhase::Authenticated)
+        d.result = {c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
+                    domain::CommentWriteError::StaleContext};
+    if (d.result.step < domain::CommentWriteStep::Unobserved ||
+        d.result.step > domain::CommentWriteStep::Writing)
+        d.result.step = domain::CommentWriteStep::Unobserved;
+    if (d.result.outcome == domain::CommentWriteOutcome::Acknowledged &&
+        d.result.step != domain::CommentWriteStep::Writing)
+        d.result = {c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
+                    domain::CommentWriteError::InvalidResponse};
+    d.result.eventId = c.mutation.eventId;
+    emit commentWriteCompleted(c.id, c.context, d.result);
 }
 
 void BackendFacade::invalidatePlayback()

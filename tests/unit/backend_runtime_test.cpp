@@ -1,3 +1,4 @@
+#include "../support/comment_write_support.h"
 #include "../support/fake_http.h"
 #include "../support/fake_secret_store.h"
 #include "../support/synthetic_cover.h"
@@ -5,6 +6,7 @@
 #include "application/playback/listening_session.h"
 #include "application/ports/playback.h"
 #include "infrastructure/bootstrap/xeapi_key_vault.h"
+#include "infrastructure/netease/music/comment_v3_issuer.h"
 #include "infrastructure/netease/music/cover_upload.h"
 #include "infrastructure/netease/network/http_transport.h"
 #include "infrastructure/netease/protocol/openssl_primitives.h"
@@ -253,6 +255,7 @@ class BackendRuntimeTest : public QObject
     void catalogMetadataThroughThread();
     void playlistTagsThroughThread();
     void playlistCoverThroughThread();
+    void commentWritesThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2299,5 +2302,129 @@ void BackendRuntimeTest::playlistCoverThroughThread()
     QCOMPARE(state->created.load(), state->destroyed.load());
 }
 
+class CountingCommentTokenManager final : public CommentTokenManager
+{
+  public:
+    explicit CountingCommentTokenManager(std::shared_ptr<SharedState> state)
+        : m_state(std::move(state))
+    {
+        check();
+        ++m_state->created;
+    }
+    ~CountingCommentTokenManager() override
+    {
+        check();
+        ++m_state->destroyed;
+    }
+
+  protected:
+    QNetworkReply* createRequest(Operation op, const QNetworkRequest& r, QIODevice* out) override
+    {
+        check();
+        ++m_state->requests;
+        return CommentTokenManager::createRequest(op, r, out);
+    }
+
+  private:
+    void check()
+    {
+        if (QThread::currentThread() == qApp->thread())
+            ++m_state->wrongThread;
+    }
+    std::shared_ptr<SharedState> m_state;
+};
+void BackendRuntimeTest::commentWritesThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir dir;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{dir.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{Plan{R"({"code":200})"}, Plan{R"({"code":403})"},
+                             Plan{commentEncrypted(R"({"code":200})")},
+                             Plan{commentEncrypted(R"({"code":200})")},
+                             Plan{commentEncrypted(R"({"code":200})")}, Plan{"", 200, -1}});
+    auto factory = factories(state, gate, plans);
+    factory.commentV3Issuer = [state] {
+        auto m = std::make_unique<CountingCommentTokenManager>(state);
+        m->plans = {Plan{R"(null([200,1,"synthetic-v3-one"]))"},
+                    Plan{R"(null([200,2,"synthetic-v3-two"]))"}, Plan{"{}"},
+                    Plan{R"(null([200,3,"synthetic-v3-three"]))"}, Plan{"", 200, -1}};
+        return std::make_unique<netease::CommentV3Issuer>(std::move(m));
+    };
+    BackendRuntime runtime(config, factory);
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::commentWriteCompleted), reads(&f, &BackendFacade::musicRequested),
+        play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested),
+        collections(&f, &BackendFacade::collectionRequested);
+    connect(&f, &BackendFacade::commentWriteCompleted, this,
+            [&](quint64, SessionToken, CommentWriteResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    const QList<CommentChange> changes{
+        CommentReaction{SongId{"1"}, {"2"}, true}, CommentReaction{PodcastId{"1"}, {"2"}, false},
+        CommentPublish{PlaylistId{"1"}, "synthetic new"},
+        CommentReply{ProgramId{"1"}, {"2"}, "synthetic reply"}, CommentDelete{AlbumId{"1"}, {"2"}}};
+    int n = 0;
+    for (const auto& change : changes) {
+        const auto event = QUuid::createUuid();
+        QVERIFY(f.mutateComment({event, change}));
+        ++n;
+        QTRY_COMPARE(done.size(), n);
+        const auto r = qvariant_cast<CommentWriteResult>(done.last()[2]);
+        QCOMPARE(r.eventId, event);
+        QCOMPARE(r.step, CommentWriteStep::Writing);
+        QCOMPARE(r.outcome,
+                 n == 2 ? CommentWriteOutcome::Rejected : CommentWriteOutcome::Acknowledged);
+        QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    }
+    QCOMPARE(state->requests.load(), 10);
+    QVERIFY(f.mutateComment(
+        {QUuid::createUuid(), CommentPublish{SongId{"1"}, "synthetic rejected token"}}));
+    QTRY_COMPARE(done.size(), 6);
+    auto r = qvariant_cast<CommentWriteResult>(done.last()[2]);
+    QCOMPARE(r.outcome, CommentWriteOutcome::NotSent);
+    QCOMPARE(r.error, CommentWriteError::TokenUnavailable);
+    QCOMPARE(r.step, CommentWriteStep::Token);
+    QCOMPARE(state->requests.load(), 11);
+    const auto pending = f.mutateComment(
+        {QUuid::createUuid(), CommentReply{SongId{"1"}, {"2"}, "synthetic hanging write"}});
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 13);
+    const auto pendingToken = f.mutateComment(
+        {QUuid::createUuid(), CommentPublish{SongId{"1"}, "synthetic hanging token"}});
+    QVERIFY(pendingToken);
+    QTRY_COMPARE(state->requests.load(), 14);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 8);
+    for (int i = 6; i < 8; ++i) {
+        r = qvariant_cast<CommentWriteResult>(done[i][2]);
+        QCOMPARE(r.outcome, CommentWriteOutcome::Unknown);
+        QCOMPARE(r.step, CommentWriteStep::Unobserved);
+        QCOMPARE(qvariant_cast<SessionToken>(done[i][1]), token);
+    }
+    QVERIFY(reads.isEmpty());
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QVERIFY(collections.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->requests.load(), 14);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
 QTEST_GUILESS_MAIN(BackendRuntimeTest)
 #include "backend_runtime_test.moc"

@@ -4,6 +4,7 @@
 #include "application/ports/music_gateway.h"
 #include "domain/music/account_library_types.h"
 #include "domain/music/collection_types.h"
+#include "domain/music/comment_write_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/podcast_types.h"
 #include "domain/playback/listening_report.h"
@@ -50,6 +51,18 @@ struct ListeningReportDelivery {
     quint64 id = 0, generation = 0;
     domain::SessionToken context;
     domain::ListeningReportResult result;
+};
+
+struct CommentWriteCommand {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    QString accountId;
+    domain::CommentMutation mutation;
+};
+struct CommentWriteDelivery {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    domain::CommentWriteResult result;
 };
 
 struct CollectionCommand {
@@ -180,6 +193,8 @@ class BackendFacade final : public QObject
     void cancelListeningReport(quint64 id);
     [[nodiscard]] quint64 mutateCollection(domain::CollectionMutation mutation);
     void cancelCollection(quint64 id);
+    [[nodiscard]] quint64 mutateComment(domain::CommentMutation mutation);
+    void cancelComment(quint64 id);
     [[nodiscard]] domain::PlaybackSnapshot playback() const { return m_playback; }
     [[nodiscard]] quint64 playSong(domain::SongId song,
                                    domain::AudioQuality quality = domain::AudioQuality::Standard,
@@ -197,6 +212,7 @@ class BackendFacade final : public QObject
     void deliverPlayback(PlaybackDelivery delivery);
     void deliverListeningReport(ListeningReportDelivery delivery);
     void deliverCollection(CollectionDelivery delivery);
+    void deliverCommentWrite(CommentWriteDelivery delivery);
 
   signals:
     void stateChanged(cirrus::application::BackendState state);
@@ -222,6 +238,8 @@ class BackendFacade final : public QObject
                                   cirrus::domain::ListeningReportResult result);
     void collectionCompleted(quint64 id, cirrus::domain::SessionToken context,
                              cirrus::domain::CollectionResult result);
+    void commentWriteCompleted(quint64 id, cirrus::domain::SessionToken context,
+                               cirrus::domain::CommentWriteResult result);
     void playbackChanged(cirrus::domain::PlaybackSnapshot snapshot);
 
     // Composition wiring only; emitted on this object's thread.
@@ -235,12 +253,17 @@ class BackendFacade final : public QObject
     void listeningReportCancelRequested(quint64 id);
     void collectionRequested(cirrus::application::CollectionCommand command);
     void collectionCancelRequested(quint64 id);
+    void commentWriteRequested(cirrus::application::CommentWriteCommand command);
+    void commentWriteCancelRequested(quint64 id);
 
   private:
     void invalidateListeningReports(domain::ReportError error);
     void cancelListeningReportWith(quint64 id, domain::ReportError error);
     QHash<quint64, ListeningReportCommand> m_reports;
     QHash<quint64, CollectionCommand> m_collections;
+    QHash<quint64, CommentWriteCommand> m_commentWrites;
+    void invalidateCommentWrites(domain::CommentWriteError error);
+    void cancelCommentWith(quint64 id, domain::CommentWriteError error);
     void invalidateCollections(domain::CollectionError error);
     void cancelCollectionWith(quint64 id, domain::CollectionError error);
     quint64 submit(AccountAction action, QrLoginOptions options = {});
@@ -275,3 +298,5 @@ Q_DECLARE_METATYPE(cirrus::application::ListeningReportCommand)
 Q_DECLARE_METATYPE(cirrus::application::ListeningReportDelivery)
 Q_DECLARE_METATYPE(cirrus::application::CollectionCommand)
 Q_DECLARE_METATYPE(cirrus::application::CollectionDelivery)
+Q_DECLARE_METATYPE(cirrus::application::CommentWriteCommand)
+Q_DECLARE_METATYPE(cirrus::application::CommentWriteDelivery)

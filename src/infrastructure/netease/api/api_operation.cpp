@@ -1,6 +1,7 @@
 #include "api_operation.h"
 #include "collection_operation.h"
 #include "comment_operation.h"
+#include "comment_write_operation.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
@@ -15,6 +16,8 @@ namespace cirrus::netease
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
 {
+    if (isCommentWriteOperation(operation))
+        return commentWriteContract(operation);
     if (isCollectionOperation(operation))
         return collectionOperationContract(operation);
     if (isCommentOperation(operation))
@@ -30,6 +33,11 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::CommentLike:
+    case ApiOperation::CommentUnlike:
+    case ApiOperation::CommentPublish:
+    case ApiOperation::CommentReply:
+    case ApiOperation::CommentDelete:
     case ApiOperation::SongHeart:
     case ApiOperation::PlaylistCollectSongs:
     case ApiOperation::AlbumSubscribe:
@@ -196,7 +204,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
 
 bool requiresAccountCookie(ApiOperation operation)
 {
-    return isCollectionOperation(operation) || operation == ApiOperation::AccountIdentity ||
+    return isCommentWriteOperation(operation) || isCollectionOperation(operation) ||
+           operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
            operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
            operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
@@ -224,6 +233,8 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (isCommentWriteOperation(operation))
+        return commentWritePayload(operation, parameters);
     if (isCollectionOperation(operation))
         return collectionOperationPayload(operation, parameters);
     if (isCommentOperation(operation))

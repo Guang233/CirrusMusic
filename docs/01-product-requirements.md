@@ -70,7 +70,7 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-027 | 本地文件导入、目录扫描、标签／封面读取、去重及失效文件提示 | P1 / M4 | 平台/本地 | TC-LOCAL |
 | FR-028 | 云盘歌曲浏览与播放 | P1 / M4 | API | TC-CLOUD |
 | FR-029 | 云盘上传、删除、匹配或修正元数据；有授权及独立确认 | P1 / M4 | API | TC-CLOUD |
-| FR-030 | 歌曲／专辑／歌单／传统节目评论读取、热门／排序／楼层／统计，播客容器已确认通用读取；后续点赞独立写操作 | P1 / M2–M3 | API | TC-COMMENT |
+| FR-030 | 歌曲／专辑／歌单／传统节目评论读取、热门／排序／楼层／统计，播客容器已确认通用读取；点赞／取消独立写操作 | P1 / M2–M3 | API | TC-COMMENT |
 | FR-031 | 发表评论、回复、删除本人评论；处理审核、限流与不确定结果 | P1 / M3 | API | TC-COMMENT |
 | FR-032 | **已撤销：MV／视频功能明确排除，保留编号不复用** | — | — | TC-VIDEO（已撤销） |
 | FR-033 | MPRIS 系统媒体控制、封面与元数据、媒体键操作 | P0 / M3 | 平台 | TC-LINUX |
@@ -96,7 +96,7 @@ FR-011／012 技术进度：[删除／排序](api/playlist-delete-and-order-writ
 
 FR-008／009／010 技术进度：[四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)已合成接入：复用歌单／专辑原description及艺人briefDesc，追加Song别名／译名／发行原值、Album别名／发行公司／类型、Artist别名／译名、Playlist标签／公开creator摘要／计数；独立艺人分节长介绍及歌曲四种百科基础文本。optional未知与显式空分开，纯文本／原token／16槽，不自动加载下游、图片／缓存／写／播放／报告；无生成歌曲叙事、全制作署名／完整复杂百科承诺，真实schema与UI尚未验收，FR不整体标完成。
 
-FR-030 技术进度：[资源评论只读包](api/comment-reads.md)五类入口／八operation已合成接入，严格身份／分页／统计missing／原token隔离；普通评论不含播客容器，Voice／艺人无已确认绑定。仅候选schema，不是实网／UI验收；点赞及FR-031写、账号评论历史／通知未交付。
+FR-030 技术进度：[资源评论只读包](api/comment-reads.md)五类入口／八operation已合成接入，严格身份／分页／统计missing／原token隔离；普通评论不含播客容器，Voice／艺人无已确认绑定。仅候选schema，不是实网／UI验收；[FR-030-031五动作写](api/comment-writes.md)已明确批准原生v3链并合成接入：原账号／独立8槽／Unknown，发布／回复四类型、reaction／delete另含Podcast候选，不开放Voice／艺人。token失败不发业务、无JS／SDK／外部token，五动作各自独立，无新评论ID／作者所有权推断或自动重试／读取／乐观更新。删除本人／审核／计数／服务兼容及UI未真实验收，FR不整体标完成；账号评论历史／通知未交付。
 
 FR-042 内的各能力必须分别探测与验收，不可因实现定时器就宣称“高级音频已完成”。不支持的能力不显示伪可用开关。
 

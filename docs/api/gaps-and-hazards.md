@@ -16,7 +16,7 @@
 
 后续[五类收藏订阅写](collection-writes.md)经用户选择先接入其他已确认项；整歌单subscribe／unsubscribe固定链都调用v2 SDK，原生均未注册／开放。本轮没有下载／执行／分发SDK或引入Node／WebEngine、外部token／空token／改协议降级。参考链的SDK调用并非当前服务必须token的实测证明。
 
-同时，playlist_subscribe 用 `query.t == 1` 选路径，却用 `query.t === 1` 决定一个 payload 字段，字符串／整数输入会产生不同分支。C++ API 应暴露显式 bool/enum，不迁移这种歧义。`comment_add`/`comment_reply` 的 token 需求也要按源文件与公共 options 逐条确认。
+同时，playlist_subscribe 用 `query.t == 1` 选路径，却用 `query.t === 1` 决定一个 payload 字段，字符串／整数输入会产生不同分支。C++ API 应暴露显式 bool/enum，不迁移这种歧义。后续[评论写契约](comment-writes.md)已完整核对新版add／reply的XEAPI+v3 default、like Weapi／delete XEAPI无需default token；维护者明确批准封闭原生v3 GET，只有候选JSONP严格解析、不执行SDK／JS，不复用旧统一comment的强制v2 SDK。失败／缺MUSIC_U或key不发业务、无外部Core token／空token／config token、只2条固定XEAPI路径允许专用header，整歌单收藏v2延期不改；真实issuer格式／TTL／绑定和服务权限待另授权验收。
 
 ## AUD-04：QR 检查异常分支
 

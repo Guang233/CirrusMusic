@@ -83,7 +83,12 @@ enum class ApiOperation {
     PlaylistTagsUpdate,
     PlaylistMakePublic,
     CoverAllocate,
-    PlaylistCoverCommit
+    PlaylistCoverCommit,
+    CommentLike,
+    CommentUnlike,
+    CommentPublish,
+    CommentReply,
+    CommentDelete
 };
 
 struct ApiOperationContract {

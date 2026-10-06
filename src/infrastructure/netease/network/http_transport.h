@@ -37,6 +37,7 @@ struct TransportRequest {
     bool musicReferer = false; // fixed official web origin, never caller-supplied URL
     // Protocol::Xeapi only; names restricted to the fixed profile set, no duplicates.
     QList<std::pair<QByteArray, QByteArray>> xeapiHeaders;
+    QByteArray commentV3Token; // only two closed XEAPI comment paths, not arbitrary headers
     OfficialDestination destination = OfficialDestination::Default;
 };
 

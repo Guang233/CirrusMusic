@@ -9,6 +9,7 @@
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
 #include "infrastructure/netease/music/collection_gateway.h"
+#include "infrastructure/netease/music/comment_write_gateway.h"
 #include "infrastructure/netease/music/listening_report_gateway.h"
 #include "infrastructure/netease/music/music_gateway.h"
 #include "infrastructure/netease/music/stream_resolver.h"
@@ -153,6 +154,31 @@ class BackendWorker final : public QObject
             }
     }
 
+    void mutateComment(CommentWriteCommand c)
+    {
+        const auto id = m_ready && !m_closing && m_commentWrites && c.generation == m_generation
+                            ? m_commentWrites->submit(c.context, c.accountId, c.mutation)
+                            : 0;
+        if (!id)
+            emit commentWriteDelivered({c.id,
+                                        c.generation,
+                                        c.context,
+                                        {c.mutation.eventId, domain::CommentWriteOutcome::NotSent,
+                                         domain::CommentWriteError::Busy}});
+        else
+            m_commentWriteRequests.insert(id, std::move(c));
+    }
+    void cancelComment(quint64 id)
+    {
+        if (!m_commentWrites)
+            return;
+        for (auto it = m_commentWriteRequests.cbegin(); it != m_commentWriteRequests.cend(); ++it)
+            if (it->id == id) {
+                m_commentWrites->cancel(it.key());
+                return;
+            }
+    }
+
     void mutateCollection(CollectionCommand command)
     {
         const auto id =
@@ -225,6 +251,8 @@ class BackendWorker final : public QObject
         m_reportRequests.clear();
         m_collections.reset();
         m_collectionRequests.clear();
+        m_commentWrites.reset();
+        m_commentWriteRequests.clear();
         m_musicService.reset();
         m_musicGateway.reset();
         m_musicRequests.clear();
@@ -240,6 +268,7 @@ class BackendWorker final : public QObject
     void playbackDelivered(cirrus::application::PlaybackDelivery delivery);
     void reportDelivered(cirrus::application::ListeningReportDelivery delivery);
     void collectionDelivered(cirrus::application::CollectionDelivery delivery);
+    void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -346,6 +375,21 @@ class BackendWorker final : public QObject
                         return;
                     const auto c = m_collectionRequests.take(id);
                     emit collectionDelivered({c.id, c.generation, context, result});
+                });
+        auto issuer = m_factories.commentV3Issuer ? m_factories.commentV3Issuer()
+                                                  : std::make_unique<netease::CommentV3Issuer>();
+        if (!issuer) {
+            startup(StartupError::Configuration);
+            return;
+        }
+        m_commentWrites = std::make_unique<netease::CommentWriteGateway>(*m_session, *m_client,
+                                                                         std::move(issuer));
+        connect(m_commentWrites.get(), &ICommentWriteGateway::completed, this,
+                [this](quint64 id, domain::SessionToken token, domain::CommentWriteResult result) {
+                    if (!m_commentWriteRequests.contains(id))
+                        return;
+                    const auto c = m_commentWriteRequests.take(id);
+                    emit commentWriteDelivered({c.id, c.generation, token, result});
                 });
         m_player = m_factories.playback ? m_factories.playback()
                                         : std::make_unique<media::QtPlaybackBackend>();
@@ -469,6 +513,8 @@ class BackendWorker final : public QObject
     QHash<quint64, ListeningReportCommand> m_reportRequests;
     std::unique_ptr<netease::CollectionGateway> m_collections;
     QHash<quint64, CollectionCommand> m_collectionRequests;
+    std::unique_ptr<netease::CommentWriteGateway> m_commentWrites;
+    QHash<quint64, CommentWriteCommand> m_commentWriteRequests;
     std::unique_ptr<IPlaybackBackend> m_player;
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;
@@ -506,6 +552,12 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             &BackendWorker::cancelReport, Qt::QueuedConnection);
     connect(worker, &BackendWorker::reportDelivered, m_facade,
             &BackendFacade::deliverListeningReport, Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::commentWriteRequested, worker, &BackendWorker::mutateComment,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::commentWriteCancelRequested, worker,
+            &BackendWorker::cancelComment, Qt::QueuedConnection);
+    connect(worker, &BackendWorker::commentWriteDelivered, m_facade,
+            &BackendFacade::deliverCommentWrite, Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::collectionRequested, worker, &BackendWorker::mutateCollection,
             Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::collectionCancelRequested, worker,

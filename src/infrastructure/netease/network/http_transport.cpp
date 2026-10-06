@@ -1,5 +1,6 @@
 #include "http_transport.h"
 
+#include "infrastructure/netease/protocol/comment_v3_policy.h"
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QHttpHeaders>
@@ -134,7 +135,12 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         !validHeaderValue(request.cookieHeader, 16 * 1024) ||
         !validHeaderValue(request.userAgent, 1024) ||
         (request.musicReferer && request.protocol != Protocol::Weapi) ||
-        !validXeapiHeaders(request)) {
+        !validXeapiHeaders(request) ||
+        (commentV3Path(request.protocol, request.logicalPath)
+             ? !validCommentV3Token(request.commentV3Token)
+             : !request.commentV3Token.isEmpty()) ||
+        (!request.commentV3Token.isEmpty() &&
+         request.destination != OfficialDestination::Default)) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -163,6 +169,8 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     for (const auto& [name, value] : request.xeapiHeaders) {
         wire.setRawHeader(name, value);
     }
+    if (!request.commentV3Token.isEmpty())
+        wire.setRawHeader("X-antiCheatToken", request.commentV3Token);
     auto* reply = m_manager->post(wire, request.formBody);
     pending->reply = reply;
     reply->setReadBufferSize(64 * 1024);

@@ -9,6 +9,7 @@ namespace cirrus::netease
 {
 class HttpTransport;
 class CoverUpload;
+class CommentV3Issuer;
 } // namespace cirrus::netease
 namespace cirrus::application
 {
@@ -37,6 +38,8 @@ struct BackendFactories {
     std::function<std::unique_ptr<netease::HttpTransport>()> keyTransport;
     std::function<std::unique_ptr<application::IPlaybackBackend>()> playback;
     std::function<std::unique_ptr<netease::CoverUpload>()> coverUpload; // same-thread NOS test seam
+    std::function<std::unique_ptr<netease::CommentV3Issuer>()>
+        commentV3Issuer; // same-thread, no real issuer in offline tests
 };
 
 // Composition root only; the template app does not instantiate it yet.
