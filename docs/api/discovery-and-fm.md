@@ -4,6 +4,8 @@
 
 后续[每日推荐歌单独立读取](daily-recommended-playlists.md)已合成接入，`recommend_resource`与本包每日歌曲及普通 `personalized` 分开，原账号／空Weapi业务／read16；候选root.recommend／100／1MiB、无日期cache／自动详情或播放。同时补强Facade／Service同token变化账号／认证态时的所有私有音乐读取屏障，原日推／FM读取保持独立；本包108＋5是历史，最新受影响753＋thread14见新契约。
 
+另行[历史日推两项读取](daily-recommendation-history.md)已按维护者新选择合成接入：只读可用日期与显式成员日期歌曲，独立原account/source token factory、原16槽，不给本页当前日推入口加date或afresh，不混入FM／observed history。data.dates/data.songs366/500与1/4MiB仅候选，本包历史108＋5不重计；最新839＋thread15／新86，85ops/47注册，不含反馈写／cache／真实会员与window验收，第四项后续亦暂停。
+
 ## 1. 封闭请求与权限边界
 
 固定参考版本仍为 `a8c781fd64faab17fedfd46e0615a2609307f163`，只读取 `module/recommend_songs.js`、`personal_fm.js` 及 `public/docs/home.md`；不运行上游服务，不增加依赖。

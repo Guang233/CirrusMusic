@@ -10,6 +10,7 @@
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
 #include "recent_entity_mapper.h"
+#include "recommendation_history_mapper.h"
 #include "search_assist_mapper.h"
 
 #include <QJsonArray>
@@ -114,10 +115,13 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
     const auto id = ++m_nextId;
     const bool busy = m_pending.size() >= 16;
     m_pending.insert(id, {context, query});
-    if (!m_client || busy || !validMusicQuery(query)) {
-        const auto error = busy        ? MusicError::Busy
-                           : !m_client ? MusicError::Network
-                                       : MusicError::InvalidRequest;
+    const auto source = musicQuerySourceContext(query);
+    const bool staleSource = source && *source != context;
+    if (!m_client || busy || !validMusicQuery(query) || staleSource) {
+        const auto error = busy          ? MusicError::Busy
+                           : !m_client   ? MusicError::Network
+                           : staleSource ? MusicError::StaleContext
+                                         : MusicError::InvalidRequest;
         QTimer::singleShot(0, this, [this, id, error] { finish(id, MusicFailure{error}); });
         return id;
     }
@@ -138,6 +142,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto history = recommendationHistoryRequest(query)) {
+        operation = history->operation;
+        parameters = history->parameters;
     } else if (const auto assist = searchAssistRequest(query)) {
         operation = assist->operation;
         parameters = assist->parameters;

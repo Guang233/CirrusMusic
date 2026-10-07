@@ -33,6 +33,7 @@
 | TC-PLAYLIST-SUB-V2（待实现） | FR-014；Q-013／R-028／B-015 | [原生v2前置门禁](api/playlist-subscription-v2-prerequisite.md)：issuer失败零业务、body/header/Cookie分层、原账号／8槽／前后取消／Unknown与线程排空；无已实现测试或新增pass／CTest，真实issuer／权限／效果另授权 |
 | TC-SYNC | FR-011～014；NFR-007/014 | 双击喜欢、写超时已成功、批次部分成功、排序冲突、无 revision 对账 |
 | TC-DAILY-PLAYLISTS | FR-015／004；R-029 | [独立每日推荐歌单](api/daily-recommended-playlists.md)：原账号／MUSIC_U、空Weapi业务、root.recommend／100／1MiB／mandatory name／lowercase playcount、private same-token scope与read16／cancel-loss-close；新62／受影响753＋线程14，0fail/skip；无日期cache／自动下游，真实schema／频率／权限／UI另验收 |
+| TC-DAILY-HISTORY | FR-015／004；R-031 | [历史日推](api/daily-recommendation-history.md)：原账号／MUSIC_U、两Weapi、calendar日期成员与原token private选择／read16／same-token scope、366/367与500/501、1/4MiB、严格dates/songs不fallback、cancel/client-loss/close；新86／17 affected839＋thread15，0fail/skip，16fresh与实编Core无泄漏。无自动下游／cache／写／实网、会员与window未实证 |
 | TC-DISCOVERY | FR-015/016 | 每日跨时区、旧推荐标记、FM 单次预取、断网耗尽、反馈语义 |
 | TC-PLAY | FR-017；NFR-004/006 | load/pause/seek、A→B→C 乱序、重复结束事件、坏源、停止时晚到事件 |
 | TC-QUEUE | FR-019/020 | 重复歌曲、删除当前项、拖拽版本冲突、随机历史、单曲循环手动 next、全部失败有限终止 |

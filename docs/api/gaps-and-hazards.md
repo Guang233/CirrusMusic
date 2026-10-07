@@ -62,6 +62,8 @@ search/cloudsearch、首页 block、通用评论和用户评论历史可能涉�
 
 recommend_songs、recommend_resource、history_recommend_songs 系列不是同一资源。后续[每日推荐歌单](daily-recommended-playlists.md)已用独立原账号／Weapi空业务接入，root.recommend／100／1MiB／mandatory name／小写playcount为有界合成候选，不是personalized或每日歌曲替代、无推荐日期或cache；Facade／Service同token变账号-认证态私有读屏障已补强。日推登录服务支持、日期／时区、afresh 行为、历史权益及 dislike 后替换均需补实测，见[独立契约](special-contracts.md)。
 
+后续[历史日推两read](daily-recommendation-history.md)已合成接入，home斜线路由与详情date必选／必须可用列表成员比TS optional和wrapper空fallback更严格；采用原account/source token成员private选择，不自由date／空串／today／自动级联。data.dates与data.songs仅合成候选，搜索生成别名冲突不作schema证据，无fallback／截断／欠会员伪空。预算366/500与1/4MiB不是日期window／完整性／权益，85ops/47登记、新86／839＋thread15，未真实验收／cache／反馈写；播客下一阶段亦经维护者选择暂缓，不重开−462。
+
 ## AUD-13：FM 是流式来源，垃圾桶是写操作
 
 personal_fm 与 personal_fm_mode 共用逻辑路径但协议／参数不同。fm_trash 是显式负反馈，不等于 next。续批、模式权限和时间参数待确认，不复制固定时长作为真实行为。

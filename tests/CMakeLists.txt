@@ -216,6 +216,12 @@ target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME entity_search COMMAND tst_entity_search)
 set_tests_properties(entity_search PROPERTIES TIMEOUT 25)
 
+qt_add_executable(tst_recommendation_history unit/recommendation_history_test.cpp
+    support/synthetic_recommendation_history.h)
+target_link_libraries(tst_recommendation_history PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME recommendation_history COMMAND tst_recommendation_history)
+set_tests_properties(recommendation_history PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_daily_playlists unit/daily_playlists_test.cpp support/synthetic_daily_playlists.h)
 target_link_libraries(tst_daily_playlists PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME daily_playlists COMMAND tst_daily_playlists)

@@ -218,4 +218,8 @@ ArtistIntroduction保留可选briefDescription与有序IntroductionSection(title
 
 ## 20. 已接入共享媒体接缝结构值（阶段1）
 
-[契约](api/spoken-media-seam.md)：PlaybackEntity=SongId|ProgramId|VoiceId带kind，canonical校验与same(kind,value)比较独立；AudioTrackId独立正signed64结构类型、不隐式转SongId／ProgramId／VoiceId，不产生可信绑定或声明服务ID必不同。类型未接活动snapshot／history／report／新入口。MediaSource只有URL／actualQuality／format／size／deadline／preview，无身份／account；PreviewRange搬到media_source头不变语义。Song StreamSource以非多态值继承与兼容构造保留Song包络，唯一coordinator核验原Song／token／TTL后只下沉物理base，媒体port／buffer／Qt backend不再看identity；不反向从物理值造Song，不承诺aggregate／ABI。元数据值不是权益／URL安全证明，原媒体限制保留，无signed URL快照／持久化。新28与373＋thread13仅离线准备，消费binding／音源G1/G2及完整spoken单owner／计量仍待证，未开放真实节目／声音播放。
+[契约](api/spoken-media-seam.md)：PlaybackEntity=SongId|ProgramId|VoiceId带kind，canonical校验与same(kind,value)比较独立；AudioTrackId独立正signed64结构类型、不隐式转SongId／ProgramId／VoiceId，不产生可信绑定或声明服务ID必不同。类型未接活动snapshot／history／report／新入口。MediaSource只有URL／actualQuality／format／size／deadline／preview，无身份／account；PreviewRange搬到media_source头不变语义。Song StreamSource以非多态值继承与兼容构造保留Song包络，唯一coordinator核验原Song／token／TTL后只下沉物理base，媒体port／buffer／Qt backend不再看identity；不反向从物理值造Song，不承诺aggregate／ABI。元数据值不是权益／URL安全证明，原媒体限制保留，无signed URL快照／持久化。新28与373＋thread13仅离线准备，消费binding／音源G1/G2及完整spoken单owner／计量仍待证，未开放真实节目／声音播放。后续维护者明确本项G1/G2阶段暂缓、先做历史日推。
+
+## 21. 已接入每日推荐历史与原日期选择
+
+[契约](api/daily-recommendation-history.md)：DailyHistoryDatesQuery当前verified accountId仅本地屏障；DailyHistoryDates保原query及有序／重复YYYY-MM-DD calendar标签，366本地预算非服务窗口。DailyHistorySongsQuery私有构造，仅fromDates接受原完成token与源DTO的显式成员，保存原account/sourceContext/date、不保全列表，不允许任意／空／本机今天／trim日期。factory仅可信内部结构前置非服务签名、paired signal token不能重标旧DTO；Facade与Service／Gateway重核source token，复用同token原账号／认证态屏障。DailyHistorySongs保query与500有序／重复宽Song元数据，候选data.songs非dailySongs，JSON／Cookie只在infra；日期只是关联请求，不验证服务所属日／完整性／权益、不是observed/cloud history／playlist。原16槽／generic runtime，无cache／自动读／选日／详情／图／源／play／write／report／新owner。85ops／47登记，新86／839＋thread15仅合成，schema／会员／window与UI待证。

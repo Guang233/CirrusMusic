@@ -12,9 +12,11 @@
 | --- | --- | --- |
 | recommend_songs | 获取日推歌曲 | 与普通歌单详情分开 |
 | recommend_songs_dislike | 日推不感兴趣 | `/api/v2/discovery/recommend/dislike`，resId、resType=4、sceneType=1；属于写操作 |
-| history_recommend_songs | 历史日推索引 | 账号权益／可查询日期待实际验证 |
-| history_recommend_songs_detail | 指定历史日推内容 | 不通过普通歌单 ID 请求 |
+| history_recommend_songs | 历史日推索引 | [两项只读契约](daily-recommendation-history.md)已合成接入，Weapi空业务／原account/read16、candidate data.dates；会员／window仍待证 |
+| history_recommend_songs_detail | 指定历史日推内容 | 仅原日期DTO成员／source token private factory、Weapi date，不用PlaylistId；data.songs候选非dailySongs fallback，无cache／自动读／反馈写 |
 | recommend_resource | 每日推荐歌单 | [独立原账号读取](daily-recommended-playlists.md)已合成接入，Weapi空业务；不是每日歌曲／普通personalized替代，root.recommend候选，无日期cache／自动下游 |
+
+最新历史增量85ops／47登记、新86／839＋thread15；ISO calendar是原服务标签不是本机推荐日或权限。home详情date必选来自索引，TSoptional/wrapper空fallback不搬，拒绝不伪空；前三项与第四项后续均暂停。本节以下snapshot/cache是设计，不作为本包已有cache或UI。
 
 客户端规则：
 

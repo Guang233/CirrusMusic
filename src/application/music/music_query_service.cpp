@@ -67,6 +67,8 @@ quint64 MusicQueryService::request(domain::SessionToken context, MusicQuery quer
     else if (requiresAuthenticatedMusicQuery(query) &&
              snapshot.phase != domain::SessionPhase::Authenticated)
         rejectLater(id, MusicError::AuthenticationRequired);
+    else if (const auto source = musicQuerySourceContext(query); source && *source != context)
+        rejectLater(id, MusicError::StaleContext);
     else if (!validMusicQuery(query))
         rejectLater(id, MusicError::InvalidRequest);
     else if (const auto account = musicQueryAccount(query);

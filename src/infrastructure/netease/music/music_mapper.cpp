@@ -14,6 +14,7 @@
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
 #include "recent_entity_mapper.h"
+#include "recommendation_history_mapper.h"
 #include "search_assist_mapper.h"
 
 #include <QJsonArray>
@@ -177,6 +178,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
         return mapPlaylistDiscoveryResponse(query, object);
     if (const auto* charts = std::get_if<ChartsQuery>(&query))
         return mapChartsResponse(*charts, object);
+    if (isRecommendationHistoryQuery(query))
+        return mapRecommendationHistoryResponse(query, object);
     if (historyQueryAccount(query))
         return mapCloudHistoryResponse(query, object);
     if (isAccountLibraryQuery(query))

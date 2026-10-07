@@ -174,6 +174,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/cover_upload.h
     infrastructure/netease/music/collection_gateway.cpp
     infrastructure/netease/music/collection_gateway.h
+    infrastructure/netease/music/recommendation_history_mapper.cpp
+    infrastructure/netease/music/recommendation_history_mapper.h
     infrastructure/netease/music/account_library_mapper.cpp
     infrastructure/netease/music/account_library_mapper.h
     infrastructure/netease/music/comment_mapper.cpp

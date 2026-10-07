@@ -92,7 +92,9 @@ enum class ApiOperation {
     SearchSuggestions,
     HotKeywords,
     HotKeywordDetails,
-    DailyRecommendedPlaylists
+    DailyRecommendedPlaylists,
+    DailyHistoryDates,
+    DailyHistorySongs
 };
 
 struct ApiOperationContract {

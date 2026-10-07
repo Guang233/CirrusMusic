@@ -13,6 +13,7 @@
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/podcast_types.h"
 #include "domain/music/recent_entity_types.h"
+#include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
 
 #include <QObject>
@@ -74,7 +75,8 @@ using MusicQuery = std::variant<
     domain::CommentFloorQuery, domain::CommentInfoQuery, domain::SubscribedPodcastsQuery,
     domain::CloudSongsQuery, domain::CloudSongDetailsQuery, domain::ArtistIntroductionQuery,
     domain::SongWikiQuery, domain::SearchSuggestionsQuery, domain::HotKeywordsQuery,
-    domain::HotKeywordDetailsQuery, domain::DailyRecommendedPlaylistsQuery>;
+    domain::HotKeywordDetailsQuery, domain::DailyRecommendedPlaylistsQuery,
+    domain::DailyHistoryDatesQuery, domain::DailyHistorySongsQuery>;
 using MusicResult = std::variant<
     domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
     domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage, domain::ArtistAlbumsPage,
@@ -90,11 +92,24 @@ using MusicResult = std::variant<
     domain::SortedCommentsPage, domain::CommentFloorPage, domain::CommentStatistics,
     domain::SubscribedPodcastsPage, domain::CloudSongsPage, domain::CloudSongDetails,
     domain::ArtistIntroduction, domain::SongWikiSummary, domain::SearchSuggestions,
-    domain::HotKeywords, domain::HotKeywordDetails, domain::DailyRecommendedPlaylists>;
+    domain::HotKeywords, domain::HotKeywordDetails, domain::DailyRecommendedPlaylists,
+    domain::DailyHistoryDates, domain::DailyHistorySongs>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {
     return std::visit([](const auto& value) { return value.isValid(); }, query);
+}
+
+inline bool isRecommendationHistoryQuery(const MusicQuery& query)
+{
+    return std::holds_alternative<domain::DailyHistoryDatesQuery>(query) ||
+           std::holds_alternative<domain::DailyHistorySongsQuery>(query);
+}
+inline std::optional<domain::SessionToken> musicQuerySourceContext(const MusicQuery& query)
+{
+    if (const auto* history = std::get_if<domain::DailyHistorySongsQuery>(&query))
+        return history->sourceContext();
+    return std::nullopt;
 }
 
 inline bool isSearchAssistQuery(const MusicQuery& query)
@@ -169,8 +184,11 @@ inline std::optional<QString> historyQueryAccount(const MusicQuery& query)
             using T = std::decay_t<decltype(value)>;
             if constexpr (std::is_same_v<T, domain::RecentSongsQuery> ||
                           std::is_same_v<T, domain::ListeningRankingQuery> ||
-                          std::is_same_v<T, domain::RecentEntitiesQuery>)
+                          std::is_same_v<T, domain::RecentEntitiesQuery> ||
+                          std::is_same_v<T, domain::DailyHistoryDatesQuery>)
                 return value.accountId;
+            if constexpr (std::is_same_v<T, domain::DailyHistorySongsQuery>)
+                return value.accountId();
             return std::nullopt;
         },
         query);

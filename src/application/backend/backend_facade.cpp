@@ -290,6 +290,17 @@ quint64 BackendFacade::dailyRecommendations()
 {
     return submitMusic(domain::DailyRecommendationsQuery{});
 }
+quint64 BackendFacade::dailyRecommendationHistoryDates()
+{
+    return submitMusic(domain::DailyHistoryDatesQuery{m_snapshot.accountId});
+}
+quint64 BackendFacade::dailyRecommendationHistorySongs(domain::DailyHistorySongsQuery query)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (query.sourceContext() != m_snapshot.token || query.accountId() != m_snapshot.accountId)
+        return 0;
+    return submitMusic(std::move(query));
+}
 quint64 BackendFacade::personalFmBatch() { return submitMusic(domain::PersonalFmQuery{}); }
 
 quint64 BackendFacade::myPlaylists(domain::CatalogPage page)

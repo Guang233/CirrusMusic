@@ -169,6 +169,8 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 playlistDetails(domain::PlaylistId playlist);
     [[nodiscard]] quint64 playlistSongs(domain::PlaylistSongsQuery query);
     [[nodiscard]] quint64 dailyRecommendations();
+    [[nodiscard]] quint64 dailyRecommendationHistoryDates();
+    [[nodiscard]] quint64 dailyRecommendationHistorySongs(domain::DailyHistorySongsQuery query);
     [[nodiscard]] quint64 personalFmBatch(); // use one PersonalFmSource for dynamic consumption
     [[nodiscard]] quint64 myPlaylists(domain::CatalogPage page = {});
     [[nodiscard]] quint64 likedSongIds();

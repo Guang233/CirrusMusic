@@ -5,6 +5,7 @@
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
+#include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
 
 #include <QJsonArray>
@@ -84,6 +85,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
+    case ApiOperation::DailyHistoryDates:
+        return ApiOperationContract{QStringLiteral("/api/discovery/recommend/songs/history/recent"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
+    case ApiOperation::DailyHistorySongs:
+        return ApiOperationContract{QStringLiteral("/api/discovery/recommend/songs/history/detail"),
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::DailyRecommendedPlaylists:
         return ApiOperationContract{QStringLiteral("/api/v1/discovery/recommend/resource"),
                                     Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
@@ -221,11 +228,12 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
            operation == ApiOperation::DailyRecommendedPlaylists ||
-           operation == ApiOperation::PersonalFm || operation == ApiOperation::MyPlaylists ||
-           operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
-           operation == ApiOperation::SavedArtists || operation == ApiOperation::ListeningStart ||
-           operation == ApiOperation::ListeningPlay || operation == ApiOperation::RecentSongs ||
-           operation == ApiOperation::ListeningRanking ||
+           operation == ApiOperation::DailyHistoryDates ||
+           operation == ApiOperation::DailyHistorySongs || operation == ApiOperation::PersonalFm ||
+           operation == ApiOperation::MyPlaylists || operation == ApiOperation::LikedSongIds ||
+           operation == ApiOperation::SavedAlbums || operation == ApiOperation::SavedArtists ||
+           operation == ApiOperation::ListeningStart || operation == ApiOperation::ListeningPlay ||
+           operation == ApiOperation::RecentSongs || operation == ApiOperation::ListeningRanking ||
            operation == ApiOperation::RecentPlaylists || operation == ApiOperation::RecentAlbums ||
            operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices ||
            operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs ||
@@ -253,6 +261,18 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         return collectionOperationPayload(operation, parameters);
     if (isCommentOperation(operation))
         return commentOperationPayload(operation, parameters);
+    if (operation == ApiOperation::DailyHistoryDates) {
+        if (!parameters.isEmpty())
+            return std::nullopt;
+        return QJsonObject{};
+    }
+    if (operation == ApiOperation::DailyHistorySongs) {
+        const auto date = parameters.value(QStringLiteral("date"));
+        if (parameters.size() != 1 || !date.isString() ||
+            !domain::validRecommendationDate(date.toString()))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("date"), date}};
+    }
     if (operation == ApiOperation::SearchSuggestions) {
         const auto value = parameters.value(QStringLiteral("keywords"));
         const domain::SearchSuggestionsQuery query{value.toString()};
@@ -583,6 +603,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         }
         break;
     }
+    case ApiOperation::DailyHistoryDates:
+    case ApiOperation::DailyHistorySongs:
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:
     case ApiOperation::PlaylistComments:
@@ -651,6 +673,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SearchSuggestions:
     case ApiOperation::HotKeywords:
     case ApiOperation::HotKeywordDetails:
+    case ApiOperation::DailyHistoryDates:
+    case ApiOperation::DailyHistorySongs:
     case ApiOperation::SongComments:
     case ApiOperation::AlbumComments:
     case ApiOperation::PlaylistComments:

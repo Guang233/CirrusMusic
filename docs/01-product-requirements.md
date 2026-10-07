@@ -86,13 +86,15 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-043 | 一起听建房／加入／退出、心跳、播放与队列同步、断线恢复；双账号验证，不以 HTTP 包装器代替实时协议 | P1 / M3 | API/播放后端 | TC-TOGETHER |
 | FR-044 | 播客／声音消费端搜索、详情、内容列表与播客订阅读取及后续播放，独立身份／来源／历史，不包含创作者管理工作台 | P1 / M2–M3 | API/播放后端 | TC-PODCAST-VOICE |
 
-FR-015 技术进度：[每日推荐歌单](api/daily-recommended-playlists.md)独立原账号Weapi空业务读取已合成接入，不以普通推荐／每日歌曲替代。root.recommend／100／1MiB、mandatory name及optional metadata为严格候选，保序／重复／宽ID／纯文本；本项与已有私有音乐读补强同token账号／认证态屏障，原read16／取消排空。新62、16受影响Debug753＋12线程数据行14 pass，0fail/skip；registry83／45登记。没有推荐日期／日期cache／UI或自动detail／image／play／write／report，真实schema／账号／频率／权限仍未验收，不整体完成FR。
+FR-015 历史读取增量：[历史日推可用日期／显式日期歌曲](api/daily-recommendation-history.md)按维护者选择已合成接入。原账号／MUSIC_U／空Weapi与date，日期必须来自原读取DTO成员和原token的private factory，不给当前日推或歌单入口塞日期；data.dates/data.songs366/500、1/4MiB仅严格候选，保序重复宽ID、read16／同token私有scope／取消排空。新86／17 affected839＋13线程数据行15pass，0fail/skip；85ops／47登记，16fresh paths clean／14objects6985deps禁入0／UI0。无日期cache／自动选择读／图／音源／play／report／反馈写，真实schema／可用窗口／会员／完整性与UI另验收；FR不整体完成。前三项及第四项G1/G2后续均暂停、阶段1保留，不自动恢复实网。
+
+FR-015 此前技术进度：[每日推荐歌单](api/daily-recommended-playlists.md)独立原账号Weapi空业务读取已合成接入，不以普通推荐／每日歌曲替代。root.recommend／100／1MiB、mandatory name及optional metadata为严格候选，保序／重复／宽ID／纯文本；本项与已有私有音乐读补强同token账号／认证态屏障，原read16／取消排空。新62、16受影响Debug753＋12线程数据行14 pass，0fail/skip；registry83／45登记。没有推荐日期／日期cache／UI或自动detail／image／play／write／report，真实schema／账号／频率／权限仍未验收，不整体完成FR。
 
 FR-007 技术进度：[搜索辅助](api/search-assistance-reads.md)web实体建议／简略及详细热搜三操作已合成接入，四类独立ID/name预览与保序／重复／optional未知，原read16／token-generation／取消排空；乱序query/requestId不混标，UI后续需显式取消／最新ID选择，不自动监听输入或搜索／取详情／图片／播放／缓存。关键词256及20/16/100是本地预算，候选order必需／root:{}不伪空成功；仅117＋受影响631与线程12，真实schema／免登录／热度含义／UI与持久搜索历史尚未验收，FR不整体标完成，mobile/pc／默认词／多重匹配未纳入。
 
 此前范围决定（接续搜索辅助包acf822e；后续第四项离线准备覆盖见FR-044播放增量）：**不新增专用下载音源operation**；维护者进一步明确未来FR-025/026以既有播放接口的实际可听音源为准，**不额外查询下载资格／下载权标志**、不采用专用下载／加密文件支路；保留音源本身的试听范围／TTL／实际访问限制，不扩可听范围，文件／恢复能力另包，当前临时完整缓冲不自动变下载功能。**云盘后续接口／音源／播放／上传／删除／匹配暂缓**，已交付原账号列表／详情保留；不撤销FR或当完成。**一起听现经维护者明确暂停，待最后提供其逆向整套接口材料再接**；固定参考9 HTTP并不完整，未提交草稿已单独本地WIP保存并撤出主线，不计交付。**整歌单收藏／取消需求保留，现因维护者暂无v2资料明确暂缓，推进其他后端**；固定Watchman v2原生前置调查保留，未解不实现且不自动恢复，comment v3不替代／SDK执行或新依赖另批准。Program／Voice与底层音轨分离仅解释／设计边界，本次不新增声音播放实现或媒体权限，UI仍最后、实网仍另授权。
 
-FR-044 播放准备增量：[离线共享媒体接缝阶段1](api/spoken-media-seam.md)按维护者从第四项开始及离线选择接入。PlaybackEntity／独立AudioTrackId仅结构，MediaSource不含身份、媒体port／buffer／Qt后端共享物理值，原唯一Song coordinator先验身份／token／TTL；没有playProgram／Voice或可信binding、泛化活动snapshot／history／报告，不把type／28合成测试作实际可播证据。新28／受影响15 Debug373＋线程13，0fail／原audio1默认skip，83ops不增／46登记。真实消费binding／节目v1权益／TTL／preview、spoken模式／计量仍待证，不整体完成FR或自动实网；前三项暂停、UI最后。
+FR-044 播放准备增量：[离线共享媒体接缝阶段1](api/spoken-media-seam.md)按维护者从第四项开始及离线选择接入。PlaybackEntity／独立AudioTrackId仅结构，MediaSource不含身份、媒体port／buffer／Qt后端共享物理值，原唯一Song coordinator先验身份／token／TTL；没有playProgram／Voice或可信binding、泛化活动snapshot／history／报告，不把type／28合成测试作实际可播证据。新28／受影响15 Debug373＋线程13，0fail／原audio1默认skip，83ops不增／46登记。真实消费binding／节目v1权益／TTL／preview、spoken模式／计量仍待证，不整体完成FR或自动实网；前三项暂停、UI最后。维护者后续因G1/G2资料不足明确先做历史日推，本项下一阶段亦暂停、不自动等待或重开探测。
 
 FR-028／044 技术进度：[账号补充读取](api/account-library-reads.md)当前账号播客订阅、云盘列表／详情已合成接入；独立CloudSongId与可选catalog引用、分页／missing及原账号隔离。不是真实schema／UI／云盘或声音播放验收，下载／上传／删除／匹配与声音播放仍未交付；消费播客订阅写见下述独立增量。
 

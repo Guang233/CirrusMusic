@@ -1,6 +1,8 @@
 # 播客／声音播放准备：离线身份与共享媒体接缝（阶段1）
 
-## 1. 最新授权与交付范围
+**后续范围覆盖**：阶段1交付后继续补核，只有旧Voice字段存在记录、无绑定／音源新样本；FeelUOwn公开源码fetch因github.com内部地址198.18.0.232拒绝，未绕过、不当服务拒绝。维护者明确选择先做[历史日推读取](daily-recommendation-history.md)，本项下一阶段G1/G2暂停、不继续等待本轮材料或自动恢复。阶段1原83/46及373＋13是历史，主线后续85/47与839＋15来自独立历史日推包，不能挪作spoken实证。前三项同样暂停，SDK／账号／metadata／媒体均无新授权。
+
+## 1. 阶段1授权与交付范围
 
 接续 `264c020` 每日推荐歌单包，维护者明确前三项（整歌单收藏v2、一起听、云盘后续）暂缓，从第四项播客／声音播放开始；在核对既有[播放门禁](spoken-playback-contract.md)与实际代码后，明确选择**先做离线接缝**，未选择新的官方元数据窗口或提供绑定材料。
 
@@ -90,4 +92,4 @@ ignored `build/workspace-checks/spoken-seam-*` 的final-build／final-focused／
 
 [原G1–G6](spoken-playback-contract.md)保留：G1消费Program／Voice与AudioTrack关联、mainTrackId／mainSong冲突、父播客与原context；G2节目v1实际ID／格式／size／level／TTL／preview候选及权限；G3合成／另授权媒体；G4可信binding及完整逻辑身份隔离；G5 Song↔FM↔spoken唯一owner／历史／计量；G6新报告namespace另授权（安全默认不发送）。
 
-本包只完成结构tag与物理接缝、原歌曲／FM屏障回归；G4/G5只补部分准备，**不把整门禁标完成**。没有消费binding字段实际材料／新公开窗口授权，不能把Program.id／Voice.id／mainSong猜为SongId，不调用workbench、旧url、SDK或自动实网验证；不伪造报告来源或Podcast→Playlist。前三项继续暂停，下一步仍在第四项，先取得可核对绑定／音源材料或另明确验证授权，再完成resolver／逻辑快照／单owner spoken模式；不跳过门禁直接UI。
+本包只完成结构tag与物理接缝、原歌曲／FM屏障回归；G4/G5只补部分准备，**不把整门禁标完成**。没有消费binding字段实际材料／新公开窗口授权，不能把Program.id／Voice.id／mainSong猜为SongId，不调用workbench、旧url、SDK或自动实网验证；不伪造报告来源或Podcast→Playlist。阶段1交付时下一步仍在第四项、需先取得可核对绑定／音源材料或另明确验证授权，再完成resolver／逻辑快照／单owner spoken模式；后续维护者明确选择历史日推，本项下一阶段现亦暂停，不自动恢复等待／探测。前三项继续暂停，不跳过门禁直接UI。

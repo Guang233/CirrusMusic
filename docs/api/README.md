@@ -26,6 +26,7 @@
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
 | [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
+| [daily-recommendation-history.md](daily-recommendation-history.md) | 原account／MUSIC_U/read16，2Weapi日期与原source token成员private选择，候选dates/songs／366/500/1/4MiB，86／839＋thread15，85ops／47登记；无会员/window/schema实证／cache／自动下游／反馈写，前三和第四后续暂停 |
 | [discovery-and-fm.md](discovery-and-fm.md) | 已实现的日推读取、FM动态条目供给、账号隔离；基础读取包证据，不等于听歌上报 |
 | [collection-writes.md](collection-writes.md) | 红心／收藏到歌单及移除／专辑／艺人／播客五类10动作、8operation，原账号／8槽／Unknown、不重试，仅合成；整歌单收藏需求保留、维护者暂无v2资料明确暂缓 |
 | [playlist-subscription-v2-prerequisite.md](playlist-subscription-v2-prerequisite.md) | 整歌单收藏v2前置静态调查：body/header来源分离与Cookie携带、SDK／原生／许可门禁和待实现TC，无新增API／测试或实网 |
@@ -117,5 +118,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 本次参考 checkout 位于已忽略的 `build/reference/`，不会打入程序或提交为运行依赖。静态提取临时使用了 AST 工具，仅解析源文本，没有 require／执行上游代码。参考项目在正式仓库中仅保留审计数据、许可、文档及 Python 校验工具；产品原生代码在 src/ 中，二者相互独立。
 
 ## 7. 下一步
+
+最新[历史日推两read](daily-recommendation-history.md)经维护者选择合成接入，85ops／47登记、新86／17 affected839＋thread15，0fail/skip，16fresh／14objects6985实编dep禁入0；日期必须原account/source token的日期DTO成员，候选schema和会员/window待证，无cache／自动下游。前三项与第四项G1/G2下一阶段均暂停，阶段1保留，UI最后；其他小包需另审计确认，不自动重开账号／−462／SDK／音频。
 
 已建立 C++ 协议、上下文请求链、扫码 port 和离线认证事务，见[实现记录](native-foundation.md)。扫码轮询与总时限、[XEAPI 编码与公钥状态](../tasks/B-002-xeapi.md)已实现。设备profile、[匿名启动](anonymous-bootstrap.md)与[账号安全持久化／恢复／退出](account-session-restore.md)已实现；[后台线程和非阻塞启动／关闭装配](backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](music-queries-and-lyrics.md)已接入；[官方URL与单曲Qt播放](stream-resolution-and-playback.md)已接入并有公开试听静音实测，[队列／六轨歌词时钟](queue-and-lyric-clock.md)也已完成后端最小闭环，[专辑／艺人／歌单只读目录](catalog-queries.md)也已接入并离线验证，[每日推荐读取／私人FM条目供给](discovery-and-fm.md)也已接入；[FM连续播放接线](fm-continuous-playback.md)已离线接通，[个人库四项读取](personal-library.md)也已接入，[本地可观测累计／会话历史](local-listening-history.md)已另包接入，[显式上报能力](explicit-listening-reports.md)也已接入；[最近记录／排行读取](cloud-history-reads.md)也已另包离线接入，[榜单列表／内容摘要及歌单选歌播放链](chart-reads.md)也已离线接通，[六项歌单发现读取](playlist-discovery-reads.md)已成组离线接通；自动时机留待播放接线，详细本地历史分析按需求再定；再按 [migration-plan.md](migration-plan.md)推进受控实测与业务。现有 Qt Quick 空窗口保持不变；不做控件、首页或播放页开发。写操作、一起听和受限下载必须先补契约证据，不以清单存在代替功能完成。

@@ -48,6 +48,7 @@
 | R-028 | SDK v2与body token混用、只加HTTP header漏Cookie／加密header，空token续发或未获许可却运行远程脚本 | 中／高 | 评论v3当v2／复制config token、TS取消0与home2混淆、SDK总200当注册成功、native标签当可用证明 | [v2前置调查](api/playlist-subscription-v2-prerequisite.md)：完整固定链分层、原生／绑定／body来源／许可／生命周期门禁，未解不注册；公共源码工具限制不绕过，需维护者材料／架构决定 | 后端/安全/维护者 / M3 |
 | R-029 | 普通推荐／每日歌曲冒充每日推荐歌单，候选字段宽松空成功／跨号，updateTime／本机午夜当推荐日期／权益 | 中／高 | root.result兜底、小写playcount被大小写替换、缺name伪空、同token换号接旧推荐、读取自动detail／play | [独立契约](api/daily-recommended-playlists.md)：原账号／read16／同token账号与认证态双层屏障，严格recommend／100／1MiB及纯文本optional／宽ID／原序重复，不生成日期／cache／下游；新62与实际回归，仅合成，真实schema／频率／权限／UI另授权验收 | 后端/QA/UI / M2–M5 |
 | R-030 | 无身份媒体值被当已验证绑定／权益，跨namespace同数值合并、泛化只改标签污染歌曲历史／报告，新增第二player owner | 中／高 | 任意Voice＋AudioTrack拼接、AudioTrack cast Song、raw MediaSource直接开放入口、old media事件贴新身份 | [离线阶段1](api/spoken-media-seam.md)：tagged逻辑结构／独立音轨、媒体无身份、原唯一coordinator验证原Song-token-TTL后下沉、late/Ended/暂停回归，原媒体限额不改；未建可信binding／spoken入口，G1/G2与完整snapshot/history计量另闭合，不依类型推权限 | 后端/播放/QA / M2–M3 |
+| R-031 | 任意／空日期或旧账号日期列表误作可查询历史，合成dates/songs当真实schema／会员／完整性，历史推荐混成收听记录 | 中／高 | 本机今天兜底／source token重标、dailySongs别名fallback、自动读日期后抓歌曲／播音源，欠权益伪空成功 | [历史日推](api/daily-recommendation-history.md)：原account/source token成员private factory／calendar结构、两Weapi原MUSIC_U/read16/取消同token私有scope、有界strict候选／保序宽ID重复；86与839＋thread15仅合成，真实date window／会员／schema／UI另授权，不自动缓存／下游／反馈写 | 后端/QA/UI / M2–M5 |
 
 “极高”影响是 S0 候选，不能以概率低为理由省略控制措施。每次风险实现为缺陷，应关联 issue、受影响版本、修复和回归测试。
 

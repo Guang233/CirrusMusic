@@ -75,7 +75,9 @@ flowchart LR
 
 ## 4. 下一轮实际动手顺序
 
-**最新覆盖**：维护者明确前三项整歌单收藏v2／一起听／云盘后续继续暂缓，从第四项播客／声音播放开始，选择先离线接缝。[阶段1](api/spoken-media-seam.md)已新增tagged PlaybackEntity／独立AudioTrackId与identity-free MediaSource，原唯一owner先验身份／token／TTL；83ops不增／46登记，新28／15 affected373＋thread13，0fail／原audio1默认skip。下一步仍是可信消费绑定与节目v1音源／TTL／preview的G1/G2补证，再接逻辑快照／单owner spoken模式；当前不开放未证入口、偷cast ID／工作台／旧url，不自动实网或因缺证转去前三项，UI最后。
+**最新覆盖**：第四项阶段1之后绑定／音源G1/G2仍缺证，维护者明确选择先做[历史日推两项读取](api/daily-recommendation-history.md)，第四项下一阶段暂缓，前三项不恢复。现日期列表与原列表成员／原account-token选择歌曲已合成接入，85ops/47登记、新86/17 affected839＋thread15，0fail/skip；16fresh路径clean/14objects6985deps禁入0/UI0。不推会员／window／日期完整性，candidate日期366/1MiB与songs500/4MiB，无自动下游/日期cache/反馈写；真实账号/源/SDK/音频无新授权。后续其他已纳入小包另审计确认、UI最后；本次不给暂停项自动材料等待或探测。
+
+**此前第四项阶段1覆盖**：维护者明确前三项整歌单收藏v2／一起听／云盘后续继续暂缓，从第四项播客／声音播放开始，选择先离线接缝。[阶段1](api/spoken-media-seam.md)已新增tagged PlaybackEntity／独立AudioTrackId与identity-free MediaSource，原唯一owner先验身份／token／TTL；83ops不增／46登记，新28／15 affected373＋thread13，0fail／原audio1默认skip。下一步仍是可信消费绑定与节目v1音源／TTL／preview的G1/G2补证，再接逻辑快照／单owner spoken模式；当前不开放未证入口、偷cast ID／工作台／旧url，不自动实网或因缺证转去前三项，UI最后。
 
 **此前优先级记录**（接续acf822e）：一起听暂停至最后，等待维护者逆向整套材料；9 HTTP草稿撤出主线且单独本地保留。整歌单收藏／取消因维护者暂无v2资料明确暂停，需求保留但不自动恢复；推进其他后端，本包[独立每日推荐歌单](api/daily-recommended-playlists.md)已合成接入，新62／affected753＋thread14，83operation／45注册，原账号／read16／同token账号-认证态屏障、无自动下游。[固定Watchman v2原生前置](api/playlist-subscription-v2-prerequisite.md)静态调查已记录：SDK桥不是原生协议、body/header token不同来源、Eapi Cookie／header携带；前置资料或架构决定仍缺，未解不注册／假完成。专用下载音源API不再加入补接口清单，未来下载以实际可听播放音源为准、不额外查询下载资格，音源自身试听／TTL／访问限制保留、文件后端另做；云盘新接口／播放／写暂缓，已有read保留。声音身份／音源链只作解释，未在这次范围调整中获准开始实现／实网；各包继续离线／UI最后。不是9 HTTP发出就完整一起听，不会自动恢复该草稿；不是明确要求收藏就授权SDK／Node／新运行库。
 

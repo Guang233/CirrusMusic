@@ -3,6 +3,7 @@
 #include "../support/fake_secret_store.h"
 #include "../support/synthetic_cover.h"
 #include "../support/synthetic_daily_playlists.h"
+#include "../support/synthetic_recommendation_history.h"
 #include "../support/synthetic_search_assist.h"
 #include "application/music/personal_fm_source.h"
 #include "application/playback/listening_session.h"
@@ -260,6 +261,7 @@ class BackendRuntimeTest : public QObject
     void commentWritesThroughThread();
     void searchAssistThroughThread();
     void dailyPlaylistsThroughThread();
+    void recommendationHistoryThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2587,6 +2589,90 @@ void BackendRuntimeTest::dailyPlaylistsThroughThread()
     QVERIFY(comments.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());
     QCOMPARE(state->requests.load(), 8);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+void BackendRuntimeTest::recommendationHistoryThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    plans.append(QList<Plan>{
+        Plan{recommendationDatesFixture()}, Plan{recommendationHistoryFixture()},
+        Plan{R"({"code":200,"data":{"songs":[]}})"}, Plan{R"({"code":200,"data":{"dates":[]}})"},
+        Plan{R"({"code":200,"data":{"dailySongs":[]}})"}, Plan{"", 200, -1}});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::musicCompleted), calls(&f, &BackendFacade::musicRequested),
+        play(&f, &BackendFacade::playbackRequested),
+        report(&f, &BackendFacade::listeningReportRequested),
+        writes(&f, &BackendFacade::collectionRequested),
+        comments(&f, &BackendFacade::commentWriteRequested);
+    connect(&f, &BackendFacade::musicCompleted, this, [&](quint64, SessionToken, MusicResult) {
+        QCOMPARE(QThread::currentThread(), qApp->thread());
+    });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    QVERIFY(!f.dailyRecommendationHistoryDates());
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    QVERIFY(f.dailyRecommendationHistoryDates());
+    QTRY_COMPARE(done.size(), 1);
+    const auto available = std::get<DailyHistoryDates>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(available.query.accountId, f.snapshot().accountId);
+    QCOMPARE(available.dates.size(), 3);
+    QCOMPARE(available.dates.first(), available.dates.last());
+    QVERIFY(!DailyHistorySongsQuery::fromDates(token, available, "2020-06-22"));
+    const auto selected = DailyHistorySongsQuery::fromDates(token, available, "2020-06-21");
+    QVERIFY(selected);
+    QVERIFY(f.dailyRecommendationHistorySongs(*selected));
+    QTRY_COMPARE(done.size(), 2);
+    const auto songs = std::get<DailyHistorySongs>(qvariant_cast<MusicResult>(done.last()[2]));
+    QCOMPARE(songs.query.sourceContext(), token);
+    QCOMPARE(songs.query.date(), selected->date());
+    QCOMPARE(songs.songs.size(), 3);
+    QCOMPARE(songs.songs.first().id.value, "9007199254740993");
+    QCOMPARE(songs.songs.last().id.value, songs.songs.first().id.value);
+    QVERIFY(f.dailyRecommendationHistorySongs(*selected));
+    QTRY_COMPARE(done.size(), 3);
+    QVERIFY(
+        std::get<DailyHistorySongs>(qvariant_cast<MusicResult>(done.last()[2])).songs.isEmpty());
+    QVERIFY(f.dailyRecommendationHistoryDates());
+    QTRY_COMPARE(done.size(), 4);
+    QVERIFY(
+        std::get<DailyHistoryDates>(qvariant_cast<MusicResult>(done.last()[2])).dates.isEmpty());
+    QVERIFY(f.dailyRecommendationHistorySongs(*selected));
+    QTRY_COMPARE(done.size(), 5);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::InvalidResponse);
+    const auto pending = f.dailyRecommendationHistorySongs(*selected);
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 9);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 6);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
+    QCOMPARE(calls.size(), 6);
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    QVERIFY(writes.isEmpty());
+    QVERIFY(comments.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->requests.load(), 9);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

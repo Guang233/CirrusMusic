@@ -31,6 +31,7 @@
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |
 | [认证事务](api/authentication-transaction.md) | 如何验证身份、绑定 Cookie 快照并安全发布已登录状态？ |
 | [独立每日推荐歌单](api/daily-recommended-playlists.md) | 原账号／read16与同token私有scope，Weapi空业务／recommend100／1MiB，62＋affected753／thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
+| [每日推荐历史读取](api/daily-recommendation-history.md) | 2Weapi／原日期DTO成员-source token-account private选择/read16；候选dates366/1MiB与songs500/4MiB，86／17 affected839＋thread15、0fail/skip，85ops／47登记，无会员/window实证／cache／自动下游／写 |
 | [日推读取与私人FM供给](api/discovery-and-fm.md) | 独立日推、认证态读取、动态批次及失败／换号边界 |
 | [收藏到歌单／红心／收藏订阅写](api/collection-writes.md) | 五类10动作、原账号／8槽／写结果Unknown，仅合成、不重试；整歌单收藏需求保留、维护者暂无v2资料明确暂缓 |
 | [整歌单收藏v2原生前置调查](api/playlist-subscription-v2-prerequisite.md) | 固定body／header token与Cookie分层、SDK／原生／许可和待实现测试门禁，要求仍在、前置未解，无新增接口 |

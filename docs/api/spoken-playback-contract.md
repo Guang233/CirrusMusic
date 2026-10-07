@@ -2,7 +2,9 @@
 
 > 2026-10-06 UTC，接续 `a3c67c1` 的[消费／recent读取](podcast-and-recent-reads.md)。本包只调查契约、确定后续接缝；**没有新增operation、C++类型／播放器入口、缓存或声音播放实现**。现有43项business operation／34套件不变。没有继续已在-462停止的公开探测，没有账号／keyring／Cookie／网易云业务API／CDN／音频请求或写入。本轮网络仅公共代码仓库与资料检索。
 
-**最新增量**：维护者现明确前三项（整歌单收藏／一起听／云盘后续）暂缓，从播客／声音播放开始，并选择[离线媒体接缝阶段1](spoken-media-seam.md)。已新增PlaybackEntity／AudioTrackId结构类型和无identity MediaSource，媒体端口／buffer／Qt后端不再接Song包络；原唯一coordinator先验证歌曲身份／TTL／token再下沉物理值。新28／15受影响373＋线程13，0fail／原audio默认1skip，17fresh路径clean／Core实编6973deps禁入0，83ops不增／46登记；**仍没有可信消费binding、节目／声音resolver／活动快照／播放入口或实网**，G1/G2待证，G4/G5仅部分准备。首段43／34及文末485links等是旧调查时点证据，不是当前注册／本包验证；未恢复-462窗口或前三项。
+**最新范围覆盖**：阶段1之后继续补核G1/G2，原Voice日志只是mainTrackId整数字段／mainSong存在，不证明一致／父播客／音源权益；新FeelUOwn候选fetch拒绝github.com内部地址198.18.0.232，无绕过或源码证据。维护者随后明确选择先做[历史日推只读包](daily-recommendation-history.md)，本项下一阶段暂缓、无新的metadata窗口／账号／音频／SDK授权。原阶段1结构保留，主线后续85ops／47登记、839＋thread15来自日推历史不作spoken验收；前三项仍暂停，UI最后。
+
+**此前阶段1增量**：维护者现明确前三项（整歌单收藏／一起听／云盘后续）暂缓，从播客／声音播放开始，并选择[离线媒体接缝阶段1](spoken-media-seam.md)。已新增PlaybackEntity／AudioTrackId结构类型和无identity MediaSource，媒体端口／buffer／Qt后端不再接Song包络；原唯一coordinator先验证歌曲身份／TTL／token再下沉物理值。新28／15受影响373＋线程13，0fail／原audio默认1skip，17fresh路径clean／Core实编6973deps禁入0，83ops不增／46登记；**仍没有可信消费binding、节目／声音resolver／活动快照／播放入口或实网**，G1/G2待证，G4/G5仅部分准备。首段43／34及文末485links等是旧调查时点证据，不是当前注册／本包验证；未恢复-462窗口或前三项。
 
 ## 1. 决策摘要
 
@@ -107,4 +109,4 @@ SPlayer的mainTrackId缺失→item.id fallback、通用SongType／JS number、AP
 
 本包为docs-only契约决策，没有新业务请求／生产代码／运行依赖／UI改动。485个本地Markdown链接有效（跳过代码标记），git diff --check通过，固定440模块／公共文件hash校验通过；改动全部为Markdown，C++／UI delta=0，因此没有新增编译／LSP覆盖需求；**不重新宣称207＋8是本轮测试结果**，该数字仍为a3c67c1读取包的历史最新定向证据。没有重跑全量Debug／Release／认证／设备矩阵，也没有新增spoken测试／虚构native实测。
 
-如果G1／G2受限，不为“补接口”而开放未知音源或管理端点。原调查时点提出可继续已确认其他后端；最新维护者指定从第四项继续，阶段1已交付，下一步仍需闭合本项绑定／音源门禁，前三项继续暂停、不自动转去云盘／一起听；每包重新确认范围／权限／错误语义，写入与账号／音频实测单独授权。不会本轮自动开始这些包，不因缺证就把FR-044标完成；UI仍最后。
+如果G1／G2受限，不为“补接口”而开放未知音源或管理端点。原调查时点提出可继续已确认其他后端；维护者此前指定从第四项继续、阶段1已交付，绑定／音源门禁未闭；后续其明确选择历史日推只读包，本项下一阶段暂停，不再自动等待本轮材料／探测。前三项继续暂停、不自动转去云盘／一起听；每包重新确认范围／权限／错误语义，写入与账号／音频实测单独授权。不会本轮自动开始这些包，不因缺证就把FR-044标完成；UI仍最后。
