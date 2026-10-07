@@ -70,7 +70,7 @@ flowchart LR
 | B-024 | 评论发布／回复／删除（M3）、云盘上传管理（M4） | [评论五动作](api/comment-writes.md)已封闭原生v3 GET／XEAPI合成接入，无SDK／JS／新库；原账号／business NotSent-Unknown、无创建ID推断或自动重试／refresh。仅合成760＋11，真实issuer／审核／本人权限／删除效果／UI未验收，云盘上传等后续接口当前明确暂缓，未交付 |
 | B-025 | **撤销：MV 与视频播放焦点** | 用户明确排除，不进入未来队列 |
 | B-026 | 桌面歌词、导入导出、高级音频（M6） | 每项专项 ADR 和测试 |
-| B-027 | 一起听协议补证、状态机与双账号同步（M3） | 维护者现明确搁置，表示已逆向整套接口，等最后提供材料再接；固定9 HTTP草稿本地WIP保存／撤出主线，不计交付。不猜接收／seq/version／时钟重连，FR-043完整契约与真实双账号验收另授权 |
+| B-027 | 一起听协议补证、状态机与双账号同步（M3） | 后续[Android摘要与固定API审计](api/together-protocol-material-audit.md)已到：NIM/chatRoomId/type与毫秒/serverSeq线索；CBC/host/全Eapi、command/playlistParam及schema差异，G1–G6未闭。只静态，不自动解除实施暂停；固定9 HTTP WIP不恢复、不计交付，85ops/47不变，SDK/新库/实网/双账号另授权 |
 | B-028 | 上游清单校验与漂移检查（M0 起持续） | Python 校验器；升级上游需重新审计 |
 
 ## 4. 下一轮实际动手顺序

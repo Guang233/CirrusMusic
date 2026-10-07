@@ -26,6 +26,7 @@
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
 | [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
+| [together-protocol-material-audit.md](together-protocol-material-audit.md) | 用户Android摘要＋固定9 HTTP静态对照；NIM/chatRoomId/type/毫秒/seq线索、crypto/profile/字段/schema冲突与G1–G6，85ops/47不变、WIP不恢复，无SDK/新库/实网/代码验证 |
 | [daily-recommendation-history.md](daily-recommendation-history.md) | 原account／MUSIC_U/read16，2Weapi日期与原source token成员private选择，候选dates/songs／366/500/1/4MiB，86／839＋thread15，85ops／47登记；无会员/window/schema实证／cache／自动下游／反馈写，前三和第四后续暂停 |
 | [discovery-and-fm.md](discovery-and-fm.md) | 已实现的日推读取、FM动态条目供给、账号隔离；基础读取包证据，不等于听歌上报 |
 | [collection-writes.md](collection-writes.md) | 红心／收藏到歌单及移除／专辑／艺人／播客五类10动作、8operation，原账号／8槽／Unknown、不重试，仅合成；整歌单收藏需求保留、维护者暂无v2资料明确暂缓 |
@@ -98,7 +99,7 @@
 2. `register_checktoken_v2` 会下载并在 jsdom 中执行浏览器 SDK，**不是简单 HTTP 或 AES 端点**；暂列待定，不暗中引入 Node.js、WebEngine 或任意远程脚本执行。
 3. QR 检查存在异常分支引用越作用域变量的问题；歌单增删有 512 时重复曲目重发的逻辑；不能原样迁移。
 4. 歌曲 URL 模块含第三方音源解锁分支，明确剔除。旧可用性检查会把不同失败都改写成“暂无版权”，也需重写。
-5. 一起听有 9 个模块，但上游文档明确“从机模式待整理”；端到端同步仍缺可靠证据。
+5. 一起听有9个采用候选模块，上游“从机模式待整理”；后续[Android摘要](together-protocol-material-audit.md)已提供NIM等线索，但鉴权/envelope/SELFHOST、seq/version/时钟恢复权限与Linux许可未闭，HTTP层有profile/字段/schema差异，不自动恢复草稿或认定完整同步。
 
 ## 6. 可重复核对
 

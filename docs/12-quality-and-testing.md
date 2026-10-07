@@ -52,7 +52,7 @@
 | TC-FAILURE | FR-040；NFR-014 | 一致错误分类、部分数据可用、取消静默、无重试风暴 |
 | TC-IMPORT | FR-041 | 不可信 URI、重复项、超限文件、导出脱敏、预览后取消 |
 | TC-AUDIO-PLUS | FR-042 | 定时器、倍速、DSP、gapless、crossfade 各自的开关与能力测试 |
-| TC-TOGETHER | FR-043 | 双账号建房／加入／退出、心跳、事件乱序、seq/version、权限差异、重连与命令回环 |
+| TC-TOGETHER（待实施） | FR-043；Q-014 | [补充材料审计G1–G6](api/together-protocol-material-audit.md)：room/chatRoom隔离、原account/token鉴权与外层envelope、type/单复数字段、seq/version/reset/echo/乱序重放、毫秒与时钟/焦点/漂移、权限/preview差异、掉线/退房/多设备；HTTP profile/schema独立、四结果/取消/drain。当前只静态，无新增Qt/CTest/build/LSP，旧WIP153/858＋13不计主线；双授权账号验收另开窗口 |
 | TC-SECURITY | NFR-008/012 | 凭据搜漏、跨域头剥离、路径穿越、诊断包预览、TLS 错误不可绕过 |
 | TC-PERF | NFR-001～006 | 固定设备上的启动、帧、首声延迟、内存、长期播放 |
 | TC-PACKAGE | NFR-010/011 | 干净系统安装、运行时依赖、QML 插件、许可证、升级／卸载 |

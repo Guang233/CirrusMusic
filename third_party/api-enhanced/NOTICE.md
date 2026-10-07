@@ -42,4 +42,6 @@ Cirrus 的接口审计参考：
 
 历史每日推荐读取增量完整参考固定history_recommend_songs.js／history_recommend_songs_detail.js、home.md斜线路由及date必须来自可用列表的说明、interface.d.ts和option/config/request完整Weapi链；2Weapi路径/empty-date payload在api_operation中C++改写，recommendation_history_mapper与Core原account/source token成员选择复用原read16/runtime。没有上游response schema证明，data.dates/data.songs只合成候选，无SDK/Node/业务账号/音源音频/版权内容或反馈写；不复制任意覆盖/空date、无自动cache或下游。见[独立契约](../../docs/api/daily-recommendation-history.md)，85ops/47登记非全API/会员/日期window/服务支持证明，原MIT与固定440审计不变。前三项与播客声音下一阶段均按维护者选择暂停。
 
+后续[一起听Android摘要审计](../../docs/api/together-protocol-material-audit.md)仅引用维护者提供文档的来源自述／hash与必要字段线索，并对照固定9 wrapper、home/HTML/TS/options/config/request/crypto和原生Eapi；未复制整份Android材料、外部反编译代码或SDK／token／真实响应，未恢复WIP、新增C++改写或执行服务/SDK/JS。NIM/SELFHOST/Linux协议或SDK的许可/接入权没有因此获得，Android来源／第三方商业SDK／接口服务不由api-enhanced MIT覆盖，固定锁与归属保持。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

@@ -69,7 +69,7 @@
 | Q-011 | 云盘／评论写／视频范围 | 云盘与评论写已纳入后端；视频明确排除，此范围问题关闭 | 已决定 | 仍需验证云盘／评论具体协议 |
 | Q-012 | 听歌上报、历史保留和隐私默认 | 官方必要协议如实执行；Cirrus 默认无遥测 | M2/M3 | 需明确用户说明与本地保留策略 |
 | Q-013 | v2 token 依赖浏览器 SDK，原生路径是否可用 | [调查](api/playlist-subscription-v2-prerequisite.md)证实固定SDK桥而非原生协议；维护者暂无原生资料、已明确暂缓推进其他后端；未来实际资料与明确恢复后再审，不自动评估SDK例外或引入Node/WebEngine／v3替代；尚未证明不可能 | M3 | 收藏歌单保持受限，不能拿 v3 直接替代 |
-| Q-014 | 一起听从机事件、时钟与恢复契约 | 维护者已明确暂停至最后、待其整套逆向材料；9 HTTP草稿本地保留不入主线，真实双账号访问另授权 | M3 | 未验证前不开启完整一起听能力 |
+| Q-014 | 一起听从机事件、时钟与恢复契约 | 后续[Android摘要对照](api/together-protocol-material-audit.md)已到，NIM/chatRoomId/type与毫秒/serverSeq有线索；原生鉴权/envelope/SELFHOST、seq/version/时间恢复权限与许可未闭，HTTP存在profile/字段/schema差异。只静态，不自动解除实施暂停或恢复9 HTTP WIP；SDK/新库/真实双账号另批准 | M3 | G1–G6未闭不开启完整一起听能力，不能把HTTP Ack或材料到达当同步验收 |
 | Q-015 | ProgramId／VoiceId对应、消费端音轨／v1权益与期限 | [补证](api/spoken-playback-contract.md)确认传统mainTrackId→旧url文档路线，v1只有第三方代码候选；Voice详情仍workbench，未实网确认。-462停止，账号／媒体另授权 | M2 | 不开放未验证播放；不以独立类型断言服务ID必不同，评论只读已合成接入，允许继续其他已确认小包 |
 
 维护者可以逐项采纳默认值；不需要先完成全部问题才能开始 M0/M1。未经确认的问题不得在发布文案中写成确定支持。

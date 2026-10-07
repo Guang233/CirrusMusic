@@ -50,7 +50,9 @@
 
 ## 3. 一起听：HTTP 模块不是完整同步协议
 
-接续搜索辅助包acf822e，维护者先要求一起听，现明确因固定接口不全**搁置至最后**，表示已逆向整套接口；收到完整材料再重新核对接收／同步／身份／序号契约，不自动恢复不全参考。已编写但未提交的9 HTTP候选草稿完整保存在本地WIP stash，撤出主线，**未作为API或完整一起听交付**。该暂停时点主线82 business operation／44 CTest不变（最新每日歌单包独立增至83／45，非一起听恢复）；没有真实账号／服务／SDK／JS／新依赖／UI授权。草稿曾153新suite／10受影响858＋11线程数据行13 pass（0fail/skip），仅草稿历史，不挪作主线／FR-043证明；后续材料不能仅凭“整套”推已兼容／授权。
+**最新材料审计**：[Android 9.5.30补充对照](together-protocol-material-audit.md)记录维护者提供的ListenTogether.md及固定hash。接收有NIM／独立chatRoomId、type20000–20002、毫秒／serverSeq／ignoreUserIds线索；但SELFHOST选择、鉴权／完整envelope、seq/version／时钟／恢复权限与Linux／许可未闭。Android CBC/host／全Eapi、command与playlistParam、check/end/queue/root schema与固定参考／旧草稿存在差异，不混用、改host／宽松fallback或恢复旧草稿。此次只静态，85ops／47登记不变、WIP固定对象不pop/drop、无新build/LSP/Qt/live/SDK/新库/UI证据。材料已收到，不再称本轮毫无资料，但不自动解除实施暂停；其他暂停项保留。
+
+此前暂停记录：接续搜索辅助包acf822e，维护者先要求一起听，随后明确因固定接口不全**搁置至最后**，表示已逆向整套接口；收到完整材料再重新核对接收／同步／身份／序号契约，不自动恢复不全参考。已编写但未提交的9 HTTP候选草稿完整保存在本地WIP stash，撤出主线，**未作为API或完整一起听交付**。该暂停时点主线82 business operation／44 CTest不变（后来每日歌单包独立增至83／45、再媒体接缝83／46、历史日推85／47，均非一起听恢复）；没有真实账号／服务／SDK／JS／新依赖／UI授权。草稿曾153新suite／10受影响858＋11线程数据行13 pass（0fail/skip），仅草稿历史，不挪作主线／FR-043证明；后续材料不能仅凭“整套”推已兼容／授权。
 
 共 9 个模块，全部列为采用目标但带 `together-receive-contract` 门禁。上游拼写为 **listentogether_heatbeat**，Cirrus 内部使用 Heartbeat，保留映射避免漏项。
 
@@ -76,9 +78,9 @@
 ### 必须补齐的协议缺口
 
 1. 邀请链接／标识的合法生成与解析，未加入／已加入／房间失效的判断。
-2. 远端播放事件的传输方式、订阅鉴权、事件格式、顺序和重放窗口。
+2. 远端播放事件材料已指向NIM，但SELFHOST选择／原生transport、订阅鉴权、外层envelope、顺序和重放窗口仍需可核对证据。
 3. 心跳周期、超时规则、成员／房主变更、服务器时间基准。
-4. progress 单位和基准、clientSeq 的作用域及确认方式；不得只按 HTML 示例猜完整协议。
+4. 新材料补出progress毫秒线索，时间基准、clientSeq/serverSeq作用域／reset／确认和echo仍缺；不得把摘要和HTML当完整时钟协议。
 5. 队列 version、并发编辑、随机序列／展示序列的对应关系。
 6. 从机暂停／seek 权限、歌曲不可播放、双方曲目权限差异、断线恢复与房间终止语义。
 

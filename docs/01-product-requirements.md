@@ -86,6 +86,8 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-043 | 一起听建房／加入／退出、心跳、播放与队列同步、断线恢复；双账号验证，不以 HTTP 包装器代替实时协议 | P1 / M3 | API/播放后端 | TC-TOGETHER |
 | FR-044 | 播客／声音消费端搜索、详情、内容列表与播客订阅读取及后续播放，独立身份／来源／历史，不包含创作者管理工作台 | P1 / M2–M3 | API/播放后端 | TC-PODCAST-VOICE |
 
+FR-043 材料增量：[Android 9.5.30摘要与固定九HTTP对照](api/together-protocol-material-audit.md)已按维护者提供路径完成静态核对。NIM/独立chatRoomId/type20000–20002与毫秒/serverSeq/ignoreUserIds仅有摘要线索；原生鉴权/envelope/SELFHOST、seq/version/时钟重连权限、Linux许可未闭，HTTP crypto/profile/command-vs-playlistParam/check/end/queue schema有差异，不直接混用或恢复草稿。85ops/47不变，无新增代码/build/Qt/LSP/实网/SDK/新依赖；材料到达不是FR完成或实施恢复授权，其他暂停项与UI最后保留。
+
 FR-015 历史读取增量：[历史日推可用日期／显式日期歌曲](api/daily-recommendation-history.md)按维护者选择已合成接入。原账号／MUSIC_U／空Weapi与date，日期必须来自原读取DTO成员和原token的private factory，不给当前日推或歌单入口塞日期；data.dates/data.songs366/500、1/4MiB仅严格候选，保序重复宽ID、read16／同token私有scope／取消排空。新86／17 affected839＋13线程数据行15pass，0fail/skip；85ops／47登记，16fresh paths clean／14objects6985deps禁入0／UI0。无日期cache／自动选择读／图／音源／play／report／反馈写，真实schema／可用窗口／会员／完整性与UI另验收；FR不整体完成。前三项及第四项G1/G2后续均暂停、阶段1保留，不自动恢复实网。
 
 FR-015 此前技术进度：[每日推荐歌单](api/daily-recommended-playlists.md)独立原账号Weapi空业务读取已合成接入，不以普通推荐／每日歌曲替代。root.recommend／100／1MiB、mandatory name及optional metadata为严格候选，保序／重复／宽ID／纯文本；本项与已有私有音乐读补强同token账号／认证态屏障，原read16／取消排空。新62、16受影响Debug753＋12线程数据行14 pass，0fail/skip；registry83／45登记。没有推荐日期／日期cache／UI或自动detail／image／play／write／report，真实schema／账号／频率／权限仍未验收，不整体完成FR。

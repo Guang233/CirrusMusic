@@ -26,6 +26,7 @@
 | [03 系统架构与模块契约](03-system-architecture.md) | 模块如何拆分、依赖如何约束、线程如何划分？ |
 | [04 领域与数据模型](04-domain-and-data-model.md) | 歌曲、队列、账号、音质和本地资源如何表达？ |
 | [05 API 适配与客户端后端](05-api-and-backend.md) | 如何接入现有接口并抵御接口变化？ |
+| [一起听Android补充材料审计](api/together-protocol-material-audit.md) | NIM/独立chatRoomId/type/毫秒/seq线索、与固定9 HTTP crypto/profile/schema差异；G1–G6未闭，不恢复WIP或自动SDK/实网，docs-only、85ops/47不变 |
 | [固定版本 API 审计](api/README.md) | 哪些模块采用／待定／排除，协议依赖、许可与缺口是什么？ |
 | [原生后端实现记录](api/native-foundation.md) | 当前哪些组件和离线测试已落地？ |
 | [扫码请求链路](api/qr-auth-request-chain.md) | 请求上下文怎样隔离，为什么803还不等于完整登录？ |

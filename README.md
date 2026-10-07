@@ -18,6 +18,8 @@
 - [实施路线与任务拆解](docs/14-roadmap-and-backlog.md)
 - [待确认问题](docs/15-risks-and-open-questions.md) · [API 交接清单](docs/checklists/api-handoff.md)
 
+最新仅资料审计：[一起听Android摘要＋固定九HTTP对照](docs/api/together-protocol-material-audit.md)。NIM/chatRoomId/消息type与毫秒/serverSeq有新线索，但transport/auth/envelope、seq/version/时钟恢复权限与Linux许可未闭，HTTP存在crypto/profile/字段/schema差异。材料已收到，不自动解除实施暂停或恢复WIP；85ops/47登记不变，无新代码验证／SDK／新库／实网／UI，其他暂停项保留。
+
 ## VS Code 与当前骨架构建
 
 完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib、Qt6Keychain 开发包及 Qt 开发 Kit（含 Network、Sql／QSQLITE、Multimedia及音频后端插件、封面基础设施的Gui／JPEG插件，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
