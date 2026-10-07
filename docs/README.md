@@ -49,6 +49,7 @@
 | [消费端播客／节目与四类recent](api/podcast-and-recent-reads.md) | 七项有界读／原账号；ProgramId独立、公开列表-462停止，Voice对应／节目详情／真实recent待实证，不含声音播放 |
 | [评论点赞／取消／发布／回复／删除写](api/comment-writes.md) | 5封闭operation与获准原生v3前置GET，无SDK／JS／新依赖／实网／UI；独立8槽／原账号／Unknown、无评论ID猜测或自动重试／读，合成134＋受影响760与线程11 |
 | [资源评论只读](api/comment-reads.md) | 普通／热门／新版／楼层／统计五类入口、八operation及严格资源身份；仅合成验证，无写入／账号评论历史／通知 |
+| [播客／声音离线媒体接缝阶段1](api/spoken-media-seam.md) | tagged逻辑结构／AudioTrackId与无身份MediaSource，原唯一owner／媒体限额，28／affected373＋thread13、0fail／原audio1skip；83ops／46登记，无可信binding／实际播放入口 |
 | [播客／声音身份与音源补证](api/spoken-playback-contract.md) | 传统底层音轨路线、Voice对应／v1实证门禁、媒体共享和历史／报告隔离；仅研究决策，没有新播放实现 |
 | [FM连续播放](api/fm-continuous-playback.md) | ListeningSession的FM模式、暂停续播、失败预算及队列切换；仍无听歌上报 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |

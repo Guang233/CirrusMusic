@@ -104,6 +104,12 @@ target_link_libraries(tst_playback PRIVATE cirrus_application Qt6::Test)
 add_test(NAME playback COMMAND tst_playback)
 set_tests_properties(playback PROPERTIES TIMEOUT 15)
 
+# Offline identity/media seam, with no Network/Multimedia in this test target.
+qt_add_executable(tst_media_seam unit/media_seam_test.cpp)
+target_link_libraries(tst_media_seam PRIVATE cirrus_application Qt6::Test)
+add_test(NAME media_seam COMMAND tst_media_seam)
+set_tests_properties(media_seam PROPERTIES TIMEOUT 15)
+
 qt_add_executable(tst_media unit/media_test.cpp)
 target_link_libraries(tst_media PRIVATE cirrus_media Qt6::Test)
 add_test(NAME media COMMAND tst_media)

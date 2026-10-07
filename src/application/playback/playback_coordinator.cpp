@@ -49,8 +49,10 @@ PlaybackCoordinator::PlaybackCoordinator(SessionCoordinator& session, IStreamRes
                 m_snapshot.preview = source.preview;
                 m_snapshot.state = PlaybackState::Loading;
                 emit changed(m_snapshot);
-                if (current(token))
-                    m_backend.load(std::move(source), token);
+                if (current(token)) {
+                    MediaSource physical = std::move(source); // retire the song envelope here
+                    m_backend.load(std::move(physical), token);
+                }
             });
     connect(&backend, &IPlaybackBackend::event, this, &PlaybackCoordinator::receive);
 }

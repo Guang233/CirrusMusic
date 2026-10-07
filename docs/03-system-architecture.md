@@ -126,6 +126,8 @@ QObject 使用父子所有权；普通业务对象使用明确的值／`unique_p
 - 页面临时状态（悬停、展开、输入中）留在 QML；查询状态、会话、下载和播放留在 ViewModel/应用层。
 - 页面销毁只取消页面所有的查询，不应停止全局播放或退出账号。
 
+[播客／声音离线媒体接缝阶段1](api/spoken-media-seam.md)已把物理MediaSource从Song StreamSource身份包络分开，媒体port／buffer／Qt backend只接无身份载荷，原唯一coordinator校验原Song-token-TTL后下沉；新PlaybackEntity／AudioTrackId仅结构，未进活动snapshot／history／report，未创建新owner或可信binding／spoken入口。G1/G2及完整逻辑模式仍待证，不因为无identity载荷就绕过source／权限／CDN限额或自动实网。
+
 ## 7. 请求流程例：搜索并播放
 
 ```mermaid

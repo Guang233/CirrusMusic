@@ -32,7 +32,8 @@ class IPlaybackBackend : public QObject
     Q_OBJECT
   public:
     using QObject::QObject;
-    virtual void load(domain::StreamSource source, domain::LoadToken token) = 0;
+    // Media cannot see or reinterpret a logical identity. Owner retains LoadToken fences.
+    virtual void load(domain::MediaSource source, domain::LoadToken token) = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0; // synchronous retirement of callbacks, no completion event

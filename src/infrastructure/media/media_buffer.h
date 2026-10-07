@@ -17,7 +17,7 @@ class MediaBuffer final : public QObject
     explicit MediaBuffer(std::unique_ptr<QNetworkAccessManager> manager = {},
                          QObject* parent = nullptr);
     ~MediaBuffer() override;
-    void start(domain::StreamSource source, domain::LoadToken token);
+    void start(domain::MediaSource source, domain::LoadToken token);
     void cancel();
     [[nodiscard]] QIODevice* device() const { return m_file.get(); }
     static constexpr qint64 MaximumBytes = 64LL * 1024 * 1024;
@@ -35,7 +35,7 @@ class MediaBuffer final : public QObject
     QPointer<QNetworkReply> m_reply;
     std::unique_ptr<QTemporaryFile> m_file;
     QTimer m_deadline;
-    domain::StreamSource m_source;
+    domain::MediaSource m_source;
     domain::LoadToken m_token;
     int m_redirects = 0;
     qint64 m_bytes = 0;

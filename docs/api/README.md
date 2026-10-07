@@ -46,6 +46,7 @@
 | [podcast-and-recent-reads.md](podcast-and-recent-reads.md) | 消费端详情／节目3项与原账号recent4项，独立ProgramId／VoiceId；公开列表-462已停，其余候选schema仅合成，声音播放另包 |
 | [comment-writes.md](comment-writes.md) | 评论5action／operation，4variant／原account-token-generation／独立8槽及business NotSent-Unknown；明确批准固定原生v3 GET→2XEAPI动作，无SDK／JS／外部Core token／创建ID猜测／自动读／重试；仅合成760＋11／新134，无实网／UI |
 | [comment-reads.md](comment-reads.md) | 资源评论五类／八operation；四类普通及五类通用资源、严格分页／楼层／统计missing，候选schema仅合成；无Voice／艺人绑定、写入／账号历史／通知 |
+| [spoken-media-seam.md](spoken-media-seam.md) | 离线阶段1：逻辑kind／AudioTrackId结构、无身份物理MediaSource／原唯一owner与媒体限额，28／affected373＋thread13、0fail／原audio1skip；83ops／46登记，G1/G2未闭、无实际spoken入口 |
 | [spoken-playback-contract.md](spoken-playback-contract.md) | 身份／官方音源补证与独立播放设计：mainTrackId文档路线、v1代码候选、工作台不可替代、6项实证门禁；docs-only，无声音播放实现 |
 | [fm-continuous-playback.md](fm-continuous-playback.md) | ListeningSession的FM连续播放、模式切换、候选保留与有界失败 |
 | [gaps-and-hazards.md](gaps-and-hazards.md) | 确认的源码问题、未确认契约和不可直接移植的行为 |

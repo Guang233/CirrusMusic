@@ -321,7 +321,7 @@ void BackendRuntimeTest::playbackThroughThread()
             if (QThread::currentThread() == qApp->thread())
                 ++state->wrongThread;
         }
-        void load(domain::StreamSource, domain::LoadToken t) override
+        void load(domain::MediaSource, domain::LoadToken t) override
         {
             check();
             token = t;
@@ -1120,7 +1120,7 @@ void BackendRuntimeTest::chartsToPlaylistPlaybackThroughThread()
             if (QThread::currentThread() == qApp->thread())
                 ++state->wrongThread;
         }
-        void load(domain::StreamSource, domain::LoadToken t) override
+        void load(domain::MediaSource, domain::LoadToken t) override
         {
             check();
             token = t;
@@ -1266,7 +1266,7 @@ void BackendRuntimeTest::playlistDiscoveryThroughThread()
             if (QThread::currentThread() == qApp->thread())
                 ++state->wrongThread;
         }
-        void load(domain::StreamSource, domain::LoadToken t) override
+        void load(domain::MediaSource, domain::LoadToken t) override
         {
             check();
             token = t;

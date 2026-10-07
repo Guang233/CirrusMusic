@@ -35,7 +35,7 @@ void MediaBuffer::cancel()
     m_file.reset();
     m_source = {};
 }
-void MediaBuffer::start(StreamSource source, LoadToken token)
+void MediaBuffer::start(MediaSource source, LoadToken token)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     cancel();

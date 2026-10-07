@@ -2,6 +2,8 @@
 
 > 已实现首个单曲闭环，尚不是完整播放器。维护者已明确批准新增 **Qt6::Multimedia** 和静音短样本验证。`main.cpp`／`Main.qml` 不变，不引入 libmpv、自建 FFmpeg 管线、Node、代理服务或第三方解锁。
 
+最新[播客／声音离线共享媒体接缝阶段1](spoken-media-seam.md)只拆物理MediaSource与原Song包络：media port／buffer／Qt backend改无身份值，唯一coordinator原身份／token／TTL核对后下沉；本页原SongStream wire／源验证／preview／媒体限额不变，不新增spoken入口／绑定／实网。15 affected373＋thread13／新28，0fail／原audio1默认skip，17fresh路径clean／Core实编6973deps禁入0，83ops／46登记；下文49＋1与静音PoC是历史，不当本包／spoken可播证据。
+
 ## 1. 实现与调用边界
 
 | 入口 | 实际职责 |

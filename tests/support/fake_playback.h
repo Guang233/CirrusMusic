@@ -34,7 +34,7 @@ class FakePlaybackBackend final : public application::IPlaybackBackend
     QList<qint64> seeks;
     int plays = 0, pauses = 0, stops = 0;
     float volume = 0.5f;
-    void load(domain::StreamSource, domain::LoadToken token) override { loads.append(token); }
+    void load(domain::MediaSource, domain::LoadToken token) override { loads.append(token); }
     void play() override { ++plays; }
     void pause() override { ++pauses; }
     void stop() override { ++stops; }

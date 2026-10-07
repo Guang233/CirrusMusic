@@ -2,6 +2,8 @@
 
 > 2026-10-06 UTC，接续 `a3c67c1` 的[消费／recent读取](podcast-and-recent-reads.md)。本包只调查契约、确定后续接缝；**没有新增operation、C++类型／播放器入口、缓存或声音播放实现**。现有43项business operation／34套件不变。没有继续已在-462停止的公开探测，没有账号／keyring／Cookie／网易云业务API／CDN／音频请求或写入。本轮网络仅公共代码仓库与资料检索。
 
+**最新增量**：维护者现明确前三项（整歌单收藏／一起听／云盘后续）暂缓，从播客／声音播放开始，并选择[离线媒体接缝阶段1](spoken-media-seam.md)。已新增PlaybackEntity／AudioTrackId结构类型和无identity MediaSource，媒体端口／buffer／Qt后端不再接Song包络；原唯一coordinator先验证歌曲身份／TTL／token再下沉物理值。新28／15受影响373＋线程13，0fail／原audio默认1skip，17fresh路径clean／Core实编6973deps禁入0，83ops不增／46登记；**仍没有可信消费binding、节目／声音resolver／活动快照／播放入口或实网**，G1/G2待证，G4/G5仅部分准备。首段43／34及文末485links等是旧调查时点证据，不是当前注册／本包验证；未恢复-462窗口或前三项。
+
 ## 1. 决策摘要
 
 | 问题 | 结论／证据等级 | 对实现的约束 |
@@ -31,7 +33,7 @@
 | module/voicelist_trans.js | programId／radioId等→workbench/radio/program/trans；这是管理排序写，不执行、不移植 |
 | module/voice_lyric.js | wrapper id→programId、`/api/voice/lyric/get`；参数名programId本身不证明legacy program namespace，也不在本包接声音歌词 |
 
-util/option.js／config.json与request.js的crypto选择接缝也已核对：doc地址是JS wrapper，不是逻辑wire path；默认profile是固定源码＋配置的结论，不从接口名推加密。interface.d.ts的dj_program_detail／voice_detail／song_url_v1只有Promise<Response>，不能补出具体binding、TTL或权益schema。
+util/option.js／config.json与request.js的crypto选择接缝也已核对：doc地址是JS wrapper，不是逻辑wire path；默认profile是固定源码＋配置的结论，不从接口名推加密。interface.d.ts的dj_program_detail／voice_detail／song_url_v1只有`Promise<Response>`，不能补出具体binding、TTL或权益schema。
 
 **重要差异：旧song_url.js整理响应并将返回根code固定200。** 本客户端不能照抄这层包装来遮住业务拒绝；也不能把br版返回当成现有v1的level／expi／freeTrialInfo契约，或在XEAPI失败时自动退旧eapi。当前native只实现SongStream v1，没有增加旧版本operation。
 
@@ -57,7 +59,7 @@ SPlayer的mainTrackId缺失→item.id fallback、通用SongType／JS number、AP
 
 ### 逻辑身份与音轨分开
 
-后续候选是逻辑实体variant `SongId | ProgramId | VoiceId`，container PodcastId只作为来源；内部另建底层 `AudioTrackId` 与原context／实体的可信绑定。这里的名称是设计方向，**尚未泛化逻辑实体、添加AudioTrackId或任何playProgram／playVoice入口**。
+后续候选是逻辑实体variant `SongId | ProgramId | VoiceId`，container PodcastId只作为来源；内部另建底层 `AudioTrackId` 与原context／实体的可信绑定。原调查时点只有这些设计方向；后续阶段1已添加PlaybackEntity／AudioTrackId结构类型，**尚未泛化活动逻辑snapshot／可信binding或添加任何playProgram／playVoice入口**。
 
 - 从已核对且可验证的消费响应取得底层音轨，校验请求／resource／父播客身份、canonical ID、原token。Programme列表／详情与声音search若将来用于binding，必须各自获得实际字段及关联证据；当前Program／Voice展示mapper继续忽略mainSong／mainTrackId，不自动抓全库补绑定。
 - caller只选择逻辑实体，不允许自行提交“任意VoiceId＋任意音轨”拼接。音轨ID不进入歌曲收藏、歌词查询、Song queue、歌曲最近记录或报告。返回数据若只有节目ID、mp3Url、无绑定或两个音轨声明冲突，失败关闭；不得fallback为节目／声音自身ID。
@@ -71,7 +73,7 @@ SPlayer的mainTrackId缺失→item.id fallback、通用SongType／JS number、AP
 | 现有接缝 | 实际约束／后续处理 |
 | --- | --- |
 | StreamQuery／StreamSource／PlaybackSnapshot | 当前有SongId；mapStreamResponse逐行匹配query.song；coordinator又检查source.song。不能给它们塞音轨SongId后把快照贴Voice标签 |
-| MediaBuffer／QtPlaybackBackend | 当前签名仍StreamSource，但实际媒体流程不读取source.song，使用URL／size／validUntil／format／preview及固定LoadToken。可以将媒体payload与逻辑身份分离后共享，不意味今天已支持泛化source |
+| MediaBuffer／QtPlaybackBackend | 原调查时点签名StreamSource；最新阶段1已改MediaSource，只有URL／size／validUntil／format／preview及固定LoadToken，不含identity。物理分离已完成，不证明节目／声音消费binding、泛化owner／活动snapshot或实际可播 |
 | PlaybackCoordinator／ListeningSession | 当前歌曲生产者与generation边界必须保留；未来整个歌曲／FM／spoken模式只有一个活动媒体owner和单调generation，切模式取消解析、销毁旧player／buffer。不能再建两套同时控制同一backend而互相覆盖的coordinator |
 | observed_playback机制 | 可复用同单调时间＋位置条件，不把duration／seek／静音／buffering当收听时长；不代表扬声器／用户注意力 |
 | ListeningHistory | 当前字段song且按snapshot.song匹配，ListeningMode只有歌曲Queue／PersonalFm；需要逻辑实体／来源模型后再记录spoken时长。不能把音轨插为新歌曲历史，也不持久化另一套完整recent |
@@ -95,8 +97,8 @@ SPlayer的mainTrackId缺失→item.id fallback、通用SongType／JS number、AP
 | G1 原节目／声音与音轨绑定 | 脱敏结构＋同请求／原context的ID比较boolean，分别证明字段来源／关联；不要保存真实ID／文本／creator／原JSON | 传统文档mainTrackId路线已获证；当前消费schema仅合成，Voice关联未验证 |
 | G2 v1音源 | 明确授权后最少量native metadata请求：成功／拒绝区分、row.id相等boolean、类型／size／level／expi／preview结构。不请求音频就不宣称播放 | SPlayer代码补强候选，但本机节目／声音XEAPI无实证；此前歌曲试听PoC不能替代 |
 | G3 媒体样本 | 另行授权的短静音试听／合成音频、暂停／seek／stop／close；不保留签名URL或版权音频 | 本轮未请求；没有声学证明 |
-| G4 身份隔离 | 合成宽ID、Program／Voice／audio ID各不同或数值相同、缺失／冲突binding、无任何ID fallback、原context／A→B→C取消／late回包 | 后续代码包必须添加；当前独立读取已有相应边界，但不是spoken播放测试 |
-| G5 共用player与计量 | 歌曲↔FM↔spoken独占转换、generation、失败／Ended去重、暂停加载、试听坐标、seek／mute不增加时长、clear抑制／切号／close | 未实现，不能只用Song snapshot测试当通过 |
+| G4 身份隔离 | 合成宽ID、Program／Voice／audio ID各不同或数值相同、缺失／冲突binding、无任何ID fallback、原context／A→B→C取消／late回包 | 阶段1有规范ID／同值不同tag与原Song验证屏障；可信消费binding／冲突／spoken snapshot尚未实现，不能整门禁标完成 |
+| G5 共用player与计量 | 歌曲↔FM↔spoken独占转换、generation、失败／Ended去重、暂停加载、试听坐标、seek／mute不增加时长、clear抑制／切号／close | 阶段1已分离无身份媒体端口并回归原Song／FM单owner；spoken模式／三模式切换与逻辑计量未实现，不能整门禁标完成 |
 | G6 报告／云端记录 | 新服务端来源／行为契约另核对／授权；4recent实测另授权，不根据播放推记录必出现或自动发报告 | 无新报告能力／实测；安全默认不发送 |
 
 需要真实账号／挑战环境时另问维护者，不从现有记忆记录／keyring取凭据，不把泛泛“继续”当账号或媒体授权。旧-462 probe不补发；G1／G2可以在未来明确批准的新验证窗口进行，拒绝则再次停下。即使后来确认旧eapi可用，也应作为独立、明确批准的契约，而非当前v1失败的偷偷fallback。
@@ -105,4 +107,4 @@ SPlayer的mainTrackId缺失→item.id fallback、通用SongType／JS number、AP
 
 本包为docs-only契约决策，没有新业务请求／生产代码／运行依赖／UI改动。485个本地Markdown链接有效（跳过代码标记），git diff --check通过，固定440模块／公共文件hash校验通过；改动全部为Markdown，C++／UI delta=0，因此没有新增编译／LSP覆盖需求；**不重新宣称207＋8是本轮测试结果**，该数字仍为a3c67c1读取包的历史最新定向证据。没有重跑全量Debug／Release／认证／设备矩阵，也没有新增spoken测试／虚构native实测。
 
-如果G1／G2受限，不为“补接口”而开放未知音源或管理端点。可继续已经确认的剩余后端能力：优先评论等只读小包，再收藏／歌单管理写入、下载／云盘、一起听；每包重新确认范围／权限／错误语义，写入与账号／音频实测单独授权。不会本轮自动开始这些包，不因缺证就把FR-044标完成；UI仍最后。
+如果G1／G2受限，不为“补接口”而开放未知音源或管理端点。原调查时点提出可继续已确认其他后端；最新维护者指定从第四项继续，阶段1已交付，下一步仍需闭合本项绑定／音源门禁，前三项继续暂停、不自动转去云盘／一起听；每包重新确认范围／权限／错误语义，写入与账号／音频实测单独授权。不会本轮自动开始这些包，不因缺证就把FR-044标完成；UI仍最后。

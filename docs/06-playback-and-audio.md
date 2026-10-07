@@ -2,6 +2,8 @@
 
 > 状态：完整播放器设计仍为提案；[官方音源／Qt单曲播放](api/stream-resolution-and-playback.md)已落地并通过公开试听静音PoC。[队列／六轨歌词时钟](api/queue-and-lyric-clock.md)已完成最小后端闭环。当前仍为有界完整临时缓冲后起播，尚无流式起播；下文未逐项标注的完整产品能力不能视为已实现。
 
+最新[播客／声音离线接缝阶段1](api/spoken-media-seam.md)已分离物理MediaSource：媒体port／buffer／Qt backend不含Song／Program／Voice身份，唯一歌曲coordinator仍先核对Song／token／TTL再下沉；独立PlaybackEntity／AudioTrackId仅结构准备，未接活动快照／历史或可信binding，不生成第二owner。373＋thread13／新28、0fail／原audio1默认skip，未证明实际节目／声音可播，消费binding与音源门禁仍保留；不恢复前三项或实网／UI，64MiB／45s等限制不扩。
+
 ## 1. 组件职责
 
 | 组件 | 职责 |
@@ -10,7 +12,7 @@
 | PlaybackCoordinator | 已实现：后台单曲来源／目标意图／状态机／generation，恢复能力仍有限 |
 | PlaybackQueue | 已实现：独立队列值模型、随机／循环与真实历史；不直接操作解码器 |
 | IStreamResolver | 根据 TrackKey、账号和音质获得本次可播放来源 |
-| IPlaybackBackend | load、play、pause、stop、seek、音量、设备、事件；不调用官方 API |
+| IPlaybackBackend | 已实现load(MediaSource,LoadToken)、play/pause/stop/seek/volume／event，无identity、不调用官方API；设备与完整能力仍提案 |
 | QtPlaybackBackend | QMediaPlayer/QAudioOutput 实现；把 Qt 状态映射为统一后端事件 |
 | LyricTimeline | 已实现：独立六轨时间索引；ListeningSession用媒体位置及试听起点定位，不建立独立音频时钟 |
 | PlayerViewModel | 对 QML 发布脱敏快照及窄命令接口 |

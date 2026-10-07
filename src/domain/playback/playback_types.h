@@ -2,8 +2,8 @@
 
 #include "domain/account/session_types.h"
 #include "domain/music/music_types.h"
-
-#include <QDeadlineTimer>
+#include "media_source.h"
+#include <utility>
 
 namespace cirrus::domain
 {
@@ -26,19 +26,19 @@ struct StreamQuery {
     SongId song;
     AudioQuality quality = AudioQuality::Standard;
 };
-struct PreviewRange {
-    qint64 startMs = 0;
-    qint64 endMs = 0;
-};
-// Internal application/infrastructure value ONLY: signed URLs never enter UI snapshots/logs.
-struct StreamSource {
+// Song resolver envelope. Identity is checked before the physical base is moved to media.
+// Public value inheritance preserves existing song-source field access/initialization;
+// the media port accepts ONLY the identity-free base by value, not this envelope.
+struct StreamSource : MediaSource {
     SongId song;
-    QUrl url;
-    QString actualQuality;
-    QString format;
-    qint64 size = 0;
-    QDeadlineTimer validUntil;
-    std::optional<PreviewRange> preview;
+    StreamSource() = default;
+    StreamSource(SongId id, QUrl location, QString quality, QString encoding, qint64 bytes,
+                 QDeadlineTimer deadline, std::optional<PreviewRange> trial = {})
+        : MediaSource{std::move(location), std::move(quality), std::move(encoding), bytes, deadline,
+                      std::move(trial)},
+          song(std::move(id))
+    {
+    }
 };
 enum class PlaybackError {
     InvalidRequest,

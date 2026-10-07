@@ -38,4 +38,6 @@ Cirrus 的接口审计参考：
 
 每日推荐歌单增量完整参考固定 `module/recommend_resource.js`、home对应章节／TS genericResponse及options／config／完整request默认链，显式Weapi `/api/v1/discovery/recommend/resource` 与空业务载荷在 `api/api_operation.cpp` 做窄C++改写，`music/playlist_discovery_mapper.cpp` 复用原摘要映射及账号查询链。推荐歌单与普通personalized／每日歌曲区分，root.recommend／name／小写playcount等是客户端严格合成候选，不由generic Response／MIT证明真实schema／账号支持／日期／权限。没有新JS／SDK／服务／真实库内容或凭据fixture，原MIT与固定hash保留；维护者暂无v2资料，整歌单收藏调查保留但现明确暂缓，不自动恢复，见[契约](../../docs/api/daily-recommended-playlists.md)。
 
+播客／声音离线接缝阶段1仅重核固定dj_program_detail.js／song_url_v1.js／voice_detail.js与已有补证契约，未复制外部播放器／新增wire算法／workbench消费接口或改变SongStream固定路径／字段。PlaybackEntity／AudioTrackId／identity-free MediaSource与原唯一coordinator／媒体port拆分为本项目离线结构准备，只有合成fixture；并非可信Program/Voice绑定、节目v1服务／权益／实际播放或第三方SDK许可证明。原参考代码改写的MIT通知仍保留、固定锁不升级，前三项暂停且无官方／账号／CDN／SDK／音频访问授权，见[阶段契约](../../docs/api/spoken-media-seam.md)。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

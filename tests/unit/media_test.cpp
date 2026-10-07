@@ -24,11 +24,10 @@ class GetManager final : public QNetworkAccessManager
                                    this);
     }
 };
-StreamSource source(qint64 bytes = 8)
+MediaSource source(qint64 bytes = 8)
 {
-    return {{"1"},      QUrl("https://m802.music.126.net/synthetic.mp3"),
-            "standard", "mp3",
-            bytes,      QDeadlineTimer(60000)};
+    return {QUrl("https://m802.music.126.net/synthetic.mp3"), "standard", "mp3", bytes,
+            QDeadlineTimer(60000)};
 }
 const LoadToken Token{{QUuid::createUuid(), 1}, 1};
 QByteArray wave()
@@ -191,7 +190,8 @@ class MediaTest : public QObject
             QSKIP("Opt-in desktop Qt audio smoke: CIRRUS_AUDIO_SMOKE=1");
         // Exercise the REAL Qt adapter on a worker, not just a Core-only fake player.
         // Result fields are read only after joining this test-owned thread.
-        bool ready = false, paused = false, seeked = false, failure = false, wrongToken = false;
+        bool ready = false, paused = false, seekAcknowledged = false, failure = false,
+             wrongToken = false;
         std::unique_ptr<QThread> worker(QThread::create([&] {
             QEventLoop loop;
             auto manager = std::make_unique<GetManager>();
@@ -218,7 +218,7 @@ class MediaTest : public QObject
                             });
                         }
                         if (event.kind == Kind::Position && event.value >= 1500) {
-                            seeked = true;
+                            seekAcknowledged = true;
                             QTimer::singleShot(50, &loop, &QEventLoop::quit);
                         }
                     });
@@ -237,7 +237,7 @@ class MediaTest : public QObject
         QVERIFY(!wrongToken);
         QVERIFY(ready);
         QVERIFY(paused);
-        QVERIFY(seeked);
+        QVERIFY(seekAcknowledged);
     }
 };
 QTEST_GUILESS_MAIN(MediaTest)

@@ -47,7 +47,7 @@ void QtPlaybackBackend::stop()
     m_buffer.cancel();
     m_preview.reset();
 }
-void QtPlaybackBackend::load(StreamSource source, LoadToken token)
+void QtPlaybackBackend::load(MediaSource source, LoadToken token)
 {
     stop();
     m_token = token;

@@ -16,7 +16,7 @@ class QtPlaybackBackend final : public application::IPlaybackBackend
     explicit QtPlaybackBackend(std::unique_ptr<QNetworkAccessManager> manager = {},
                                QObject* parent = nullptr);
     ~QtPlaybackBackend() override;
-    void load(domain::StreamSource source, domain::LoadToken token) override;
+    void load(domain::MediaSource source, domain::LoadToken token) override;
     void play() override;
     void pause() override;
     void stop() override;
