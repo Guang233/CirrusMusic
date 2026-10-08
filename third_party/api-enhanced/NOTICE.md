@@ -44,4 +44,6 @@ Cirrus 的接口审计参考：
 
 后续[一起听Android摘要审计](../../docs/api/together-protocol-material-audit.md)仅引用维护者提供文档的来源自述／hash与必要字段线索，并对照固定9 wrapper、home/HTML/TS/options/config/request/crypto和原生Eapi；未复制整份Android材料、外部反编译代码或SDK／token／真实响应，未恢复WIP、新增C++改写或执行服务/SDK/JS。NIM/SELFHOST/Linux协议或SDK的许可/接入权没有因此获得，Android来源／第三方商业SDK／接口服务不由api-enhanced MIT覆盖，固定锁与归属保持。
 
+随后经维护者明确选择[核心12 Together HTTP-only](../../docs/api/together-http-core.md)，原九wrapper／crypto链的路径与有限字段参考用C++重写，额外end/check／restore/reconnect/info／device/reconnect/notice仅参考用户文档摘要；Status按用户选择Eapi、使用既有标准ECB，不采用摘要CBC描述。窄文档host保原PC metadata组合未实网证明，不复制Android源码／整份原材料／NIM SDK，不接token、transport或可执行脚本，无新运行库；typed HTTP metadata/Ack非完整同步或服务权利。固定api-enhanced MIT通知/lock/hash保持；用户摘要的必要引用与来源自述不授予Android/商业SDK/服务/音乐许可。APK检查被撤权且从未读取/hash/检查/解包/执行，固定旧stash不pop/drop/apply。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

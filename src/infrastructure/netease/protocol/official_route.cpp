@@ -68,6 +68,28 @@ std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPat
         if (protocol != Protocol::Eapi || logicalPath != u"/api/feedback/weblog")
             return std::nullopt;
         host = u"clientlog.music.163.com"_s;
+    } else if (destination == OfficialDestination::TogetherHttp) {
+        if (protocol != Protocol::Eapi)
+            return std::nullopt;
+        constexpr QStringView paths[]{u"/api/listen/together/room/create",
+                                      u"/api/listen/together/room/check",
+                                      u"/api/listen/together/play/invitation/accept",
+                                      u"/api/listen/together/status/get",
+                                      u"/api/listen/together/end/check",
+                                      u"/api/listen/together/end/v2",
+                                      u"/api/listen/together/heartbeat",
+                                      u"/api/listen/together/play/command/report",
+                                      u"/api/listen/together/sync/playlist/get",
+                                      u"/api/listen/together/sync/list/command/report",
+                                      u"/api/listen/together/restore/reconnect/info",
+                                      u"/api/listen/together/device/reconnect/notice"};
+        bool permitted = false;
+        for (const auto path : paths)
+            if (logicalPath == path)
+                permitted = true;
+        if (!permitted)
+            return std::nullopt;
+        host = u"interface.music.163.com"_s;
     } else if (destination != OfficialDestination::Default)
         return std::nullopt;
     QUrl url;

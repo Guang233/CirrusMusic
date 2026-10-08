@@ -13,6 +13,7 @@
 #include "infrastructure/netease/music/listening_report_gateway.h"
 #include "infrastructure/netease/music/music_gateway.h"
 #include "infrastructure/netease/music/stream_resolver.h"
+#include "infrastructure/netease/music/together_gateway.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
 
@@ -179,6 +180,30 @@ class BackendWorker final : public QObject
             }
     }
 
+    void together(TogetherCommand c)
+    {
+        const auto id = m_ready && !m_closing && m_together && c.generation == m_generation
+                            ? m_together->submit(c.context, c.accountId, c.request)
+                            : 0;
+        if (!id) {
+            domain::TogetherResult r{
+                c.request.eventId, domain::TogetherOutcome::NotSent, domain::TogetherError::Busy,
+                domain::togetherKind(c.request.action), c.request.roomGeneration};
+            emit togetherDelivered({c.id, c.generation, c.context, r});
+        } else
+            m_togetherRequests.insert(id, std::move(c));
+    }
+    void cancelTogether(quint64 id)
+    {
+        if (!m_together)
+            return;
+        for (auto it = m_togetherRequests.cbegin(); it != m_togetherRequests.cend(); ++it)
+            if (it->id == id) {
+                m_together->cancel(it.key());
+                return;
+            }
+    }
+
     void mutateCollection(CollectionCommand command)
     {
         const auto id =
@@ -253,6 +278,8 @@ class BackendWorker final : public QObject
         m_collectionRequests.clear();
         m_commentWrites.reset();
         m_commentWriteRequests.clear();
+        m_together.reset();
+        m_togetherRequests.clear();
         m_musicService.reset();
         m_musicGateway.reset();
         m_musicRequests.clear();
@@ -269,6 +296,7 @@ class BackendWorker final : public QObject
     void reportDelivered(cirrus::application::ListeningReportDelivery delivery);
     void collectionDelivered(cirrus::application::CollectionDelivery delivery);
     void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
+    void togetherDelivered(cirrus::application::TogetherDelivery delivery);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -390,6 +418,14 @@ class BackendWorker final : public QObject
                         return;
                     const auto c = m_commentWriteRequests.take(id);
                     emit commentWriteDelivered({c.id, c.generation, token, result});
+                });
+        m_together = std::make_unique<netease::TogetherGateway>(*m_session, *m_client);
+        connect(m_together.get(), &ITogetherGateway::completed, this,
+                [this](quint64 id, domain::SessionToken context, domain::TogetherResult result) {
+                    if (!m_togetherRequests.contains(id))
+                        return;
+                    const auto c = m_togetherRequests.take(id);
+                    emit togetherDelivered({c.id, c.generation, context, std::move(result)});
                 });
         m_player = m_factories.playback ? m_factories.playback()
                                         : std::make_unique<media::QtPlaybackBackend>();
@@ -515,6 +551,8 @@ class BackendWorker final : public QObject
     QHash<quint64, CollectionCommand> m_collectionRequests;
     std::unique_ptr<netease::CommentWriteGateway> m_commentWrites;
     QHash<quint64, CommentWriteCommand> m_commentWriteRequests;
+    std::unique_ptr<netease::TogetherGateway> m_together;
+    QHash<quint64, TogetherCommand> m_togetherRequests;
     std::unique_ptr<IPlaybackBackend> m_player;
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;
@@ -558,6 +596,12 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             &BackendWorker::cancelComment, Qt::QueuedConnection);
     connect(worker, &BackendWorker::commentWriteDelivered, m_facade,
             &BackendFacade::deliverCommentWrite, Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::togetherRequested, worker, &BackendWorker::together,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::togetherCancelRequested, worker,
+            &BackendWorker::cancelTogether, Qt::QueuedConnection);
+    connect(worker, &BackendWorker::togetherDelivered, m_facade, &BackendFacade::deliverTogether,
+            Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::collectionRequested, worker, &BackendWorker::mutateCollection,
             Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::collectionCancelRequested, worker,

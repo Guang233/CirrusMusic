@@ -50,7 +50,9 @@
 
 ## 3. 一起听：HTTP 模块不是完整同步协议
 
-**最新材料审计**：[Android 9.5.30补充对照](together-protocol-material-audit.md)记录维护者提供的ListenTogether.md及固定hash。接收有NIM／独立chatRoomId、type20000–20002、毫秒／serverSeq／ignoreUserIds线索；但SELFHOST选择、鉴权／完整envelope、seq/version／时钟／恢复权限与Linux／许可未闭。Android CBC/host／全Eapi、command与playlistParam、check/end/queue/root schema与固定参考／旧草稿存在差异，不混用、改host／宽松fallback或恢复旧草稿。此次只静态，85ops／47登记不变、WIP固定对象不pop/drop、无新build/LSP/Qt/live/SDK/新库/UI证据。材料已收到，不再称本轮毫无资料，但不自动解除实施暂停；其他暂停项保留。
+**最新实施子集**：[核心12 HTTP-only](together-http-core.md)经维护者后续明确选择。全部标准Eapi-ECB／Status Eapi／窄interface.music目的地，原PC metadata保留未实网证明、command而非playlistParam、严格data.playList部分metadata／playlist显式unmapped。原account-token-generation-eventId相关／shared8／四结果，97ops／48登记；109新／15affected911＋runtime17pass，非NIM、Active、同步或播放器queue-report/timer。APK撤权且从未检查、stash不恢复；完整同步G1–G6与其他暂停项仍保留。下面是此前材料和固定九wrapper审计，不能当当前route/profile选择或当前没有HTTP注册。
+
+**此前材料审计**：[Android 9.5.30补充对照](together-protocol-material-audit.md)记录维护者提供的ListenTogether.md及固定hash。接收有NIM／独立chatRoomId、type20000–20002、毫秒／serverSeq／ignoreUserIds线索；但SELFHOST选择、鉴权／完整envelope、seq/version／时钟／恢复权限与Linux／许可未闭。Android CBC/host／全Eapi、command与playlistParam、check/end/queue/root schema与固定参考／旧草稿存在差异，不混用、改host／宽松fallback或恢复旧草稿。此次只静态，85ops／47登记不变、WIP固定对象不pop/drop、无新build/LSP/Qt/live/SDK/新库/UI证据。材料已收到，不再称本轮毫无资料，但不自动解除实施暂停；其他暂停项保留。
 
 此前暂停记录：接续搜索辅助包acf822e，维护者先要求一起听，随后明确因固定接口不全**搁置至最后**，表示已逆向整套接口；收到完整材料再重新核对接收／同步／身份／序号契约，不自动恢复不全参考。已编写但未提交的9 HTTP候选草稿完整保存在本地WIP stash，撤出主线，**未作为API或完整一起听交付**。该暂停时点主线82 business operation／44 CTest不变（后来每日歌单包独立增至83／45、再媒体接缝83／46、历史日推85／47，均非一起听恢复）；没有真实账号／服务／SDK／JS／新依赖／UI授权。草稿曾153新suite／10受影响858＋11线程数据行13 pass（0fail/skip），仅草稿历史，不挪作主线／FR-043证明；后续材料不能仅凭“整套”推已兼容／授权。
 

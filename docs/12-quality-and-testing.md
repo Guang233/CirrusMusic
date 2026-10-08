@@ -52,7 +52,8 @@
 | TC-FAILURE | FR-040；NFR-014 | 一致错误分类、部分数据可用、取消静默、无重试风暴 |
 | TC-IMPORT | FR-041 | 不可信 URI、重复项、超限文件、导出脱敏、预览后取消 |
 | TC-AUDIO-PLUS | FR-042 | 定时器、倍速、DSP、gapless、crossfade 各自的开关与能力测试 |
-| TC-TOGETHER（待实施） | FR-043；Q-014 | [补充材料审计G1–G6](api/together-protocol-material-audit.md)：room/chatRoom隔离、原account/token鉴权与外层envelope、type/单复数字段、seq/version/reset/echo/乱序重放、毫秒与时钟/焦点/漂移、权限/preview差异、掉线/退房/多设备；HTTP profile/schema独立、四结果/取消/drain。当前只静态，无新增Qt/CTest/build/LSP，旧WIP153/858＋13不计主线；双授权账号验收另开窗口 |
+| TC-TOGETHER-HTTP | FR-043／004；R-032 | [核心12 HTTP-only](api/together-http-core.md)：12封闭Eapi-ECB／窄host／原MUSIC_U无SetCookie／native解密；55 malformed／旧alias／room-chatRoom隔离、precision／counter／毫秒／多重集、四结果、前后cancel、same-token账号/phase、token失效、8槽/duplicateUUID/client-loss、Facade串线与close drain。新109／15affected911＋15runtime数据行17pass，0fail/skip；16fresh0／实编Core6992无禁入。playlist内部unmapped／无播放队列报告timer；非实网／NIM／完整同步 |
+| TC-TOGETHER（完整同步待实施） | FR-043；Q-014 | [补充材料审计G1–G6](api/together-protocol-material-audit.md)：room/chatRoom隔离、原account/token鉴权与外层envelope、type/单复数字段、seq/version/reset/echo/乱序重放、毫秒与时钟/焦点/漂移、权限/preview差异、掉线/退房/多设备；HTTP profile/schema独立、四结果/取消/drain。完整同步仍待证；HTTP-only独立新增验证见上一行，不挪用旧WIP153/858＋13为完整同步；双授权账号验收另开窗口 |
 | TC-SECURITY | NFR-008/012 | 凭据搜漏、跨域头剥离、路径穿越、诊断包预览、TLS 错误不可绕过 |
 | TC-PERF | NFR-001～006 | 固定设备上的启动、帧、首声延迟、内存、长期播放 |
 | TC-PACKAGE | NFR-010/011 | 干净系统安装、运行时依赖、QML 插件、许可证、升级／卸载 |

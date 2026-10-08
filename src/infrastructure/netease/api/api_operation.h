@@ -94,7 +94,19 @@ enum class ApiOperation {
     HotKeywordDetails,
     DailyRecommendedPlaylists,
     DailyHistoryDates,
-    DailyHistorySongs
+    DailyHistorySongs,
+    TogetherCreate,
+    TogetherCheck,
+    TogetherJoin,
+    TogetherStatus,
+    TogetherEndCheck,
+    TogetherEnd,
+    TogetherHeartbeat,
+    TogetherPlay,
+    TogetherQueue,
+    TogetherReplaceQueue,
+    TogetherReconnectInfo,
+    TogetherDeviceNotice
 };
 
 struct ApiOperationContract {

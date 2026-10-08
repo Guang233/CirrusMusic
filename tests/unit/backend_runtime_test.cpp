@@ -5,6 +5,7 @@
 #include "../support/synthetic_daily_playlists.h"
 #include "../support/synthetic_recommendation_history.h"
 #include "../support/synthetic_search_assist.h"
+#include "../support/synthetic_together_http.h"
 #include "application/music/personal_fm_source.h"
 #include "application/playback/listening_session.h"
 #include "application/ports/playback.h"
@@ -262,6 +263,7 @@ class BackendRuntimeTest : public QObject
     void searchAssistThroughThread();
     void dailyPlaylistsThroughThread();
     void recommendationHistoryThroughThread();
+    void togetherHttpThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
     void closeDuringRead();
@@ -2673,6 +2675,86 @@ void BackendRuntimeTest::recommendationHistoryThroughThread()
     QVERIFY(comments.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());
     QCOMPARE(state->requests.load(), 9);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+void BackendRuntimeTest::togetherHttpThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    auto plans = loginPlans();
+    for (int i = 0; i < 12; ++i)
+        plans.append(Plan{togetherHttpFixture(TogetherKind(i))});
+    plans.append(Plan{R"({"code":200,"data":{"playlist":{}}})"});
+    plans.append(Plan{"", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::togetherCompleted), calls(&f, &BackendFacade::togetherRequested),
+        play(&f, &BackendFacade::playbackRequested),
+        report(&f, &BackendFacade::listeningReportRequested),
+        writes(&f, &BackendFacade::collectionRequested),
+        comments(&f, &BackendFacade::commentWriteRequested),
+        music(&f, &BackendFacade::musicRequested);
+    connect(&f, &BackendFacade::togetherCompleted, this,
+            [&](quint64, SessionToken, TogetherResult) {
+                QCOMPARE(QThread::currentThread(), qApp->thread());
+            });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    TogetherRequest request{QUuid::createUuid(), 1, TogetherCreate{}};
+    QVERIFY(!f.requestTogether(request));
+    QCOMPARE(state->requests.load(), 0);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    for (int i = 0; i < 12; ++i) {
+        request = {QUuid::createUuid(), 7, togetherHttpActions()[i]};
+        QVERIFY(f.requestTogether(request));
+        QTRY_COMPARE(done.size(), i + 1);
+        const auto r = qvariant_cast<TogetherResult>(done.last()[2]);
+        QCOMPARE(r.outcome, TogetherOutcome::Acknowledged);
+        QCOMPARE(r.kind, TogetherKind(i));
+        QCOMPARE(r.eventId, request.eventId);
+        QCOMPARE(r.roomGeneration, request.roomGeneration);
+        QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+        const auto c = qvariant_cast<TogetherCommand>(calls.last()[0]);
+        QCOMPARE(c.accountId, f.snapshot().accountId);
+        QCOMPARE(c.context, token);
+        if (i == 8) {
+            QVERIFY(r.playlistContentUnmapped);
+            QVERIFY(r.reportedPlay);
+        }
+    }
+    request = {QUuid::createUuid(), 7, TogetherQueue{{"synthetic-room"}}};
+    QVERIFY(f.requestTogether(request));
+    QTRY_COMPARE(done.size(), 13);
+    QCOMPARE(qvariant_cast<TogetherResult>(done.last()[2]).error, TogetherError::InvalidResponse);
+    const auto pending = f.requestTogether(request);
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 17);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 14);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QCOMPARE(qvariant_cast<TogetherResult>(done.last()[2]).error, TogetherError::Canceled);
+    QCOMPARE(calls.size(), 14);
+    QVERIFY(play.isEmpty());
+    QVERIFY(report.isEmpty());
+    QVERIFY(writes.isEmpty());
+    QVERIFY(comments.isEmpty());
+    QVERIFY(music.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->requests.load(), 17);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

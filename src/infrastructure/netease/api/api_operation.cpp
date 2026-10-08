@@ -7,6 +7,7 @@
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
+#include "together_operation.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -18,6 +19,8 @@ namespace cirrus::netease
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
 {
+    if (isTogetherOperation(operation))
+        return togetherContract(operation);
     if (isCommentWriteOperation(operation))
         return commentWriteContract(operation);
     if (isCollectionOperation(operation))
@@ -35,6 +38,19 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::TogetherCreate:
+    case ApiOperation::TogetherCheck:
+    case ApiOperation::TogetherJoin:
+    case ApiOperation::TogetherStatus:
+    case ApiOperation::TogetherEndCheck:
+    case ApiOperation::TogetherEnd:
+    case ApiOperation::TogetherHeartbeat:
+    case ApiOperation::TogetherPlay:
+    case ApiOperation::TogetherQueue:
+    case ApiOperation::TogetherReplaceQueue:
+    case ApiOperation::TogetherReconnectInfo:
+    case ApiOperation::TogetherDeviceNotice:
+        return std::nullopt; // closed HTTP-only adapter above
     case ApiOperation::SearchSuggestions:
         return ApiOperationContract{QStringLiteral("/api/search/suggest/web"), Protocol::Weapi,
                                     ResponseEncoding::Json, 512 * 1024};
@@ -224,8 +240,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
 
 bool requiresAccountCookie(ApiOperation operation)
 {
-    return isCommentWriteOperation(operation) || isCollectionOperation(operation) ||
-           operation == ApiOperation::AccountIdentity ||
+    return isTogetherOperation(operation) || isCommentWriteOperation(operation) ||
+           isCollectionOperation(operation) || operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
            operation == ApiOperation::DailyRecommendedPlaylists ||
            operation == ApiOperation::DailyHistoryDates ||
@@ -255,6 +271,8 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (isTogetherOperation(operation))
+        return togetherPayload(operation, parameters);
     if (isCommentWriteOperation(operation))
         return commentWritePayload(operation, parameters);
     if (isCollectionOperation(operation))
@@ -577,6 +595,19 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
+    case ApiOperation::TogetherCreate:
+    case ApiOperation::TogetherCheck:
+    case ApiOperation::TogetherJoin:
+    case ApiOperation::TogetherStatus:
+    case ApiOperation::TogetherEndCheck:
+    case ApiOperation::TogetherEnd:
+    case ApiOperation::TogetherHeartbeat:
+    case ApiOperation::TogetherPlay:
+    case ApiOperation::TogetherQueue:
+    case ApiOperation::TogetherReplaceQueue:
+    case ApiOperation::TogetherReconnectInfo:
+    case ApiOperation::TogetherDeviceNotice:
+        break; // closed HTTP-only adapter above
     case ApiOperation::SearchSuggestions:
     case ApiOperation::HotKeywords:
     case ApiOperation::HotKeywordDetails:
@@ -663,6 +694,19 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return false;
     }
     switch (operation) {
+    case ApiOperation::TogetherCreate:
+    case ApiOperation::TogetherCheck:
+    case ApiOperation::TogetherJoin:
+    case ApiOperation::TogetherStatus:
+    case ApiOperation::TogetherEndCheck:
+    case ApiOperation::TogetherEnd:
+    case ApiOperation::TogetherHeartbeat:
+    case ApiOperation::TogetherPlay:
+    case ApiOperation::TogetherQueue:
+    case ApiOperation::TogetherReplaceQueue:
+    case ApiOperation::TogetherReconnectInfo:
+    case ApiOperation::TogetherDeviceNotice:
+        return false;
     case ApiOperation::QrKey:
         return *response.businessCode == 200 &&
                validQrKey(response.object.value(QStringLiteral("unikey")).toString());

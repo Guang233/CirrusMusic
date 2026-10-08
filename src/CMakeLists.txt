@@ -18,6 +18,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/recent_entity_types.h
     domain/music/comment_types.h
     domain/music/comment_write_types.h
+    domain/music/together_types.h
     domain/music/account_library_types.h
     domain/music/collection_types.h
     domain/music/playlist_order_types.h
@@ -48,6 +49,7 @@ add_library(cirrus_application STATIC
     application/ports/listening_report_gateway.h
     application/ports/collection_gateway.h
     application/ports/comment_write_gateway.h
+    application/ports/together_gateway.h
     application/playback/playback_queue.cpp
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
@@ -108,6 +110,8 @@ target_link_libraries(cirrus_netease_session PUBLIC cirrus_domain Qt6::Network)
 add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/api_operation.cpp
     infrastructure/netease/api/api_operation.h
+    infrastructure/netease/api/together_operation.cpp
+    infrastructure/netease/api/together_operation.h
     infrastructure/netease/api/comment_operation.cpp
     infrastructure/netease/api/comment_operation.h
     infrastructure/netease/api/comment_write_operation.cpp
@@ -166,6 +170,8 @@ add_library(cirrus_netease_auth STATIC
 target_link_libraries(cirrus_netease_auth PUBLIC cirrus_application cirrus_netease_api cirrus_secrets)
 
 add_library(cirrus_netease_music STATIC
+    infrastructure/netease/music/together_gateway.cpp
+    infrastructure/netease/music/together_gateway.h
     infrastructure/netease/music/comment_write_gateway.cpp
     infrastructure/netease/music/comment_write_gateway.h
     infrastructure/netease/music/comment_v3_issuer.cpp

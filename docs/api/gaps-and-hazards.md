@@ -82,7 +82,7 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 ## AUD-17：一起听缺完整接收／同步链
 
-9 个模块在采用候选清单，不是当前运行注册，更不证明“完整一起听可用”。后续维护者提供[Android摘要并已对照](together-protocol-material-audit.md)：NIM/chatRoomId/type与毫秒/serverSeq有线索，但原生鉴权／完整envelope／SELFHOST、时间基准／seq/version／恢复权限和许可未闭，HTTP profile/字段/schema也有差异。详见[一起听契约](special-contracts.md)，本轮仅静态，不恢复WIP或开启capability，85ops/47不变，不自动SDK／实网／新依赖。
+固定9模块仍只是审计候选清单；后续维护者明确选择[核心12 HTTP-only](together-http-core.md)已独立登记，97ops／48 suites、新109／affected911＋runtime17，全部标准Eapi-ECB／Status Eapi／窄host、PC metadata兼容性未实网证明。不是“完整一起听可用”：NIM/chatRoomId/type与毫秒/serverSeq仅有[摘要线索](together-protocol-material-audit.md)，原生鉴权／envelope／SELFHOST、时间／seq/version／恢复权限和许可G1–G6未闭；发送可选扩展未全映射，Queue内部playlist只标unmapped。HTTP Ack非Active／同步，原账号／四结果且无播放器queue-report/timer、retry/fallback；不恢复WIP、APK撤权且未检查，不自动SDK／实网／新依赖。
 
 ## 增量：资料与百科的复杂结构不是透明JSON通道
 

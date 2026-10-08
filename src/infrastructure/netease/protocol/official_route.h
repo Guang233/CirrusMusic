@@ -9,7 +9,7 @@ namespace cirrus::netease
 {
 
 enum class Protocol { Api, Weapi, Eapi, Xeapi };
-enum class OfficialDestination { Default, ListeningLog };
+enum class OfficialDestination { Default, ListeningLog, TogetherHttp };
 
 // Internal route construction only, NOT an operation registry or a signer.
 // Accept a canonical /api/... path; reject full URLs, queries and escapes.

@@ -216,6 +216,11 @@ target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME entity_search COMMAND tst_entity_search)
 set_tests_properties(entity_search PROPERTIES TIMEOUT 25)
 
+qt_add_executable(tst_together_http unit/together_http_test.cpp support/synthetic_together_http.h)
+target_link_libraries(tst_together_http PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME together_http COMMAND tst_together_http)
+set_tests_properties(together_http PROPERTIES TIMEOUT 60)
+
 qt_add_executable(tst_recommendation_history unit/recommendation_history_test.cpp
     support/synthetic_recommendation_history.h)
 target_link_libraries(tst_recommendation_history PRIVATE cirrus_netease_music Qt6::Test)
