@@ -80,8 +80,18 @@ application::MusicResult mapDiscoveryBrowseResponse(const domain::DiscoveryBrows
         query.action);
     if (kind == 2) {
         DiscoveryAlbumCharts groups;
-        if (!list(object.value(QStringLiteral("weekData")), 500, groups.week, albumFrom) ||
-            !list(object.value(QStringLiteral("monthData")), 500, groups.month, albumFrom))
+        const auto group = [&](QString key, std::optional<QList<Album>>& out) {
+            if (!object.contains(key))
+                return true;
+            QList<Album> rows;
+            if (!list(object.value(key), 500, rows, albumFrom))
+                return false;
+            out = std::move(rows);
+            return true;
+        };
+        if (!group(QStringLiteral("weekData"), groups.week) ||
+            !group(QStringLiteral("monthData"), groups.month) || (!groups.week && !groups.month) ||
+            !optionalMore(object.value(QStringLiteral("hasMore")), result.hasMore))
             return invalid;
         result.content = std::move(groups);
         return result;
@@ -104,9 +114,12 @@ application::MusicResult mapDiscoveryBrowseResponse(const domain::DiscoveryBrows
         result.content = std::move(artists);
     } else if (kind == 5 || kind == 6) {
         DiscoverySongs songs;
-        if (!list(object.value(QStringLiteral("songs")), kind == 5 ? 50 : maxRows, songs.songs,
+        // Observed SimilarSongs returns a batch larger than requested limit; never truncate
+        // it into a fake page. Preserve legacy artists/album/duration via existing songFrom.
+        if (!list(object.value(QStringLiteral("songs")), kind == 5 ? 50 : 100, songs.songs,
                   songFrom))
             return invalid;
+        songs.requestedPaginationUnverified = kind == 6;
         result.content = std::move(songs);
     } else if (kind == 8) {
         DiscoveryPlaylists playlists;

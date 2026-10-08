@@ -72,7 +72,7 @@ flowchart LR
 | B-026 | 桌面歌词、导入导出、高级音频（M6） | 每项专项 ADR 和测试 |
 | B-027 | 一起听核心HTTP12合成已接；完整同步仍待证（M3） | 后续明确选择[12 HTTP-only](api/together-http-core.md)：全Eapi-ECB（Status）、窄host/原PC profile/shared8/四结果/部分metadata、playlist显式unmapped。97ops/48登记，新109/15affected911＋runtime17，0fail/skip；不接NIM/SDK/新库/实网/播放器queue-report-timer。仅HTTP暂停被覆盖，固定旧WIP不恢复、APK撤权且未检查；[Android审计G1–G6](api/together-protocol-material-audit.md)仍约束完整实时同步、双账号另授权，其他paused/UI最后不变 |
 | B-028 | 上游清单校验与漂移检查（M0 起持续） | Python 校验器；升级上游需重新审计 |
-| B-029 | 常规发现9typed读取合成已接／复杂百科门禁（M2–M3） | 维护者明确先补发现：[新碟/艺人/相似](api/discovery-browse-reads.md)9Weapi/read16，原query-kind/token-generation/取消关闭，无自动下游；106ops/49登记、新165/22affected1167＋thread18、15fresh0/14objects6998deps禁入0/UI0。complexWiki request已知但root/blocks/Song绑定缺证Q-016，未注册，R-033／TC-DISCOVERY-BROWSE；实网/权益/UI另验收，原paused/APK禁读/stash不动 |
+| B-029 | 常规发现9typed读取合成已接／复杂百科门禁（M2–M3） | 维护者明确先补发现：[新碟/艺人/相似](api/discovery-browse-reads.md)9Weapi/read16，原query-kind/token-generation/取消关闭，无自动下游；106ops/49登记不变；[后续公开窗口](api/discovery-public-response-verification.md)11次native metadata／301即停，月榜optional分组与相似歌曲100有界未知分页批修正，188/22affected1190＋thread18、5fresh0/14objects6998逐对象依赖禁入0/UI0；旧165/1167历史不累加。complexWiki观察data.blocks6/rnData部分结构，Song绑定／块类缺证Q-016，未注册，R-033／TC-DISCOVERY-BROWSE；广泛服务/权益/UI另验收，原paused/APK禁读/stash不动 |
 
 
 ## 4. 下一轮实际动手顺序

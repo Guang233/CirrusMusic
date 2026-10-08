@@ -24,7 +24,8 @@
 | [inventory.json](inventory.json) | 全部 440 个模块的机器可读决定，含排除理由和源码观察 |
 | [upstream-lock.json](upstream-lock.json) | 固定版本、module tree、公共文件校验值与许可来源 |
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
-| [discovery-browse-reads.md](discovery-browse-reads.md) | 新碟／分区年月榜、艺人索引／热门／top歌曲与三类相似9Weapi；原read16、seed SongId／年月显式、strict候选；106ops/49登记，新165／22affected1167＋thread18／15fresh0／14objects6998deps禁入0，复杂百科缺schema不注册、无自动下游／实网／UI |
+| [discovery-browse-reads.md](discovery-browse-reads.md) | 新碟／艺人／相似9Weapi，原read16、seed SongId／年月显式，month/week optional分组／相似歌曲100有界未知分页批；106ops/49登记，复杂百科门禁仍G，不自动下游／UI |
+| [discovery-public-response-verification.md](discovery-public-response-verification.md) | 11次native公开metadata，301即停；原mapper2差异已合成修正，188／22affected1190＋thread18，5fresh0／14objects6998逐对象依赖禁入0，旧165／1167历史不累加，未修后重发实网 |
 | [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
 | [together-http-core.md](together-http-core.md) | 核心12 HTTP-only后续明确选择：标准Eapi-ECB／Status Eapi／窄interface.music host／原PC profile待实证、原账号／shared8／四结果，部分metadata/playlist显式unmapped；97ops/48，新109/affected911＋runtime17，非NIM/同步/实网/播放器queue-report-timer |
@@ -122,7 +123,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-最新[常规发现9读取与复杂百科门禁](discovery-browse-reads.md)已按维护者优先选择typed合成接入，106ops／49登记，165新／22affected1167＋runtime18、0fail/skip；无SDK/new deps/live/自动下游/UI。复杂百科请求已知但root/blocks/资源绑定待证、不注册假入口；其他暂停不解除。账号等级＋音乐收藏计数仍候选未实现，FM mode/trash需原来源/真实time，next不等于垃圾桶。
+最新[公开发现窗口与映射修正](discovery-public-response-verification.md)11次原native metadata、业务301即停；月榜optional分组与相似歌100有界未知分页批修正后188／22affected1190＋runtime18，0fail/skip（旧165／1167为331b4fb历史）。106ops／49登记不增，无SDK/new deps/自动下游/UI或修后重发实网。复杂百科见data.blocks6/rnData部分shape，资源绑定／块类／余块语义仍G、不注册假入口；其他暂停不解除。账号等级＋音乐收藏计数仍候选未实现，FM mode/trash需原来源/真实time，next不等于垃圾桶。
 
 [106operation／44FR ledger](backend-coverage-audit.md)已跟随增量更新，25families/38E63W5X/I-S-L-G-P-X分开；原53f8f3e的docs-only时点是97／48，不把本包fresh tests倒算到旧审计。固定164adopt与operation非同单位，不作差值；完整Together/v2/cloud/spoken仍暂停、APK禁读/UI最后。
 

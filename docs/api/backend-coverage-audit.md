@@ -2,7 +2,7 @@
 
 ## 1. 初始审计、后续更新与判定标准
 
-本页初始响应Together HTTP-only之后的覆盖盘点，代码基线 **`7b0d7620cd05a7f01245b19eefc3db9b9fceec03`**，docs-only交付53f8f3e时为97ops／48登记；没有该审计轮Qt/build/LSP diagnostics/actualdeps或新业务证据。后续维护者明确先补[常规发现9读取＋复杂百科审计](discovery-browse-reads.md)，本页随该代码包更新，不把新合成测试倒填旧审计。复杂百科缺schema不注册，其他paused/实网/SDK/UI边界不恢复。
+本页初始响应Together HTTP-only之后的覆盖盘点，代码基线 **`7b0d7620cd05a7f01245b19eefc3db9b9fceec03`**，docs-only交付53f8f3e时为97ops／48登记；没有该审计轮Qt/build/LSP diagnostics/actualdeps或新业务证据。后续维护者明确先补[常规发现9读取＋复杂百科审计](discovery-browse-reads.md)，本页随该代码包更新，不把新合成测试倒填旧审计。复杂百科缺schema不注册；后续[公开metadata窗口](discovery-public-response-verification.md)仅窄授权，其他paused/账号/SDK/UI边界不恢复。
 
 - 当前[ApiOperation](../../src/infrastructure/netease/api/api_operation.h)：**106唯一枚举**，首QrKey、末SimilarPlaylists；header SHA-256 `fd6b3e4fa45da2d89da45087cb00cc34f933a88058e2d89ddb8f28baca131894`。初始97 header hash `42def4780a2f8d9cc916e1183b10cc9337a2bf62a9da6b3bc57b339858967ec7`仅历史。
 - 当前root contract与collection/comment/comment-write/together/discovery-browse五个窄adapter、[Facade声明](../../src/application/backend/backend_facade.h)及实际接线；不是从旧review graph推当前支持。发现单Core discover(typed query)复用MusicQuery/read16/原worker/Gateway，无owner或下游新增。
@@ -43,7 +43,7 @@
 | 每日推荐歌单 | 1 | `dailyRecommendedPlaylists` | FR-015 | [daily-recommended-playlists.md](daily-recommended-playlists.md) |
 | 历史日推 | 2 | `dailyRecommendationHistoryDates/dailyRecommendationHistorySongs` | FR-015 | [daily-recommendation-history.md](daily-recommendation-history.md) |
 | Together HTTP-only | 12 | `requestTogether(12 typed actions)` | FR-043 | [together-http-core.md](together-http-core.md) |
-| 常规发现新碟／艺人／相似 | 9 | `discover(DiscoveryBrowseQuery)` | FR-008/009/010/015 | [discovery-browse-reads.md](discovery-browse-reads.md) |
+| 常规发现新碟／艺人／相似 | 9 | `discover(DiscoveryBrowseQuery)` | FR-008/009/010/015 | [discovery-browse-reads.md](discovery-browse-reads.md)／[公开响应与修正](discovery-public-response-verification.md) |
 
 ## 3. 已实现的非registry链与结构：不要误记为缺API
 
@@ -174,7 +174,9 @@ APK许可撤回且从未读/hash/检查/解包/执行。本轮不访问它；资
 
 新165／22affected Debug1167＋15选runtime函数16data/18pass，0fail/skip；最终真实build0/warnings0、15fresh all-server C++LSP0/format15、14实际application对象（含MOC）6998Ninja deps禁入0/entry-QML0。fixed440/21referencehash0/Python15与最终worktree-staged diff/local refs/有限literal-query扫描另记HANDOFF，ignored discovery-browse-*；非anchors或全面安全。first fixture缺直接include/append overload、MOC新增/改名过期经真实include/AUTOGEN修，不删Q_OBJECT/.moc/坏schema/fatal，#92旧parse仍另记。没有完整49/Release/minQt/账号/服务/SDK/keyring/audio/UI或权益验收，不累加其他包或first123/newthread3。
 
-complexWiki root/blocks/原Song绑定未闭仍G/未注册，旧summary不套另path；常规9无自动下游/Owner/运行库。原v2/cloud/spoken-next/fullTogether暂停、−462停止、撤权APK禁读/stash原样保持。当前账号等级+计数仍推荐候选，未开始下一包或授权实网。
+以上为331b4fb初始合成包历史。后续公开窗口原native11次metadata：搜索2／complexWiki1／发现8；前10次HTTP/code200，其中原mapper2拒绝，SimilarArtists第11次code301即停，SimilarPlaylists未发。L分别为5个发现mapper接受、2个发现仅成功结构观察、1个业务301拒绝；未发仍G，不把L当完整兼容。月榜optional分组／相似歌曲100有界未知分页批修正后，离线188／22affected1190＋15选runtime18，0fail/skip，5fresh all-server0／14实对象6998逐对象-601唯一deps禁入0／UI0，未修后重发实网。只增加这个公开窗口L，不倒填旧audit或§9历史tests。
+
+complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类及其余语义仍G/未注册，旧summary不套另path；常规9无自动下游/Owner/运行库。原v2/cloud/spoken-next/fullTogether暂停、播客−462停止、撤权APK禁读/stash原样保持。账号等级+计数仍推荐候选，未接入或获账号实网授权。
 
 ## 附录A. 当前106-operation逐项ledger
 

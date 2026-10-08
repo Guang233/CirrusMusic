@@ -87,12 +87,15 @@ struct DiscoveryArtists {
 };
 struct DiscoverySongs {
     QList<Song> songs;
+    // SimilarSongs only: caller's limit/offset are not proven provider pagination.
+    bool requestedPaginationUnverified = false;
 };
 struct DiscoveryPlaylists {
     QList<DiscoveryPlaylist> playlists;
 };
 struct DiscoveryAlbumCharts {
-    QList<Album> week, month; // independent provider groups, never merge into a fake ranking
+    // Missing group is unknown, not an explicit empty group. At least one must be present.
+    std::optional<QList<Album>> week, month; // independent groups, never merge into a fake ranking
 };
 struct DiscoveryBrowsePage {
     DiscoveryBrowseQuery query; // original query correlation, not a provider-signed receipt

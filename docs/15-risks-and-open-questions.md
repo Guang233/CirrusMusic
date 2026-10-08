@@ -58,7 +58,7 @@
 
 ### R-033：发现候选结构／年月／seed不可当实网完整性与复杂百科已支持
 
-[常规发现9读取](api/discovery-browse-reads.md)已typed合成接入，106ops/49登记、新165／1167＋thread18；2MiB／500等是本地候选，Guest是本地策略不是服务免登录。显式年月与original query只是结构相关，不保证服务期次／新鲜度／排名/权益；week/month分组不合并，相似歌单seed是SongId，top50非全部艺人库，missing/null不伪空。保原read16/token-generation/cancel-close、宽ID/重复/plain text/未知分页，拒绝alias与自动下游，不以合成通过关闭服务schema风险。复杂song_wiki_info root/blocks/原Song绑定待证，只有请求事实不注册，旧summary或UGC不套另path，HTML/URL非动作；有权source片段/合成样本门禁Q-016，账号/服务/UI另授权。
+[常规发现9读取](api/discovery-browse-reads.md)已typed合成接入，106ops/49登记、新165／1167＋thread18；2MiB／500等是本地候选，Guest是本地策略不是服务免登录。显式年月与original query只是结构相关，不保证服务期次／新鲜度／排名/权益；week/month分组不合并，相似歌单seed是SongId，top50非全部艺人库，missing/null不伪空。保原read16/token-generation/cancel-close、宽ID/重复/plain text/未知分页，拒绝alias与自动下游，不以合成通过关闭服务schema风险。[后续公开窗口](api/discovery-public-response-verification.md)11次native metadata／301即停（相似歌单未发）；原月榜monthData[]缺weekData及相似歌5>limit2拒绝，修后optional分组／100有界未知分页批保序，188/1190＋thread18只离线回归，未重发实网。complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类及余块未闭，不注册；旧summary或UGC不套另path，HTML/URL非动作。DNS-only198.18阻断推论已撤回，默认curl首页200/TLS0非API保证；不得据此绕过真实拒绝。Q-016仍G，账号/广泛服务/UI另授权。
 
 ## 3. 待确认决策
 
@@ -79,7 +79,7 @@
 | Q-013 | v2 token 依赖浏览器 SDK，原生路径是否可用 | [调查](api/playlist-subscription-v2-prerequisite.md)证实固定SDK桥而非原生协议；维护者暂无原生资料、已明确暂缓推进其他后端；未来实际资料与明确恢复后再审，不自动评估SDK例外或引入Node/WebEngine／v3替代；尚未证明不可能 | M3 | 收藏歌单保持受限，不能拿 v3 直接替代 |
 | Q-014 | 一起听从机事件、时钟与恢复契约 | 后续[Android摘要对照](api/together-protocol-material-audit.md)已到，NIM/chatRoomId/type与毫秒/serverSeq有线索；原生鉴权/envelope/SELFHOST、seq/version/时间恢复权限与许可未闭，HTTP存在profile/字段/schema差异。后续仅[核心12 HTTP-only](api/together-http-core.md)已明确批准并合成接入，非完整同步；PC-host组合/optional/playlist仍缺证，不恢复9 HTTP WIP。NIM/SDK/新库/真实双账号另批准 | M3 | G1–G6未闭不开启完整一起听能力，不能把HTTP Ack或材料到达当同步验收 |
 | Q-015 | ProgramId／VoiceId对应、消费端音轨／v1权益与期限 | [补证](api/spoken-playback-contract.md)确认传统mainTrackId→旧url文档路线，v1只有第三方代码候选；Voice详情仍workbench，未实网确认。-462停止，账号／媒体另授权 | M2 | 不开放未验证播放；不以独立类型断言服务ID必不同，评论只读已合成接入，允许继续其他已确认小包 |
-| Q-016 | 复杂消费百科root/blocks/sections/原Song资源绑定与预算 | [本轮审计](api/discovery-browse-reads.md)仅闭合固定song_wiki_info Eapi请求；需有权source/合成响应说明纯text-link、unknown/empty/malformed及顺序/预算，不能用旧summary/UGC/raw JSON/HTML造能力；无需真实Cookie/token/音频 | M2–M3 | 不注册复杂百科入口/假HTTP200成功，已有基础文本保留、完整百科与署名仍G |
+| Q-016 | 复杂消费百科root/blocks/sections/原Song资源绑定与预算 | [公开窗口](api/discovery-public-response-verification.md)一次HTTP/code200见data.blocks6/rnData前2块形状，未核对原Song资源绑定／块类值／余块语义；需有权source/合成响应说明纯text-link、unknown/empty/malformed及顺序/预算，不能用旧summary/UGC/raw JSON/HTML造能力；无需真实Cookie/token/音频 | M2–M3 | 不注册复杂百科入口/假HTTP200成功，已有基础文本保留、完整百科与署名仍G |
 
 维护者可以逐项采纳默认值；不需要先完成全部问题才能开始 M0/M1。未经确认的问题不得在发布文案中写成确定支持。
 

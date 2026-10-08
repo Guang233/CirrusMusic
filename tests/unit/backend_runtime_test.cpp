@@ -2528,7 +2528,8 @@ void BackendRuntimeTest::discoveryBrowseThroughThread()
     QList<Plan> plans{Plan{discoveryBrowseBody(0)}};
     plans.append(loginPlans());
     for (int i = 0; i < 9; ++i)
-        plans.append(Plan{discoveryBrowseBody(i)});
+        plans.append(
+            Plan{QJsonDocument(discoveryObservedShapeFixture(i)).toJson(QJsonDocument::Compact)});
     plans.append(Plan{R"({"code":200,"data":{"albums":[]}})"});
     plans.append(Plan{"", 200, -1});
     BackendRuntime runtime(config, factories(state, gate, plans));
@@ -2565,7 +2566,21 @@ void BackendRuntimeTest::discoveryBrowseThroughThread()
         QTRY_COMPARE(done.size(), i + 2);
         const auto r = qvariant_cast<MusicResult>(done.last()[2]);
         QVERIFY(std::holds_alternative<DiscoveryBrowsePage>(r));
-        QVERIFY(matchingDiscoveryBrowsePage(queries[i], std::get<DiscoveryBrowsePage>(r)));
+        const auto page = std::get<DiscoveryBrowsePage>(r);
+        QVERIFY(matchingDiscoveryBrowsePage(queries[i], page));
+        if (i == 2) {
+            const auto groups = std::get<DiscoveryAlbumCharts>(page.content);
+            QVERIFY(!groups.week);
+            QVERIFY(groups.month);
+            QVERIFY(groups.month->isEmpty());
+            QCOMPARE(page.hasMore, std::optional<bool>(false));
+        }
+        if (i == 6) {
+            const auto batch = std::get<DiscoverySongs>(page.content);
+            QCOMPARE(batch.songs.size(), 5);
+            QVERIFY(batch.requestedPaginationUnverified);
+            QCOMPARE(std::get<SimilarSongsQuery>(page.query.action).page.limit, 2);
+        }
         QCOMPARE(done.last()[0].toULongLong(), id);
         QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
     }

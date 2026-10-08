@@ -99,6 +99,6 @@
 
 ## 4. 常规发现：显式年月、歌曲seed与复杂百科门禁
 
-[9读取已typed合成接入](discovery-browse-reads.md)，原read16/token-generation/query-kind/cancel-close/default Weapi，没有新owner或自动详情/图片/播放/report/write/cache。新碟月榜caller显式year/month，weekData/monthData独立保序且预算500各组，不读系统日期或推完整期次；ArtistTopSongs候选50不是全部曲库/已有ArtistSongs hot替代。SimilarPlaylists传原SongId而非PlaylistId，SimilarArtists原ArtistId，宽ID与重复顺序不能截精度/去重；必需数组missing/null拒绝/[]明确有效，未知分页/权益不推断。106ops/49登记、新165/affected1167＋thread18仅合成，非服务schema/Guest权限/产品发现UI验收。
+[9读取已typed合成接入](discovery-browse-reads.md)，原read16/token-generation/query-kind/cancel-close/default Weapi，没有新owner或自动详情/图片/播放/report/write/cache。新碟月榜caller显式year/month，weekData/monthData为独立optional分组、至少一组存在，missing未知/[]明确空/present null错，预算500各组，不读系统日期或推完整期次；SimilarSongs单批100有界保序/重复，不按请求limit截断，requestedPaginationUnverified标原分页未证；ArtistTopSongs候选50不是全部曲库/已有ArtistSongs hot替代。SimilarPlaylists传原SongId而非PlaylistId，SimilarArtists原ArtistId，宽ID与重复顺序不能截精度/去重；必需数组missing/null拒绝/[]明确有效，未知分页/权益不推断。106ops/49登记、新165/affected1167＋thread18仅合成，非服务schema/Guest权限/产品发现UI验收。
 
-song_wiki_info固定Eapi请求与extJson已审，root/blocks/资源绑定/纯text-link/unknown/empty/预算未闭；不注册假入口、套旧summary data.blocks、借UGC creator或返回raw JSON/HTML。R-033／Q-016需合法source片段/合成样本，无真实Cookie/token/版权音频要求；不触碰暂停项/撤权APK，也不默认执行SDK或实网。
+后续[公开窗口与修正](discovery-public-response-verification.md)11次native metadata/301即停，原月榜及相似歌2差异离线修后188/1190＋thread18，未重发实网；旧165/1167为331b4fb历史。song_wiki_info固定Eapi请求与extJson已审，观察data.blocks6/rnData前2块key/type，但资源绑定/块类/其余语义/纯text-link/unknown/empty/预算未闭；不注册假入口、套旧summary data.blocks、借UGC creator或返回raw JSON/HTML。R-033／Q-016需合法source片段/合成样本，无真实Cookie/token/版权音频要求；不触碰暂停项/撤权APK，也不默认执行SDK或实网。

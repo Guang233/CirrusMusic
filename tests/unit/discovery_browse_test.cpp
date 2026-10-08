@@ -158,8 +158,10 @@ class DiscoveryBrowseTest : public QObject
         std::visit(
             [](const auto& items) {
                 if constexpr (requires { items.week; }) {
-                    QCOMPARE(items.week.size(), 1);
-                    QCOMPARE(items.month.size(), 2);
+                    QVERIFY(items.week);
+                    QVERIFY(items.month);
+                    QCOMPARE(items.week->size(), 1);
+                    QCOMPARE(items.month->size(), 2);
                 } else if constexpr (requires { items.albums; })
                     QCOMPARE(items.albums.size(), 2);
                 else if constexpr (requires { items.artists; })
@@ -204,8 +206,13 @@ class DiscoveryBrowseTest : public QObject
                 field = i.key();
                 break;
             }
-        if (fault == 0)
+        if (fault == 0) {
             o.remove(field);
+            if (kind == 2) {
+                o.remove("weekData");
+                o.remove("monthData"); // both absent is still a missing-required-group failure
+            }
+        }
         if (fault == 1)
             o.insert(field, QJsonValue(QJsonValue::Null));
         if (fault == 2)
@@ -230,6 +237,137 @@ class DiscoveryBrowseTest : public QObject
             o.insert("unknown", QString(2 * 1024 * 1024, u'x'));
         QVERIFY(std::holds_alternative<MusicFailure>(
             mapMusicResponse(discoveryBrowseQueries()[kind], o)));
+    }
+    void chartGroups_data()
+    {
+        QTest::addColumn<int>("fault");
+        for (int i = 0; i < 12; ++i)
+            QTest::newRow(qPrintable(QString::number(i))) << i;
+    }
+    void chartGroups()
+    {
+        QFETCH(int, fault);
+        auto o = discoveryObservedShapeFixture(2);
+        if (fault == 1) {
+            o.remove("monthData");
+            o.insert("weekData", QJsonArray{});
+        }
+        if (fault == 2)
+            o.insert("weekData", QJsonArray{});
+        if (fault == 3)
+            o.remove("monthData");
+        if (fault == 4)
+            o.insert("monthData", QJsonValue(QJsonValue::Null));
+        if (fault == 5)
+            o.insert("weekData", QJsonValue(QJsonValue::Null));
+        if (fault == 6)
+            o.insert("monthData", QJsonObject{});
+        if (fault == 7)
+            o.insert("monthData", QJsonArray{QJsonValue(1)});
+        if (fault == 8)
+            o.insert("hasMore", 1);
+        if (fault == 9)
+            o.insert("hasMore", true);
+        if (fault >= 10) {
+            const auto item = discoveryBrowseResponse(2)["monthData"].toArray().first();
+            QJsonArray rows;
+            for (int i = 0; i < (fault == 10 ? 500 : 501); ++i)
+                rows.append(item);
+            o.insert("monthData", rows);
+        }
+        const auto q = discoveryBrowseQueries()[2];
+        const auto r = mapMusicResponse(q, o);
+        if (fault <= 2 || fault == 9 || fault == 10) {
+            QVERIFY(std::holds_alternative<DiscoveryBrowsePage>(r));
+            const auto page = std::get<DiscoveryBrowsePage>(r);
+            QVERIFY(matchingDiscoveryBrowsePage(q, page));
+            const auto groups = std::get<DiscoveryAlbumCharts>(page.content);
+            QCOMPARE(groups.week.has_value(), fault == 1 || fault == 2);
+            QCOMPARE(groups.month.has_value(), fault != 1);
+            if (groups.week)
+                QVERIFY(groups.week->isEmpty());
+            if (groups.month)
+                QCOMPARE(groups.month->size(), fault == 10 ? 500 : 0);
+            QCOMPARE(page.hasMore, std::optional<bool>(fault == 9));
+            QVERIFY(!page.total);
+        } else
+            QVERIFY(std::holds_alternative<MusicFailure>(r));
+    }
+    void similarityBatch_data()
+    {
+        QTest::addColumn<int>("fault");
+        for (int i = 0; i < 10; ++i)
+            QTest::newRow(qPrintable(QString::number(i))) << i;
+    }
+    void similarityBatch()
+    {
+        QFETCH(int, fault);
+        auto o = discoveryObservedShapeFixture(6);
+        auto row = o["songs"].toArray().first().toObject();
+        if (fault == 3)
+            row.insert("artists", QJsonObject{});
+        if (fault == 4)
+            row.insert("album", QJsonObject{{"id", "51"}, {"name", true}});
+        if (fault == 5)
+            row.insert("duration", true);
+        if (fault == 9)
+            row.insert("artists", QJsonArray{QJsonObject{{"id", true}, {"name", "synthetic"}}});
+        const int count = fault == 1 ? 100 : fault == 2 ? 101 : fault == 8 ? 0 : 5;
+        QJsonArray rows;
+        for (int i = 0; i < count; ++i)
+            rows.append(row);
+        o.insert("songs", rows);
+        if (fault == 6)
+            o.remove("songs");
+        if (fault == 7)
+            o.insert("songId", "999");
+        const auto q = discoveryBrowseQueries()[6];
+        const auto r = mapMusicResponse(q, o);
+        if (fault == 0 || fault == 1 || fault == 8) {
+            QVERIFY(std::holds_alternative<DiscoveryBrowsePage>(r));
+            const auto page = std::get<DiscoveryBrowsePage>(r);
+            QVERIFY(matchingDiscoveryBrowsePage(q, page));
+            const auto batch = std::get<DiscoverySongs>(page.content);
+            QCOMPARE(batch.songs.size(),
+                     count); // original limit=2, no truncation or synthetic page
+            QVERIFY(batch.requestedPaginationUnverified);
+            QVERIFY(!page.total);
+            QVERIFY(!page.hasMore);
+            if (!batch.songs.isEmpty()) {
+                const auto song = batch.songs.first();
+                QVERIFY(!song.artists.isEmpty());
+                QVERIFY(song.artists.first().id);
+                QVERIFY(song.album);
+                QVERIFY(song.album->id);
+                QCOMPARE(song.id.value, QString("9007199254740997"));
+                QCOMPARE(song.artists.first().id->value, QString("41"));
+                QCOMPARE(song.album->id->value, QString("51"));
+                QCOMPARE(song.durationMs, std::optional<qint64>(60000));
+                QCOMPARE(song.title, QString(" synthetic 雲 & <text> "));
+                QCOMPARE(batch.songs.last().id.value, song.id.value);
+            }
+        } else
+            QVERIFY(std::holds_alternative<MusicFailure>(r));
+    }
+    void nativeObservationRegressions()
+    {
+        Harness h(
+            {Plan{QJsonDocument(discoveryObservedShapeFixture(2)).toJson(QJsonDocument::Compact)},
+             Plan{QJsonDocument(discoveryObservedShapeFixture(6)).toJson(QJsonDocument::Compact)},
+             Plan{R"({"code":301})"}});
+        QSignalSpy spy(&h.service, &MusicQueryService::completed);
+        for (int k : {2, 6, 7}) {
+            const auto size = spy.size();
+            QVERIFY(h.service.request(h.session.snapshot().token, discoveryBrowseQueries()[k]));
+            QTRY_COMPARE(spy.size(), size + 1);
+            if (k == 7)
+                QCOMPARE(std::get<MusicFailure>(last(spy)).error, MusicError::ProviderRejected);
+            else
+                QVERIFY(std::holds_alternative<DiscoveryBrowsePage>(last(spy)));
+        }
+        QTest::qWait(40);
+        QCOMPARE(spy.size(), 3);
+        QCOMPARE(h.http->requests.size(), 3); // no retry or automatic login
     }
     void boundsAndEchoes()
     {
@@ -415,7 +553,7 @@ class DiscoveryBrowseTest : public QObject
             std::visit(
                 [](const auto& items) {
                     if constexpr (requires { items.week; })
-                        QCOMPARE(items.week.first().id.value, QString("9007199254740997"));
+                        QCOMPARE(items.week->first().id.value, QString("9007199254740997"));
                     else if constexpr (requires { items.albums; }) {
                         QCOMPARE(items.albums.first().id.value, QString("9007199254740997"));
                         QCOMPARE(items.albums.first().title, QString(" synthetic 雲 & <text> "));

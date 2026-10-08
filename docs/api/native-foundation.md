@@ -97,7 +97,7 @@ Core-only `PlaybackQueue`／`LyricTimeline`／`ListeningSession`已组成[队列
 
 [每日推荐历史](daily-recommendation-history.md)新增2Weapi原账号read，Core日期DTO与原列表成员／source token工厂、原read16／generic runtime；native payload空／date，严格候选data.dates/data.songs，无自动日期／下游／cache／反馈写／会员保证。第四项下一阶段资料不足后经维护者选择暂缓，阶段1保留，前三项仍暂停。
 
-[常规发现9读取](discovery-browse-reads.md)新增窄discovery_browse_operation与mapper，Latest/NewAlbums/AlbumCharts、ArtistBrowse/PopularArtists/ArtistTopSongs、SimilarSongs/Artists/Playlists全Weapi/JSON/default destination，明确不采纳response Cookie。原MusicQuery/Service/Core typed discover/worker/Gateway/read16/token-generation/cancel-close，无新Manager/owner、任意JSON/host或自动下游。AlbumCharts显式年月，相似歌单seed SongId，2MiB/严格必需数组及typed摘要/未知分页/宽ID保序；106ops。complexWiki只必要固定请求事实，root/blocks/资源绑定缺证，不复用旧summary假入口。
+[常规发现9读取](discovery-browse-reads.md)新增窄discovery_browse_operation与mapper，Latest/NewAlbums/AlbumCharts、ArtistBrowse/PopularArtists/ArtistTopSongs、SimilarSongs/Artists/Playlists全Weapi/JSON/default destination，明确不采纳response Cookie。原MusicQuery/Service/Core typed discover/worker/Gateway/read16/token-generation/cancel-close，无新Manager/owner、任意JSON/host或自动下游。AlbumCharts显式年月，相似歌单seed SongId，2MiB/严格必需数组及typed摘要/未知分页/宽ID保序；106ops。[后续公开响应窗口](discovery-public-response-verification.md)11次native metadata/301即停，月榜optional分组与相似歌曲100有界未知分页批修正，原调用／crypto／payload不变；188/22affected1190＋thread18只修后离线，5fresh0/14actual objects6998逐对象-601唯一deps禁入0，未修后重发实网。complexWiki见data.blocks6/rnData前2块部分结构，但绑定／块类仍缺证，不复用旧summary假入口。
 
 ## 测试与构建
 

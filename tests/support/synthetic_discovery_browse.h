@@ -27,6 +27,14 @@ inline QJsonObject discoveryBrowseResponse(int kind)
     if (kind == 2) {
         o.insert(QStringLiteral("weekData"), QJsonArray{item});
         o.insert(QStringLiteral("monthData"), QJsonArray{item, item});
+    } else if (kind == 6) {
+        auto legacy = item;
+        legacy.insert(QStringLiteral("artists"),
+                      QJsonArray{QJsonObject{{"id", "41"}, {"name", "synthetic artist"}}});
+        legacy.insert(QStringLiteral("album"),
+                      QJsonObject{{"id", "51"}, {"name", "synthetic album"}});
+        legacy.insert(QStringLiteral("duration"), 60000);
+        o.insert(QStringLiteral("songs"), QJsonArray{legacy, legacy});
     } else {
         const auto field = kind <= 1                               ? QStringLiteral("albums")
                            : (kind == 3 || kind == 4 || kind == 7) ? QStringLiteral("artists")
@@ -35,6 +43,20 @@ inline QJsonObject discoveryBrowseResponse(int kind)
         o.insert(field, QJsonArray{item, item});
     }
     return o; // synthetic in-memory metadata only, no provider responses or images
+}
+// Reproduces observed structural differences ONLY, never original provider values/text/URLs.
+inline QJsonObject discoveryObservedShapeFixture(int kind)
+{
+    auto o = discoveryBrowseResponse(kind);
+    if (kind == 2) {
+        o.remove(QStringLiteral("weekData"));
+        o.insert(QStringLiteral("monthData"), QJsonArray{});
+        o.insert(QStringLiteral("hasMore"), false);
+    } else if (kind == 6) {
+        const auto row = o.value(QStringLiteral("songs")).toArray().first();
+        o.insert(QStringLiteral("songs"), QJsonArray{row, row, row, row, row});
+    }
+    return o;
 }
 inline QByteArray discoveryBrowseBody(int kind)
 {

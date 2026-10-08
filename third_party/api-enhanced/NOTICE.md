@@ -48,4 +48,6 @@ Cirrus 的接口审计参考：
 
 后续维护者选择[发现类常规读取＋复杂百科审计](../../docs/api/discovery-browse-reads.md)，完整参考固定album_newest/album_new/top_album/artist_list/top_artists/artist_top_song/simi_song/simi_artist/simi_playlist九wrapper及home/TS/options/config/request的Weapi/default链；闭合路径与有限typed业务字段在api/discovery_browse_operation中窄C++改写，music/discovery_browse_mapper复用摘要/原Core read16/runtime。106ops/49登记、新165/1167＋thread18只合成，root arrays/分页/500/2MiB为本地严格候选，非MIT/TS证明服务schema/Guest免登录/权益/榜期/完整库。song_wiki_info固定Eapi request/positionCode/extJson只必要事实审计，缺root/blocks/资源绑定不注册/复制raw内容或套旧summary/UGC creator。未复制其他外部项目代码或运行SDK/JS/Node，无新运行库、真实账号/Cookie/服务响应/图/音乐/音频或下游自动动作；原固定440/锁/21hash/MIT通知保留，不授予曲库/服务/商标/商业SDK权利，暂停/撤权APK/stash边界保持。
 
+后续维护者仅授权[发现公开metadata窗口](../../docs/api/discovery-public-response-verification.md)，原C++/Qt crypto/transport发送11次串行搜索／发现／一个固定complexWiki诊断读取，业务301即停，不重试或恢复播客−462窗口。只存bounded key/type/count/string-length，不留服务原值／全文、Cookie、签名URL或音频，不取图／动作／SDK或账号凭据。month-only／相似歌超请求limit的结构差异用合成样本修正（optional组／100有界未知分页批），旧165/1167为初始离线包历史；修后188/1190＋thread18仍只合成，未再实网。complexWiki仅data.blocks6/rnData部分shape、Song绑定／块类未闭，不注册／套用UGC或旧summary。固定440/锁/hash/MIT与106ops/49登记不变；服务响应观察不授予音乐、第三方服务／商标／SDK许可，不扩paused/APK/stash或UI权限。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。
