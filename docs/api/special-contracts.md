@@ -1,5 +1,7 @@
 # 每日推荐、私人 FM、一起听与常规发现
 
+新独立[歌曲百科受限纯文本](song-wiki-text-subset.md)：固定Eapi positionCode/extJson只两文本子块；原Song/标题/专辑/source token工厂、read16/严格2MiB和131072 UTF16/Facade关联。内容身份未独立验证，完整百科与其余节点仍G；无URL/image/action/Core JSON/自动下游。107ops/50登记，下方106/49与“不注册”是上包审计时点，不恢复paused或301窗口。
+
 这些能力均在本轮范围内，但属于不同的来源／会话，不为复用歌单页面而伪造相同远程协议。以下“客户端规则”是设计约束；响应字段和真实权限仍需验证。
 
 ## 1. 每日推荐歌曲

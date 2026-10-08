@@ -115,7 +115,8 @@ enum class ApiOperation {
     ArtistTopSongs,
     SimilarSongs,
     SimilarArtists,
-    SimilarPlaylists
+    SimilarPlaylists,
+    SongWikiText
 };
 
 struct ApiOperationContract {

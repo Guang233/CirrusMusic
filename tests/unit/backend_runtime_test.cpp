@@ -6,6 +6,7 @@
 #include "../support/synthetic_discovery_browse.h"
 #include "../support/synthetic_recommendation_history.h"
 #include "../support/synthetic_search_assist.h"
+#include "../support/synthetic_song_wiki_text.h"
 #include "../support/synthetic_together_http.h"
 #include "application/music/personal_fm_source.h"
 #include "application/playback/listening_session.h"
@@ -264,6 +265,7 @@ class BackendRuntimeTest : public QObject
     void searchAssistThroughThread();
     void dailyPlaylistsThroughThread();
     void discoveryBrowseThroughThread();
+    void songWikiTextThroughThread();
     void recommendationHistoryThroughThread();
     void togetherHttpThroughThread();
     void playbackThroughThread_data();
@@ -2517,6 +2519,81 @@ void BackendRuntimeTest::searchAssistThroughThread()
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }
+void BackendRuntimeTest::songWikiTextThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    QList<Plan> plans{Plan{wikiTextBody()}};
+    plans.append(loginPlans());
+    plans.append(Plan{wikiTextBody()});
+    plans.append(Plan{R"({"code":200,"data":{"blocks":[]}})"});
+    plans.append(Plan{"", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::musicCompleted), play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested),
+        writes(&f, &BackendFacade::collectionRequested),
+        comments(&f, &BackendFacade::commentWriteRequested),
+        together(&f, &BackendFacade::togetherRequested);
+    connect(&f, &BackendFacade::musicCompleted, this, [&](quint64, SessionToken, MusicResult) {
+        QCOMPARE(QThread::currentThread(), qApp->thread());
+    });
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    const auto guest = wikiTextQuery(f.snapshot().token);
+    QVERIFY(f.songWikiText(guest));
+    QTRY_COMPARE(done.size(), 1);
+    auto page = std::get<SongWikiText>(qvariant_cast<MusicResult>(done.last()[2]));
+    QVERIFY(matchingSongWikiText(guest, page));
+    QCOMPARE(page.identity, SongWikiIdentity::NotIndependentlyVerified);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), guest.sourceContext());
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    QCOMPARE(f.songWikiText(guest), quint64(0));
+    const auto query = wikiTextQuery(f.snapshot().token);
+    const auto id = f.songWikiText(query);
+    QVERIFY(id);
+    QTRY_COMPARE(done.size(), 2);
+    page = std::get<SongWikiText>(qvariant_cast<MusicResult>(done.last()[2]));
+    QVERIFY(matchingSongWikiText(query, page));
+    QCOMPARE(page.sections.size(), 2);
+    QCOMPARE(page.unsupportedBlockCount, 3);
+    QVERIFY(page.metadataOmitted);
+    QCOMPARE(done.last()[0].toULongLong(), id);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), query.sourceContext());
+    QVERIFY(f.songWikiText(query));
+    QTRY_COMPARE(done.size(), 3);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::InvalidResponse);
+    const auto pending = f.songWikiText(query);
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 7);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 4);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QVERIFY(writes.isEmpty());
+    QVERIFY(comments.isEmpty());
+    QVERIFY(together.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->requests.load(), 7);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
 void BackendRuntimeTest::discoveryBrowseThroughThread()
 {
     using namespace domain;

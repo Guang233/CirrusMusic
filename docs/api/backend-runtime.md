@@ -1,5 +1,7 @@
 # 后台装配、非阻塞入口与关闭排空
 
+本轮[百科受限纯文本](song-wiki-text-subset.md)显式songWikiText(query)复用原MusicCommand/Service/Gateway/read16/worker和close，无新factory/线程/owner。原source token/query-kind/描述关联跨线程，单值内容身份未独立验证。新songWikiTextThroughThread合成Guest→login→当前token读→坏结构→hang close，7requests/4results/旧source本地拒绝/Caller线程/资源对称/所有下游0；16选runtime函数17data+init-cleanup19pass，0fail/skip。107ops/50登记、完整百科仍G；以下旧包记录是历史，不累加，UI/暂停/APK/stash不变。
+
 > 已实现并通过离线线程／生命周期测试。`main.cpp` 和 `Main.qml` 仍为模板；没有自动启动官方网络、访问真实账号或把后台入口注册给QML。原后台装配工作包没有新增运行依赖；后续[播放增量](stream-resolution-and-playback.md)已获准接入Qt Multimedia。
 
 ## 1. 实际边界

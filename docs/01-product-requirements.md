@@ -1,5 +1,7 @@
 # 01 · 产品范围与需求规格
 
+FR-008新受限增量：[歌曲百科纯文本子集](api/song-wiki-text-subset.md)已按明确选择接入两文本子块，原来源factory/read16/关联；必须展示“内容身份未独立验证”，不当完整百科、权威署名/版权身份或播放绑定。其他块unsupported，无图/链接/播放/报告/写/UI；107ops/50登记，88／23affected1278＋runtime19只是范围内后端证据，44FR未整体验收，账号实网及暂停项不恢复。
+
 > 基线 0.2 · 范围已按维护者要求更新：后端优先、UI 最后。需求描述目标，不代表 API 已支持；静态接口审计见 [api/](api/README.md)，真实契约仍待验证。
 
 ## 1. 产品定位
@@ -86,7 +88,7 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-043 | 一起听建房／加入／退出、心跳、播放与队列同步、断线恢复；双账号验证，不以 HTTP 包装器代替实时协议 | P1 / M3 | API/播放后端 | TC-TOGETHER-HTTP／TC-TOGETHER |
 | FR-044 | 播客／声音消费端搜索、详情、内容列表与播客订阅读取及后续播放，独立身份／来源／历史，不包含创作者管理工作台 | P1 / M2–M3 | API/播放后端 | TC-PODCAST-VOICE |
 
-**需求覆盖对照**：[106-operation／逐44-FR账本](api/backend-coverage-audit.md)已跟随发现包更新，25families/38E63W5X；I/S/L/G/P/X分开，106ops/49show-only登记不是44FR完成，固定164adopt与op不能作差值。初始53f8f3e的docs-only97／48仍为历史审计时点，不回填新测试。FR005/004相关当前账号等级与消费音乐收藏计数两empty Weapi读仍未接入候选、真实schema待证，不推会员/可播权/库完整性/编辑权或跨账号MV/creator。持久化/文件/平台/UI另设计，暂停项不恢复。
+**需求覆盖对照**：[107-operation／逐44-FR账本](api/backend-coverage-audit.md)已跟随百科子集更新，26families/39E63W5X；I/S/L/G/P/X分开，107ops/50show-only登记不是44FR完成，固定164adopt与op不能作差值。初始53f8f3e的docs-only97／48仍为历史审计时点，不回填新测试。FR005/004相关当前账号等级与消费音乐收藏计数两empty Weapi读仍未接入候选、真实schema待证，不推会员/可播权/库完整性/编辑权或跨账号MV/creator。持久化/文件/平台/UI另设计，暂停项不恢复。
 
 FR-008／009／010／015 常规发现增量：[新碟、艺人、相似推荐9读取](api/discovery-browse-reads.md)已按维护者先补发现的选择typed合成接入。Latest/NewAlbums/显式year-month AlbumCharts，ArtistBrowse/PopularArtists/独立ArtistTopSongs，SimilarSongs/Artists及原SongId SimilarPlaylists；不伪完整榜/艺人库/权益。原read16／query-content-kind/token-generation／取消关闭，2MiB／500等严格本地候选，empty[]与missing/null失败分开，保plain text／宽ID／重复顺序／optional未知，不自动图片/详情/播放/report/write/cache或UI。初始331b4fb新165／1167为历史；[公开窗口](api/discovery-public-response-verification.md)11次native metadata、301即停。月榜week/month改optional（至少一组，missing未知／[]空）与相似歌曲100有界批／原分页未证标记；修后188／22affected1190＋runtime18，0fail/skip，5fresh0／14objects6998逐对象依赖禁入0／UI0，未重发实网。不是广泛服务/账号/完整schema/Guest免登录/完整FR验收。TC-DISCOVERY-BROWSE／R-033另记。复杂song_wiki_info仅观察data.blocks6/rnData部分结构，资源绑定／块类及其余语义未闭、不注册假入口，不以已有SongWikiSummary基础文本套另path或借UGC creator结构；完整百科/署名仍待补证。
 

@@ -1,19 +1,19 @@
-# 后端覆盖审计：106 operations 不等于106项产品能力
+# 后端覆盖审计：107 operations 不等于107项产品能力
 
 ## 1. 初始审计、后续更新与判定标准
 
-本页初始响应Together HTTP-only之后的覆盖盘点，代码基线 **`7b0d7620cd05a7f01245b19eefc3db9b9fceec03`**，docs-only交付53f8f3e时为97ops／48登记；没有该审计轮Qt/build/LSP diagnostics/actualdeps或新业务证据。后续维护者明确先补[常规发现9读取＋复杂百科审计](discovery-browse-reads.md)，本页随该代码包更新，不把新合成测试倒填旧审计。复杂百科缺schema不注册；后续[公开metadata窗口](discovery-public-response-verification.md)仅窄授权，其他paused/账号/SDK/UI边界不恢复。
+本页初始响应Together HTTP-only之后的覆盖盘点，代码基线 **`7b0d7620cd05a7f01245b19eefc3db9b9fceec03`**，docs-only交付53f8f3e时为97ops／48登记；没有该审计轮Qt/build/LSP diagnostics/actualdeps或新业务证据。后续维护者明确先补[常规发现9读取＋复杂百科审计](discovery-browse-reads.md)，本页随该代码包更新，不把新合成测试倒填旧审计。当时复杂百科缺schema不注册；后续[公开metadata窗口](discovery-public-response-verification.md)仅窄授权。最新[受限纯文本子集](song-wiki-text-subset.md)另获四次公开百科窗口和明确接入选择，仅两类文本/原请求关联/内容身份未独立验证；完整百科仍G，其他paused/账号/SDK/UI边界不恢复。
 
-- 当前[ApiOperation](../../src/infrastructure/netease/api/api_operation.h)：**106唯一枚举**，首QrKey、末SimilarPlaylists；header SHA-256 `fd6b3e4fa45da2d89da45087cb00cc34f933a88058e2d89ddb8f28baca131894`。初始97 header hash `42def4780a2f8d9cc916e1183b10cc9337a2bf62a9da6b3bc57b339858967ec7`仅历史。
+- 当前[ApiOperation](../../src/infrastructure/netease/api/api_operation.h)：**107唯一枚举**，首QrKey、末SongWikiText；header SHA-256 `54f2dc453c88690b839ac2901654752d18c40a1f1006648552dc4b897c2155c2`。旧106 header hash `fd6b3e4fa45da2d89da45087cb00cc34f933a88058e2d89ddb8f28baca131894`仅历史。初始97 header hash `42def4780a2f8d9cc916e1183b10cc9337a2bf62a9da6b3bc57b339858967ec7`仅历史。
 - 当前root contract与collection/comment/comment-write/together/discovery-browse五个窄adapter、[Facade声明](../../src/application/backend/backend_facade.h)及实际接线；不是从旧review graph推当前支持。发现单Core discover(typed query)复用MusicQuery/read16/原worker/Gateway，无owner或下游新增。
-- 当前`ctest --show-only=json-v1`实核**49注册套件／discovery_browse1／together_http1**；只是登记，不是全49测试或106用户能力验证。本包affected/选定runtime单列§9。
-- 下表人工归组25组；E=Eapi、W=Weapi、X=Xeapi，合同 **38 E／63 W／5 X**。默认host/profile沿原route；Together12窄destination、报告2clientlog。path相同不意味着协议／输入／业务相同。
+- 当前`ctest --show-only=json-v1`实核**50注册套件／song_wiki_text1／discovery_browse1／together_http1**；只是登记，不是全50测试或107用户能力验证。本轮affected/选定runtime单列§10，§9为上包历史。
+- 下表人工归组26组（本轮受限百科单列一组）；E=Eapi、W=Weapi、X=Xeapi，合同 **39 E／63 W／5 X**。默认host/profile沿原route；Together12窄destination、报告2clientlog。path相同不意味着协议／输入／业务相同。
 - 固定参考仍v4.40.1／`a8c781fd64faab17fedfd46e0615a2609307f163`：440模块＝164adopt／40defer／236exclude。**不能用164−97计算缺口**：module、逻辑path、operation、用户能力是四种单位；同path多动作／本地组合／新增doc接口／后续消费范围覆盖均存在。inventory的not-implemented/static-only是原审计时点标记，不重写成动态支持表。
 - `main.cpp`／`Main.qml`仍模板。Core backend可调用不等于产品UI可用、服务兼容、会员／权限、远端效果或完整数据已验证。
 
 判定分为：**I**已有代码／装配；**S**有所属工作包的合成证据（仅引用各契约历史，不自动给每个分支盖章）；**L**单列有限授权公开／媒体观察，不概括为全服务；**G**缺证／尚未实现；**P**维护者明确暂停；**X**排除或旧候选被后续范围决定覆盖。无“登记即FR完成”或百分比。
 
-## 2. 已接入入口的25组索引
+## 2. 已接入入口的26组索引
 
 这些是内部Core／装配入口，不是QML注册。组内operation并不逐项对应独立Facade方法：`charts(kind)`、`playlistTags(kind)`、`comments(kind)`、各typed mutation及组合`playlistSongs`等有意复用。SongStream由原playSong/resolver消费，不新增暴露原始音源或物理→逻辑反推入口。
 
@@ -44,6 +44,7 @@
 | 历史日推 | 2 | `dailyRecommendationHistoryDates/dailyRecommendationHistorySongs` | FR-015 | [daily-recommendation-history.md](daily-recommendation-history.md) |
 | Together HTTP-only | 12 | `requestTogether(12 typed actions)` | FR-043 | [together-http-core.md](together-http-core.md) |
 | 常规发现新碟／艺人／相似 | 9 | `discover(DiscoveryBrowseQuery)` | FR-008/009/010/015 | [discovery-browse-reads.md](discovery-browse-reads.md)／[公开响应与修正](discovery-public-response-verification.md) |
+| 歌曲百科受限纯文本 | 1 | `songWikiText(SongWikiTextQuery)` | FR-008 | [song-wiki-text-subset.md](song-wiki-text-subset.md)，内容身份未独立验证 |
 
 ## 3. 已实现的非registry链与结构：不要误记为缺API
 
@@ -170,7 +171,7 @@ APK许可撤回且从未读/hash/检查/解包/执行。本轮不访问它；资
 
 ## 9. 常规发现包更新与验证边界
 
-后续维护者优先选择新碟/艺人/相似9Weapi与complexWiki审计；当前106唯一enum/49show-only登记、25family合计106、38E63W5X。ledger名称顺序与当前enum、path literal/模板prefix与root/五窄adapter/契约路径静态对应，不证明每个参数/schema/live分支可用。
+后续维护者优先选择新碟/艺人/相似9Weapi与complexWiki审计；该包331b4fb／6f63c24时点106唯一enum/49show-only登记、25family合计106、38E63W5X。ledger名称顺序与当前enum、path literal/模板prefix与root/五窄adapter/契约路径静态对应，不证明每个参数/schema/live分支可用。
 
 新165／22affected Debug1167＋15选runtime函数16data/18pass，0fail/skip；最终真实build0/warnings0、15fresh all-server C++LSP0/format15、14实际application对象（含MOC）6998Ninja deps禁入0/entry-QML0。fixed440/21referencehash0/Python15与最终worktree-staged diff/local refs/有限literal-query扫描另记HANDOFF，ignored discovery-browse-*；非anchors或全面安全。first fixture缺直接include/append overload、MOC新增/改名过期经真实include/AUTOGEN修，不删Q_OBJECT/.moc/坏schema/fatal，#92旧parse仍另记。没有完整49/Release/minQt/账号/服务/SDK/keyring/audio/UI或权益验收，不累加其他包或first123/newthread3。
 
@@ -178,7 +179,13 @@ APK许可撤回且从未读/hash/检查/解包/执行。本轮不访问它；资
 
 complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类及其余语义仍G/未注册，旧summary不套另path；常规9无自动下游/Owner/运行库。原v2/cloud/spoken-next/fullTogether暂停、播客−462停止、撤权APK禁读/stash原样保持。账号等级+计数仍推荐候选，未接入或获账号实网授权。
 
-## 附录A. 当前106-operation逐项ledger
+## 10. 受限歌曲百科增量（本轮）
+
+[受限子集](song-wiki-text-subset.md)新增SongWikiText Eapi／原来源factory／read16／Facade关联，107 enum/50登记/26family/39E63W5X，44FR不增。四次另行确认metadata读只补结构与描述匹配；两文本子块 I/S、独立身份与完整百科 G。无后实现live、账号/SDK/媒体/暂停重开。
+
+本轮百科88／23affected Debug1278＋16选runtime函数17data/init-cleanup19，0fail/skip；18 changed+邻接fresh all-server LSP0／13 format0，14实际application对象含MOC7004逐对象/602唯一VALID Ninja deps禁入0/UI0。旧§9测试不累加；非完整50/Release/minQt/服务/权益验收。失败日志和修因、固定440/Python15/文档有限检查见契约/HANDOFF，#92仍独立。
+
+## 附录A. 当前107-operation逐项ledger
 
 协议仅来自当前合同，和wire/form/encrypted body/host/profile是不同层次。含`{…}`的path是**封闭模板注记，不是产品开放动态输入**；仍必须用adapter的规范ID/resource与payload验证。详见§2组内实际entry与契约；表中存在不代表每个参数/资源/response分支均已live或产品可用。
 
@@ -412,3 +419,9 @@ complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类�
 | `SimilarSongs` | W | `/api/v1/discovery/simiSong` |
 | `SimilarArtists` | W | `/api/discovery/simiArtist` |
 | `SimilarPlaylists` | W | `/api/discovery/simiPlaylist` |
+
+### 歌曲百科受限纯文本（1）
+
+| Operation | 协议 | logical path模板 |
+| --- | --- | --- |
+| `SongWikiText` | E | `/api/link/page/parent/relation/construct/info` |

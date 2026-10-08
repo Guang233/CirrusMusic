@@ -210,6 +210,12 @@ quint64 BackendFacade::discover(domain::DiscoveryBrowseQuery query)
 {
     return submitMusic(std::move(query));
 }
+quint64 BackendFacade::songWikiText(domain::SongWikiTextQuery query)
+{
+    if (query.sourceContext() != m_snapshot.token)
+        return 0;
+    return submitMusic(std::move(query));
+}
 
 quint64 BackendFacade::charts(domain::ChartListKind kind)
 {
@@ -425,6 +431,12 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
              browse && !std::holds_alternative<MusicFailure>(delivery.result)) {
         const auto* page = std::get_if<domain::DiscoveryBrowsePage>(&delivery.result);
         if (!page || !domain::matchingDiscoveryBrowsePage(*browse, *page))
+            delivery.result = MusicFailure{MusicError::InvalidResponse};
+    }
+    if (const auto* wiki = std::get_if<domain::SongWikiTextQuery>(&expected.query);
+        wiki && !std::holds_alternative<MusicFailure>(delivery.result)) {
+        const auto* page = std::get_if<domain::SongWikiText>(&delivery.result);
+        if (!page || !domain::matchingSongWikiText(*wiki, *page))
             delivery.result = MusicFailure{MusicError::InvalidResponse};
     }
     emit musicCompleted(expected.id, expected.context, std::move(delivery.result));

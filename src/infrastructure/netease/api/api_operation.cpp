@@ -204,6 +204,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::ArtistIntroduction:
         return ApiOperationContract{QStringLiteral("/api/artist/introduction"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
+    case ApiOperation::SongWikiText:
+        return ApiOperationContract{QStringLiteral("/api/link/page/parent/relation/construct/info"),
+                                    Protocol::Eapi, ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::SongWikiSummary:
         return ApiOperationContract{QStringLiteral("/api/song/play/about/block/page"),
                                     Protocol::Eapi, ResponseEncoding::Json, 2 * 1024 * 1024};
@@ -286,6 +289,19 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
 {
     if (isDiscoveryBrowseOperation(operation))
         return discoveryBrowsePayload(operation, parameters);
+    if (operation == ApiOperation::SongWikiText) {
+        const auto id = parameters.value(QStringLiteral("id"));
+        if (parameters.size() != 1 || !id.isString() || !domain::validMusicId(id.toString()))
+            return std::nullopt;
+        const QJsonObject ext{
+            {QStringLiteral("states"),
+             QJsonObject{{QStringLiteral("playingResource"),
+                          QJsonObject{{QStringLiteral("current"), id},
+                                      {QStringLiteral("scene"), QStringLiteral("songWiki")}}}}}};
+        return QJsonObject{{QStringLiteral("positionCode"), QStringLiteral("songWikiMainPosition")},
+                           {QStringLiteral("extJson"),
+                            QString::fromUtf8(QJsonDocument(ext).toJson(QJsonDocument::Compact))}};
+    }
     if (isTogetherOperation(operation))
         return togetherPayload(operation, parameters);
     if (isCommentWriteOperation(operation))
@@ -719,6 +735,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return false;
     }
     switch (operation) {
+    case ApiOperation::SongWikiText:
+        return false;
     case ApiOperation::LatestAlbums:
     case ApiOperation::NewAlbums:
     case ApiOperation::AlbumCharts:

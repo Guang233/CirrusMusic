@@ -1,5 +1,7 @@
 # 静态审计发现与契约缺口
 
+最新限定：[百科受限纯文本](song-wiki-text-subset.md)另获四次metadata结构/equality补证与明确两子块选择，107ops/50登记。独立主SongId身份仍缺，强制NotIndependentlyVerified；仅原请求/描述关联与strict文本 I/S，不把title/AlbumId/相关节目/opaque encodeId当身份证据。完整百科仍G，未知节点unsupported、无Core JSON/URL/action/自动下游；以下原审计/旧包记录不倒填为当时已知，也不恢复暂停/拒绝窗口。
+
 所有源码观察都针对 [固定版本](upstream-lock.json)。`module/…` 文件的不可变链接在 [接口表](selected-endpoints.md)／[清单](inventory.json)中，公共文件见 lock。**没有实际调用证据**；下述处理是 Cirrus 的迁移要求，不宣称已修复上游。
 
 ## AUD-01：音源主路径变更且夹带解锁分支

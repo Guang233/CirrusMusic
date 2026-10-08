@@ -217,6 +217,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/discovery_mapper.h
     infrastructure/netease/music/discovery_browse_mapper.cpp
     infrastructure/netease/music/discovery_browse_mapper.h
+    infrastructure/netease/music/song_wiki_text_mapper.cpp
+    infrastructure/netease/music/song_wiki_text_mapper.h
     infrastructure/netease/music/catalog_mapper.cpp
     infrastructure/netease/music/catalog_mapper.h
     infrastructure/netease/music/introduction_mapper.cpp

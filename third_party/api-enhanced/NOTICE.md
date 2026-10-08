@@ -1,5 +1,7 @@
 # api-enhanced 来源与许可
 
+本轮[歌曲百科受限纯文本](../../docs/api/song-wiki-text-subset.md)只参考固定song_wiki_info请求契约，产品使用原生C++/Qt，不执行上游JS/SDK或新增运行库。四次独立公开metadata窗口只保有界技术结构/equality bool与synthetic skeleton，不保存服务全文/原ID/URL/Cookie；两文本子块107ops/50登记不证明独立内容身份或完整百科。原请求关联与NotIndependentlyVerified强制保留，其他块/图/链接动作排除。MIT只覆盖参考仓库代码，未授予服务/音乐/商标/Android/NIM/SDK权利，APK禁读及固定stash不变；只本地commit/no push/publication。
+
 Cirrus 的接口审计参考：
 
 - 项目：NeteaseCloudMusicApiEnhanced/api-enhanced

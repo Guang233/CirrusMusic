@@ -1,5 +1,7 @@
 # Cirrus 开发技术文档
 
+最新：[歌曲百科受限纯文本](api/song-wiki-text-subset.md)，107ops/50登记/26families/39E63W5X；仅两类文本，原请求关联但内容身份未独立验证，完整百科仍G。88／23affected1278＋runtime19，0fail/skip，四次独立窄公开结构窗口不扩账号/媒体/SDK/UI授权。以下旧包数字保留历史，不累加。
+
 | 项目 | 内容 |
 | --- | --- |
 | 文档基线 | 0.2，2026-09-26；后端先行／UI 最后，API 静态审计已完成 |
@@ -75,7 +77,7 @@
 | [API 交接清单](checklists/api-handoff.md) | 接入真实 API 前需要哪些材料？ |
 | [发布检查表](checklists/release.md) | 哪些条件不可跳过？ |
 
-**最新后端覆盖入口**：[106-operation／44-FR对照](api/backend-coverage-audit.md)。25组Core入口、38E/63W/5X与逐项ledger，I/S/L/G/P/X分开；164adopt与106op不能作差值。维护者后续先补发现9项，当前106ops／49登记；初始代码包165／affected1167及后续公开窗口修正188／affected1190＋thread18分开，均不是53f8f3e的docs-only97／48证据。账号等级＋计数仍未实现候选；复杂百科部分结构观察与未闭schema、Together完整同步/paused单列，未广泛服务/SDK/UI验收。
+**最新后端覆盖入口**：[107-operation／44-FR对照](api/backend-coverage-audit.md)。26组Core入口、39E/63W/5X与逐项ledger，I/S/L/G/P/X分开；164adopt与106op不能作差值。维护者后续先补发现9项，该上包时点106ops／49登记；初始代码包165／affected1167及后续公开窗口修正188／affected1190＋thread18分开，均不是53f8f3e的docs-only97／48证据。账号等级＋计数仍未实现候选；复杂百科部分结构观察与未闭schema、Together完整同步/paused单列，未广泛服务/SDK/UI验收。
 
 ## 2. 规范用词
 

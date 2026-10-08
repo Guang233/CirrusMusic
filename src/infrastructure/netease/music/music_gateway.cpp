@@ -148,6 +148,9 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         Q_ASSERT(request);
         operation = request->operation;
         parameters = request->parameters;
+    } else if (const auto* wiki = std::get_if<domain::SongWikiTextQuery>(&query)) {
+        operation = ApiOperation::SongWikiText;
+        parameters = {{QStringLiteral("id"), wiki->song().value}};
     } else if (const auto history = recommendationHistoryRequest(query)) {
         operation = history->operation;
         parameters = history->parameters;

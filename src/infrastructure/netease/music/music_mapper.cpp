@@ -17,6 +17,7 @@
 #include "recent_entity_mapper.h"
 #include "recommendation_history_mapper.h"
 #include "search_assist_mapper.h"
+#include "song_wiki_text_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -165,6 +166,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
     if (std::holds_alternative<ArtistIntroductionQuery>(query) ||
         std::holds_alternative<SongWikiQuery>(query))
         return mapIntroductionResponse(query, object);
+    if (const auto* wiki = std::get_if<SongWikiTextQuery>(&query))
+        return mapSongWikiTextResponse(*wiki, object);
     if (const auto* browse = std::get_if<DiscoveryBrowseQuery>(&query))
         return mapDiscoveryBrowseResponse(*browse, object);
     if (isSearchAssistQuery(query))

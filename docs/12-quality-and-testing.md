@@ -1,5 +1,7 @@
 # 12 · 质量保障与测试策略
 
+本轮：[受限百科纯文本](api/song-wiki-text-subset.md)88／23affected Debug1278＋16选runtime函数17data/init-cleanup19，0fail/skip；18fresh all-server LSP0、13 format0、14实际应用对象含MOC7004逐对象/602唯一deps禁入0/UI0。107ops/50登记不等于全50/Release/minQt/服务/身份/权益/产品验收；四次公开结构窗口与实现后离线证据分开。历史失败、修因、MOC/compile DB与旧#92按契约保留。
+
 > 状态：产品测试策略提案。API 清单已有离线 Python 工具测试，与 C++ 协议／业务测试分开统计；下列测试族不是已通过的产品验收报告。
 
 ## 1. 测试分层
@@ -30,6 +32,7 @@
 | TC-PODCAST-VOICE | FR-044 | 独立ID、voice≠mainSong、资源类型和父播客核对、当前context取消／切号；搜索44项合成Qt Test及有限公开结构验证见[实体搜索](api/entity-search-reads.md)，后续[消费／recent包](api/podcast-and-recent-reads.md)55项合成Qt Test及线程流通过，公开列表-462拒绝；ProgramId／VoiceId对应、节目详情／真实recent、播放及UI验收未完成 |
 | TC-DISCOVERY-BROWSE | FR-008/009/010/015；R-033 | [常规发现9typed读](api/discovery-browse-reads.md)：9合同/pre-crypto payload、90坏schema/预算、宽ID/原text/重复顺序/未知分页、Song seed/年月显式、36 cancel/epoch、provider5/无Cookie、read16/Facade query-content-kind/close；新165／22affected1167＋thread18、0fail/skip，106ops/49登记；候选非实网/Guest权限/完整百科 |
 | TC-CATALOG | FR-008/009 | 缺图、未知时长、多碟专辑、多艺人、下架、详情分页 |
+| TC-SONG-WIKI-TEXT | FR-008；R-034/Q-016/B-030 | [子集契约](api/song-wiki-text-subset.md)：原来源与未独立验证身份、51坏结构/8边界、宽ID/纯文本/重复/未知空分开、2MiB/131072 UTF16总预算、native Eapi实际解密/Set-Cookie零采用、read16/4取消/过期来源/Facade串线与线程close；88/1278＋19只范围内，完整百科仍G、无下游 |
 | TC-LIBRARY | FR-010 | 超大歌单、完整 ID 与首屏区分、失败续页、只读权限 |
 | TC-PLAYLIST-SUB-V2（待实现） | FR-014；Q-013／R-028／B-015 | [原生v2前置门禁](api/playlist-subscription-v2-prerequisite.md)：issuer失败零业务、body/header/Cookie分层、原账号／8槽／前后取消／Unknown与线程排空；无已实现测试或新增pass／CTest，真实issuer／权限／效果另授权 |
 | TC-SYNC | FR-011～014；NFR-007/014 | 双击喜欢、写超时已成功、批次部分成功、排序冲突、无 revision 对账 |

@@ -1,5 +1,7 @@
 # 网易云接口审计与 C++ 移植清单
 
+最新增量：[歌曲百科受限纯文本](song-wiki-text-subset.md)，107ops/50登记/26families/39E63W5X/44FR。原Song/标题/专辑/token来源关联，只两类文本，内容身份未独立验证，完整百科仍G；四次独立metadata观察与88／affected1278＋runtime19离线证据分开，无后实现live/自动下游/账号/SDK/媒体/UI或暂停恢复。
+
 > 范围已按维护者最新要求确定；本目录是**源码静态审计和移植输入**，不是已实现的 API SDK。没有运行上游 Node.js 服务，没有调用真实账号接口，没有采集真实 Cookie。
 
 ## 1. 本轮结果
@@ -123,9 +125,9 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-最新[公开发现窗口与映射修正](discovery-public-response-verification.md)11次原native metadata、业务301即停；月榜optional分组与相似歌100有界未知分页批修正后188／22affected1190＋runtime18，0fail/skip（旧165／1167为331b4fb历史）。106ops／49登记不增，无SDK/new deps/自动下游/UI或修后重发实网。复杂百科见data.blocks6/rnData部分shape，资源绑定／块类／余块语义仍G、不注册假入口；其他暂停不解除。账号等级＋音乐收藏计数仍候选未实现，FM mode/trash需原来源/真实time，next不等于垃圾桶。
+上包[公开发现窗口与映射修正](discovery-public-response-verification.md)11次原native metadata、业务301即停；月榜optional分组与相似歌100有界未知分页批修正后188／22affected1190＋runtime18，0fail/skip（旧165／1167为331b4fb历史）。106ops／49登记不增，无SDK/new deps/自动下游/UI或修后重发实网。复杂百科见data.blocks6/rnData部分shape，资源绑定／块类／余块语义仍G、不注册假入口；其他暂停不解除。账号等级＋音乐收藏计数仍候选未实现，FM mode/trash需原来源/真实time，next不等于垃圾桶。
 
-[106operation／44FR ledger](backend-coverage-audit.md)已跟随增量更新，25families/38E63W5X/I-S-L-G-P-X分开；原53f8f3e的docs-only时点是97／48，不把本包fresh tests倒算到旧审计。固定164adopt与operation非同单位，不作差值；完整Together/v2/cloud/spoken仍暂停、APK禁读/UI最后。
+[107operation／44FR ledger](backend-coverage-audit.md)已跟随增量更新，26families/39E63W5X/I-S-L-G-P-X分开；原53f8f3e的docs-only时点是97／48，不把本包fresh tests倒算到旧审计。固定164adopt与operation非同单位，不作差值；完整Together/v2/cloud/spoken仍暂停、APK禁读/UI最后。
 
 此前[一起听核心12 HTTP-only](together-http-core.md)已按后续选择合成接入，97ops／48登记，109新／15affected911＋runtime17；仅HTTP暂停被覆盖，不接NIM/SDK/new deps/live/timer/player/queue/report，APK撤权且从未检查，完整同步及v2/云盘/spoken下一阶段继续暂停，UI最后。schema/profile/optional/playlist不作实网或全协议承诺，stash不恢复。
 

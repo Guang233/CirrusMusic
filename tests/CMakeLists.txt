@@ -237,6 +237,11 @@ target_link_libraries(tst_discovery_browse PRIVATE cirrus_netease_music Qt6::Tes
 add_test(NAME discovery_browse COMMAND tst_discovery_browse)
 set_tests_properties(discovery_browse PROPERTIES TIMEOUT 60)
 
+qt_add_executable(tst_song_wiki_text unit/song_wiki_text_test.cpp support/synthetic_song_wiki_text.h)
+target_link_libraries(tst_song_wiki_text PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME song_wiki_text COMMAND tst_song_wiki_text)
+set_tests_properties(song_wiki_text PROPERTIES TIMEOUT 60)
+
 qt_add_executable(tst_playlist_discovery unit/playlist_discovery_test.cpp)
 target_link_libraries(tst_playlist_discovery PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME playlist_discovery COMMAND tst_playlist_discovery)

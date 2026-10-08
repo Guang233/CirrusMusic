@@ -1,5 +1,7 @@
 # 04 · 领域与数据模型
 
+本轮已落地：[SongWikiTextQuery/SongWikiText](api/song-wiki-text-subset.md)，仅Core。私有query由原Song/标题/AlbumId/source SessionToken工厂形成，不是服务签名来源。结果保同query/observed描述值、单值NotIndependentlyVerified、两类有序文本section及optional content/texts、unsupportedBlockCount/metadataOmitted；missing≠[]/空串，纯文本不解释HTML/URI，无JSON/URL/action/edit信息或独立内容SongId证明。107ops/50登记；下方§23的106/49与未建复杂百科DTO属于上包历史，完整百科仍G。
+
 > 状态：提案。这里定义客户端规范化模型，不是网易云官方 JSON 字段说明。
 
 ## 1. 建模原则
