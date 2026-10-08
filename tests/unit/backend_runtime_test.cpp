@@ -3,6 +3,7 @@
 #include "../support/fake_secret_store.h"
 #include "../support/synthetic_cover.h"
 #include "../support/synthetic_daily_playlists.h"
+#include "../support/synthetic_discovery_browse.h"
 #include "../support/synthetic_recommendation_history.h"
 #include "../support/synthetic_search_assist.h"
 #include "../support/synthetic_together_http.h"
@@ -262,6 +263,7 @@ class BackendRuntimeTest : public QObject
     void commentWritesThroughThread();
     void searchAssistThroughThread();
     void dailyPlaylistsThroughThread();
+    void discoveryBrowseThroughThread();
     void recommendationHistoryThroughThread();
     void togetherHttpThroughThread();
     void playbackThroughThread_data();
@@ -2515,6 +2517,83 @@ void BackendRuntimeTest::searchAssistThroughThread()
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }
+void BackendRuntimeTest::discoveryBrowseThroughThread()
+{
+    using namespace domain;
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    QList<Plan> plans{Plan{discoveryBrowseBody(0)}};
+    plans.append(loginPlans());
+    for (int i = 0; i < 9; ++i)
+        plans.append(Plan{discoveryBrowseBody(i)});
+    plans.append(Plan{R"({"code":200,"data":{"albums":[]}})"});
+    plans.append(Plan{"", 200, -1});
+    BackendRuntime runtime(config, factories(state, gate, plans));
+    auto& f = runtime.facade();
+    QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped),
+        challenge(&f, &BackendFacade::challengeReady), login(&f, &BackendFacade::signedIn),
+        done(&f, &BackendFacade::musicCompleted), play(&f, &BackendFacade::playbackRequested),
+        reports(&f, &BackendFacade::listeningReportRequested),
+        writes(&f, &BackendFacade::collectionRequested),
+        comments(&f, &BackendFacade::commentWriteRequested),
+        together(&f, &BackendFacade::togetherRequested);
+    connect(&f, &BackendFacade::musicCompleted, this, [&](quint64, SessionToken, MusicResult) {
+        QCOMPARE(QThread::currentThread(), qApp->thread());
+    });
+    const auto queries = discoveryBrowseQueries();
+    QCOMPARE(f.discover(queries[0]), quint64(0));
+    f.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(f.snapshot().token.isValid());
+    const auto guest = f.snapshot().token;
+    QVERIFY(f.discover(queries[0]));
+    QTRY_COMPARE(done.size(), 1);
+    QVERIFY(
+        std::holds_alternative<DiscoveryBrowsePage>(qvariant_cast<MusicResult>(done.last()[2])));
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), guest);
+    QVERIFY(f.beginLogin());
+    QTRY_COMPARE(challenge.size(), 1);
+    QVERIFY(f.poll());
+    QTRY_COMPARE(login.size(), 1);
+    const auto token = f.snapshot().token;
+    for (int i = 0; i < 9; ++i) {
+        const auto id = f.discover(queries[i]);
+        QVERIFY(id);
+        QTRY_COMPARE(done.size(), i + 2);
+        const auto r = qvariant_cast<MusicResult>(done.last()[2]);
+        QVERIFY(std::holds_alternative<DiscoveryBrowsePage>(r));
+        QVERIFY(matchingDiscoveryBrowsePage(queries[i], std::get<DiscoveryBrowsePage>(r)));
+        QCOMPARE(done.last()[0].toULongLong(), id);
+        QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    }
+    QVERIFY(f.discover(queries[0]));
+    QTRY_COMPARE(done.size(), 11);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::InvalidResponse);
+    const auto pending = f.discover(queries[0]);
+    QVERIFY(pending);
+    QTRY_COMPARE(state->requests.load(), 15);
+    f.close();
+    QTRY_COMPARE(stopped.size(), 1);
+    QTRY_COMPARE(done.size(), 12);
+    QCOMPARE(done.last()[0].toULongLong(), pending);
+    QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
+    QCOMPARE(std::get<MusicFailure>(qvariant_cast<MusicResult>(done.last()[2])).error,
+             MusicError::Canceled);
+    QVERIFY(play.isEmpty());
+    QVERIFY(reports.isEmpty());
+    QVERIFY(writes.isEmpty());
+    QVERIFY(comments.isEmpty());
+    QVERIFY(together.isEmpty());
+    QVERIFY(runtime.listening().queue().entries.isEmpty());
+    QCOMPARE(state->requests.load(), 15);
+    QCOMPARE(state->wrongThread.load(), 0);
+    QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
 void BackendRuntimeTest::dailyPlaylistsThroughThread()
 {
     using namespace domain;

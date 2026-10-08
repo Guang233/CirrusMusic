@@ -181,6 +181,7 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 artistAlbums(domain::ArtistAlbumsQuery query);
     [[nodiscard]] quint64 playlistDetails(domain::PlaylistId playlist);
     [[nodiscard]] quint64 playlistSongs(domain::PlaylistSongsQuery query);
+    [[nodiscard]] quint64 discover(domain::DiscoveryBrowseQuery query);
     [[nodiscard]] quint64 dailyRecommendations();
     [[nodiscard]] quint64 dailyRecommendationHistoryDates();
     [[nodiscard]] quint64 dailyRecommendationHistorySongs(domain::DailyHistorySongsQuery query);

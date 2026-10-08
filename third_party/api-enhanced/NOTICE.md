@@ -46,4 +46,6 @@ Cirrus 的接口审计参考：
 
 随后经维护者明确选择[核心12 Together HTTP-only](../../docs/api/together-http-core.md)，原九wrapper／crypto链的路径与有限字段参考用C++重写，额外end/check／restore/reconnect/info／device/reconnect/notice仅参考用户文档摘要；Status按用户选择Eapi、使用既有标准ECB，不采用摘要CBC描述。窄文档host保原PC metadata组合未实网证明，不复制Android源码／整份原材料／NIM SDK，不接token、transport或可执行脚本，无新运行库；typed HTTP metadata/Ack非完整同步或服务权利。固定api-enhanced MIT通知/lock/hash保持；用户摘要的必要引用与来源自述不授予Android/商业SDK/服务/音乐许可。APK检查被撤权且从未读取/hash/检查/解包/执行，固定旧stash不pop/drop/apply。
 
+后续维护者选择[发现类常规读取＋复杂百科审计](../../docs/api/discovery-browse-reads.md)，完整参考固定album_newest/album_new/top_album/artist_list/top_artists/artist_top_song/simi_song/simi_artist/simi_playlist九wrapper及home/TS/options/config/request的Weapi/default链；闭合路径与有限typed业务字段在api/discovery_browse_operation中窄C++改写，music/discovery_browse_mapper复用摘要/原Core read16/runtime。106ops/49登记、新165/1167＋thread18只合成，root arrays/分页/500/2MiB为本地严格候选，非MIT/TS证明服务schema/Guest免登录/权益/榜期/完整库。song_wiki_info固定Eapi request/positionCode/extJson只必要事实审计，缺root/blocks/资源绑定不注册/复制raw内容或套旧summary/UGC creator。未复制其他外部项目代码或运行SDK/JS/Node，无新运行库、真实账号/Cookie/服务响应/图/音乐/音频或下游自动动作；原固定440/锁/21hash/MIT通知保留，不授予曲库/服务/商标/商业SDK权利，暂停/撤权APK/stash边界保持。
+
 特别是上游 v2 token 模块运行时下载的 Watchman 脚本，不能据此认定同样受 MIT 许可授权。依赖、远程 SDK 和服务条款需分别审查；当前没有将其下载、打包或执行。

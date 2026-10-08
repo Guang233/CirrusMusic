@@ -24,6 +24,7 @@
 | [inventory.json](inventory.json) | 全部 440 个模块的机器可读决定，含排除理由和源码观察 |
 | [upstream-lock.json](upstream-lock.json) | 固定版本、module tree、公共文件校验值与许可来源 |
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
+| [discovery-browse-reads.md](discovery-browse-reads.md) | 新碟／分区年月榜、艺人索引／热门／top歌曲与三类相似9Weapi；原read16、seed SongId／年月显式、strict候选；106ops/49登记，新165／22affected1167＋thread18／15fresh0／14objects6998deps禁入0，复杂百科缺schema不注册、无自动下游／实网／UI |
 | [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
 | [special-contracts.md](special-contracts.md) | 每日推荐、私人 FM、一起听的独立业务契约 |
 | [together-http-core.md](together-http-core.md) | 核心12 HTTP-only后续明确选择：标准Eapi-ECB／Status Eapi／窄interface.music host／原PC profile待实证、原账号／shared8／四结果，部分metadata/playlist显式unmapped；97ops/48，新109/affected911＋runtime17，非NIM/同步/实网/播放器queue-report-timer |
@@ -121,9 +122,11 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 
 ## 7. 下一步
 
-最新**覆盖盘点（docs-only）**：[97operation／44FR ledger](backend-coverage-audit.md)对应代码7b0d762，24family/38E54W5X/原入口/合同；97ops与48show-only登记不增。固定164adopt与operation非同单位，不做差值；原body/枚举与源码模板核对而非旧graph证明。推荐当前账号等级user_level＋音乐收藏计数user_subcount两empty Weapi只读作为下一独立候选，未知response需strict synthetic schema，未开始接入；FM mode/trash需原来源/time、newAlbum可后续。完整Together/v2/cloud/spoken暂停、APK不读/UI最后，无本轮Qt/build/LSP diagnostics/deps/SDK/live证据。
+最新[常规发现9读取与复杂百科门禁](discovery-browse-reads.md)已按维护者优先选择typed合成接入，106ops／49登记，165新／22affected1167＋runtime18、0fail/skip；无SDK/new deps/live/自动下游/UI。复杂百科请求已知但root/blocks/资源绑定待证、不注册假入口；其他暂停不解除。账号等级＋音乐收藏计数仍候选未实现，FM mode/trash需原来源/真实time，next不等于垃圾桶。
 
-最新[一起听核心12 HTTP-only](together-http-core.md)已按后续选择合成接入，97ops／48登记，109新／15affected911＋runtime17；仅HTTP暂停被覆盖，不接NIM/SDK/new deps/live/timer/player/queue/report，APK撤权且从未检查，完整同步及v2/云盘/spoken下一阶段继续暂停，UI最后。schema/profile/optional/playlist不作实网或全协议承诺，stash不恢复。
+[106operation／44FR ledger](backend-coverage-audit.md)已跟随增量更新，25families/38E63W5X/I-S-L-G-P-X分开；原53f8f3e的docs-only时点是97／48，不把本包fresh tests倒算到旧审计。固定164adopt与operation非同单位，不作差值；完整Together/v2/cloud/spoken仍暂停、APK禁读/UI最后。
+
+此前[一起听核心12 HTTP-only](together-http-core.md)已按后续选择合成接入，97ops／48登记，109新／15affected911＋runtime17；仅HTTP暂停被覆盖，不接NIM/SDK/new deps/live/timer/player/queue/report，APK撤权且从未检查，完整同步及v2/云盘/spoken下一阶段继续暂停，UI最后。schema/profile/optional/playlist不作实网或全协议承诺，stash不恢复。
 
 此前[历史日推两read](daily-recommendation-history.md)经维护者选择合成接入，85ops／47登记、新86／17 affected839＋thread15，0fail/skip，16fresh／14objects6985实编dep禁入0；日期必须原account/source token的日期DTO成员，候选schema和会员/window待证，无cache／自动下游。前三项与第四项G1/G2下一阶段均暂停，阶段1保留，UI最后；其他小包需另审计确认，不自动重开账号／−462／SDK／音频。
 

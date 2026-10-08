@@ -6,6 +6,7 @@
 #include "domain/music/chart_types.h"
 #include "domain/music/cloud_history_types.h"
 #include "domain/music/comment_types.h"
+#include "domain/music/discovery_browse_types.h"
 #include "domain/music/discovery_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/introduction_types.h"
@@ -76,7 +77,7 @@ using MusicQuery = std::variant<
     domain::CloudSongsQuery, domain::CloudSongDetailsQuery, domain::ArtistIntroductionQuery,
     domain::SongWikiQuery, domain::SearchSuggestionsQuery, domain::HotKeywordsQuery,
     domain::HotKeywordDetailsQuery, domain::DailyRecommendedPlaylistsQuery,
-    domain::DailyHistoryDatesQuery, domain::DailyHistorySongsQuery>;
+    domain::DailyHistoryDatesQuery, domain::DailyHistorySongsQuery, domain::DiscoveryBrowseQuery>;
 using MusicResult = std::variant<
     domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
     domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage, domain::ArtistAlbumsPage,
@@ -93,7 +94,7 @@ using MusicResult = std::variant<
     domain::SubscribedPodcastsPage, domain::CloudSongsPage, domain::CloudSongDetails,
     domain::ArtistIntroduction, domain::SongWikiSummary, domain::SearchSuggestions,
     domain::HotKeywords, domain::HotKeywordDetails, domain::DailyRecommendedPlaylists,
-    domain::DailyHistoryDates, domain::DailyHistorySongs>;
+    domain::DailyHistoryDates, domain::DailyHistorySongs, domain::DiscoveryBrowsePage>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {

@@ -26,6 +26,7 @@
 | [03 系统架构与模块契约](03-system-architecture.md) | 模块如何拆分、依赖如何约束、线程如何划分？ |
 | [04 领域与数据模型](04-domain-and-data-model.md) | 歌曲、队列、账号、音质和本地资源如何表达？ |
 | [05 API 适配与客户端后端](05-api-and-backend.md) | 如何接入现有接口并抵御接口变化？ |
+| [常规发现读取与复杂百科门禁](api/discovery-browse-reads.md) | 新碟／艺人／相似9typed Weapi/read16，严格候选，月榜年月显式、simiPlaylist seed SongId；106ops/49登记，新165／22affected1167＋thread18、15fresh0／14objects6998deps禁入0；复杂百科缺schema不注册，无自动下游／实网／UI |
 | [一起听核心12 HTTP-only](api/together-http-core.md) | 后续明确授权：全Eapi-ECB／Status／窄host／shared8／原account-token／四结果及部分metadata；97ops／48登记，新109／affected911＋runtime17；playlist内部unmapped、非NIM／完整同步／实网／播放器queue-report-timer |
 | [一起听Android补充材料审计](api/together-protocol-material-audit.md) | NIM/独立chatRoomId/type/毫秒/seq线索、与固定9 HTTP crypto/profile/schema差异；G1–G6未闭，不恢复WIP或自动SDK/实网，f384b7d历史docs-only、当时85ops/47；后续HTTP-only选择另页，不自动放开完整同步 |
 | [固定版本 API 审计](api/README.md) | 哪些模块采用／待定／排除，协议依赖、许可与缺口是什么？ |
@@ -73,7 +74,7 @@
 | [API 交接清单](checklists/api-handoff.md) | 接入真实 API 前需要哪些材料？ |
 | [发布检查表](checklists/release.md) | 哪些条件不可跳过？ |
 
-**最新后端覆盖入口**：[97-operation／44-FR静态盘点](api/backend-coverage-audit.md)。24组已接Core入口、38E/54W/5X与逐项ledger，区分代码／合成／有限live／缺证／暂停／排除；不能164−97计缺口。推荐下一独立小包当前账号等级＋音乐收藏计数两Weapi只读，未开始实现；Together可选发送／playlist／profile与完整同步、其他paused仍分开；97ops／48注册不增，无本轮Qt/build/LSP/deps/实网/SDK证据。
+**最新后端覆盖入口**：[106-operation／44-FR对照](api/backend-coverage-audit.md)。25组Core入口、38E/63W/5X与逐项ledger，I/S/L/G/P/X分开；164adopt与106op不能作差值。维护者后续先补发现9项，当前106ops／49登记；该代码包新165／affected1167＋thread18不是初始53f8f3e的docs-only97／48证据。账号等级＋计数仍未实现候选；复杂百科schema缺证与Together完整同步/paused单列，无实网/SDK/UI验收。
 
 ## 2. 规范用词
 

@@ -2,6 +2,7 @@
 #include "collection_operation.h"
 #include "comment_operation.h"
 #include "comment_write_operation.h"
+#include "discovery_browse_operation.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
@@ -19,6 +20,8 @@ namespace cirrus::netease
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
 {
+    if (isDiscoveryBrowseOperation(operation))
+        return discoveryBrowseContract(operation);
     if (isTogetherOperation(operation))
         return togetherContract(operation);
     if (isCommentWriteOperation(operation))
@@ -38,6 +41,16 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     8 * 1024 * 1024};
     }
     switch (operation) {
+    case ApiOperation::LatestAlbums:
+    case ApiOperation::NewAlbums:
+    case ApiOperation::AlbumCharts:
+    case ApiOperation::ArtistBrowse:
+    case ApiOperation::PopularArtists:
+    case ApiOperation::ArtistTopSongs:
+    case ApiOperation::SimilarSongs:
+    case ApiOperation::SimilarArtists:
+    case ApiOperation::SimilarPlaylists:
+        return std::nullopt; // closed discovery-browse adapter above
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:
     case ApiOperation::TogetherJoin:
@@ -271,6 +284,8 @@ bool validQrKey(QStringView key)
 
 std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonObject& parameters)
 {
+    if (isDiscoveryBrowseOperation(operation))
+        return discoveryBrowsePayload(operation, parameters);
     if (isTogetherOperation(operation))
         return togetherPayload(operation, parameters);
     if (isCommentWriteOperation(operation))
@@ -595,6 +610,16 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
+    case ApiOperation::LatestAlbums:
+    case ApiOperation::NewAlbums:
+    case ApiOperation::AlbumCharts:
+    case ApiOperation::ArtistBrowse:
+    case ApiOperation::PopularArtists:
+    case ApiOperation::ArtistTopSongs:
+    case ApiOperation::SimilarSongs:
+    case ApiOperation::SimilarArtists:
+    case ApiOperation::SimilarPlaylists:
+        break; // closed discovery-browse adapter above
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:
     case ApiOperation::TogetherJoin:
@@ -694,6 +719,16 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
         return false;
     }
     switch (operation) {
+    case ApiOperation::LatestAlbums:
+    case ApiOperation::NewAlbums:
+    case ApiOperation::AlbumCharts:
+    case ApiOperation::ArtistBrowse:
+    case ApiOperation::PopularArtists:
+    case ApiOperation::ArtistTopSongs:
+    case ApiOperation::SimilarSongs:
+    case ApiOperation::SimilarArtists:
+    case ApiOperation::SimilarPlaylists:
+        return false;
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:
     case ApiOperation::TogetherJoin:

@@ -106,7 +106,16 @@ enum class ApiOperation {
     TogetherQueue,
     TogetherReplaceQueue,
     TogetherReconnectInfo,
-    TogetherDeviceNotice
+    TogetherDeviceNotice,
+    LatestAlbums,
+    NewAlbums,
+    AlbumCharts,
+    ArtistBrowse,
+    PopularArtists,
+    ArtistTopSongs,
+    SimilarSongs,
+    SimilarArtists,
+    SimilarPlaylists
 };
 
 struct ApiOperationContract {

@@ -232,6 +232,11 @@ target_link_libraries(tst_daily_playlists PRIVATE cirrus_netease_music Qt6::Test
 add_test(NAME daily_playlists COMMAND tst_daily_playlists)
 set_tests_properties(daily_playlists PROPERTIES TIMEOUT 25)
 
+qt_add_executable(tst_discovery_browse unit/discovery_browse_test.cpp support/synthetic_discovery_browse.h)
+target_link_libraries(tst_discovery_browse PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME discovery_browse COMMAND tst_discovery_browse)
+set_tests_properties(discovery_browse PROPERTIES TIMEOUT 60)
+
 qt_add_executable(tst_playlist_discovery unit/playlist_discovery_test.cpp)
 target_link_libraries(tst_playlist_discovery PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME playlist_discovery COMMAND tst_playlist_discovery)

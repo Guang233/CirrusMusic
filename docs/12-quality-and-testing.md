@@ -28,6 +28,7 @@
 | TC-SEARCH | FR-006/007 | IME、防抖、A/B 请求逆序、分类切换、未知总数、空态、超大 ID |
 | TC-MEDIA-SEAM（阶段1） | FR-044／017；R-030 | [离线共享接缝](api/spoken-media-seam.md)：14canonical／9namespace／physical拷贝与无身份签名、单owner A/B/C／原Song-token-TTL验证在媒体前；新28／373＋thread13，0fail／原audio1skip；未证消费binding／spoken snapshot与三模式，不推定真实可播 |
 | TC-PODCAST-VOICE | FR-044 | 独立ID、voice≠mainSong、资源类型和父播客核对、当前context取消／切号；搜索44项合成Qt Test及有限公开结构验证见[实体搜索](api/entity-search-reads.md)，后续[消费／recent包](api/podcast-and-recent-reads.md)55项合成Qt Test及线程流通过，公开列表-462拒绝；ProgramId／VoiceId对应、节目详情／真实recent、播放及UI验收未完成 |
+| TC-DISCOVERY-BROWSE | FR-008/009/010/015；R-033 | [常规发现9typed读](api/discovery-browse-reads.md)：9合同/pre-crypto payload、90坏schema/预算、宽ID/原text/重复顺序/未知分页、Song seed/年月显式、36 cancel/epoch、provider5/无Cookie、read16/Facade query-content-kind/close；新165／22affected1167＋thread18、0fail/skip，106ops/49登记；候选非实网/Guest权限/完整百科 |
 | TC-CATALOG | FR-008/009 | 缺图、未知时长、多碟专辑、多艺人、下架、详情分页 |
 | TC-LIBRARY | FR-010 | 超大歌单、完整 ID 与首屏区分、失败续页、只读权限 |
 | TC-PLAYLIST-SUB-V2（待实现） | FR-014；Q-013／R-028／B-015 | [原生v2前置门禁](api/playlist-subscription-v2-prerequisite.md)：issuer失败零业务、body/header/Cookie分层、原账号／8槽／前后取消／Unknown与线程排空；无已实现测试或新增pass／CTest，真实issuer／权限／效果另授权 |
@@ -125,6 +126,10 @@ Given 创建歌单在服务端成功；When 响应连接断开；Then UI 显示�
 ### TC-SEARCH-ASSIST：搜索建议及两类热搜（FR-007部分）
 
 [契约／复跑](api/search-assistance-reads.md)：最终11 affected Debug套件631 pass＋10线程数据行12 pass，0fail/skip，registry82／CTest44不是全量／Release。新117含88坏schema、四类型同数字独立ID／20group-16order-100hot／256关键词、未知vs[]／unsupported过滤、6 Guest/Auth双请求native／实际hot Eapi解密及Pc e_r:false、6 cancel-stale、9拒绝／429／−462无fallback、16槽／迟到、2建议乱序query/id、3client销毁／3raw超限，无自动play/report/write。线程Guest热搜→完整合成登录→四型建议／热搜→坏schema→挂起close Caller Canceled及资源真排空，9请求／6结果，无隐式search/detail/image或cache/history。13changed CPP＋2adjacent fresh all-server clean，14应用对象6963真实依赖禁入0／UI0。初次4fixture失败单RetryAfter／closeCanceled修正，production／fatal／malformed不改，moc保留并生成／DB/fresh确认。ignored search-assist-final-{build,focused,thread}.log；不累加评论760＋11／初次115＋3，不作当前服务／完整搜索／schema／权限或全面秘密证明。
+
+### TC-DISCOVERY-BROWSE：发现9读取与复杂百科门禁
+
+[契约与最终证据](api/discovery-browse-reads.md)：Latest/NewAlbums/AlbumCharts、ArtistBrowse/PopularArtists/ArtistTopSongs、SimilarSongs/Artists/Playlists；未知Response不默认空、不同ID族/原query保持。22affected1167／selected runtime15函数16data/18pass（新165），0fail/skip；15fresh LSP0、14actual application objects（含MOC）6998deps禁入0、UI0。真实build/format/fixed440/21hash/Python15与最终doc/literal check分别留档，不加first123/newthread3或旧包。首fixture漏直接include/append overload仅修真实include/std::pair；新增及改名MOC真实AUTOGEN，不删Q_OBJECT/.moc/坏schema/fatal。Guest单读→账号9读→坏root.alias→hung close共15requests/12results，资源对称/原token/thread正确且无play/queue/report/write/Together自动行为。49登记仅metadata，非完整49/Release/minQt/服务/账号/SDK/keyring/audio/UI验证。复杂song_wiki_info只有请求事实，需有权分享的source/合成root/blocks/原Song绑定/纯text-link/unknown/empty预算，不能虚构已实现测试/entry或以旧summary的data.blocks套另path。
 
 ## 4. API fixture 规范
 

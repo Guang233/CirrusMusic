@@ -56,6 +56,10 @@
 
 [核心12 HTTP-only](api/together-http-core.md)已按后续授权合成接入，97ops／48登记，新109／affected911＋runtime17。全Eapi-ECB／Status Eapi／窄interface.music host保留PC metadata，组合与严格data响应未实网证明；发送可选扩展和完整playlist缺证／未全映射，局部counter不是CAS，UUID不是service幂等，roomGeneration不是自动房间切换fence。HTTP metadata/Ack、inRoom、canReconnect非Active/播放器同步/远端效果；cancel/close不能撤销已发送副作用。禁止自动retry/host-field-Weapi fallback/NIM/SDK/timer/播放器queue-report控制，保留Unknown/playlistContentUnmapped；APK撤权且从未读取，stash不恢复。G1–G6仍约束完整同步，风险未因109合成通过关闭。
 
+### R-033：发现候选结构／年月／seed不可当实网完整性与复杂百科已支持
+
+[常规发现9读取](api/discovery-browse-reads.md)已typed合成接入，106ops/49登记、新165／1167＋thread18；2MiB／500等是本地候选，Guest是本地策略不是服务免登录。显式年月与original query只是结构相关，不保证服务期次／新鲜度／排名/权益；week/month分组不合并，相似歌单seed是SongId，top50非全部艺人库，missing/null不伪空。保原read16/token-generation/cancel-close、宽ID/重复/plain text/未知分页，拒绝alias与自动下游，不以合成通过关闭服务schema风险。复杂song_wiki_info root/blocks/原Song绑定待证，只有请求事实不注册，旧summary或UGC不套另path，HTML/URL非动作；有权source片段/合成样本门禁Q-016，账号/服务/UI另授权。
+
 ## 3. 待确认决策
 
 | ID | 需要确认的事实／选择 | 当前建议／安全默认 | 最晚节点 | 不确认的影响 |
@@ -75,6 +79,7 @@
 | Q-013 | v2 token 依赖浏览器 SDK，原生路径是否可用 | [调查](api/playlist-subscription-v2-prerequisite.md)证实固定SDK桥而非原生协议；维护者暂无原生资料、已明确暂缓推进其他后端；未来实际资料与明确恢复后再审，不自动评估SDK例外或引入Node/WebEngine／v3替代；尚未证明不可能 | M3 | 收藏歌单保持受限，不能拿 v3 直接替代 |
 | Q-014 | 一起听从机事件、时钟与恢复契约 | 后续[Android摘要对照](api/together-protocol-material-audit.md)已到，NIM/chatRoomId/type与毫秒/serverSeq有线索；原生鉴权/envelope/SELFHOST、seq/version/时间恢复权限与许可未闭，HTTP存在profile/字段/schema差异。后续仅[核心12 HTTP-only](api/together-http-core.md)已明确批准并合成接入，非完整同步；PC-host组合/optional/playlist仍缺证，不恢复9 HTTP WIP。NIM/SDK/新库/真实双账号另批准 | M3 | G1–G6未闭不开启完整一起听能力，不能把HTTP Ack或材料到达当同步验收 |
 | Q-015 | ProgramId／VoiceId对应、消费端音轨／v1权益与期限 | [补证](api/spoken-playback-contract.md)确认传统mainTrackId→旧url文档路线，v1只有第三方代码候选；Voice详情仍workbench，未实网确认。-462停止，账号／媒体另授权 | M2 | 不开放未验证播放；不以独立类型断言服务ID必不同，评论只读已合成接入，允许继续其他已确认小包 |
+| Q-016 | 复杂消费百科root/blocks/sections/原Song资源绑定与预算 | [本轮审计](api/discovery-browse-reads.md)仅闭合固定song_wiki_info Eapi请求；需有权source/合成响应说明纯text-link、unknown/empty/malformed及顺序/预算，不能用旧summary/UGC/raw JSON/HTML造能力；无需真实Cookie/token/音频 | M2–M3 | 不注册复杂百科入口/假HTTP200成功，已有基础文本保留、完整百科与署名仍G |
 
 维护者可以逐项采纳默认值；不需要先完成全部问题才能开始 M0/M1。未经确认的问题不得在发布文案中写成确定支持。
 

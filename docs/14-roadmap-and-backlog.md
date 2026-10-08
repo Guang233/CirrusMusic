@@ -72,12 +72,16 @@ flowchart LR
 | B-026 | 桌面歌词、导入导出、高级音频（M6） | 每项专项 ADR 和测试 |
 | B-027 | 一起听核心HTTP12合成已接；完整同步仍待证（M3） | 后续明确选择[12 HTTP-only](api/together-http-core.md)：全Eapi-ECB（Status）、窄host/原PC profile/shared8/四结果/部分metadata、playlist显式unmapped。97ops/48登记，新109/15affected911＋runtime17，0fail/skip；不接NIM/SDK/新库/实网/播放器queue-report-timer。仅HTTP暂停被覆盖，固定旧WIP不恢复、APK撤权且未检查；[Android审计G1–G6](api/together-protocol-material-audit.md)仍约束完整实时同步、双账号另授权，其他paused/UI最后不变 |
 | B-028 | 上游清单校验与漂移检查（M0 起持续） | Python 校验器；升级上游需重新审计 |
+| B-029 | 常规发现9typed读取合成已接／复杂百科门禁（M2–M3） | 维护者明确先补发现：[新碟/艺人/相似](api/discovery-browse-reads.md)9Weapi/read16，原query-kind/token-generation/取消关闭，无自动下游；106ops/49登记、新165/22affected1167＋thread18、15fresh0/14objects6998deps禁入0/UI0。complexWiki request已知但root/blocks/Song绑定缺证Q-016，未注册，R-033／TC-DISCOVERY-BROWSE；实网/权益/UI另验收，原paused/APK禁读/stash不动 |
+
 
 ## 4. 下一轮实际动手顺序
 
-**最新覆盖盘点（docs-only）**：[97operation／44FR账本](api/backend-coverage-audit.md)对应代码7b0d762，97ops／48show-only登记不增，24families／38E54W5X；未跑本轮Qt/build/新LSP diagnostics/deps/实网。优先建议下一独立小包：当前verified账号等级user_level＋消费音乐收藏计数user_subcount两empty Weapi读（FR005/004、B011/016关联），依然需要strict synthetic schema／同token账号phase屏障／read16，未开始实现。备选newAlbum，FM mode/negative feedback需原FM来源与真实time，不复制25或next当负反馈。只做建议与源体审计，不能164−97算缺口／恢复暂停／改UI时点。
+**最新代码包／维护者优先级**：后续明确先补发现并选择[新碟/艺人/相似9读取＋复杂百科审计](api/discovery-browse-reads.md)，已typed合成接入。106ops/49登记、新165／22affected1167＋selected runtime18，0fail/skip，15fresh0／14objects6998actualdeps禁入0／UI0；复杂百科响应结构待证不注册，原9读取strict候选非真实schema/免登录/权益保证。只本地commit/no push，无SDK/新运行依赖/实网/自动下游。不是全发现产品或44FR验收，TC-DISCOVERY-BROWSE／R-033／Q-016另记；其他paused/APK禁读不动。
 
-**当前最新代码包覆盖**：[核心12 Together HTTP-only](api/together-http-core.md)已明确批准并合成接入；97ops／48登记，旧911＋runtime17/新109只属该包。NIM/SELFHOST完整同步G1–G6、v2/cloud/spoken next仍暂停，optional/完整playlist/profile另补证，APK撤权且从未检查、旧stash不自动恢复。
+[106operation／44FR覆盖账本](api/backend-coverage-audit.md)同步25families/38E63W5X、I/S/L/G/P/X；53f8f3e初始docs-only97/48仍历史，不把当前Qt证据倒填。账号等级user_level＋收藏计数user_subcount两empty Weapi读仍候选、未实现/未授权实网，需要strict synthetic schema与原account/token/read16；FM mode/feedback需真实来源与观察time，不复制25/next。后续由维护者另选，不自动恢复暂停或修改UI最后。
+
+**此前代码包覆盖**：[核心12 Together HTTP-only](api/together-http-core.md)已明确批准并合成接入；97ops／48登记，旧911＋runtime17/新109只属该包。NIM/SELFHOST完整同步G1–G6、v2/cloud/spoken next仍暂停，optional/完整playlist/profile另补证，APK撤权且从未检查、旧stash不自动恢复。
 
 **此前历史日推覆盖**：第四项阶段1之后绑定／音源G1/G2仍缺证，维护者明确选择先做[历史日推两项读取](api/daily-recommendation-history.md)，第四项下一阶段暂缓，前三项不恢复。现日期列表与原列表成员／原account-token选择歌曲已合成接入，85ops/47登记、新86/17 affected839＋thread15，0fail/skip；16fresh路径clean/14objects6985deps禁入0/UI0。不推会员／window／日期完整性，candidate日期366/1MiB与songs500/4MiB，无自动下游/日期cache/反馈写；真实账号/源/SDK/音频无新授权。后续其他已纳入小包另审计确认、UI最后；本次不给暂停项自动材料等待或探测。
 

@@ -9,6 +9,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/music_types.h
     domain/music/catalog_types.h
     domain/music/discovery_types.h
+    domain/music/discovery_browse_types.h
     domain/music/cloud_history_types.h
     domain/music/chart_types.h
     domain/music/playlist_discovery_types.h
@@ -110,6 +111,8 @@ target_link_libraries(cirrus_netease_session PUBLIC cirrus_domain Qt6::Network)
 add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/api_operation.cpp
     infrastructure/netease/api/api_operation.h
+    infrastructure/netease/api/discovery_browse_operation.cpp
+    infrastructure/netease/api/discovery_browse_operation.h
     infrastructure/netease/api/together_operation.cpp
     infrastructure/netease/api/together_operation.h
     infrastructure/netease/api/comment_operation.cpp
@@ -212,6 +215,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/library_mapper.h
     infrastructure/netease/music/discovery_mapper.cpp
     infrastructure/netease/music/discovery_mapper.h
+    infrastructure/netease/music/discovery_browse_mapper.cpp
+    infrastructure/netease/music/discovery_browse_mapper.h
     infrastructure/netease/music/catalog_mapper.cpp
     infrastructure/netease/music/catalog_mapper.h
     infrastructure/netease/music/introduction_mapper.cpp

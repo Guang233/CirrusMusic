@@ -1,4 +1,4 @@
-# 每日推荐、私人 FM 与一起听
+# 每日推荐、私人 FM、一起听与常规发现
 
 这些能力均在本轮范围内，但属于不同的来源／会话，不为复用歌单页面而伪造相同远程协议。以下“客户端规则”是设计约束；响应字段和真实权限仍需验证。
 
@@ -96,3 +96,9 @@
 - UI 以后只暴露已通过能力门禁的状态；现在不制作房间页面，也不引入私信功能作为隐式依赖。
 
 完成标准不是“9 个 HTTP 请求能发送”，而是两名授权测试用户能完成建房、加入、同步播放／暂停／切歌／队列变化、网络中断恢复和退出，且有脱敏证据。此项暂不阻塞普通歌曲、日推和 FM 后端。
+
+## 4. 常规发现：显式年月、歌曲seed与复杂百科门禁
+
+[9读取已typed合成接入](discovery-browse-reads.md)，原read16/token-generation/query-kind/cancel-close/default Weapi，没有新owner或自动详情/图片/播放/report/write/cache。新碟月榜caller显式year/month，weekData/monthData独立保序且预算500各组，不读系统日期或推完整期次；ArtistTopSongs候选50不是全部曲库/已有ArtistSongs hot替代。SimilarPlaylists传原SongId而非PlaylistId，SimilarArtists原ArtistId，宽ID与重复顺序不能截精度/去重；必需数组missing/null拒绝/[]明确有效，未知分页/权益不推断。106ops/49登记、新165/affected1167＋thread18仅合成，非服务schema/Guest权限/产品发现UI验收。
+
+song_wiki_info固定Eapi请求与extJson已审，root/blocks/资源绑定/纯text-link/unknown/empty/预算未闭；不注册假入口、套旧summary data.blocks、借UGC creator或返回raw JSON/HTML。R-033／Q-016需合法source片段/合成样本，无真实Cookie/token/版权音频要求；不触碰暂停项/撤权APK，也不默认执行SDK或实网。

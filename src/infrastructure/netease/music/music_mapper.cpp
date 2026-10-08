@@ -4,6 +4,7 @@
 #include "chart_mapper.h"
 #include "cloud_history_mapper.h"
 #include "comment_mapper.h"
+#include "discovery_browse_mapper.h"
 #include "discovery_mapper.h"
 #include "entity_search_mapper.h"
 #include "introduction_mapper.h"
@@ -164,6 +165,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
     if (std::holds_alternative<ArtistIntroductionQuery>(query) ||
         std::holds_alternative<SongWikiQuery>(query))
         return mapIntroductionResponse(query, object);
+    if (const auto* browse = std::get_if<DiscoveryBrowseQuery>(&query))
+        return mapDiscoveryBrowseResponse(*browse, object);
     if (isSearchAssistQuery(query))
         return mapSearchAssistResponse(query, object);
     if (isCommentQuery(query))

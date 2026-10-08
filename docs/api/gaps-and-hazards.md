@@ -86,7 +86,11 @@ scrobble 顺序发送 startplay 和 play 两条 weblog，并强制 osx profile�
 
 ## 增量：资料与百科的复杂结构不是透明JSON通道
 
-[四类资料／介绍](catalog-introduction-and-metadata-reads.md)只合成增量详情字段及艺人分节／歌曲四类基础百科文本，TS generic Response与第三方解析都不构成服务schema／完整性证明。root.data.blocks／root.introduction严格必需、纯文本／预算／原token；未知block明确unsupported，不递归资源／图片／外链、生成叙事／作者或用管理UGC替代资料读。全百科及登录UGC真实schema／权益／UI仍待补证；未恢复−462窗口。
+[四类资料／介绍](catalog-introduction-and-metadata-reads.md)只合成增量详情字段及艺人分节／歌曲四类基础百科文本，TS generic Response与第三方解析都不构成服务schema／完整性证明。root.data.blocks／root.introduction严格必需、纯文本／预算／原token；未知block明确unsupported，不递归资源／图片／外链、生成叙事／作者或用管理UGC替代资料读。全百科及登录UGC真实schema／权益／UI仍待补证；未恢复−462窗口。后续维护者选择复杂百科时，[song_wiki_info固定请求审计](discovery-browse-reads.md)只确认Eapi path/positionCode/extJson，缺root/blocks/原Song绑定/unknown/empty预算，不套用旧data.blocks或UGC结构、不注册假入口，R-033/Q-016仍G。
+
+## 增量：常规发现不是完整艺人库、榜期或权益证明
+
+[9发现读取](discovery-browse-reads.md)已typed合成接入，106ops/49登记；仅本地严格候选，2MiB/必需数组/明确[]与missing-null失败/分页未知、original query/content-kind/read16/token-generation/取消关闭。AlbumCharts显式年月/独立week-month、ArtistTopSongs50、SimilarPlaylists原SongId，不推完整榜/全部曲库/Guest权限或新鲜度；不自动图/详情/play/report/write/cache，复杂百科门禁另行保留。新165/22affected1167＋thread18、15fresh0/14objects6998deps禁入0/UI0，实网与产品验收未做。164adopt不能和106op作差值，其他paused/−462/撤权APK不自动恢复。
 
 ## 增量：标签及单向公开不是任意隐私转换
 

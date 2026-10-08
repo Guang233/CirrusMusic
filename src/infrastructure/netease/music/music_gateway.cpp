@@ -5,6 +5,7 @@
 #include "cloud_history_mapper.h"
 #include "comment_mapper.h"
 #include "entity_search_mapper.h"
+#include "infrastructure/netease/api/discovery_browse_operation.h"
 #include "library_mapper.h"
 #include "music_mapper.h"
 #include "playlist_discovery_mapper.h"
@@ -142,6 +143,11 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::DailyRecommendations;
     } else if (std::holds_alternative<domain::PersonalFmQuery>(query)) {
         operation = ApiOperation::PersonalFm;
+    } else if (const auto* browse = std::get_if<domain::DiscoveryBrowseQuery>(&query)) {
+        const auto request = discoveryBrowseRequest(*browse);
+        Q_ASSERT(request);
+        operation = request->operation;
+        parameters = request->parameters;
     } else if (const auto history = recommendationHistoryRequest(query)) {
         operation = history->operation;
         parameters = history->parameters;
