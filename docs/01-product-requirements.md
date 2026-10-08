@@ -86,6 +86,8 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-043 | 一起听建房／加入／退出、心跳、播放与队列同步、断线恢复；双账号验证，不以 HTTP 包装器代替实时协议 | P1 / M3 | API/播放后端 | TC-TOGETHER-HTTP／TC-TOGETHER |
 | FR-044 | 播客／声音消费端搜索、详情、内容列表与播客订阅读取及后续播放，独立身份／来源／历史，不包含创作者管理工作台 | P1 / M2–M3 | API/播放后端 | TC-PODCAST-VOICE |
 
+**需求覆盖盘点（docs-only）**：[97-operation／逐44-FR审计](api/backend-coverage-audit.md)以代码7b0d762、当前Core entry与合同区分I/S/L/G/P/X；97ops/48show-only登记不增，不能把164adopt与97差值作缺口或把合成Ack作FR完成。下一候选为FR005/004相关当前账号等级与消费音乐收藏计数两empty Weapi读，未接入／未知真实schema，level/count不能推会员、可播权、库完整性或编辑权；不默认扩MV/creator/跨账号资料。持久化/文件/系统集成/UI仍另设计，暂停项不恢复，本轮无新Qt/build/LSP diagnostics/deps/实网证据。
+
 FR-043 HTTP子集增量：[核心12 HTTP-only](api/together-http-core.md)经后续明确选择已合成接入。全部标准Eapi-ECB（含Status）、窄interface.music host、原PC metadata未实网证明、Core typed请求／部分metadata／shared8／原account-token-generation-eventId相关／四结果。Queue内部playlist显式unmapped，部分可选发送扩展未全映射，不控制播放器／队列／报告／timer，不接NIM／SDK／新库／实网／UI；97ops／48登记，新109／15affected911＋runtime17，0fail/skip。仅HTTP暂停被覆盖，完整FR-043同步／双账号验收和G1–G6未完成，v2／云盘／spoken后续仍暂停；APK撤权且从未检查，旧stash不恢复。
 
 FR-043 此前材料增量：[Android 9.5.30摘要与固定九HTTP对照](api/together-protocol-material-audit.md)已按维护者提供路径完成静态核对。NIM/独立chatRoomId/type20000–20002与毫秒/serverSeq/ignoreUserIds仅有摘要线索；原生鉴权/envelope/SELFHOST、seq/version/时钟重连权限、Linux许可未闭，HTTP crypto/profile/command-vs-playlistParam/check/end/queue schema有差异，不直接混用或恢复草稿。85ops/47不变，无新增代码/build/Qt/LSP/实网/SDK/新依赖；材料到达不是FR完成或实施恢复授权，其他暂停项与UI最后保留。

@@ -73,6 +73,8 @@
 | [API 交接清单](checklists/api-handoff.md) | 接入真实 API 前需要哪些材料？ |
 | [发布检查表](checklists/release.md) | 哪些条件不可跳过？ |
 
+**最新后端覆盖入口**：[97-operation／44-FR静态盘点](api/backend-coverage-audit.md)。24组已接Core入口、38E/54W/5X与逐项ledger，区分代码／合成／有限live／缺证／暂停／排除；不能164−97计缺口。推荐下一独立小包当前账号等级＋音乐收藏计数两Weapi只读，未开始实现；Together可选发送／playlist／profile与完整同步、其他paused仍分开；97ops／48注册不增，无本轮Qt/build/LSP/deps/实网/SDK证据。
+
 ## 2. 规范用词
 
 - **必须／不得（MUST／MUST NOT）**：采纳基线后的强制约束，例外需记录理由、负责人及到期时间。

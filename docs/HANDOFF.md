@@ -16,6 +16,8 @@
 
 上游440模块（164采用候选、40待定、236排除）只是静态审计，维护者新批的播客／声音消费范围与5项搜索在增量契约中记录，不回写审计为实时支持列表；`inventory.json` 的 `not-implemented/static-only` 是审计时点标记，不作为运行注册表或实时实现进度。
 
+最新**后端覆盖盘点（docs-only）**：[97operations／44FR审计](api/backend-coverage-audit.md)。代码基线7b0d762，97唯一enum／48show-only注册不变；24family、38E/54W/5X、原入口/contract与逐项ledger，I/S/L/G/P/X分层，不能164adopt−97算剩余或登记即FR完成。推荐下一独立小包当前账号等级user_level＋音乐收藏计数user_subcount两empty Weapi读，仍未实现、未知真实response schema，不推权益/完整库/creator-MV或自动下游；备选newAlbum，FM feedback需原来源+真实time、不用25或next伪反馈。单列Together optional/playlist/profile与G1–G6；v2/cloud/spoken next/fullTogether暂停不解除，APK不读、固定stash不apply/pop/drop，UI最后。本轮仅源体/元数据/文档静态核对、fixed440/publichash+Python15/diff/local refs/有限literal检查，无新Qt/build/LSP diagnostics/compileddeps/live/SDK/audio/UI证据；历史911＋17等不挪用。最终静态计数见本页文末覆盖审计记录，仅本地commit、不push。
+
 最新代码包：[一起听核心12 HTTP-only](api/together-http-core.md)。全部Eapi标准ECB／Status Eapi／窄interface.music host，保留原PC metadata（组合未实网证明）；Core typed DTO／shared8／原account-token-generation-UUID-roomGeneration相关／四结果，roomGeneration非自动房间切换fence。Queue内部playlist未知，显式unmapped，不改本地队列／播放器／报告／timer／Active。15affected911＋runtime15data/17pass，新109，0fail/skip；16fresh C++ all-server LSP0／14objects6992actualdeps禁入0／UI0；fixed440/publichash+Python15／format/diff／最终local refs与有限literal-query扫描见ignored together-http-doc-check.json，非anchors／全面安全。本包不是全48／Release／真实账号／NIM／SDK／音频／UI验收；#92旧cpp-check output parse未闭另记。只本地commit、不push；资料后用户明确批准核心12，仅HTTP暂停被覆盖，v2／云盘／spoken next／完整同步仍暂停；APK撤权且从未访问，stash9907ac4…不pop/drop/apply。
 
 此前**资料审计**：[一起听Android摘要与固定API对照](api/together-protocol-material-audit.md)。维护者提供下载目录ListenTogether.md供参考；原文件hash／完整静态核对已记录，NIM/chatRoomId/三个type、serverSeq/ignoreUserIds与毫秒有新线索，但IM鉴权／envelope／SELFHOST、seq/version／时钟重连权限、Linux与许可未闭；CBC/host/全Eapi、command/playlistParam与check/end/queue响应差异不直接混用。资料到达不是完整协议或自动解除实施暂停；只docs，85ops／47不变，无新增C++／build／Qt／LSP／实网／SDK／依赖／UI证据。固定WIP9907ac4…仅只读，未pop/drop/apply，其他暂停项保留、UI最后。
@@ -177,9 +179,11 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | 安全存储实现与新增依赖 | QtKeychain 系统包（`qtkeychain-qt6`）已接入；无后端时只留内存，不明文 fallback |
 | app ID、自身许可证、发行 Runtime | 由维护者决定；不阻碍后端单测，不擅自填公司域名或发布许可证 |
 | 真实账号与音源验证 | 必须明确授权并安排脱敏流程；不在聊天或仓库提供凭据 |
-| v2 checktoken SDK、一起听接收链 | 整歌单收藏／取消固定参考链每次需v2 SDK，原生未接，现用户要求补齐并优先调查；一起听用户明确暂停，最后待其整套材料；仍有证据／许可门禁，不暗加Node/WebEngine、不以v3／改协议替代v2 |
+| v2 checktoken SDK、一起听接收链 | v2原生前置调查保留、维护者明确暂无资料并暂停，不自行等待/装SDK或v3替代；Together后续明确批准核心12 HTTP-only已接，完整NIM/SELFHOST同步G1–G6仍暂停，metadata/Ack非Active，不暗加Node/WebEngine或从HTTP推token/transport |
 | 播客／声音后续 | [补证决策](api/spoken-playback-contract.md)为docs-only，旧公开列表-462停止；传统mainTrackId文档路线已获证，v1实网／Voice关系仍未知，不换host／工作台或自动登录；账号／挑战／媒体验证另授权 |
 | 播放后端 | Qt Multimedia已明确获准接入；公开试听MP3／合成WAV PoC通过，完整缓冲后起播；流式、设备切换／打包等仍有门禁 |
+
+**覆盖盘点后的下一候选**：见[覆盖审计§7](api/backend-coverage-audit.md)。优先当前原账号等级/消费音乐收藏数量两只读合同，不自动扩大VIP/跨账号资料/MV/creator/权益/缓存；FM mode/write及newAlbum等另包，下载文件/MPRIS/持久化要单独设计且不得默认新增依赖。本轮仅选择建议，尚未进入新实现。
 
 当前没有指定新的接手人／问题负责人；由维护者分配。详见[风险与决策](15-risks-and-open-questions.md)。
 
@@ -192,3 +196,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 - [ ] 每个增量按影响范围记录必要编译／测试结果及未复验项目，剩余风险同步更新本页和实现记录；提交、推送、发布分别授权。
 
 不交付：`CMakeUserPresets.json`、Qt Creator 私有配置、Qt 安装目录、编译数据库、构建缓存、本机日志、真实凭据。以上接收勾选项尚待实际接手者执行，不因本机复验而代勾。
+
+### 覆盖盘点交付记录（仅文档，代码基线7b0d762）
+
+97row ledger名称/顺序等于当前enum、24group／38E54W5X与44FR唯一行均offline sanity-check；当前Facade声明/源体与5窄合同已有原入口，不由旧graph/查不到member猜状态。实际header SHA保持42def478…，show-only48／together_http1，固定stash是commit且不更动；8files仅Markdown，source/test/CMake/lock/inventory/entry/QML未改。fixed440（164/40/236）、21固定reference hashes（含home/HTML）mismatch0、Python15 OK、最终worktree＋cached diff0；首次stage发现新Markdown末尾多空行，仅删空行后复核（worktree-only diff本不覆盖untracked），scanner最终合并staged/worktree/untracked保证8files；**867本地reference paths missing0、有限Cookie/signed-query flags0**，anchors未查、非全面安全。结果/ledger/logs为ignored `build/workspace-checks/backend-coverage-*`；原together-http-*和其824refs等历史文件不覆盖。未编译/Qt测试/Release/minQt/fresh LSP diagnostics/actual compileddeps/服务/SDK/keyring/音频/UI，不将旧911＋17等当新回归。task92 unparsed runner输出仍单独未闭；推荐下一包不等于开始实现或恢复暂停。只本地提交，无push/包/发布。

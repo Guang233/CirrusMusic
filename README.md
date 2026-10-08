@@ -18,7 +18,9 @@
 - [实施路线与任务拆解](docs/14-roadmap-and-backlog.md)
 - [待确认问题](docs/15-risks-and-open-questions.md) · [API 交接清单](docs/checklists/api-handoff.md)
 
-最新仅资料审计：[一起听Android摘要＋固定九HTTP对照](docs/api/together-protocol-material-audit.md)。NIM/chatRoomId/消息type与毫秒/serverSeq有新线索，但transport/auth/envelope、seq/version/时钟恢复权限与Linux许可未闭，HTTP存在crypto/profile/字段/schema差异。材料已收到，不自动解除实施暂停或恢复WIP；85ops/47登记不变，无新代码验证／SDK／新库／实网／UI，其他暂停项保留。
+最新后端覆盖盘点（docs-only）：[97operations／44FR对照与下一包建议](docs/api/backend-coverage-audit.md)。24families／38E54W5X，当前97ops／48登记不增；代码／合成／有限live／缺证／暂停分开，不能164−97算缺口或宣称全后端完成。下一候选当前账号等级＋音乐收藏计数两empty Weapi读，尚未接入、真实schema待证，不推权益/完整库。未跑本轮Qt/build/LSP diagnostics/deps/实网/SDK，paused及UI最后不变。
+
+此前仅资料审计（f384b7d时点）：[一起听Android摘要＋固定九HTTP对照](docs/api/together-protocol-material-audit.md)。NIM/chatRoomId/消息type与毫秒/serverSeq有新线索，但transport/auth/envelope、seq/version/时钟恢复权限与Linux许可未闭，HTTP存在crypto/profile/字段/schema差异。材料已收到，不自动解除实施暂停或恢复WIP；85ops/47登记不变，无新代码验证／SDK／新库／实网／UI，其他暂停项保留。
 
 ## VS Code 与当前骨架构建
 

@@ -66,7 +66,7 @@ recommend_songs、recommend_resource、history_recommend_songs 系列不是同�
 
 ## AUD-13：FM 是流式来源，垃圾桶是写操作
 
-personal_fm 与 personal_fm_mode 共用逻辑路径但协议／参数不同。fm_trash 是显式负反馈，不等于 next。续批、模式权限和时间参数待确认，不复制固定时长作为真实行为。
+personal_fm 与 personal_fm_mode 共用逻辑路径但协议／参数不同。fm_trash 是显式负反馈，不等于 next。原DEFAULT批次续补已在[独立FM连续链](fm-continuous-playback.md)合成接入；mode权限/参数和trash time含义与来源仍需单包确认，不复制固定时长作为真实行为。[覆盖盘点](backend-coverage-audit.md)复核固定personal_fm_mode为默认Eapi（mode/subMode/limit）、既有PersonalFm为Weapi；fm_trash仍显式Weapi负反馈，wrapper默认time25不是真实观察，不因same path假定同host/profile/业务或让next触发。下一优先候选是当前账号等级/音乐收藏计数两只读，FM extensions未实现，且不解除暂停或开启实网。
 
 ## AUD-14：上传插件不在模块直接调用清单内
 
