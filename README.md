@@ -4,7 +4,9 @@
 
 > 当前状态：Qt 模板入口 + 分层原生后端（认证／查询／队列／FM播放／歌词）+ 开发文档、固定版本 API 审计及定向 Qt Test，尚未实现可用的音乐客户端功能。本文中的产品目标不是已交付功能；本项目不是网易云音乐官方客户端。
 
-**最新代码增量**：[B-031 §9.9](docs/tasks/B-031-playback-observation.md)补写Windows SMTC／macOS Now Playing原生适配及共享有界回调／main-loop生命周期接缝；原binding＋private intent复验、≤8pending、exact native token撤销，不建第二player。Linux便携接缝Debug/Release、Clang与no-undefined链接通过；**两端原生代码缺SDK／Qt Kit，未编译或运行验证**。后续源码阶段未新增／运行测试、安装依赖或接产品／UI，全部default off；不能称三平台已完成。维护者允许本地commit、禁止push，提交边界见§9.10。
+**最新架构整理**：[评论写入Facade内部职责拆分](docs/tasks/comment-write-facade-refactor.md)。独立Core同步组件管理pending／接纳／取消结果／回包校验，Facade保留原API、共享ID、账号屏障与Qt通知；不扩业务／通用Manager。Debug／Release、Clang与Core-only链接通过；未新增或运行测试，仅本地commit、不push。
+
+**此前B-031代码增量**：[B-031 §9.9](docs/tasks/B-031-playback-observation.md)补写Windows SMTC／macOS Now Playing原生适配及共享有界回调／main-loop生命周期接缝；原binding＋private intent复验、≤8pending、exact native token撤销，不建第二player。Linux便携接缝Debug/Release、Clang与no-undefined链接通过；**两端原生代码缺SDK／Qt Kit，未编译或运行验证**。后续源码阶段未新增／运行测试、安装依赖或接产品／UI，全部default off；不能称三平台已完成。维护者允许本地commit、禁止push，提交边界见§9.10。
 
 **此前Linux MPRIS代码检查点**：[B-031 §9.8](docs/tasks/B-031-playback-observation.md)新增Linux MPRIS可选适配，复用同一观测／命令桥；独立I/O线程、显式私有Unix session bus、默认关闭，控制／metadata分别opt-in。Qt6.11.2 Debug/Release编译、实际flags Clang与no-undefined链接通过；未启动真实服务或验GNOME/KDE／最低Qt。没有新增或运行测试、产品接线或提交；Windows SMTC／macOS Now Playing仍未实现。
 

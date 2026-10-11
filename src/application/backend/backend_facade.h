@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application/account/qr_login_service.h"
+#include "application/backend/comment_write_messages.h"
 #include "application/ports/music_gateway.h"
 #include "domain/music/account_library_types.h"
 #include "domain/music/collection_types.h"
@@ -13,9 +14,15 @@
 #include <QHash>
 
 #include <QSet>
+#include <memory>
 
 namespace cirrus::application
 {
+
+namespace detail
+{
+class CommentWriteRequests;
+}
 
 enum class BackendState { Dormant, Starting, Ready, Failed, Stopping, Stopped };
 enum class StartupError { None, Configuration, Storage, GuestBootstrap };
@@ -52,18 +59,6 @@ struct ListeningReportDelivery {
     quint64 id = 0, generation = 0;
     domain::SessionToken context;
     domain::ListeningReportResult result;
-};
-
-struct CommentWriteCommand {
-    quint64 id = 0, generation = 0;
-    domain::SessionToken context;
-    QString accountId;
-    domain::CommentMutation mutation;
-};
-struct CommentWriteDelivery {
-    quint64 id = 0, generation = 0;
-    domain::SessionToken context;
-    domain::CommentWriteResult result;
 };
 
 struct TogetherCommand {
@@ -145,6 +140,7 @@ class BackendFacade final : public QObject
     Q_OBJECT
   public:
     explicit BackendFacade(QObject* parent = nullptr);
+    ~BackendFacade() override;
     [[nodiscard]] BackendState state() const { return m_state; }
     [[nodiscard]] domain::SessionSnapshot snapshot() const { return m_snapshot; }
     void start();
@@ -289,7 +285,7 @@ class BackendFacade final : public QObject
     void cancelListeningReportWith(quint64 id, domain::ReportError error);
     QHash<quint64, ListeningReportCommand> m_reports;
     QHash<quint64, CollectionCommand> m_collections;
-    QHash<quint64, CommentWriteCommand> m_commentWrites;
+    std::unique_ptr<detail::CommentWriteRequests> m_commentWrites;
     QHash<quint64, TogetherCommand> m_together;
     void invalidateTogether(domain::TogetherError error);
     void cancelTogetherWith(quint64 id, domain::TogetherError error);
@@ -329,7 +325,5 @@ Q_DECLARE_METATYPE(cirrus::application::ListeningReportCommand)
 Q_DECLARE_METATYPE(cirrus::application::ListeningReportDelivery)
 Q_DECLARE_METATYPE(cirrus::application::CollectionCommand)
 Q_DECLARE_METATYPE(cirrus::application::CollectionDelivery)
-Q_DECLARE_METATYPE(cirrus::application::CommentWriteCommand)
-Q_DECLARE_METATYPE(cirrus::application::CommentWriteDelivery)
 Q_DECLARE_METATYPE(cirrus::application::TogetherCommand)
 Q_DECLARE_METATYPE(cirrus::application::TogetherDelivery)

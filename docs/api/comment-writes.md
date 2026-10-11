@@ -66,6 +66,8 @@ issuer错误归TokenUnavailable／NotSent，第三方码不冒充NetEase provide
 
 ## 6. 合成验证与交接
 
+以下为原评论业务实现时点的历史测试证据。后续[Facade内部职责拆分](../tasks/comment-write-facade-refactor.md)仅移动Core评论请求管理与校验，不改本页业务合同；当前维护约定不新增或运行测试，重构只单列编译／静态／链接证据，不重用下述pass为重构验收。
+
 Qt6.11.2 Debug，LC_ALL=C.UTF-8／QT_FATAL_WARNINGS=1。最终10套件：comment_writes134、comments149、xeapi23、http_transport22、session_api_client24、backend_facade8、collections189、playlist_writes122、playlist_cover_writes57、bootstrap32，共**760 pass**；选定9条线程数据行**11 pass**（含init/cleanup），0fail/skip。登记42→43套件、74→79业务operation，v3 issuer是独立窄前置传输、原公钥链另计；非全43／Release／真实服务、Sdk、UI验收，原封面562＋11与新suite初次129＋3不累加。
 
 新suite：4variant／5动作、文本／Unicode／4096、23资源模式及native请求／原Cookie不轮换，独立固定path／payload／严格键／宽ID、真实XEAPI头／加密响应、17坏issuer行、60响应模式行、24三阶段cancel×logout行、Guest／MUSIC_U／foreign-account／missing-key、直接transport双重token白名单／实际XEAPI缺Cookie阻断、client毁于token／business两行、same-token账号／Guest／错generation／晚到Ack、8槽／UUID、fresh2token不复用／issuer8容量发送前取消。请求业务密文不声明逐次独立解密，既有crypto互操作另有向量；普通type映射不是实网成功证明。

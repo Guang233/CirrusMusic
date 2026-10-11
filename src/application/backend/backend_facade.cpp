@@ -1,4 +1,5 @@
 #include "backend_facade.h"
+#include "comment_write_requests.h"
 
 #include <QThread>
 #include <QTimer>
@@ -8,7 +9,12 @@
 namespace cirrus::application
 {
 
-BackendFacade::BackendFacade(QObject* parent) : QObject(parent) {}
+BackendFacade::BackendFacade(QObject* parent)
+    : QObject(parent), m_commentWrites(std::make_unique<detail::CommentWriteRequests>())
+{
+}
+
+BackendFacade::~BackendFacade() = default;
 
 void BackendFacade::setState(BackendState state)
 {
@@ -588,31 +594,21 @@ void BackendFacade::deliverCollection(CollectionDelivery delivery)
 quint64 BackendFacade::mutateComment(domain::CommentMutation mutation)
 {
     Q_ASSERT(QThread::currentThread() == thread());
-    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() ||
-        m_snapshot.phase != domain::SessionPhase::Authenticated ||
-        !domain::validMusicId(m_snapshot.accountId) || !mutation.isValid() ||
-        m_commentWrites.size() >= 8)
+    const auto command = m_commentWrites->submit(
+        {m_state == BackendState::Ready, m_generation, m_snapshot}, std::move(mutation), m_nextId);
+    if (!command)
         return 0;
-    for (const auto& p : std::as_const(m_commentWrites))
-        if (p.mutation.eventId == mutation.eventId)
-            return 0;
-    const auto id = ++m_nextId;
-    const CommentWriteCommand c{id, m_generation, m_snapshot.token, m_snapshot.accountId,
-                                std::move(mutation)};
-    m_commentWrites.insert(id, c);
-    emit commentWriteRequested(c);
-    return id;
+    emit commentWriteRequested(*command);
+    return command->id;
 }
 void BackendFacade::cancelCommentWith(quint64 id, domain::CommentWriteError error)
 {
-    if (!m_commentWrites.contains(id))
+    const auto completion = m_commentWrites->cancel(id, error);
+    if (!completion)
         return;
-    const auto c = m_commentWrites.take(id);
     emit commentWriteCancelRequested(id);
-    const domain::CommentWriteResult r{c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
-                                       error};
-    QTimer::singleShot(0, this, [this, id, context = c.context, r] {
-        emit commentWriteCompleted(id, context, r);
+    QTimer::singleShot(0, this, [this, completion = *completion] {
+        emit commentWriteCompleted(completion.id, completion.context, completion.result);
     });
 }
 void BackendFacade::cancelComment(quint64 id)
@@ -622,29 +618,16 @@ void BackendFacade::cancelComment(quint64 id)
 }
 void BackendFacade::invalidateCommentWrites(domain::CommentWriteError error)
 {
-    for (const auto id : m_commentWrites.keys())
+    for (const auto id : m_commentWrites->pendingIds())
         cancelCommentWith(id, error);
 }
-void BackendFacade::deliverCommentWrite(CommentWriteDelivery d)
+void BackendFacade::deliverCommentWrite(CommentWriteDelivery delivery)
 {
     Q_ASSERT(QThread::currentThread() == thread());
-    if (!m_commentWrites.contains(d.id))
-        return;
-    const auto c = m_commentWrites.take(d.id);
-    if (d.generation != c.generation || d.context != c.context || c.generation != m_generation ||
-        c.context != m_snapshot.token || c.accountId != m_snapshot.accountId ||
-        m_state != BackendState::Ready || m_snapshot.phase != domain::SessionPhase::Authenticated)
-        d.result = {c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
-                    domain::CommentWriteError::StaleContext};
-    if (d.result.step < domain::CommentWriteStep::Unobserved ||
-        d.result.step > domain::CommentWriteStep::Writing)
-        d.result.step = domain::CommentWriteStep::Unobserved;
-    if (d.result.outcome == domain::CommentWriteOutcome::Acknowledged &&
-        d.result.step != domain::CommentWriteStep::Writing)
-        d.result = {c.mutation.eventId, domain::CommentWriteOutcome::Unknown,
-                    domain::CommentWriteError::InvalidResponse};
-    d.result.eventId = c.mutation.eventId;
-    emit commentWriteCompleted(c.id, c.context, d.result);
+    const auto completion = m_commentWrites->complete(
+        {m_state == BackendState::Ready, m_generation, m_snapshot}, std::move(delivery));
+    if (completion)
+        emit commentWriteCompleted(completion->id, completion->context, completion->result);
 }
 
 quint64 BackendFacade::requestTogether(domain::TogetherRequest request)

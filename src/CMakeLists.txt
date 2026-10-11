@@ -39,6 +39,9 @@ target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
 add_library(cirrus_application STATIC
     application/backend/backend_facade.cpp
     application/backend/backend_facade.h
+    application/backend/comment_write_messages.h
+    application/backend/comment_write_requests.cpp
+    application/backend/comment_write_requests.h
     application/account/login_scheduler.cpp
     application/account/login_scheduler.h
     application/account/qr_login_service.cpp
