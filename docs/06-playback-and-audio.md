@@ -4,6 +4,14 @@
 
 最新[播客／声音离线接缝阶段1](api/spoken-media-seam.md)已分离物理MediaSource：媒体port／buffer／Qt backend不含Song／Program／Voice身份，唯一歌曲coordinator仍先核对Song／token／TTL再下沉；独立PlaybackEntity／AudioTrackId仅结构准备，未接活动快照／历史或可信binding，不生成第二owner。373＋thread13／新28、0fail／原audio1默认skip，未证明实际节目／声音可播，消费binding与音源门禁仍保留；不恢复前三项或实网／UI，64MiB／45s等限制不扩。
 
+最新系统媒体源码：[B-031 §9.9](tasks/B-031-playback-observation.md)补写SMTC／Now Playing原生代码及Core有界回调／main-loop生命周期，默认关闭、原binding/private intent复验，关闭不停止音乐。Linux便携接缝编译通过；Windows/macOS未原生编译／运行，不能称三平台支持已完成；无新增或运行测试、产品接线或依赖安装。
+
+此前Linux系统媒体代码检查点：[B-031 §9.8](tasks/B-031-playback-observation.md)Linux MPRIS已写入可选默认OFF target；同一publisher/feed／原SystemMediaCommands桥、owner私有来源复验，独立D-Bus I/O线程与异步关闭，无第二player／clock／query。controls与metadata另行opt-in，Rate1／Position不PropertiesChanged／Seeked仅确认反馈；Debug/Release与Clang/链接通过，但未启动真实bus服务／新增或运行测试。SMTC／macOS Now Playing仍未实现，产品／桌面／设备／权限验收不变。
+
+此前O3b2：[B-031 §9.6](tasks/B-031-playback-observation.md)live原来源→mailbox→Linux单I/O线程/真实socket、严格发现/双向UID/hello与显式XDG选择限定I/S；新50、Debug361＋runtime6/Release307，0fail/skip。真实八慢client的input/retained＋native pending、单票wake/隐私/期限/关闭已验；新实例不保留旧clock/document关联，也不撤销private retirement。无历史changed授权/第二播放链/自动业务查询/产品接线，default off、58登记非全58；发行身份/另一OS user/minQt/沙箱/部署性能及adapter仍G。
+
+此前维护者选择：[B-031统一播放状态／六轨歌词本机只读IPC及三平台系统媒体设计](tasks/B-031-playback-observation.md)。Linux MPRIS、Windows SMTC、macOS Now Playing共用同一观测投影／命令桥；IPC含歌词文档与独立游标，不依赖UI、不加第二播放器/时钟。原设计后已按继续选择接O1 Core投影/coherent sample、实际volume反馈port、offset/位置到达及保守native位置不连续接缝，限定合成验收见§9.1；后续O2a codec/framer/完整golden/六轨分页限定I/S见§9.2（125新、5selected216＋runtime6），后续O2b逻辑连接/订阅/增量编码/退役/背压fake限定I/S见§9.3（43新/6selected259＋runtime6），后续O3a Linux私有资源/native UID隔离harness见§9.4（32新/3selected200），仍无Core/真实调度/发现消费者/另一OS用户负测或产品状态server；设备/decoder效果与三平台adapter仍G。不默认安装新平台依赖、开启HTTP或恢复paused。两个账号API先不做，队列/历史持久化后续另包。
+
 ## 1. 组件职责
 
 | 组件 | 职责 |
@@ -16,7 +24,9 @@
 | QtPlaybackBackend | QMediaPlayer/QAudioOutput 实现；把 Qt 状态映射为统一后端事件 |
 | LyricTimeline | 已实现：独立六轨时间索引；ListeningSession用媒体位置及试听起点定位，不建立独立音频时钟 |
 | PlayerViewModel | 对 QML 发布脱敏快照及窄命令接口 |
-| MprisAdapter | 对同一协调器发布 D-Bus 能力，不维护第二套播放状态 |
+| PlaybackObservationPublisher（O1已实现） | Core-only coherent投影，原绑定／same-token隐私屏障；同线程历史值，未来跨线程consumer仍须单latest与消费时复验 |
+| PlaybackObservationCodec／LinuxObservationService（限定已实现） | codec/framer/golden/六轨分页与便携逻辑连接已接；O3b2另有参数化default-off Linux owner→真实socket/严格发现组合，线程/限额/隐私见§9.6；非产品端点/发行验收，不拥有媒体或发官方请求 |
+| SystemMediaAdapters（分阶段） | Linux MPRIS可选代码／编译已接，桌面运行仍G；[§9.9](tasks/B-031-playback-observation.md)新增Windows SMTC／macOS Now Playing原生源代码、owner/main-loop与有界callback/private intent gate。仅Linux便携接缝编译通过，原生SDK／运行未验，全default off／不接产品；命令仍通过ListeningSession唯一入口，不维护第二套权威状态 |
 
 使用单路主音频实例；视频／MV 明确排除。一起听仍通过同一个协调器执行，不另建第二套播放器。两个 QML 页面不能各自实例化一个 `MediaPlayer`。
 

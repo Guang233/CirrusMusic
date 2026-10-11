@@ -75,7 +75,7 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-030 | 歌曲／专辑／歌单／传统节目评论读取、热门／排序／楼层／统计，播客容器已确认通用读取；点赞／取消独立写操作 | P1 / M2–M3 | API | TC-COMMENT |
 | FR-031 | 发表评论、回复、删除本人评论；处理审核、限流与不确定结果 | P1 / M3 | API | TC-COMMENT |
 | FR-032 | **已撤销：MV／视频功能明确排除，保留编号不复用** | — | — | TC-VIDEO（已撤销） |
-| FR-033 | MPRIS 系统媒体控制、封面与元数据、媒体键操作 | P0 / M3 | 平台 | TC-LINUX |
+| FR-033 | Linux MPRIS、Windows SMTC、macOS系统媒体状态与控制；本机程序只读获取当前播放状态、六轨歌词及独立游标；封面按安全能力另接 | P0 / M2–M4 | 平台/本地 | TC-SYSTEM-MEDIA／TC-PLAYBACK-OBSERVATION／TC-LINUX |
 | FR-034 | 托盘、切歌通知、关闭行为和后台播放；无托盘环境可退出 | P1 / M3 | 平台 | TC-LINUX |
 | FR-035 | 应用内快捷键；全局快捷键按桌面能力提供并可禁用 | P1 / M3 | 平台 | TC-LINUX |
 | FR-036 | 桌面歌词／独立歌词窗；Wayland 不支持置顶或穿透时说明限制 | P2 / M6 | 平台 | TC-LINUX |
@@ -88,7 +88,7 @@ Cirrus 是“可靠播放优先、音乐库完整、与 Linux 桌面自然融合
 | FR-043 | 一起听建房／加入／退出、心跳、播放与队列同步、断线恢复；双账号验证，不以 HTTP 包装器代替实时协议 | P1 / M3 | API/播放后端 | TC-TOGETHER-HTTP／TC-TOGETHER |
 | FR-044 | 播客／声音消费端搜索、详情、内容列表与播客订阅读取及后续播放，独立身份／来源／历史，不包含创作者管理工作台 | P1 / M2–M3 | API/播放后端 | TC-PODCAST-VOICE |
 
-**需求覆盖对照**：[107-operation／逐44-FR账本](api/backend-coverage-audit.md)已跟随百科子集更新，26families/39E63W5X；I/S/L/G/P/X分开，107ops/50show-only登记不是44FR完成，固定164adopt与op不能作差值。初始53f8f3e的docs-only97／48仍为历史审计时点，不回填新测试。FR005/004相关当前账号等级与消费音乐收藏计数两empty Weapi读仍未接入候选、真实schema待证，不推会员/可播权/库完整性/编辑权或跨账号MV/creator。持久化/文件/平台/UI另设计，暂停项不恢复。
+**需求覆盖对照**：[107-operation／逐44-FR账本](api/backend-coverage-audit.md)已跟随百科子集更新，26families/39E63W5X；I/S/L/G/P/X分开，107ops/当前Linux58show-only登记（百科时50）不是44FR完成，固定164adopt与op不能作差值。初始53f8f3e的docs-only97／48仍为历史审计时点，不回填新测试。FR005/004相关当前账号等级与消费音乐收藏计数两empty Weapi读仍未接入候选，维护者明确先不做、真实schema待证，不推会员/可播权/库完整性/编辑权或跨账号MV/creator。持久化/文件/平台/UI另设计，暂停项不恢复。
 
 FR-008／009／010／015 常规发现增量：[新碟、艺人、相似推荐9读取](api/discovery-browse-reads.md)已按维护者先补发现的选择typed合成接入。Latest/NewAlbums/显式year-month AlbumCharts，ArtistBrowse/PopularArtists/独立ArtistTopSongs，SimilarSongs/Artists及原SongId SimilarPlaylists；不伪完整榜/艺人库/权益。原read16／query-content-kind/token-generation／取消关闭，2MiB／500等严格本地候选，empty[]与missing/null失败分开，保plain text／宽ID／重复顺序／optional未知，不自动图片/详情/播放/report/write/cache或UI。初始331b4fb新165／1167为历史；[公开窗口](api/discovery-public-response-verification.md)11次native metadata、301即停。月榜week/month改optional（至少一组，missing未知／[]空）与相似歌曲100有界批／原分页未证标记；修后188／22affected1190＋runtime18，0fail/skip，5fresh0／14objects6998逐对象依赖禁入0／UI0，未重发实网。不是广泛服务/账号/完整schema/Guest免登录/完整FR验收。TC-DISCOVERY-BROWSE／R-033另记。复杂song_wiki_info仅观察data.blocks6/rnData部分结构，资源绑定／块类及其余语义未闭、不注册假入口，不以已有SongWikiSummary基础文本套另path或借UGC creator结构；完整百科/署名仍待补证。
 
@@ -117,6 +117,10 @@ FR-011／012 技术进度：[删除／排序](api/playlist-delete-and-order-writ
 FR-008／009／010 技术进度：[四类资料／介绍](api/catalog-introduction-and-metadata-reads.md)已合成接入：复用歌单／专辑原description及艺人briefDesc，追加Song别名／译名／发行原值、Album别名／发行公司／类型、Artist别名／译名、Playlist标签／公开creator摘要／计数；独立艺人分节长介绍及歌曲四种百科基础文本。optional未知与显式空分开，纯文本／原token／16槽，不自动加载下游、图片／缓存／写／播放／报告；无生成歌曲叙事、全制作署名／完整复杂百科承诺，真实schema与UI尚未验收，FR不整体标完成。
 
 FR-030 技术进度：[资源评论只读包](api/comment-reads.md)五类入口／八operation已合成接入，严格身份／分页／统计missing／原token隔离；普通评论不含播客容器，Voice／艺人无已确认绑定。仅候选schema，不是实网／UI验收；[FR-030-031五动作写](api/comment-writes.md)已明确批准原生v3链并合成接入：原账号／独立8槽／Unknown，发布／回复四类型、reaction／delete另含Podcast候选，不开放Voice／艺人。token失败不发业务、无JS／SDK／外部token，五动作各自独立，无新评论ID／作者所有权推断或自动重试／读取／乐观更新。删除本人／审核／计数／服务兼容及UI未真实验收，FR不整体标完成；账号评论历史／通知未交付。
+
+FR-033后续O3b2：[B-031 §9.6](tasks/B-031-playback-observation.md)owner→真实Linux单线程socket与严格发现/双向UID/hello关联、显式XDG选择限定I/S，新50、Debug361＋runtime6/Release307、0fail/skip；真实八慢client/input/retained＋native pending/wake/deadline/关闭已验。不以历史通知授权，default off/不接产品；发行身份/另一OS用户负测/沙箱/minQt/部署性能与三平台adapter仍G，O3未整体完成、107ops不增、58登记非全58。
+
+此前FR-033新增范围已由维护者确认：[B-031播放状态／歌词IPC与三平台系统媒体设计](tasks/B-031-playback-observation.md)，后续继续选择已接O1 Core观测/窄桥与O2a严格codec/framer/完整golden/六轨分页限定I/S（§9.2）；后续O2b连接状态机/订阅/分步编码/退役/背压fake限定I/S见§9.3（43新/6selected259＋runtime6），后续O3a Linux私有资源/kernel UID/harness见§9.4（32新/3selected200），正式身份/XDG消费者/另一OS用户负测/私有owner组合与真实bounded IO仍G，不是可消费状态server；三平台adapter仍G，未安装native或DBus依赖。IPC提供当前已持有的六轨快照与独立游标，不新增官方读、控制RPC或公网服务；系统媒体命令走唯一ListeningSession，不建第二owner。SMTC/macOS服务范围不代表整个客户端三平台发行已通过；FR-036桌面歌词窗口仍后置，44FR/107operations不变，O1历史登记51、O2a历史52、O2b历史53、当前Linux54登记（不是全54验收），原设计50登记/文档检查及历史Qt证据不倒填新能力。
 
 FR-042 内的各能力必须分别探测与验收，不可因实现定时器就宣称“高级音频已完成”。不支持的能力不显示伪可用开关。
 

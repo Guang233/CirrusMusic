@@ -140,6 +140,12 @@ bool PlaybackQueue::next(bool naturalEnd, bool ignoreSingleRepeat)
     }
     return choose(m_order.first(), true);
 }
+bool PlaybackQueue::canNext() const
+{
+    return !m_order.isEmpty() && (m_historyCursor + 1 < m_history.size() ||
+                                  m_order.indexOf(m_state.active) + 1 < m_order.size() ||
+                                  m_state.repeat != QueueRepeat::Off);
+}
 bool PlaybackQueue::previous()
 {
     return m_historyCursor > 0 && choose(m_history[--m_historyCursor], false);

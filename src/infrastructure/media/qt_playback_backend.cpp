@@ -1,4 +1,5 @@
 #include "qt_playback_backend.h"
+#include "seek_observation.h"
 #include <QAudioDevice>
 #include <QMediaDevices>
 #include <QThread>
@@ -139,12 +140,14 @@ void QtPlaybackBackend::openBuffered(LoadToken token)
         if (m_active && token == m_token)
             m_meter.breakInterval();
     });
-    connect(m_player.get(), &QMediaPlayer::positionChanged, this, [this, token](qint64 position) {
-        if (m_active && token == m_token && m_seekTarget && position == *m_seekTarget) {
-            m_seekTarget.reset();
-            m_meter.breakInterval();
-        }
-    });
+    connect(
+        m_audio.get(), &QAudioOutput::volumeChanged, this,
+        [this, token](float value) {
+            PlaybackEvent feedback{token, Kind::Volume};
+            feedback.volumeLinear = value;
+            send(feedback);
+        },
+        Qt::QueuedConnection);
     connect(
         m_player.get(), &QMediaPlayer::errorOccurred, this,
         [this, token](QMediaPlayer::Error, const QString&) { fail(token, PlaybackError::Decode); },
@@ -169,6 +172,11 @@ void QtPlaybackBackend::openBuffered(LoadToken token)
                 send({token, Kind::Seekable, {}, m_player->isSeekable()});
                 if (!m_active || token != m_token)
                     return;
+                PlaybackEvent volume{token, Kind::Volume};
+                volume.volumeLinear = m_audio->volume();
+                send(volume);
+                if (!m_active || token != m_token)
+                    return;
                 send({token, Kind::Ready});
             } else if (status == QMediaPlayer::EndOfMedia)
                 ended(token);
@@ -183,18 +191,29 @@ void QtPlaybackBackend::openBuffered(LoadToken token)
                 send({token, Kind::State, PlaybackState::Paused});
         },
         Qt::QueuedConnection);
-    connect(
-        m_player.get(), &QMediaPlayer::positionChanged, this,
-        [this, token](qint64 value) {
+    connect(m_player.get(), &QMediaPlayer::positionChanged, this, [this, token](qint64 value) {
+        if (!m_active || token != m_token)
+            return;
+        const bool confirmedSeek =
+            m_seekTarget &&
+            confirmedPositionJump(m_seekFrom, *m_seekTarget, value,
+                                  m_sampleClock.elapsed() - m_seekIssuedAtMs, m_seekWhilePlaying);
+        if (m_seekTarget) {
+            m_seekTarget.reset(); // first signal only: later natural progress isn't proof
+            m_meter.breakInterval();
+        }
+        // Capture effect at the original signal, but never dispose/emit outward
+        // in QMediaPlayer's signal stack. Retired loads stay tagged and ignored.
+        QTimer::singleShot(0, this, [this, token, value, confirmedSeek] {
             if (!m_active || token != m_token)
                 return;
             if (m_preview && value >= m_preview->endMs - m_preview->startMs) {
                 ended(token);
                 return;
             }
-            send({token, Kind::Position, {}, value});
-        },
-        Qt::QueuedConnection);
+            send({token, confirmedSeek ? Kind::SeekConfirmed : Kind::Position, {}, value});
+        });
+    });
     connect(
         m_player.get(), &QMediaPlayer::seekableChanged, this,
         [this, token](bool value) { send({token, Kind::Seekable, {}, value}); },
@@ -238,6 +257,9 @@ void QtPlaybackBackend::seek(qint64 positionMs)
     m_meter.breakInterval();
     if (m_player->position() == target && !m_seekTarget)
         return; // no asynchronous jump needed
+    m_seekFrom = m_player->position();
+    m_seekIssuedAtMs = m_sampleClock.elapsed();
+    m_seekWhilePlaying = m_player->isPlaying();
     m_seekTarget = target;
     m_player->setPosition(target);
 }

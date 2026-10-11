@@ -2,6 +2,7 @@
 #include "application/music/personal_fm_source.h"
 #include <QThread>
 #include <QTimer>
+#include <chrono>
 #include <utility>
 
 namespace cirrus::application
@@ -98,6 +99,8 @@ void ListeningSession::reset()
     m_playback = {};
     m_token = {};
     m_queueContext = {};
+    m_sourceSession = {};
+    m_positionObservedAt.reset();
     m_auto = false;
     m_autoVisited.clear();
     m_terminalHandled = false;
@@ -131,6 +134,7 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     const auto entry = candidate.current();
     if (!entry || m_backend.state() != BackendState::Ready)
         return false;
+    const auto sourceSession = m_backend.snapshot();
     const auto revision = ++m_revision;
     m_starting = true;
     const auto id = m_backend.playSong(entry->song, quality, intent);
@@ -157,6 +161,8 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     m_playback = m_backend.playback();
     m_token = m_playback.token;
     m_queueContext = m_token.session;
+    m_sourceSession = sourceSession;
+    m_positionObservedAt.reset();
     m_history.begin(m_token, m_backend.snapshot().accountId, entry->song,
                     fm ? ListeningMode::PersonalFm : ListeningMode::Queue,
                     fm ? QUuid{} : entry->id);
@@ -246,6 +252,21 @@ bool ListeningSession::next()
                  m_intent == TransportIntent::Pause ? m_intent : TransportIntent::Play, m_quality,
                  false);
 }
+bool ListeningSession::canGoNext() const
+{
+    if (m_backend.state() != BackendState::Ready || !queueContextMatches())
+        return false;
+    return m_mode == ListeningMode::PersonalFm ? current() && !m_fmWaiting && m_fm
+                                               : m_queue.canNext();
+}
+bool ListeningSession::canGoPrevious() const
+{
+    if (m_backend.state() != BackendState::Ready || !queueContextMatches())
+        return false;
+    const bool restart = current() && m_playback.positionMs > 3000 && m_playback.seekable;
+    return m_mode == ListeningMode::PersonalFm ? restart && !m_fmWaiting
+                                               : restart || m_queue.canPrevious();
+}
 bool ListeningSession::previous()
 {
     if (m_mode == ListeningMode::PersonalFm)
@@ -319,6 +340,7 @@ bool ListeningSession::stop()
         return true;
     m_token = m_backend.playback().token;
     m_playback = m_backend.playback();
+    m_positionObservedAt.reset();
     m_intent = TransportIntent::Stop;
     m_auto = false;
     m_autoVisited.clear();
@@ -338,8 +360,11 @@ bool ListeningSession::pause()
     if (current() && m_mode == ListeningMode::PersonalFm &&
         (m_fmWaiting || m_playback.state == PlaybackState::Ended ||
          (m_auto && m_playback.state == PlaybackState::Failed))) {
-        if (m_intent == TransportIntent::Pause)
+        if (m_intent == TransportIntent::Pause) {
+            recordControlIntent();
             return true;
+        }
+        recordControlIntent();
         m_intent = TransportIntent::Pause;
         m_playback.intent = m_intent;
         emit playbackChanged(m_playback);
@@ -350,6 +375,7 @@ bool ListeningSession::pause()
         return false;
     if (!m_backend.pausePlayback())
         return false;
+    recordControlIntent();
     m_intent = TransportIntent::Pause;
     m_playback.intent = m_intent;
     emit playbackChanged(m_playback);
@@ -360,8 +386,11 @@ bool ListeningSession::resume()
     if (!queueContextMatches())
         return false;
     if (m_mode == ListeningMode::PersonalFm && m_fmWaiting) {
-        if (m_intent == TransportIntent::Play && !m_fmBlocked)
+        if (m_intent == TransportIntent::Play && !m_fmBlocked) {
+            recordControlIntent();
             return true;
+        }
+        recordControlIntent();
         m_intent = TransportIntent::Play;
         m_playback.intent = m_intent;
         emit playbackChanged(m_playback);
@@ -371,6 +400,7 @@ bool ListeningSession::resume()
         m_playback.state != PlaybackState::Failed && m_playback.state != PlaybackState::Ended) {
         if (!m_backend.resumePlayback())
             return false;
+        recordControlIntent();
         m_intent = TransportIntent::Play;
         m_playback.intent = m_intent;
         emit playbackChanged(m_playback);
@@ -381,15 +411,25 @@ bool ListeningSession::resume()
 }
 bool ListeningSession::seek(qint64 position)
 {
-    return current() && m_backend.seekPlayback(position) != 0;
+    if (!current() || !m_backend.seekPlayback(position))
+        return false;
+    recordControlIntent();
+    return true;
 }
-bool ListeningSession::setVolume(float linear) { return m_backend.setPlaybackVolume(linear) != 0; }
+bool ListeningSession::setVolume(float linear)
+{
+    if (!m_backend.setPlaybackVolume(linear))
+        return false;
+    recordControlIntent();
+    return true;
+}
 bool ListeningSession::setModes(QueueOrder order, QueueRepeat repeat)
 {
     if (m_mode == ListeningMode::PersonalFm || (m_queueContext.isValid() && !queueContextMatches()))
         return false;
     if (!m_queue.setModes(order, repeat))
         return false;
+    recordControlIntent();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -398,6 +438,7 @@ bool ListeningSession::setLyricOffset(qint64 offset)
     if (offset < -120000 || offset > 120000)
         return false;
     m_userOffset = offset;
+    emit lyricOffsetChanged(offset); // even an empty/unchanged cursor needs a new observation
     refreshCursors();
     return true;
 }
@@ -443,6 +484,11 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
     if (snapshot.token != m_token)
         return;
     const auto revision = m_revision;
+    if (snapshot.positionRevision != m_playback.positionRevision) {
+        m_positionObservedAt = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now().time_since_epoch())
+                                   .count(); // owner arrival, not decoder/acoustic time
+    }
     m_playback = snapshot;
     m_playback.intent = m_intent;
     if (m_history.observe(snapshot)) {

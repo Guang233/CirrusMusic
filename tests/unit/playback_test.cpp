@@ -55,8 +55,11 @@ class PlaybackTest : public QObject
         emit backend.event({token, Kind::State, PlaybackState::Playing});
         QCOMPARE(player.snapshot().state, PlaybackState::Playing);
         QVERIFY(player.pause());
+        QCOMPARE(player.snapshot().state, PlaybackState::Playing); // acceptance isn't effect
         emit backend.event(
             {token, Kind::State, PlaybackState::Playing}); // stale transport intention
+        QCOMPARE(player.snapshot().state, PlaybackState::Playing);
+        emit backend.event({token, Kind::State, PlaybackState::Paused});
         QCOMPARE(player.snapshot().state, PlaybackState::Paused);
     }
     void outOfOrderSourcesAndRetiredMedia()

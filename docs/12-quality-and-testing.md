@@ -1,5 +1,7 @@
 # 12 · 质量保障与测试策略
 
+**维护者最新实施要求**：后续代码不必新增测试；当前[B-031跨平台资源／三平台媒体源代码阶段§9.7–9.9](tasks/B-031-playback-observation.md)没有新增或运行测试，保留旧测试及下述历史记录／产品策略，不将未跑用例算通过。仍做编译、格式与主动静态检查；Linux共享适配通过不替代缺SDK的Windows/macOS原生编译／安全／运行证据，发行门禁不自动撤销。
+
 本轮：[受限百科纯文本](api/song-wiki-text-subset.md)88／23affected Debug1278＋16选runtime函数17data/init-cleanup19，0fail/skip；18fresh all-server LSP0、13 format0、14实际应用对象含MOC7004逐对象/602唯一deps禁入0/UI0。107ops/50登记不等于全50/Release/minQt/服务/身份/权益/产品验收；四次公开结构窗口与实现后离线证据分开。历史失败、修因、MOC/compile DB与旧#92按契约保留。
 
 > 状态：产品测试策略提案。API 清单已有离线 Python 工具测试，与 C++ 协议／业务测试分开统计；下列测试族不是已通过的产品验收报告。
@@ -42,6 +44,8 @@
 | TC-PLAY | FR-017；NFR-004/006 | load/pause/seek、A→B→C 乱序、重复结束事件、坏源、停止时晚到事件 |
 | TC-QUEUE | FR-019/020 | 重复歌曲、删除当前项、拖拽版本冲突、随机历史、单曲循环手动 next、全部失败有限终止 |
 | TC-LYRICS | FR-021/022 | 多时间标签、翻译错位、正负偏移、重叠、坏格式、逐字降级、无歌词、seek 后同步 |
+| TC-PLAYBACK-OBSERVATION（O3b2 Linux限定I/S；发行门禁未闭） | FR-017/020/021/022/033；NFR-008/011/012；B-031 | 最新[O3b2证据§9.6](tasks/B-031-playback-observation.md)：真实Linux单线程socket/严格发现/双向UID/hello、显式XDG、八慢client/≤16KiB input/≤2MiB retained＋native pending/≤16MiB total、wake/deadline/隐私/关闭，新50/Debug361＋runtime6/Release307、0fail/skip，58登记非全58；发行身份/另一OS用户负测/沙箱/minQt/部署性能与adapter仍G、#92未闭。以下是独立历史：[O3b1证据§9.5](tasks/B-031-playback-observation.md)：owner→mailbox同步private retire/live原来源验证/重入与单票wake20新，8selected311＋runtime6、0fail/skip；52fresh0/实际Clang3 units0/Debug0，application16objects8124/611与feed2objects1113/567禁入0，当时55登记非全55，彼时真实I/O组合与另一OS用户/发现/发行仍G、#92未闭；此前[O1证据§9.1](tasks/B-031-playback-observation.md)：coherent/重入、六轨多游标/preview/offset、同token phase往返/旧load、actual反馈port、≤8命令/新意图、Core实际deps含MOC；新suite37，12affected228/0fail/1音频skip、选定runtime6；O1历史51登记；后续O2a§9.2固定golden/16错误、framer/strictUTF8/duplicate/depth/整数词法/wire限额±1/六轨分页/fake分块consumer：125新、5selected216＋runtime6、0fail/skip；O2a历史52；后续O2b§9.3：43连接新/6selected259＋runtime6、0fail/skip，53登记非全53；hello/pending/rate/订阅基线7topic/partial/8慢client/单latest/增量取消/private fence与旧epoch/retained-prefix2MiB已fake验证。后续§9.4 O3a Linux私有资源/kernel UID隔离harness32新/3selected200、0fail/skip，真实0700/0600、碰撞/替换/清理/双向UID与fork跨process正测；当时Linux54登记非全54；彼时后续owner/I/O/发现门禁未闭，最新限定状态见§9.6，O3整体未完成 |
+| TC-SYSTEM-MEDIA（运行门禁；不新增测试） | FR-033；B-017/031 | [§9.8](tasks/B-031-playback-observation.md)Linux MPRIS代码Debug/Release编译、实际flags Clang3 units/no-undefined链接通过，未启动真实服务／运行测试；GNOME/KDE、微秒/stale TrackId/Seeked/能力、最小Qt／权限仍G。后续[§9.9](tasks/B-031-playback-observation.md)SMTC owned HWND/STA及macOS playbackState/exact token撤销代码已写，有界scalar/private intent gate与main生命周期仅Linux便携代码Debug/Release/Clang4 units/Core链接通过；两端原生SDK／编译／运行仍G，无新增或运行测试。另一平台必须有原生独立证据，不以Linux编译替代 |
 | TC-UI | FR-023/040；NFR-002/003/013 | 迷你栏／沉浸页状态相同、切页不断播、加载／空／错、长标题和大量行 |
 | TC-HISTORY | FR-024 | 真实收听阈值、seek 不增加已听量、短歌、远程历史分开、清理范围 |
 | TC-DOWNLOAD | FR-025/026；NFR-007 | Range 200/206/416、URL 过期换源、暂停、磁盘满、崩溃于 rename 前后、权限失效 |

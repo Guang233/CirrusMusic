@@ -1,0 +1,18 @@
+{
+  "instanceId": "00000000-0000-4000-8000-000000000001", "viewEpoch": "00000000-0000-4000-8000-000000000002", "trackId": null,
+  "sequence": "18446744073709551615", "lyricsRevision": "0", "availability": "unavailable",
+  "playback": {"state": "empty", "intent": "stop"}, "track": null,
+  "metadataExportStatus": "unknown", "metadata": null,
+  "timing": {"positionMs": null, "durationMs": null, "songPositionMs": null, "preview": null},
+  "clock": {"sampleMonoMs": "1500", "positionObservedMonoMs": null},
+  "settings": {"volumeLinear": null, "mode": "queue", "order": null, "repeat": null, "fmWaiting": false, "fmBlocked": false},
+  "capabilities": {"canPlay": false, "canPause": false, "canStop": false, "canNext": false, "canPrevious": false, "canSeek": false, "canSetModes": false, "canSetVolume": false},
+  "failure": null,
+  "lyrics": {"state": "none", "documentExportStatus": "notReady", "cursorExportStatus": "notReady", "userOffsetMs": 0, "providerNoLyric": null, "instrumental": null,
+    "tracks": {
+      "original.standard": {"summary": null, "cursor": null}, "original.enhanced": {"summary": null, "cursor": null},
+      "translation.standard": {"summary": null, "cursor": null}, "translation.enhanced": {"summary": null, "cursor": null},
+      "romanization.standard": {"summary": null, "cursor": null}, "romanization.enhanced": {"summary": null, "cursor": null}
+    }
+  }
+}

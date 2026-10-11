@@ -2,6 +2,7 @@
 #include "infrastructure/media/media_buffer.h"
 #include "infrastructure/media/media_source_policy.h"
 #include "infrastructure/media/qt_playback_backend.h"
+#include "infrastructure/media/seek_observation.h"
 #include <QDataStream>
 #include <QEventLoop>
 #include <QSignalSpy>
@@ -51,6 +52,47 @@ class MediaTest : public QObject
 {
     Q_OBJECT
   private slots:
+    void conservativeSeekProof_data()
+    {
+        QTest::addColumn<qint64>("before");
+        QTest::addColumn<qint64>("target");
+        QTest::addColumn<qint64>("observed");
+        QTest::addColumn<qint64>("elapsed");
+        QTest::addColumn<bool>("playing");
+        QTest::addColumn<bool>("confirmed");
+        QTest::newRow("paused-jump")
+            << qint64(0) << qint64(100) << qint64(100) << qint64(1) << false << true;
+        QTest::newRow("backward") << qint64(1000) << qint64(900) << qint64(900) << qint64(10)
+                                  << true << true;
+        QTest::newRow("large-forward")
+            << qint64(0) << qint64(5000) << qint64(5000) << qint64(10) << true << true;
+        QTest::newRow("small-natural")
+            << qint64(0) << qint64(100) << qint64(100) << qint64(100) << true << false;
+        QTest::newRow("late-natural")
+            << qint64(0) << qint64(5000) << qint64(5000) << qint64(5000) << true << false;
+        QTest::newRow("wrong-position")
+            << qint64(0) << qint64(5000) << qint64(100) << qint64(10) << true << false;
+        QTest::newRow("unchanged")
+            << qint64(100) << qint64(100) << qint64(100) << qint64(0) << false << false;
+        QTest::newRow("invalid-clock")
+            << qint64(0) << qint64(5000) << qint64(5000) << qint64(-1) << true << false;
+        QTest::newRow("negative") << qint64(-1) << qint64(5000) << qint64(5000) << qint64(1)
+                                  << false << false;
+        QTest::newRow("over-bound")
+            << qint64(0) << ObservedPlayback::MaximumMs + 1 << ObservedPlayback::MaximumMs + 1
+            << qint64(1) << false << false;
+    }
+    void conservativeSeekProof()
+    {
+        QFETCH(qint64, before);
+        QFETCH(qint64, target);
+        QFETCH(qint64, observed);
+        QFETCH(qint64, elapsed);
+        QFETCH(bool, playing);
+        QFETCH(bool, confirmed);
+        QCOMPARE(media::confirmedPositionJump(before, target, observed, elapsed, playing),
+                 confirmed);
+    }
     void sourcePolicy_data()
     {
         QTest::addColumn<QString>("url");

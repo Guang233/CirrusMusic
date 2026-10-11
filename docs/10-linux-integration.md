@@ -2,6 +2,12 @@
 
 > 状态：提案。Linux 不是单一桌面；Wayland、X11、GNOME、KDE 与沙箱环境分别验证，不能靠开发机“看起来正常”外推。
 
+最新MPRIS代码：[B-031 §9.8](tasks/B-031-playback-observation.md)可选Qt DBus target默认关闭，显式private runtimeRoot/bus，不采用环境地址／autolaunch／TCP；独立I/O线程从原观测投影发布，控制经唯一owner桥再次private验证。Rate恒1（设置0请求Pause），Position与CanControl不发PropertiesChanged，Seeked仅确认反馈；metadata与控制分别opt-in，无歌词/artURL/OpenUri。Debug/Release编译、Clang、no-undefined链接通过；无新增／执行测试或真实bus服务启动，GNOME/KDE／沙箱／最低Qt／发行身份／权限仍G，产品入口未接。
+
+此前O3b2：[B-031 §9.6](tasks/B-031-playback-observation.md)Core private owner→单I/O线程/native socket、严格私有发现/双向SO_PEERCRED/hello实例关联及显式XDG选择限定I/S；新50、Debug361＋runtime6/Release307、0fail/skip，58登记非全58。八真实慢client/input/retained＋native pending/wake/期限/隐私/异步thread关闭已验；production namespace不猜测、default off/无产品接线。发行身份/另一真实OS user负测/沙箱/minQt/部署性能与MPRIS仍G，无新依赖。
+
+此前[B-031设计](tasks/B-031-playback-observation.md)将MPRIS等非视觉媒体服务提前到播放后端：另含Windows SMTC／macOS Now Playing与独立本机只读状态/六轨歌词IPC；O1共同Core观测/命令桥与O2a纯codec/framer/golden/六轨分页限定I/S，O2b逻辑连接/订阅/退役/背压fake也已限定I/S（§9.3），后续O3a（§9.4）已实现Linux私有资源/native SO_PEERCRED接缝与隔离harness：默认off、0700/0600、pinned/no-follow/exclusive/自身清理、双向UID与跨process正测，32新/3selected200、0fail/skip，Linux54登记非全54。仅本机harness真实filesystem listener，非可消费观察server；正式app ID/XDG发现消费者、另一真实OS用户负测、Core私有通知与bounded IO组合仍未完成，三平台adapter仍G。未安装平台依赖，三平台运行与权限须分别验。本文Linux发行/桌面矩阵不因此扩成整个客户端三平台发布承诺，托盘/窗口/通知仍后置。
+
 ## 1. 支持矩阵
 
 | 平台层 | 首版目标 | 边界 |
@@ -29,10 +35,10 @@ M0 冻结以下一致值：app ID、desktop 文件名、图标 ID、Qt organizat
 
 | MPRIS 能力 | Cirrus 映射 |
 | --- | --- |
-| Play/Pause/PlayPause/Stop/Next/Previous | 调用同一个 PlaybackCoordinator，不模拟按钮点击 |
+| Play/Pause/PlayPause/Stop/Next/Previous | 经ListeningSession唯一队列意图入口与Facade到原PlaybackCoordinator，不模拟按钮点击 |
 | PlaybackStatus | 依据实际媒体状态与用户意图映射 Playing/Paused/Stopped；Buffering 不假装新曲已开始 |
 | LoopStatus | None/Track/Playlist → repeat Off/One/All |
-| Shuffle | QueueService 的顺序模式 |
+| Shuffle | ListeningSession／PlaybackQueue 的顺序模式 |
 | Volume | 线性音量，内部 UI 感知曲线单独处理；不暗中放大超过产品范围 |
 | Rate、MinimumRate、MaximumRate | 不支持倍速时全部按规范报告 1.0，不能暴露假能力 |
 | Position | 内部毫秒转为有符号 64 位微秒 |
@@ -41,7 +47,7 @@ M0 冻结以下一致值：app ID、desktop 文件名、图标 ID、Qt organizat
 
 关键规范：
 
-- track object path 基于 QueueEntryId，使用 D-Bus 合法字符编码，不直接塞含连字符 UUID 或外部大 ID。
+- 按最新B-031，track object path基于每个有效load的opaque trackId，load内稳定、同entry重新load也退役旧path；QueueEntryId另保留且FM不强造entry。使用D-Bus合法UUID hex字符编码，不直接塞含连字符UUID或外部大ID。
 - Position 自然递增时**不发送** `PropertiesChanged` 风暴；seek 等不连续位置变化发送 `Seeked`。
 - `SetPosition` 的 TrackId 与当前项不匹配时忽略；超出范围的绝对位置按规范处理，不作用于下一首。
 - `Seek` 是相对偏移，跨越曲尾／曲首的行为按规范实现并测试，不能简单混用 UI 的 clamp 逻辑。
@@ -51,6 +57,8 @@ M0 冻结以下一致值：app ID、desktop 文件名、图标 ID、Qt organizat
 - 系统媒体元数据会被其他本地程序读取。可提供隐藏封面／曲目信息的隐私模式，说明取舍。
 
 验收用实际桌面媒体控件与 `playerctl` 等诊断工具；后者不是运行依赖。
+
+MPRIS不是歌词API；不在标准对象加私有歌词属性。当前状态/六轨文本/游标由B-031独立只读IPC提供，禁用时不fallback HTTP；与单实例激活通道分开。CanControl生命周期、headless CanRaise/CanQuit=false、preview clip坐标、实际Seeked/volume反馈与全部退出门禁见该设计，本段封面等目标并未全部获本小包实现授权。
 
 ## 4. 托盘、通知与关闭行为
 

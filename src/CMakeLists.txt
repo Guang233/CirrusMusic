@@ -28,6 +28,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/introduction_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
+    domain/playback/playback_observation_types.h
     domain/playback/listening_history.h
     domain/playback/listening_report.h
 )
@@ -62,6 +63,10 @@ add_library(cirrus_application STATIC
     application/playback/listening_fm.cpp
     application/playback/listening_session.cpp
     application/playback/listening_session.h
+    application/playback/playback_observation_publisher.cpp
+    application/playback/playback_observation_publisher.h
+    application/playback/system_media_commands.cpp
+    application/playback/system_media_commands.h
     application/playback/playback_coordinator.cpp
     application/playback/playback_coordinator.h
     application/music/personal_fm_source.cpp
@@ -70,6 +75,111 @@ add_library(cirrus_application STATIC
     application/music/music_query_service.h
 )
 target_link_libraries(cirrus_application PUBLIC cirrus_domain)
+
+# Portable wire codec/logical connection. No listener, native API or application reverse dependency.
+add_library(cirrus_observation_codec STATIC
+    infrastructure/ipc/playback_observation_codec.h
+    infrastructure/ipc/playback_observation_codec.cpp
+    infrastructure/ipc/playback_observation_request.cpp
+    infrastructure/ipc/playback_observation_connection.h
+    infrastructure/ipc/playback_observation_connection.cpp
+)
+target_link_libraries(cirrus_observation_codec PUBLIC cirrus_domain)
+
+# Owner/Core -> mailbox composition, no I/O/native/API scheduler.
+add_library(cirrus_observation_feed STATIC
+    infrastructure/ipc/playback_observation_feed.h
+    infrastructure/ipc/playback_observation_feed.cpp
+)
+target_link_libraries(cirrus_observation_feed PUBLIC cirrus_application cirrus_observation_codec)
+
+# Portable native command gate/lifecycle. No platform framework by default;
+# unsupported start fails closed. Never linked/activated by the product entry.
+add_library(cirrus_system_media_native STATIC
+    infrastructure/system_media/native_media_inbox.h
+    infrastructure/system_media/native_media_inbox.cpp
+    infrastructure/system_media/native_media_service.h
+    infrastructure/system_media/native_media_service.cpp
+    infrastructure/system_media/native_media_platform.h
+)
+target_link_libraries(cirrus_system_media_native PUBLIC cirrus_application)
+option(CIRRUS_BUILD_SMTC "Build the optional Windows SDK/C++ WinRT SMTC adapter" OFF)
+option(CIRRUS_BUILD_NOW_PLAYING "Build the optional macOS Now Playing adapter" OFF)
+if(CIRRUS_BUILD_SMTC)
+    if(NOT WIN32)
+        message(FATAL_ERROR "CIRRUS_BUILD_SMTC requires a native Windows SDK and Qt Kit")
+    endif()
+    target_sources(cirrus_system_media_native PRIVATE infrastructure/system_media/windows_smtc_platform.cpp)
+    target_compile_definitions(cirrus_system_media_native PRIVATE CIRRUS_NATIVE_SMTC NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0A00)
+    target_link_libraries(cirrus_system_media_native PRIVATE windowsapp runtimeobject ole32 user32)
+endif()
+if(CIRRUS_BUILD_NOW_PLAYING)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        message(FATAL_ERROR "CIRRUS_BUILD_NOW_PLAYING requires a native macOS SDK and Qt Kit")
+    endif()
+    enable_language(OBJCXX)
+    find_library(CIRRUS_MEDIA_PLAYER_FRAMEWORK MediaPlayer REQUIRED)
+    find_library(CIRRUS_FOUNDATION_FRAMEWORK Foundation REQUIRED)
+    target_sources(cirrus_system_media_native PRIVATE infrastructure/system_media/macos_now_playing_platform.mm)
+    target_compile_definitions(cirrus_system_media_native PRIVATE CIRRUS_NATIVE_NOW_PLAYING)
+    set_target_properties(cirrus_system_media_native PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED ON OBJCXX_EXTENSIONS OFF)
+    target_compile_options(cirrus_system_media_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>" "$<$<COMPILE_LANGUAGE:OBJCXX>:-fblocks>")
+    target_link_libraries(cirrus_system_media_native PRIVATE ${CIRRUS_MEDIA_PLAYER_FRAMEWORK} ${CIRRUS_FOUNDATION_FRAMEWORK})
+endif()
+
+# Optional native session-bus adapter; never linked/activated by the product entry.
+option(CIRRUS_BUILD_MPRIS "Build the optional Linux MPRIS adapter" OFF)
+if(CIRRUS_BUILD_MPRIS)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "CIRRUS_BUILD_MPRIS requires Linux")
+    endif()
+    find_package(Qt6 6.10 REQUIRED COMPONENTS DBus)
+    add_library(cirrus_system_media_mpris STATIC
+        infrastructure/system_media/mpris_service.h
+        infrastructure/system_media/mpris_service.cpp
+        infrastructure/system_media/mpris_worker.h
+        infrastructure/system_media/mpris_worker.cpp
+    )
+    target_link_libraries(cirrus_system_media_mpris PUBLIC cirrus_observation_feed PRIVATE Qt6::DBus cirrus_observation_linux)
+endif()
+
+# Linux resource/credential harness primitive, not composed into the product.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_library(cirrus_observation_linux STATIC
+        infrastructure/ipc/linux_observation_endpoint.h
+        infrastructure/ipc/linux_observation_endpoint.cpp
+    )
+    target_link_libraries(cirrus_observation_linux PUBLIC cirrus_domain)
+    add_library(cirrus_observation_linux_service STATIC
+        infrastructure/ipc/linux_observation_io.h
+        infrastructure/ipc/linux_observation_io.cpp
+        infrastructure/ipc/linux_observation_service.h
+        infrastructure/ipc/linux_observation_service.cpp
+    )
+    target_link_libraries(cirrus_observation_linux_service PUBLIC cirrus_observation_linux cirrus_observation_feed)
+    add_library(cirrus_observation_linux_client STATIC
+        infrastructure/ipc/linux_observation_client.h
+        infrastructure/ipc/linux_observation_client.cpp
+    )
+    target_link_libraries(cirrus_observation_linux_client PUBLIC cirrus_observation_linux cirrus_observation_codec)
+endif()
+
+# Native resource/identity boundary, not a product service or media adapter.
+# Linux delegates to its existing primitive; Darwin/Windows keep native guards.
+add_library(cirrus_observation_local STATIC
+    infrastructure/ipc/local_observation_endpoint.h
+    infrastructure/ipc/local_observation_endpoint.cpp
+)
+target_link_libraries(cirrus_observation_local PUBLIC cirrus_domain)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(cirrus_observation_local PRIVATE cirrus_observation_linux)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_sources(cirrus_observation_local PRIVATE infrastructure/ipc/macos_observation_endpoint.cpp)
+elseif(WIN32)
+    target_sources(cirrus_observation_local PRIVATE infrastructure/ipc/windows_observation_endpoint.cpp)
+    target_compile_definitions(cirrus_observation_local PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0A00)
+    target_link_libraries(cirrus_observation_local PRIVATE advapi32)
+endif()
 
 add_library(cirrus_netease_protocol STATIC
     infrastructure/netease/protocol/eapi_request_profile.cpp

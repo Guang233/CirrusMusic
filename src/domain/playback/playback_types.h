@@ -85,6 +85,10 @@ struct PlaybackSnapshot {
     qint64 positionMs = 0;
     std::optional<qint64> durationMs;
     bool seekable = false;
+    // Effect evidence, not command acceptance. Per-load counters never reused.
+    quint64 positionRevision = 0;
+    quint64 seekRevision = 0;
+    std::optional<float> volumeLinear; // application output, absent until observed
     std::optional<PlaybackFailure> failure;
     // Monotonic per-load observed progress. Absent means no instrumented backend evidence.
     std::optional<ObservedPlayback> observed;

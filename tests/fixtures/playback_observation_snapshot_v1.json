@@ -1,0 +1,29 @@
+{
+  "instanceId": "00000000-0000-4000-8000-000000000001",
+  "viewEpoch": "00000000-0000-4000-8000-000000000002",
+  "trackId": "00000000-0000-4000-8000-000000000003",
+  "sequence": "18446744073709551615",
+  "lyricsRevision": "2",
+  "availability": "ready",
+  "playback": {"state": "paused", "intent": "pause"},
+  "track": {"providerSongId": "9007199254740993", "entryId": "00000000-0000-4000-8000-000000000004"},
+  "metadataExportStatus": "ready",
+  "metadata": {"title": " synthetic 雲 & <text> \" \n", "artists": ["same", "same"], "album": " synthetic album "},
+  "timing": {"positionMs": 1250, "durationMs": 30000, "songPositionMs": 11250, "preview": {"startMs": 10000, "endMs": 40000}},
+  "clock": {"sampleMonoMs": "1500", "positionObservedMonoMs": "1250"},
+  "settings": {"volumeLinear": 0.5, "mode": "queue", "order": "shuffle", "repeat": "all", "fmWaiting": false, "fmBlocked": false},
+  "capabilities": {"canPlay": true, "canPause": true, "canStop": true, "canNext": true, "canPrevious": true, "canSeek": true, "canSetModes": true, "canSetVolume": true},
+  "failure": null,
+  "lyrics": {
+    "state": "ready", "documentExportStatus": "ready", "cursorExportStatus": "ready",
+    "userOffsetMs": 25, "providerNoLyric": false, "instrumental": false,
+    "tracks": {
+      "original.standard": {"summary": {"availability": "present", "timing": "lines", "providerOffsetMs": 0, "malformedLines": 0, "lineCount": 3}, "cursor": {"lines": [0,1,2], "words": []}},
+      "original.enhanced": {"summary": {"availability": "present", "timing": "words", "providerOffsetMs": 0, "malformedLines": 0, "lineCount": 1}, "cursor": {"lines": [0], "words": [{"line": 0, "word": 0}, {"line": 0, "word": 1}]}},
+      "translation.standard": {"summary": {"availability": "present", "timing": "lines", "providerOffsetMs": 100, "malformedLines": 0, "lineCount": 1}, "cursor": {"lines": [], "words": []}},
+      "translation.enhanced": {"summary": {"availability": "empty", "timing": "plainText", "providerOffsetMs": 0, "malformedLines": 0, "lineCount": 0}, "cursor": {"lines": [], "words": []}},
+      "romanization.standard": {"summary": {"availability": "malformed", "timing": "plainText", "providerOffsetMs": 0, "malformedLines": 5, "lineCount": 0}, "cursor": {"lines": [], "words": []}},
+      "romanization.enhanced": {"summary": {"availability": "present", "timing": "plainText", "providerOffsetMs": 0, "malformedLines": 0, "lineCount": 1}, "cursor": {"lines": [], "words": []}}
+    }
+  }
+}

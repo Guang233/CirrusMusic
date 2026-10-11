@@ -1,5 +1,5 @@
 BasedOnStyle: LLVM
-Language: Cpp
+# Shared style for C++ and the opt-in Objective-C++ native adapter.
 Standard: c++20
 IndentWidth: 4
 TabWidth: 4

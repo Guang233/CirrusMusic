@@ -3,6 +3,8 @@
 #include "listening_history.h"
 #include "lyric_timeline.h"
 #include "playback_queue.h"
+#include <limits>
+#include <utility>
 
 namespace cirrus::application
 {
@@ -45,6 +47,22 @@ class ListeningSession final : public QObject
     bool setModes(domain::QueueOrder order, domain::QueueRepeat repeat);
     bool setLyricOffset(qint64 offsetMs);
     void clearHistory();
+    // Internal provenance/clock seam: NEVER serialize this session fingerprint.
+    [[nodiscard]] domain::SessionSnapshot observationSource() const
+    {
+        return current() ? m_sourceSession : domain::SessionSnapshot{};
+    }
+    [[nodiscard]] std::optional<qint64> positionObservedAtMs() const
+    {
+        return current() ? m_positionObservedAt : std::nullopt;
+    }
+    [[nodiscard]] qint64 lyricOffsetMs() const { return m_userOffset; }
+    [[nodiscard]] std::pair<quint64, quint64> intentRevision() const
+    {
+        return {m_revision, m_controlRevision};
+    }
+    [[nodiscard]] bool canGoNext() const;
+    [[nodiscard]] bool canGoPrevious() const;
     [[nodiscard]] QList<domain::ListeningRecord> history() const
     {
         return m_backend.state() == BackendState::Ready &&
@@ -83,6 +101,7 @@ class ListeningSession final : public QObject
     void lyricsChanged(cirrus::domain::LyricsState state);
     void lyricsFailed(cirrus::application::MusicFailure failure);
     void cursorsChanged(cirrus::domain::LyricCursors cursors);
+    void lyricOffsetChanged(qint64 offsetMs);
     void
     advanceStopped(bool failed); // false=end of queue; true=bounded failure/busy, no retry loop
   private:
@@ -101,6 +120,11 @@ class ListeningSession final : public QObject
     void refreshCursors();
     bool current() const;
     bool queueContextMatches() const { return m_queueContext == m_backend.snapshot().token; }
+    void recordControlIntent()
+    {
+        if (m_controlRevision != std::numeric_limits<quint64>::max())
+            ++m_controlRevision; // saturate: the native bridge refuses exhausted epochs
+    }
     BackendFacade& m_backend;
     PersonalFmSource* m_fm = nullptr; // injected source and facade must outlive this session
     domain::ListeningMode m_mode = domain::ListeningMode::Queue;
@@ -114,13 +138,15 @@ class ListeningSession final : public QObject
     domain::PlaybackSnapshot m_playback;
     domain::LoadToken m_token;
     domain::SessionToken m_queueContext;
+    domain::SessionSnapshot m_sourceSession;
+    std::optional<qint64> m_positionObservedAt;
     domain::AudioQuality m_quality{};
     domain::TransportIntent m_intent{};
     domain::LyricsState m_lyricsState{};
     std::optional<domain::SongLyrics> m_lyrics;
     domain::LyricCursors m_cursors;
     qint64 m_userOffset = 0;
-    quint64 m_lyricRequest = 0, m_revision = 0;
+    quint64 m_lyricRequest = 0, m_revision = 0, m_controlRevision = 0;
     QSet<QUuid> m_autoVisited;
     bool m_starting = false, m_auto = false, m_terminalHandled = false;
 };

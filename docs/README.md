@@ -1,5 +1,11 @@
 # Cirrus 开发技术文档
 
+最新O3b2工作树：[B-031 §9.6](tasks/B-031-playback-observation.md)参数化Linux owner→真实单线程socket组合、严格发现/双向UID/hello与显式XDG选择限定I/S；新50、Debug11selected361＋runtime6、Release8selected307，0fail/skip。58登记非全58；八个真实慢client的≤16KiB input／≤2MiB retained＋native pending／≤16MiB total、单票wake/隐私退役/期限/关闭已验。default off/无产品接线，发行身份/另一OS用户负测/沙箱/部署性能与三平台adapter仍G，O3未全闭、#92未闭。无新依赖/NetEase请求/entry/UI/commit/push/paused或stash变化。
+
+此前O3a工作树（历史子包）：[B-031 §9.4](tasks/B-031-playback-observation.md)已接Linux私有资源/native SO_PEERCRED primitive与隔离harness：默认off/参数化非发行身份/0700与0600/nofollow与inode/exclusive/自身清理、双向UID与fork跨process同user正测，32新/3selected200、0fail/skip，当前Linux54登记非全54。正式app ID/XDG发现消费者、另一OS用户负测、Core private barrier与真实bounded IO组合未接，O3整体未完成，没有产品状态server/平台adapter；107ops/44FR/paused/entry/UI/stash保持，无新依赖/NetEase请求/commit/push，#92未闭，旧包不相加。
+
+此前O2a/O2b工作树（历史子包）：[B-031 §9.2](tasks/B-031-playback-observation.md)已在O1 Core基础上接O2a纯codec/framer、完整snapshot golden/固定错误与六轨分页，限定I/S：125codec、5selected216＋runtime6，0fail/skip。后续O2b逻辑连接/fake sink/mailbox/分步编码/订阅基线/退役/backpressure已限定I/S，当前§9.3：43connection、6selected259＋runtime6，0fail/skip；下一O3真实安全传输；真实IPC/peer与MPRIS/SMTC/macOS仍G。107ops/44FR不变、O2a历史52、当前53登记非全53验收，无新平台依赖/端点/入口/实网；全部未提交，两个账号API仍不做，UI/paused保持。原O1的37/228＋6/音频1skip留作独立历史证据。
+
 最新：[歌曲百科受限纯文本](api/song-wiki-text-subset.md)，107ops/50登记/26families/39E63W5X；仅两类文本，原请求关联但内容身份未独立验证，完整百科仍G。88／23affected1278＋runtime19，0fail/skip，四次独立窄公开结构窗口不扩账号/媒体/SDK/UI授权。以下旧包数字保留历史，不累加。
 
 | 项目 | 内容 |
@@ -61,6 +67,7 @@
 | [FM连续播放](api/fm-continuous-playback.md) | ListeningSession的FM模式、暂停续播、失败预算及队列切换；仍无听歌上报 |
 | [专辑／艺人／歌单目录](api/catalog-queries.md) | 只读元数据、分页与完整性、两阶段歌单补详情；听歌上报的未实现边界 |
 | [队列与六轨歌词时钟](api/queue-and-lyric-clock.md) | 最小听歌闭环：队列策略、暂停切歌、媒体位置与独立歌词游标的实现边界 |
+| [B-031播放状态／歌词IPC与三平台系统媒体设计](tasks/B-031-playback-observation.md) | O1 Core与O2a严格codec/framer/golden/六轨分页限定I/S；O2b逻辑连接/订阅/退役/背压fake限定I/S；O3a Linux私有资源/kernel UID harness已接；O3b1 owner→mailbox私有退役/活源验证/单票wake组合限定I/S；后续O3b2 §9.6参数化Linux真实I/O/严格发现已限定I/S；发行身份/另一OS用户负测/沙箱/部署性能与三平台adapter仍G，无产品状态server |
 | [06 播放与音频系统](06-playback-and-audio.md) | 播放状态、并发切歌、错误恢复和后端如何实现？ |
 | [07 QML 与设计系统工程](07-qml-and-design-system.md) | 如何自绘现代控件而不丢掉交互、性能和可访问性？ |
 | [08 功能流程规格](08-feature-specifications.md) | 登录、搜索、歌词、下载、云盘等具体怎样工作？ |
@@ -77,7 +84,7 @@
 | [API 交接清单](checklists/api-handoff.md) | 接入真实 API 前需要哪些材料？ |
 | [发布检查表](checklists/release.md) | 哪些条件不可跳过？ |
 
-**最新后端覆盖入口**：[107-operation／44-FR对照](api/backend-coverage-audit.md)。26组Core入口、39E/63W/5X与逐项ledger，I/S/L/G/P/X分开；164adopt与106op不能作差值。维护者后续先补发现9项，该上包时点106ops／49登记；初始代码包165／affected1167及后续公开窗口修正188／affected1190＋thread18分开，均不是53f8f3e的docs-only97／48证据。账号等级＋计数仍未实现候选；复杂百科部分结构观察与未闭schema、Together完整同步/paused单列，未广泛服务/SDK/UI验收。
+**最新后端覆盖入口**：[107-operation／44-FR对照](api/backend-coverage-audit.md)。26组Core入口、39E/63W/5X与逐项ledger，I/S/L/G/P/X分开；164adopt与106op不能作差值。维护者后续先补发现9项，该上包时点106ops／49登记；初始代码包165／affected1167及后续公开窗口修正188／affected1190＋thread18分开，均不是53f8f3e的docs-only97／48证据。账号等级＋计数仍未实现且维护者明确先不做；复杂百科部分结构观察与未闭schema、Together完整同步/paused单列，未广泛服务/SDK/UI验收。
 
 ## 2. 规范用词
 

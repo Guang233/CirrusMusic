@@ -6,7 +6,7 @@
 
 - 当前[ApiOperation](../../src/infrastructure/netease/api/api_operation.h)：**107唯一枚举**，首QrKey、末SongWikiText；header SHA-256 `54f2dc453c88690b839ac2901654752d18c40a1f1006648552dc4b897c2155c2`。旧106 header hash `fd6b3e4fa45da2d89da45087cb00cc34f933a88058e2d89ddb8f28baca131894`仅历史。初始97 header hash `42def4780a2f8d9cc916e1183b10cc9337a2bf62a9da6b3bc57b339858967ec7`仅历史。
 - 当前root contract与collection/comment/comment-write/together/discovery-browse五个窄adapter、[Facade声明](../../src/application/backend/backend_facade.h)及实际接线；不是从旧review graph推当前支持。发现单Core discover(typed query)复用MusicQuery/read16/原worker/Gateway，无owner或下游新增。
-- 当前`ctest --show-only=json-v1`实核**50注册套件／song_wiki_text1／discovery_browse1／together_http1**；只是登记，不是全50测试或107用户能力验证。本轮affected/选定runtime单列§10，§9为上包历史。
+- 当前`ctest --show-only=json-v1`实核**51注册套件／playback_observation1／song_wiki_text1／discovery_browse1／together_http1**；只是登记，不是全51测试或107用户能力验证。本轮affected/选定runtime单列§10，§9为上包历史。
 - 下表人工归组26组（本轮受限百科单列一组）；E=Eapi、W=Weapi、X=Xeapi，合同 **39 E／63 W／5 X**。默认host/profile沿原route；Together12窄destination、报告2clientlog。path相同不意味着协议／输入／业务相同。
 - 固定参考仍v4.40.1／`a8c781fd64faab17fedfd46e0615a2609307f163`：440模块＝164adopt／40defer／236exclude。**不能用164−97计算缺口**：module、逻辑path、operation、用户能力是四种单位；同path多动作／本地组合／新增doc接口／后续消费范围覆盖均存在。inventory的not-implemented/static-only是原审计时点标记，不重写成动态支持表。
 - `main.cpp`／`Main.qml`仍模板。Core backend可调用不等于产品UI可用、服务兼容、会员／权限、远端效果或完整数据已验证。
@@ -95,7 +95,7 @@
 | 030 | 8评论读取operations与5typed资源的窄支持、reaction写 | 真实schema/UI/账号评论history未证；Voice/Artist不造绑定，通知不顺带纳入 |
 | 031 | 显式add/reply/delete与原账号/UUID/Unknown | 审核/作者权限/真实删除效果/UI未证，无创建ID猜测/auto retry |
 | 032 | 编号保留 | **X：视频/MV明确排除**，不因旧inventory模块或计数出现而恢复 |
-| 033 | 分层允许future非视觉服务 | MPRIS未成；DBus适配/发行权限需单独设计批准，不暗加依赖 |
+| 033 | 分层／原队列及六轨lyrics可复用（非媒体适配已成） | I/S：[B-031 O1](../tasks/B-031-playback-observation.md)共同Core观测/接缝/窄桥；G：Linux MPRIS／Windows SMTC／macOS Now Playing及本机只读IPC，native/DBus依赖、peer权限及设备/三平台未验，不暗加依赖或新owner |
 | 034 | Runtime异步生命周期/后台close | 托盘／通知／窗口关闭体验未成，桌面环境另验收 |
 | 035 | 仅需求 | 应用/全局快捷键、桌面差异未成 |
 | 036 | 原lyrics clock可复用 | P2桌面歌词窗未成，Wayland能力另验收 |
@@ -184,6 +184,14 @@ complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类�
 [受限子集](song-wiki-text-subset.md)新增SongWikiText Eapi／原来源factory／read16／Facade关联，107 enum/50登记/26family/39E63W5X，44FR不增。四次另行确认metadata读只补结构与描述匹配；两文本子块 I/S、独立身份与完整百科 G。无后实现live、账号/SDK/媒体/暂停重开。
 
 本轮百科88／23affected Debug1278＋16选runtime函数17data/init-cleanup19，0fail/skip；18 changed+邻接fresh all-server LSP0／13 format0，14实际application对象含MOC7004逐对象/602唯一VALID Ninja deps禁入0/UI0。旧§9测试不累加；非完整50/Release/minQt/服务/权益验收。失败日志和修因、固定440/Python15/文档有限检查见契约/HANDOFF，#92仍独立。
+
+## 11. 播放观测／Linux参数化真实I/O已限定I/S，发行端点与系统媒体未完成
+
+维护者明确两个账号等级/计数API先不做；[B-031](../tasks/B-031-playback-observation.md)设计后按继续选择接O1共同Core观测/接缝/窄桥，限定I/S证据见其§9.1（新suite37、12affected228＋runtime6、音频skip1）。44FR/107operations/26families/39E63W5X不变；O1历史51，后续O2a当前52登记非全52验收。§9.2纯Core基础设施codec/framer/golden/固定错误/六轨分页限定I/S：125新、5selected216＋runtime6、0fail/skip，11fresh0。后续O2b §9.3逻辑连接/mailbox/分步编码/订阅/退役/背压fake限定I/S：43新、6selected259＋runtime6，0fail/skip；O2b时53登记非全53。fake分块consumer不是server，真实IPC/peer及MPRIS/SMTC/macOS仍G，无新平台依赖、native运行、实际设备效果或服务窗口；原设计50登记/文档检查保历史，不倒填。O2只便携逻辑/fake退出条件限定I/S、非产品端点；真实owner组合与O3–O6分别验，UI最后/paused保持。
+
+最新O3b2 [§9.6](../tasks/B-031-playback-observation.md)参数化Linux owner→真实单I/O线程socket、严格私有发现/双向UID/hello关联与显式XDG选择限定I/S：新50/Debug11selected361＋runtime6/Release8selected307、0fail/skip，58登记非全58。八慢client/input/retained＋native pending/wake/隐私/期限/thread关闭已验；application无JSON/Network/infra反向边。default off/无产品接线，发行namespace/另一真实OS用户负测/沙箱/minQt/部署性能与adapter仍G，107operations/26families/44FR不增、#92独立未闭，无新服务L窗口/NetEase请求/UI/commit/push。此前O3b1 §9.5的20/311＋6为历史子包，不相加。
+
+此前O3a §9.4已有Linux私有资源/kernel SO_PEERCRED primitive与隔离合成harness：32新/3selected200、0fail/skip，双向native UID＋fork跨process同user正测、0700/0600与nofollow/inode/exclusive/仅自身清理。当前Linux54登记非全54，业务ledger107/26/44不变；这是临时本机filesystem listener/resource测试，不是服务L窗口、音乐状态server或另一OS user负测/发行支持。正式app ID/XDG discovery消费者、Core private barrier组合、真实bounded调度/buffers/生命周期仍G，O3未完成；MPRIS/SMTC/macOS/沙箱/Release/minQt/device仍G，无平台依赖安装/NetEase请求/产品入口/UI/commit/push，#92未闭，旧包证据不累加。
 
 ## 附录A. 当前107-operation逐项ledger
 

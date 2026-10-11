@@ -2,6 +2,8 @@
 #include <QThread>
 #include <QTimer>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <utility>
 
 namespace cirrus::application
@@ -125,8 +127,7 @@ bool PlaybackCoordinator::pause()
     if (!current(m_snapshot.token))
         return false;
     m_snapshot.intent = TransportIntent::Pause;
-    if (m_ready)
-        m_snapshot.state = PlaybackState::Paused;
+    // Keep actual state until media feedback; accepting Pause is only intent.
     const auto token = m_snapshot.token;
     emit changed(m_snapshot);
     if (current(token))
@@ -209,10 +210,28 @@ void PlaybackCoordinator::receive(PlaybackEvent event)
             return;
         m_snapshot.observed = event.observed;
         break;
+    case Kind::SeekConfirmed:
     case Kind::Position:
-        m_snapshot.positionMs = qMax<qint64>(0, event.value);
+        if (event.value < 0 || event.value > ObservedPlayback::MaximumMs)
+            return;
+        if (m_snapshot.positionRevision == std::numeric_limits<quint64>::max() ||
+            (event.kind == Kind::SeekConfirmed &&
+             m_snapshot.seekRevision == std::numeric_limits<quint64>::max())) {
+            fail({PlaybackError::InvalidResponse});
+            return;
+        }
+        ++m_snapshot.positionRevision;
+        if (event.kind == Kind::SeekConfirmed)
+            ++m_snapshot.seekRevision;
+        m_snapshot.positionMs = event.value;
         if (m_snapshot.durationMs)
             m_snapshot.positionMs = qMin(m_snapshot.positionMs, *m_snapshot.durationMs);
+        break;
+    case Kind::Volume:
+        if (!event.volumeLinear || !std::isfinite(*event.volumeLinear) || *event.volumeLinear < 0 ||
+            *event.volumeLinear > 1)
+            return;
+        m_snapshot.volumeLinear = event.volumeLinear;
         break;
     case Kind::Duration:
         if (event.value <= 0 || event.value > 7LL * 24 * 60 * 60 * 1000)

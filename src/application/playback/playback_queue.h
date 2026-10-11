@@ -15,6 +15,8 @@ class PlaybackQueue
     bool select(QUuid id);
     bool next(bool naturalEnd = false, bool ignoreSingleRepeat = false);
     bool previous();
+    [[nodiscard]] bool canNext() const;
+    [[nodiscard]] bool canPrevious() const { return m_historyCursor > 0; }
     bool remove(QUuid id);
     void clear();
     bool setModes(domain::QueueOrder order, domain::QueueRepeat repeat);

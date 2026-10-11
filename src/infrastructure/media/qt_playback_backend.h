@@ -35,7 +35,9 @@ class QtPlaybackBackend final : public application::IPlaybackBackend
     QElapsedTimer m_sampleClock;
     application::ObservedPlaybackMeter m_meter;
     std::optional<domain::ObservedPlayback> m_publishedProgress;
-    std::optional<qint64> m_seekTarget; // fail closed until exact position acknowledgement
+    std::optional<qint64> m_seekTarget; // first native observation; never late natural matching
+    qint64 m_seekFrom = 0, m_seekIssuedAtMs = 0;
+    bool m_seekWhilePlaying = false;
     std::unique_ptr<QAudioOutput> m_audio;
     std::unique_ptr<QMediaPlayer> m_player;
     domain::LoadToken m_token;

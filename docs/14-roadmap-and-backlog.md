@@ -1,6 +1,6 @@
 # 14 · 实施路线与任务拆解
 
-最新B-030：[歌曲百科受限纯文本](api/song-wiki-text-subset.md)已按维护者明确选择接入，仅两类文本、原请求关联、内容身份未独立验证；完整百科仍G。107ops/50登记，88／23affected1278＋runtime19范围内通过。后续优先可审账号等级+收藏计数候选（未获账号live），或经确认推进队列/历史持久化与启动恢复，再文件/Linux；不自动再访问服务、恢复paused或先做UI。
+最新B-030：[歌曲百科受限纯文本](api/song-wiki-text-subset.md)已按维护者明确选择接入，仅两类文本、原请求关联、内容身份未独立验证；完整百科仍G。107ops/50登记，88／23affected1278＋runtime19范围内通过。维护者后续明确两个账号API先不做，先设计[播放状态／六轨歌词本机IPC＋三平台系统媒体](tasks/B-031-playback-observation.md)，原设计后按继续选择接O1 Core投影/接缝/窄桥的限定I/S（证据见B-031§9.1），登记51但非全51验收；IPC/三平台native仍G、无新平台依赖；Core投影→只读IPC→Linux MPRIS→Windows SMTC/macOS Now Playing各平台验收，再单独推进持久化／恢复。不自动再访问服务、恢复paused或先做UI。
 
 > 最新顺序：**后端先行，UI 最后**。已完成 Qt 骨架、VS Code 基础配置和上游静态 API 审计；协议／认证／后台装配与首批音乐查询已实现；[搜索／详情／歌词](api/music-queries-and-lyrics.md)有少量官方公开实测。最新定向测试见HANDOFF，尚无真实账号／完整播放验收。接口清单工具测试不等于产品测试。
 
@@ -62,7 +62,7 @@ flowchart LR
 | B-014 | AppShell、路由、列表、迷你栏与沉浸页（M5） | 复用稳定后端；性能、键盘、无障碍 |
 | B-015 | 喜欢、收藏、歌单编辑和写对账（M3） | [五类收藏订阅写](api/collection-writes.md)已合成接入：红心／收藏到歌单及移除／专辑／艺人／播客，8槽与Unknown、不自动重试／对账；整歌单收藏／取消此前因v2 SDK延期，现维护者要求补齐，[原生v2前置调查](api/playlist-subscription-v2-prerequisite.md)已核对固定SDK／body-header-Cookie与TS分歧，原生issuer／许可／绑定未解，维护者暂无资料、明确暂缓，实际材料与明确恢复后再审，不绕过／用v3替代；[创建／改名／描述](api/playlist-management-writes.md)已合成接入，共享8槽／创建ID候选及Unknown，不猜同名唯一；[删除／完整范围排序](api/playlist-delete-and-order-writes.md)已合成接入，原token与完整置换工厂；[标签／隐私歌单单向公开](api/playlist-tags-and-publication-writes.md)已合成接入，Catalogue工厂／原token／8槽／Unknown；[封面更新](api/playlist-cover-update.md)已合成接入，有界JPEG／获准Gui仅基础设施、3阶段／原账号／Unknown；标签清空／公开转私密／格式扩展／对账／同步及实网仍未交付 |
 | B-016 | 推荐、独立每日歌曲、榜单、FM、历史（M2/M3） | [日推读取与FM有界供给](api/discovery-and-fm.md)已接入；[FM连续播放／模式切换／失败预算](api/fm-continuous-playback.md)已离线接通，服务端跨日语义／缓存仍未交付；[推荐／普通／精品歌单与三类标签](api/playlist-discovery-reads.md)6项已成组离线接入，原歌单／显式播放复用；[本地观测累计／256条会话历史](api/local-listening-history.md)已接入，[显式报告能力](api/explicit-listening-reports.md)已接入；自动时机／来源扩展与持久历史未接入，禁止用进度条位置代替已听时长；真实上报另授权 |
-| B-017 | MPRIS 等非视觉服务（M4）；托盘／通知入口（M5） | GNOME/KDE Wayland 实测，不耦合页面 |
+| B-017 | Linux MPRIS／Windows SMTC／macOS Now Playing非视觉服务（本轮提前设计）；托盘／通知仍M5 | 共用B-031 Core投影与唯一命令桥，三平台独立真实build/runtime/权限门禁；只是设计、未加DBus/native依赖，不耦合页面 |
 | B-018 | 下载、Range/hash、离线、空间管理（M4） | 不新增专用下载音源API，未来以播放接口实际可听源为下载条件，不额外查询下载资格／标志，不接加密下载文件支路；音源自身试听范围／TTL／实际访问限制保留，文件／恢复另包，下载功能未实现 |
 | B-019 | 文件访问、扫描、标签与去重（M4），文件选择交互（M5） | 坏文件、符号链接、授权撤销 |
 | B-020 | 云盘浏览／播放、评论读取／点赞（M2～M4） | [资源评论只读](api/comment-reads.md)五类／八operation已合成接入；严格资源／安全文本；[评论点赞／取消与其余写](api/comment-writes.md)已明确批准原生v3并合成接入，独立8槽／原账号／Unknown，无实网／UI／账号历史／通知；[播客订阅／云盘列表及详情](api/account-library-reads.md)3项原账号只读已合成接入，云盘后续API／音源／播放／写暂缓，保留已交付读取 |
@@ -76,12 +76,15 @@ flowchart LR
 | B-028 | 上游清单校验与漂移检查（M0 起持续） | Python 校验器；升级上游需重新审计 |
 | B-029 | 常规发现9typed读取合成已接／复杂百科门禁（M2–M3） | 维护者明确先补发现：[新碟/艺人/相似](api/discovery-browse-reads.md)9Weapi/read16，原query-kind/token-generation/取消关闭，无自动下游；106ops/49登记不变；[后续公开窗口](api/discovery-public-response-verification.md)11次native metadata／301即停，月榜optional分组与相似歌曲100有界未知分页批修正，188/22affected1190＋thread18、5fresh0/14objects6998逐对象依赖禁入0/UI0；旧165/1167历史不累加。complexWiki观察data.blocks6/rnData部分结构，Song绑定／块类缺证Q-016，未注册，R-033／TC-DISCOVERY-BROWSE；广泛服务/权益/UI另验收，原paused/APK禁读/stash不动 |
 | B-030 | 歌曲百科受限纯文本子集合成已接（M2） | [固定Eapi/两子块](api/song-wiki-text-subset.md)，原Song/标题/专辑/token工厂、read16/Facade关联与NotIndependentlyVerified；88/1278＋19、无自动下游；独立主SongId身份/剩余块/完整schema仍G，TC-SONG-WIKI-TEXT/R-034/Q-016，四次metadata观察不扩范围 |
+| B-031 | 当前播放状态／六轨歌词本机只读接口（M2–M4，O3b2 Linux参数化组合限定I/S；发行与O4–O6 G） | [契约与证据§9.1](tasks/B-031-playback-observation.md)：Core coherent/绑定/同token隐私/六轨独立游标/窄桥已接；O2a严格codec/framer/完整golden/六轨分页已限定合成；125新/5selected216＋runtime6，当前52登记非全52；后续O2b fake连接/mailbox/订阅/增量编码/退役/背压限定I/S：43新/6selected259＋runtime6、O2b时53登记非全53；后续O3a Linux私有资源/kernel UID隔离harness32新/3selected200，O3a时54登记，后续O3b1 §9.5 owner→mailbox同步private retire/live原来源factory/单票wake组合限定I/S，20新/8selected311＋runtime6、0fail/skip；后续O3b2 §9.6已接参数化Linux真实I/O/严格发现/双向UID/hello/显式XDG，新50/Debug361＋runtime6/Release307、0fail/skip；当前Linux58登记非全58。input/retained＋native pending/八慢client/wake/deadline/thread关闭已限定，O3整体发行身份/另一OS用户负测/沙箱/minQt/部署性能与三平台adapter仍G，不拿MPRIS替代歌词API或新建播放器 |
 
 ## 4. 下一轮实际动手顺序
 
+**当前明确选择**：账号等级与收藏计数两API先不做。原B-031设计后已按继续选择接O1 Core投影/必要观测接缝与限定合成验收，后续O2 codec/fake逻辑连接限定I/S已接，当前下一O3 Linux安全只读IPC→O4 MPRIS→O5/O6 Windows/macOS各自真实工具链与系统媒体/权限验证。设计授权不是产品实现、native依赖安装、实网或跨平台验收授权；持久化/恢复留随后独立包，UI最后。
+
 **上包代码／维护者优先级记录**：后续明确先补发现并选择[新碟/艺人/相似9读取＋复杂百科审计](api/discovery-browse-reads.md)，已typed合成接入。106ops/49登记、新165／22affected1167＋selected runtime18，0fail/skip，15fresh0／14objects6998actualdeps禁入0／UI0；复杂百科响应结构待证不注册，原9读取strict候选非真实schema/免登录/权益保证。只本地commit/no push，无SDK/新运行依赖/实网/自动下游。不是全发现产品或44FR验收，TC-DISCOVERY-BROWSE／R-033／Q-016另记；其他paused/APK禁读不动。
 
-[107operation／44FR覆盖账本](api/backend-coverage-audit.md)同步26families/39E63W5X、I/S/L/G/P/X；53f8f3e初始docs-only97/48仍历史，不把当前Qt证据倒填。账号等级user_level＋收藏计数user_subcount两empty Weapi读仍候选、未实现/未授权实网，需要strict synthetic schema与原account/token/read16；FM mode/feedback需真实来源与观察time，不复制25/next。后续由维护者另选，不自动恢复暂停或修改UI最后。
+[107operation／44FR覆盖账本](api/backend-coverage-audit.md)同步26families/39E63W5X、I/S/L/G/P/X；53f8f3e初始docs-only97/48仍历史，不把当前Qt证据倒填。账号等级user_level＋收藏计数user_subcount两empty Weapi读仍候选、未实现/未授权实网，需要strict synthetic schema与原account/token/read16；FM mode/feedback需真实来源与观察time，不复制25/next。该候选建议已被后续维护者选择覆盖：两个账号API先不做，先B-031设计；其他paused与UI最后不变。
 
 **此前代码包覆盖**：[核心12 Together HTTP-only](api/together-http-core.md)已明确批准并合成接入；97ops／48登记，旧911＋runtime17/新109只属该包。NIM/SELFHOST完整同步G1–G6、v2/cloud/spoken next仍暂停，optional/完整playlist/profile另补证，APK撤权且从未检查、旧stash不自动恢复。
 
