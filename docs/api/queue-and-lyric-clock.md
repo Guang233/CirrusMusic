@@ -2,6 +2,8 @@
 
 > 已实现后端，未接入模板入口／UI。本包不增加协议、依赖或官方访问，沿用[官方来源与单曲播放器](stream-resolution-and-playback.md)和[六轨歌词查询](music-queries-and-lyrics.md)。后续[目录读取](catalog-queries.md)也已接入；[日推读取／FM动态供给](discovery-and-fm.md)也已接入，[FM连续播放](fm-continuous-playback.md)现已通过ListeningSession的独立模式接通，不继续扩大音频框架。
 
+**最新后续**：[队列恢复与长期历史](../tasks/listening-state-persistence.md)已追加显式default-off Runtime存储接缝；纯Core restore只还顺序／重复entry／选择／模式，不自动load、lyrics或play，恢复权限仍走原显式命令链。原10000上限不变，FM／进度／shuffle遍历史不恢复；manual clear与切号reset分开持久化。该新包无新增或执行测试；下述§4为旧f1cc6b2工作包证据，不移作持久化验收。
+
 ## 1. 装配与入口
 
 - `PlaybackQueue`：Core-only可复制值模型，管理UUID条目、播放排列、有限历史。相同SongId可以有不同entryId。
@@ -32,7 +34,7 @@ listening.next(); // 新load原子携带Pause，不能先Play再补发Pause
 - 换曲先构造候选队列；Facade接纳新load后才提交。邮箱满时不虚构新选择。信号观察者重入的新意图优先，旧clear／remove后续不能覆盖新队列。
 - 重复／旧load End不会二次前进。自然结束在下一事件循环轮次处理，避免从媒体信号栈里递归切歌。
 - 直接点选失败停留原失败状态；自动续播失败可跳过，每轮最多尝试 `min(队列条数,5)` 个不同entry，不绕过单曲循环限制，不重试同一失败URL。自然结束或显式播放才开启新预算，Ready后随即失败不会刷新预算。`advanceStopped(false)`表示正常耗尽，true表示失败预算／忙而停止；最后的播放失败保留在快照，不宣称已有完整失败汇总UI。
-- 队列从首次append就绑定会话，即使尚未播放。注销／换号立即使访问器与旧条目操作无效，后续会话通知清理；关闭也清队列／歌词。循环／偏移等非敏感偏好可保留。本包不持久化队列／进度。
+- 队列从首次append就绑定会话，即使尚未播放。注销／换号立即使访问器与旧条目操作无效，后续会话通知清理；关闭也清队列／歌词。循环／偏移等非敏感偏好可保留。原本包不持久化；后续独立包持久化队列状态，但仍不恢复进度。
 
 ## 3. 六轨媒体时钟
 
@@ -80,4 +82,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步与未实现项
 
-后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，[FM连续播放接线](fm-continuous-playback.md)也已完成，[个人库四项读取](personal-library.md)也已接入；[本地观测累计／会话历史](local-listening-history.md)也已另包接入。FM是独立动态来源，不能把普通列表循环当FM续批。队列持久化、持久听歌历史／官方播放上报、失败汇总界面、MPRIS仍未实现；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。
+后续[专辑／艺人／歌单目录](catalog-queries.md)已接入并离线验证，后续[日推读取／FM条目供给](discovery-and-fm.md)也已接入，[FM连续播放接线](fm-continuous-playback.md)也已完成，[个人库四项读取](personal-library.md)也已接入；[本地观测累计／会话历史](local-listening-history.md)也已另包接入。FM是独立动态来源，不能把普通列表循环当FM续批。队列／长期本地历史现已提供default-off存储接缝；官方显式上报已另包接入但自动时机未接，失败汇总UI仍未实现；MPRIS有可选源码但桌面运行尚未验；流式／Range缓存、URL刷新、音质切换保留位置、设备恢复另立小包，不削弱既有CDN／TLS与缓冲上限。UI仍最后。

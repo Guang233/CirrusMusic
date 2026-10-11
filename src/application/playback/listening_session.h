@@ -51,6 +51,7 @@ class ListeningSession final : public QObject
     bool setModes(domain::QueueOrder order, domain::QueueRepeat repeat);
     bool setLyricOffset(qint64 offsetMs);
     void clearHistory();
+    void finishHistoryForStorage(); // composition shutdown only; never changes playback
     // Internal provenance/clock seam: NEVER serialize this session fingerprint.
     [[nodiscard]] domain::SessionSnapshot observationSource() const
     {
@@ -99,7 +100,11 @@ class ListeningSession final : public QObject
     }
   signals:
     void historyChanged(); // notification only, owning-thread getter; never a reporting event
-    void fmChanged();      // notification only; read current mode/waiting/blocked getters
+    void
+    listeningRecordChanged(cirrus::domain::StoredListeningRecord record); // private local store
+    void historyCleared(cirrus::domain::SessionSnapshot source);
+    void historyStorageOverflow(); // explicit gap, not silent durable retention
+    void fmChanged();              // notification only; read current mode/waiting/blocked getters
     void queueChanged(cirrus::domain::QueueSnapshot queue);
     void queueCleared(cirrus::domain::SessionSnapshot source); // explicit user clear, not reset
     void playbackChanged(cirrus::domain::PlaybackSnapshot snapshot);
@@ -123,6 +128,7 @@ class ListeningSession final : public QObject
     void reset();
     void cancelLyrics();
     void refreshCursors();
+    bool notifyHistory(bool notifyView = true);
     bool current() const;
     bool queueContextMatches() const { return m_queueContext == m_backend.snapshot().token; }
     void recordControlIntent()
@@ -152,6 +158,7 @@ class ListeningSession final : public QObject
     domain::LyricCursors m_cursors;
     qint64 m_userOffset = 0;
     quint64 m_lyricRequest = 0, m_revision = 0, m_controlRevision = 0;
+    quint64 m_historyClearEpoch = 0;
     QSet<QUuid> m_autoVisited;
     bool m_starting = false, m_auto = false, m_terminalHandled = false;
 };

@@ -1,14 +1,16 @@
 # 本地可观测收听累计与会话历史
 
+**最新接续**：新增[队列恢复与长期本地历史](../tasks/listening-state-persistence.md)显式default-off Runtime接缝，SQLite v3独立record ID／UTC起止／实际playedMs、长期保存与keyset分页；256仅近期内存窗口，不是保留上限。不序列化原token，不自动恢复活动账本／播放或报告。该新增包只做编译与静态检查，无新增或运行测试／SQL／真实播放；以下计量算法不改，§4为c838573历史证据。
+
 ## 1. 范围与入口
 
 在[官方播放](stream-resolution-and-playback.md)、[普通队列](queue-and-lyric-clock.md)与[FM连续播放](fm-continuous-playback.md)之上增加：
 
 - `PlaybackSnapshot::observed`：可选的 `ObservedPlayback { playedMs, capped }`，固定load内的累计观测值；缺失表示没有具备计量能力的后端证据，不是零秒。
-- `ListeningSession::history()`／`historyChanged()`／`clearHistory()`：调用线程上、仅当前会话、最多256条的播放摘要。Runtime仍通过 `listening()` 暴露，不新增线程或服务。
-- Core-only `ObservedPlaybackMeter` 与 `ListeningHistory`；Qt播放器／单调时钟／采样定时器接线留在基础设施层。未新增依赖、数据库表、业务operation或UI接线。
+- `ListeningSession::history()`／`historyChanged()`／`clearHistory()`：调用线程上、仅当前会话、最多256条的播放摘要。Runtime通过 `listening()` 暴露近期Core窗口；可选 `listeningState()` 服务提供长期磁盘分页，不新增数据库线程。
+- Core-only `ObservedPlaybackMeter` 与 `ListeningHistory`；Qt播放器／单调时钟／采样定时器接线留在基础设施层。原计量包未新增依赖、数据库表、业务operation或UI接线；后续持久化新增SQL表，不增加计量器、业务operation或UI。
 
-**这是保守的媒体播放进展观测，不是“用户确实听到了声音”的证明，也不是持久历史或官方听歌报告。** 不从FM取出、喜欢ID、曲目时长、seek后的进度或自然End推导已听时长。不新增官方访问、真实账号／密钥环访问或写操作。
+**这是保守的媒体播放进展观测，不是“用户确实听到了声音”的证明，本身不是持久历史或官方听歌报告；后续存储也不能把它提升为声学证明或官方计数。** 不从FM取出、喜欢ID、曲目时长、seek后的进度或自然End推导已听时长。不新增官方访问、真实账号／密钥环访问或写操作。
 
 ## 2. 计量契约
 
@@ -46,11 +48,11 @@ seek在调用播放器之前先断区间，并等待 `positionChanged` 的目标
 - 单曲计量也适用于直接使用Facade的调用方；但本会话历史只记录ListeningSession拥有的load，不把外部Facade播放冒充队列／FM播放。
 - 切号、退出、启动失败、关闭立即在getter隔离，并在失效处理时清空内存；相同账号重新登录也不继承旧epoch。仅停止／清空队列保留当前会话已有历史。
 - `clearHistory()`清空列表并停止记录**当前load的剩余部分**；直到新load才重新入历史。这样晚到的、可能在清空前采样的累计值不能复活旧记录。它不停止音频，也不重置底层单曲计量。重复begin／旧generation不能重新开启已清空load。
-- 信号只是通知，消费者应读当前getter；已经取走的值副本不会自动擦除，消费者仍需在账号变化时丢弃。没有写盘、缓存恢复、日期分组或历史同步，也未保存墙钟起止时间。
+- 信号只是通知，消费者应读当前getter；已经取走的值副本不会自动擦除，消费者仍需在账号变化时丢弃。原内存包没有写盘或时间；后续独立StoredListeningRecord存UUID、UTC日历、original account/song/source、正playedMs/终态/quality/preview，不存原token。开始／结束UTC仅日历，墙钟差不计时；长期分页与内存active分开，不能触发播放或报告，崩溃的Active磁盘摘要不是当前load。
 
-## 4. 离线验证
+## 4. 历史离线验证（原内存包c838573，非本轮持久化证据）
 
-最新受影响Debug结果（含init/cleanup；前次运行不累计）：
+当时受影响Debug结果（含init/cleanup；前次运行不累计）。持久化阶段未新增或运行这些测试：
 
 | 套件 | pass |
 | --- | ---: |
@@ -81,4 +83,4 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 ## 5. 下一步
 
-维护者决定历史展示优先采用网易云记录，本地主要计量时长；后续[网易云最近听过／听歌排行读取](cloud-history-reads.md)已离线接入，但不提供实听时长，不与本地累计直接合并；详细本地历史／分析按需求再定，并非默认下一项。若做历史持久化，需另定保留上限、guest与账号归属、显式清除及在途写入隔离；不得直接把本内存结构或token序列化当完成。后续[显式startplay／play报告](explicit-listening-reports.md)已另包接入，不自动调用；播放来源扩展、资格／阈值、结算时机和load去重仍待播放接线，不喜欢反馈仍未实现，真实报告另行授权。UI、MPRIS、队列恢复及先进音频仍另包处理。
+维护者决定历史展示优先采用网易云记录，本地主要计量时长；后续[网易云最近听过／听歌排行读取](cloud-history-reads.md)已离线接入，但不提供实听时长，不与本地累计直接合并；维护者随后明确需要长期本地历史和实际时长供future dashboard，新增包已写独立schema与显式Runtime接缝：无默认条数删除、guest独立桶、clear／FIFO写与读取epoch、有限未送fact／分页。没有直接序列化本内存结构／token；统计聚合与dashboard仍另做，SQL语义、durability／磁盘满／崩溃恢复尚无本包运行证据。后续[显式startplay／play报告](explicit-listening-reports.md)已另包接入，不自动调用；播放来源扩展、资格／阈值、结算时机和load去重仍待播放接线，不喜欢反馈仍未实现，真实报告另行授权。UI、统计聚合／dashboard与先进音频仍另包处理；MPRIS已有default-off源码接缝，实际桌面仍未验；队列状态-only恢复见新包。

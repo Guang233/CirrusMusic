@@ -114,7 +114,8 @@ void ListeningSession::reset()
         m_fm->stop();
     if (revision != m_revision)
         return;
-    emit historyChanged();
+    if (!notifyHistory())
+        return;
     if (revision != m_revision)
         return;
     emit fmChanged();
@@ -192,7 +193,8 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     }
     m_lyricRequest = lyricRequest;
     m_lyricsState = m_lyricRequest ? LyricsState::Loading : LyricsState::Failed;
-    emit historyChanged();
+    if (!notifyHistory())
+        return true;
     if (revision != m_revision)
         return true;
     emit fmChanged();
@@ -372,7 +374,8 @@ bool ListeningSession::stop()
     m_intent = TransportIntent::Stop;
     m_auto = false;
     m_autoVisited.clear();
-    emit historyChanged();
+    if (!notifyHistory())
+        return true;
     if (revision != m_revision)
         return true;
     emit playbackChanged(m_playback);
@@ -470,17 +473,47 @@ bool ListeningSession::setLyricOffset(qint64 offset)
     refreshCursors();
     return true;
 }
+bool ListeningSession::notifyHistory(bool notifyView)
+{
+    const QPointer<ListeningSession> guard(this);
+    const auto epoch = m_historyClearEpoch;
+    const auto updates = m_history.takeUpdates();
+    const bool overflow = m_history.takeUpdateOverflow();
+    for (const auto& row : updates) {
+        emit listeningRecordChanged(row);
+        if (!guard || m_historyClearEpoch != epoch)
+            return bool(guard);
+    }
+    if (overflow)
+        emit historyStorageOverflow();
+    if (!guard)
+        return false;
+    if (notifyView)
+        emit historyChanged();
+    return bool(guard);
+}
+void ListeningSession::finishHistoryForStorage()
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_history.finish(ListeningEnd::Detached);
+    notifyHistory(false); // no player command or restored reporting event
+}
 void ListeningSession::clearHistory()
 {
     Q_ASSERT(QThread::currentThread() == thread());
+    const QPointer<ListeningSession> guard(this);
+    const auto source = m_backend.snapshot();
+    const bool ready = m_backend.state() == BackendState::Ready;
     const bool changed = !m_history.records().isEmpty();
-    if (m_history.context() != m_backend.snapshot().token ||
-        m_backend.state() != BackendState::Ready)
+    ++m_historyClearEpoch;
+    if (m_history.context() != source.token || !ready)
         m_history.reset();
     else
         m_history.clear();
-    if (changed)
-        emit historyChanged();
+    if (ready && source.token.isValid())
+        emit historyCleared(source); // delete precedes any newly reentrant post-clear load
+    if (guard)
+        notifyHistory(changed);
 }
 void ListeningSession::refreshCursors()
 {
@@ -520,7 +553,8 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
     m_playback = snapshot;
     m_playback.intent = m_intent;
     if (m_history.observe(snapshot)) {
-        emit historyChanged();
+        if (!notifyHistory())
+            return;
         if (revision != m_revision)
             return;
     }

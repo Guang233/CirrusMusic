@@ -1,4 +1,7 @@
 #include "listening_history.h"
+#include <QDateTime>
+#include <algorithm>
+#include <utility>
 
 namespace cirrus::application
 {
@@ -21,6 +24,8 @@ void ListeningHistory::begin(LoadToken token, QString accountId, SongId song, Li
     m_active->song = std::move(song);
     m_active->source = source;
     m_active->queueEntry = queueEntry;
+    m_active->recordId = QUuid::createUuid();
+    m_active->startedAtMs = QDateTime::currentMSecsSinceEpoch();
 }
 bool ListeningHistory::observe(const PlaybackSnapshot& snapshot)
 {
@@ -47,6 +52,7 @@ bool ListeningHistory::observe(const PlaybackSnapshot& snapshot)
                         if (m_records.size() > MaximumRecords)
                             m_records.removeLast();
                     }
+                    recordUpdate(*m_active);
                     changed = true;
                 }
             }
@@ -63,23 +69,49 @@ bool ListeningHistory::finish(ListeningEnd end)
     if (!m_active)
         return false;
     const bool recorded = !m_records.isEmpty() && m_records.first().token == m_active->token;
+    m_active->end = end;
+    if (end != ListeningEnd::Active)
+        m_active->endedAtMs = std::max(m_active->startedAtMs, QDateTime::currentMSecsSinceEpoch());
     if (recorded)
-        m_records.first().end = end;
+        m_records.first() = *m_active;
+    if (m_active->playedMs > 0)
+        recordUpdate(*m_active);
     m_active.reset();
     return recorded;
 }
 void ListeningHistory::clear()
 {
+    m_updates.clear(); // explicit erasure supersedes any fact not yet handed to persistence
     m_records.clear();
     m_active.reset();
     m_lastTotal = 0;
 }
 void ListeningHistory::reset()
 {
+    finish(ListeningEnd::Detached); // retain the original account's final positive fact
     m_records.clear();
     m_active.reset();
     m_context = {};
     m_generation = 0;
     m_lastTotal = 0;
 }
+void ListeningHistory::recordUpdate(const ListeningRecord& record)
+{
+    auto row = storedListeningRecord(record);
+    for (auto& pending : m_updates)
+        if (pending.id == row.id) {
+            pending = std::move(row);
+            return;
+        }
+    if (m_updates.size() >= 64) {
+        m_updateOverflow = true; // explicit storage gap, never silently truncate durable history
+        return;
+    }
+    m_updates.append(std::move(row));
+}
+QList<StoredListeningRecord> ListeningHistory::takeUpdates()
+{
+    return std::exchange(m_updates, {});
+}
+bool ListeningHistory::takeUpdateOverflow() { return std::exchange(m_updateOverflow, false); }
 } // namespace cirrus::application

@@ -4,7 +4,7 @@
 
 > 当前状态：Qt 模板入口 + 分层原生后端（认证／查询／队列／FM播放／歌词）+ 开发文档、固定版本 API 审计及定向 Qt Test，尚未实现可用的音乐客户端功能。本文中的产品目标不是已交付功能；本项目不是网易云音乐官方客户端。
 
-**最新后端增量**：[队列持久化与安全恢复](docs/tasks/listening-state-persistence.md)。复用SQLite线程、v2事务队列／账号隔离，纯Core恢复不加载音源或自动播放；显式Runtime开关default false，不接UI。Debug／Release编译、Clang7 units／Core+Sql链接通过，无新增或运行测试；长期历史与实际听歌时长另包接续，不以256条内存窗口截断数据库。
+**最新后端增量**：[队列恢复与长期收听历史](docs/tasks/listening-state-persistence.md)。队列包本地提交 `55458e5`；复用SQLite线程、v2队列／v3长期明细与分页，独立record ID／UTC／实际已听毫秒、累计upsert不重复计账；256仅近期内存窗口，不截断数据库。纯队列恢复不load/play/lyrics，历史不还原active或自动报告；显式Runtime开关default false、不接UI。两包Debug／Release、Clang7 units／Core+Sql链接通过；无新增或运行测试／SQL／播放／服务／NetEase，不把编译当持久性或崩溃验收，#92等门禁保留，仅本地commit、不push。
 
 **此前架构整理**：[评论写入Facade内部职责拆分](docs/tasks/comment-write-facade-refactor.md)。独立Core同步组件管理pending／接纳／取消结果／回包校验，Facade保留原API、共享ID、账号屏障与Qt通知；不扩业务／通用Manager。Debug／Release、Clang与Core-only链接通过；未新增或运行测试，仅本地commit、不push。
 
@@ -20,7 +20,7 @@
 
 ## 开发文档
 
-**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证；[队列与六轨歌词时钟](docs/api/queue-and-lyric-clock.md)也已完成后端最小闭环；[专辑／艺人／歌单只读目录](docs/api/catalog-queries.md)已接入并离线验证；[每日推荐读取与私人FM条目供给](docs/api/discovery-and-fm.md)也已接入，[FM连续播放接线](docs/api/fm-continuous-playback.md)已完成离线后端闭环，[个人库四项只读查询](docs/api/personal-library.md)也已离线接入；[本地可观测收听累计／有界会话历史](docs/api/local-listening-history.md)已接入，[显式听歌上报能力](docs/api/explicit-listening-reports.md)也已离线接入，[云端最近听过／一周与全部时间排行](docs/api/cloud-history-reads.md)已离线接入，[榜单列表／内容摘要与歌单选歌播放链](docs/api/chart-reads.md)也已离线接通，[六项歌单发现读取](docs/api/playlist-discovery-reads.md)也已成组离线接入；自动上报时机／来源扩展尚未接线，本地历史持久化仍未实现（见[路线图](docs/14-roadmap-and-backlog.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
+**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证；[队列与六轨歌词时钟](docs/api/queue-and-lyric-clock.md)也已完成后端最小闭环；[专辑／艺人／歌单只读目录](docs/api/catalog-queries.md)已接入并离线验证；[每日推荐读取与私人FM条目供给](docs/api/discovery-and-fm.md)也已接入，[FM连续播放接线](docs/api/fm-continuous-playback.md)已完成离线后端闭环，[个人库四项只读查询](docs/api/personal-library.md)也已离线接入；[本地可观测收听累计／有界会话历史](docs/api/local-listening-history.md)已接入，[显式听歌上报能力](docs/api/explicit-listening-reports.md)也已离线接入，[云端最近听过／一周与全部时间排行](docs/api/cloud-history-reads.md)已离线接入，[榜单列表／内容摘要与歌单选歌播放链](docs/api/chart-reads.md)也已离线接通，[六项歌单发现读取](docs/api/playlist-discovery-reads.md)也已成组离线接入；自动上报时机／来源扩展尚未接线，本地历史持久化已提供显式default-off后端，统计聚合／dashboard与实际运行验收仍未实现（见[增量契约](docs/tasks/listening-state-persistence.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
 
 - [产品范围与需求](docs/01-product-requirements.md)
 - [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)

@@ -7,17 +7,21 @@
 
 namespace cirrus::storage
 {
-enum class ListeningStateOperation { LoadQueue, SaveQueue };
+enum class ListeningStateOperation { LoadQueue, SaveQueue, SaveHistory, ClearHistory, LoadHistory };
 struct ListeningStateJob {
     quint64 id = 0;
     ListeningStateOperation operation{};
     QString accountId;
     domain::QueueSnapshot queue;
+    QList<domain::StoredListeningRecord> records{}; // <=64 facts per transaction, no DB row cap
+    std::optional<domain::ListeningHistoryCursor> cursor = std::nullopt;
+    int pageSize = 100;
 };
 struct ListeningStateResult {
     quint64 id = 0;
     StorageError error = StorageError::None;
     std::optional<domain::QueueSnapshot> queue;
+    std::optional<domain::ListeningHistoryPage> history = std::nullopt;
 };
 
 // Backend-thread adapter over the existing single DatabaseWorker/SQL executor.

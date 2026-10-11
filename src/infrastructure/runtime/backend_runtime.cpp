@@ -275,9 +275,11 @@ class BackendWorker final : public QObject
         }
         m_stateStore->submit(std::move(job));
     }
-    void closeForListeningState(bool rejected)
+    void closeForListeningState(bool rejected, QList<storage::ListeningStateJob> finalJobs)
     {
-        m_stateWriteRejected = m_stateWriteRejected || rejected;
+        m_stateWriteRejected = m_stateWriteRejected || rejected || finalJobs.size() > 265;
+        if (finalJobs.size() <= 265)
+            m_finalStateJobs = std::move(finalJobs);
         close();
     }
     void close()
@@ -526,6 +528,18 @@ class BackendWorker final : public QObject
         m_drainQueued = true;
         QTimer::singleShot(0, this, [this] {
             m_drainQueued = false;
+            if (!m_finalStateJobs.isEmpty()) {
+                if (!m_stateStore) {
+                    m_stateWriteRejected = true;
+                    m_finalStateJobs.clear();
+                } else {
+                    if (m_stateStore->pending() >= 8)
+                        return; // idle receipt will resume, without the owner object
+                    m_stateStore->submit(m_finalStateJobs.takeFirst());
+                    queueDrain();
+                    return;
+                }
+            }
             if ((m_store && m_store->pending() != 0) ||
                 (m_accountVault && !m_accountVault->isIdle()) ||
                 (m_keyVault && !m_keyVault->isIdle()) ||
@@ -560,6 +574,7 @@ class BackendWorker final : public QObject
     std::unique_ptr<storage::InstallationStore> m_installation;
     std::unique_ptr<storage::ListeningStateStore> m_stateStore;
     bool m_stateWriteRejected = false;
+    QList<storage::ListeningStateJob> m_finalStateJobs; // bounded transferred shutdown facts
     std::unique_ptr<secrets::TrackedSecretStore> m_store;
     std::unique_ptr<SessionCoordinator> m_session;
     std::unique_ptr<netease::XeapiKeyRing> m_ring;
@@ -611,11 +626,13 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
                 &storage::ListeningStateService::deliver, Qt::QueuedConnection);
     }
     connect(m_facade, &BackendFacade::closeRequested, this, [this, worker] {
-        if (m_state)
-            m_state->close(); // final SQL jobs posted BEFORE worker close, even on destruction
+        auto finalJobs = m_state ? m_state->close() : QList<storage::ListeningStateJob>{};
         const bool rejected = m_state && m_state->writeRejected();
         QMetaObject::invokeMethod(
-            worker, [worker, rejected] { worker->closeForListeningState(rejected); },
+            worker,
+            [worker, rejected, finalJobs = std::move(finalJobs)]() mutable {
+                worker->closeForListeningState(rejected, std::move(finalJobs));
+            },
             Qt::QueuedConnection);
     });
     connect(worker, &BackendWorker::delivered, m_facade, &BackendFacade::deliver,
@@ -672,6 +689,9 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 
 BackendRuntime::~BackendRuntime()
 {
+    if (m_state)
+        m_listening
+            ->finishHistoryForStorage(); // final observed total before deleting the Core owner
     delete m_listening; // injected source and facade must outlive the listening session
     m_listening = nullptr;
     delete m_fm;

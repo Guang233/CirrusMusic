@@ -1,5 +1,5 @@
 #pragma once
-#include "domain/playback/listening_history.h"
+#include "domain/playback/listening_state_types.h"
 
 namespace cirrus::application
 {
@@ -16,8 +16,14 @@ class ListeningHistory
     void reset(); // account/lifetime change: forget everything
     [[nodiscard]] domain::SessionToken context() const { return m_context; }
     [[nodiscard]] QList<domain::ListeningRecord> records() const { return m_records; }
+    // Single owner consumes each changed/finalized fact before the 256-row view can evict it.
+    QList<domain::StoredListeningRecord> takeUpdates();
+    bool takeUpdateOverflow();
 
   private:
+    void recordUpdate(const domain::ListeningRecord& record);
+    QList<domain::StoredListeningRecord> m_updates; // bounded transient facts, not DB retention
+    bool m_updateOverflow = false;
     domain::SessionToken m_context;
     std::optional<domain::ListeningRecord> m_active;
     QList<domain::ListeningRecord> m_records; // newest first, only positive observed loads

@@ -15,5 +15,8 @@ struct ListeningRecord {
     qint64 playedMs = 0; // observed elapsed progress, NOT final position or unique coverage
     bool capped = false;
     ListeningEnd end = ListeningEnd::Active;
+    QUuid recordId;         // independent local row identity, not the private load token
+    qint64 startedAtMs = 0; // UTC calendar metadata; NEVER a duration source
+    std::optional<qint64> endedAtMs;
 };
 } // namespace cirrus::domain

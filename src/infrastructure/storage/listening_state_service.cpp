@@ -33,6 +33,20 @@ ListeningStateService::ListeningStateService(application::ListeningSession& list
     Q_ASSERT(listening.thread() == thread() && facade.thread() == thread());
     m_timer.setSingleShot(true);
     m_timer.setInterval(500);
+    m_historyTimer.setSingleShot(true);
+    m_historyTimer.setInterval(5000);
+    connect(&m_historyTimer, &QTimer::timeout, this, &ListeningStateService::flushHistory);
+    connect(&listening, &application::ListeningSession::listeningRecordChanged, this,
+            &ListeningStateService::recordChanged, Qt::DirectConnection);
+    connect(&listening, &application::ListeningSession::historyCleared, this,
+            &ListeningStateService::clearHistory, Qt::DirectConnection);
+    connect(
+        &listening, &application::ListeningSession::historyStorageOverflow, this,
+        [this] {
+            m_writeRejected = true;
+            emit storageFailed(StorageError::Query);
+        },
+        Qt::DirectConnection);
     connect(&m_timer, &QTimer::timeout, this, &ListeningStateService::flush);
     connect(
         &facade, &application::BackendFacade::sessionChanged, this, [this] { contextChanged(); },
@@ -76,6 +90,7 @@ void ListeningStateService::contextChanged()
         m_facade.snapshot() != source)
         return;
     m_source = source;
+    ++m_historyEpoch; // pending page data is never delivered into a different live account
     m_loadId = 0;
     if (!m_listening.queue().entries.isEmpty() ||
         m_listening.mode() != domain::ListeningMode::Queue)
@@ -123,7 +138,22 @@ void ListeningStateService::deliver(ListeningStateResult result)
     Q_ASSERT(QThread::currentThread() == thread());
     if (!m_pending.remove(result.id))
         return;
+    m_clearRequests.remove(result.id);
     const QPointer<ListeningStateService> guard(this);
+    if (m_historyReads.contains(result.id)) {
+        const auto read = m_historyReads.take(result.id);
+        auto error = result.error;
+        if (!live() || read.source != m_source || read.epoch != m_historyEpoch)
+            error = StorageError::NotOpen;
+        else if (error == StorageError::None && !result.history)
+            error = StorageError::Corrupt;
+        emit historyPageReady(result.id, error,
+                              error == StorageError::None ? std::move(*result.history)
+                                                          : domain::ListeningHistoryPage{});
+        if (guard && !m_closed && !m_historyTimer.isActive())
+            flushHistory();
+        return;
+    }
     if (result.error != StorageError::None)
         emit storageFailed(result.error);
     if (!guard)
@@ -148,14 +178,143 @@ void ListeningStateService::deliver(ListeningStateResult result)
     }
     if (guard && !m_closed && m_save)
         flush();
+    if (guard && !m_closed && !m_historyTimer.isActive())
+        flushHistory();
 }
-void ListeningStateService::close()
+void ListeningStateService::recordChanged(domain::StoredListeningRecord record)
+{
+    if (m_closed)
+        return;
+    const auto existing = m_historyDirty.constFind(record.id);
+    const bool changedIdentity =
+        existing != m_historyDirty.cend() &&
+        (existing->accountId != record.accountId || existing->song != record.song ||
+         existing->startedAtMs != record.startedAtMs || existing->source != record.source ||
+         existing->queueEntry != record.queueEntry);
+    if (!domain::validStoredListeningRecord(record) || changedIdentity ||
+        (!m_historyDirty.contains(record.id) && m_historyDirty.size() >= 256)) {
+        m_writeRejected = true;
+        emit storageFailed(StorageError::Query);
+        return;
+    }
+    const bool finalized = record.end != domain::ListeningEnd::Active;
+    m_historyDirty.insert(record.id, std::move(record));
+    if (finalized)
+        flushHistory();
+    else if (!m_historyTimer.isActive())
+        m_historyTimer.start();
+}
+void ListeningStateService::clearHistory(domain::SessionSnapshot source)
+{
+    if (m_closed || !eligible(source))
+        return;
+    ++m_historyEpoch; // cancels pre-clear reads as well as deferred writes
+    for (auto it = m_historyDirty.begin(); it != m_historyDirty.end();)
+        if (it->accountId == source.accountId)
+            it = m_historyDirty.erase(it);
+        else
+            ++it;
+    if (!m_historyClears.contains(source.accountId) && m_historyClears.size() >= 8) {
+        m_writeRejected = true;
+        emit storageFailed(StorageError::Query);
+        return;
+    }
+    m_historyClears.insert(source.accountId);
+    flushHistory(); // FIFO erase BEFORE any subsequently observed new load; no requeue on ack
+}
+QList<ListeningStateJob> ListeningStateService::historyJobs(qsizetype maximumJobs)
+{
+    QList<ListeningStateJob> jobs;
+    while (jobs.size() < maximumJobs && (!m_historyClears.isEmpty() || !m_historyDirty.isEmpty())) {
+        if (m_nextId == std::numeric_limits<quint64>::max()) {
+            m_writeRejected = true;
+            break;
+        }
+        ListeningStateJob job;
+        job.id = ++m_nextId;
+        if (!m_historyClears.isEmpty()) {
+            job.operation = ListeningStateOperation::ClearHistory;
+            job.accountId = *m_historyClears.begin();
+            m_historyClears.remove(job.accountId);
+            m_clearRequests.insert(job.id, job.accountId);
+        } else {
+            job.operation = ListeningStateOperation::SaveHistory;
+            job.accountId = m_historyDirty.first().accountId;
+            for (auto it = m_historyDirty.begin();
+                 it != m_historyDirty.end() && job.records.size() < 64;)
+                if (it->accountId == job.accountId) {
+                    job.records.append(std::move(it.value()));
+                    it = m_historyDirty.erase(it);
+                } else
+                    ++it;
+        }
+        m_pending.insert(job.id);
+        jobs.append(std::move(job));
+    }
+    return jobs;
+}
+void ListeningStateService::flushHistory()
+{
+    if (m_closed)
+        return;
+    m_historyTimer.stop();
+    const QPointer<ListeningStateService> guard(this);
+    while (m_pending.size() <
+           7) { // leave an admission slot; close handoff is independently drained
+        auto jobs = historyJobs(1);
+        if (jobs.isEmpty())
+            break;
+        emit requested(std::move(jobs.first()));
+        if (!guard || m_closed)
+            return;
+    }
+    if ((!m_historyDirty.isEmpty() || !m_historyClears.isEmpty()) && !m_historyTimer.isActive())
+        m_historyTimer.start();
+}
+quint64 ListeningStateService::historyPage(int pageSize,
+                                           std::optional<domain::ListeningHistoryCursor> cursor)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!live() || m_historyClears.contains(m_source.accountId) ||
+        m_clearRequests.values().contains(m_source.accountId) || pageSize < 1 || pageSize > 100 ||
+        m_pending.size() >= 6 || m_historyReads.size() >= 2 ||
+        m_nextId == std::numeric_limits<quint64>::max() ||
+        (cursor && (cursor->id.isNull() || cursor->startedAtMs <= 0 ||
+                    cursor->startedAtMs > 253402300799999LL))) {
+        emit storageFailed(StorageError::Query);
+        return 0;
+    }
+    ListeningStateJob job;
+    const auto id = job.id = ++m_nextId;
+    job.operation = ListeningStateOperation::LoadHistory;
+    job.accountId = m_source.accountId;
+    job.cursor = cursor;
+    job.pageSize = pageSize;
+    m_pending.insert(id);
+    m_historyReads.insert(id, {m_source, m_historyEpoch});
+    emit requested(std::move(job));
+    return id;
+}
+QList<ListeningStateJob> ListeningStateService::close()
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_closed)
-        return;
+        return {};
     m_closed = true;
     m_loadId = 0;
-    flush(); // queue BEFORE the worker close; its DB pending count owns the shutdown barrier
+    ++m_historyEpoch;
+    m_timer.stop();
+    m_historyTimer.stop();
+    QList<ListeningStateJob> jobs;
+    if (m_save && m_nextId != std::numeric_limits<quint64>::max()) {
+        m_save->id = ++m_nextId;
+        m_pending.insert(m_save->id);
+        jobs.append(std::move(*m_save));
+        m_save.reset();
+    }
+    jobs.append(historyJobs(264)); // <=256 facts/8 scope erasures, never a retention policy
+    if (m_save || !m_historyDirty.isEmpty() || !m_historyClears.isEmpty())
+        m_writeRejected = true;
+    return jobs; // worker admits final jobs as earlier DB slots complete; no owner callback needed
 }
 } // namespace cirrus::storage
