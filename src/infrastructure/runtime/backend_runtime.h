@@ -22,12 +22,18 @@ namespace cirrus::secrets
 class SecretStore;
 }
 
+namespace cirrus::storage
+{
+class ListeningStateService;
+}
+
 namespace cirrus::runtime
 {
 
 struct BackendConfig {
     QString databasePath;    // absolute installation state.sqlite path; not a credentials file
     QString keychainService; // caller-selected application identity; no invented app ID
+    bool persistListeningState = false; // explicit local metadata persistence; no product opt-in
 };
 
 // Factories run on the backend thread, never return pre-created GUI-thread QObjects.
@@ -56,11 +62,13 @@ class BackendRuntime final : public QObject
     [[nodiscard]] application::BackendFacade& facade() const { return *m_facade; }
     [[nodiscard]] application::ListeningSession& listening() const { return *m_listening; }
     [[nodiscard]] application::PersonalFmSource& fm() const { return *m_fm; }
+    [[nodiscard]] storage::ListeningStateService* listeningState() const { return m_state; }
 
   private:
     application::BackendFacade* m_facade = nullptr;
     application::PersonalFmSource* m_fm = nullptr;
     application::ListeningSession* m_listening = nullptr;
+    storage::ListeningStateService* m_state = nullptr;
 };
 
 } // namespace cirrus::runtime

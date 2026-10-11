@@ -33,6 +33,10 @@ class ListeningSession final : public QObject
     [[nodiscard]] bool fmBlocked() const { return waitingForFm() && m_fmBlocked; }
     bool replaceQueue(const QList<domain::SongId>& songs, qsizetype startIndex = 0,
                       domain::AudioQuality quality = domain::AudioQuality::Standard);
+    // Storage composition only. Never load/play/query during restoration.
+    bool restoreQueue(const domain::QueueSnapshot& saved, domain::SessionSnapshot expected,
+                      std::pair<quint64, quint64> expectedIntent);
+    [[nodiscard]] domain::SessionToken queueContext() const { return m_queueContext; }
     bool append(const QList<domain::SongId>& songs, bool playNext = false);
     bool select(QUuid entry);
     bool remove(QUuid entry);
@@ -97,6 +101,7 @@ class ListeningSession final : public QObject
     void historyChanged(); // notification only, owning-thread getter; never a reporting event
     void fmChanged();      // notification only; read current mode/waiting/blocked getters
     void queueChanged(cirrus::domain::QueueSnapshot queue);
+    void queueCleared(cirrus::domain::SessionSnapshot source); // explicit user clear, not reset
     void playbackChanged(cirrus::domain::PlaybackSnapshot snapshot);
     void lyricsChanged(cirrus::domain::LyricsState state);
     void lyricsFailed(cirrus::application::MusicFailure failure);

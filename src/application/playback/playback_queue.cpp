@@ -19,6 +19,26 @@ void PlaybackQueue::clear()
     m_historyCursor = -1;
     m_insertTail = {};
 }
+bool PlaybackQueue::restore(const QueueSnapshot& saved)
+{
+    if (!validSavedQueue(saved))
+        return false;
+    clear();
+    m_state = saved;
+    for (const auto& entry : saved.entries)
+        m_order.append(entry.id);
+    if (saved.order == QueueOrder::Shuffle) {
+        m_order.removeAll(saved.active);
+        reshuffle();
+        if (!saved.active.isNull())
+            m_order.prepend(saved.active);
+    }
+    if (!saved.active.isNull()) {
+        m_history.append(saved.active);
+        m_historyCursor = 0;
+    }
+    return true;
+}
 bool PlaybackQueue::replace(const QList<SongId>& songs)
 {
     if (songs.isEmpty() || songs.size() > MaximumEntries)

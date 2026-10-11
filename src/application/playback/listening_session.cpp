@@ -1,5 +1,6 @@
 #include "listening_session.h"
 #include "application/music/personal_fm_source.h"
+#include <QPointer>
 #include <QThread>
 #include <QTimer>
 #include <chrono>
@@ -19,7 +20,9 @@ ListeningSession::ListeningSession(BackendFacade& backend, QObject* parent)
             reset();
     });
     connect(&backend, &BackendFacade::sessionChanged, this, [this](SessionSnapshot value) {
-        if (m_queueContext.isValid() && value.token != m_queueContext)
+        if (m_queueContext.isValid() &&
+            (value.token != m_queueContext || value.accountId != m_sourceSession.accountId ||
+             value.phase != m_sourceSession.phase))
             reset();
     });
     connect(&backend, &BackendFacade::musicCompleted, this,
@@ -216,6 +219,27 @@ bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startI
         return false;
     return begin(std::move(candidate), TransportIntent::Play, quality, false);
 }
+bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot expected,
+                                    std::pair<quint64, quint64> expectedIntent)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_backend.state() != BackendState::Ready || !expected.token.isValid() ||
+        m_backend.snapshot() != expected || intentRevision() != expectedIntent || current() ||
+        m_mode != ListeningMode::Queue || !m_queue.snapshot().entries.isEmpty() ||
+        m_revision == std::numeric_limits<quint64>::max())
+        return false;
+    auto candidate = m_queue;
+    if (!candidate.restore(saved))
+        return false;
+    const auto revision = ++m_revision;
+    m_queue = std::move(candidate);
+    m_queueContext = expected.token;
+    m_sourceSession = expected;
+    m_intent = TransportIntent::Play; // only a future explicit user command may start media
+    const QPointer<ListeningSession> guard(this);
+    emit queueChanged(m_queue.snapshot());
+    return guard && m_revision == revision && m_backend.snapshot() == expected;
+}
 bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
 {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -227,6 +251,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
     if (!m_queue.append(songs, playNext))
         return false;
     m_queueContext = m_backend.snapshot().token;
+    m_sourceSession = m_backend.snapshot();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -310,6 +335,7 @@ bool ListeningSession::remove(QUuid entry)
 }
 bool ListeningSession::clear()
 {
+    const auto source = m_backend.snapshot();
     const auto revision = m_revision;
     if (current()) {
         if (!stop())
@@ -318,6 +344,8 @@ bool ListeningSession::clear()
             return true;
     }
     reset();
+    if (m_backend.state() == BackendState::Ready && m_backend.snapshot() == source)
+        emit queueCleared(source);
     return true;
 }
 bool ListeningSession::stop()

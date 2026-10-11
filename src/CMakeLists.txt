@@ -28,6 +28,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/introduction_types.h
     domain/playback/playback_types.h
     domain/playback/listening_types.h
+    domain/playback/listening_state_types.h
     domain/playback/playback_observation_types.h
     domain/playback/listening_history.h
     domain/playback/listening_report.h
@@ -254,6 +255,15 @@ target_compile_features(cirrus_storage PUBLIC cxx_std_20)
 target_include_directories(cirrus_storage PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(cirrus_storage PUBLIC Qt6::Sql)
 
+# Optional Runtime composition uses the existing database executor; Core has no SQL dependency.
+add_library(cirrus_listening_state STATIC
+    infrastructure/storage/listening_state_store.h
+    infrastructure/storage/listening_state_store.cpp
+    infrastructure/storage/listening_state_service.h
+    infrastructure/storage/listening_state_service.cpp
+)
+target_link_libraries(cirrus_listening_state PUBLIC cirrus_application cirrus_storage)
+
 # System keyring (QtKeychain system package). Plaintext fallback is disabled.
 find_package(Qt6Keychain REQUIRED)
 add_library(cirrus_secrets STATIC
@@ -360,4 +370,4 @@ add_library(cirrus_backend STATIC
     infrastructure/runtime/backend_runtime.h
 )
 target_link_libraries(cirrus_backend PUBLIC cirrus_application
-    PRIVATE cirrus_bootstrap cirrus_netease_auth cirrus_netease_music cirrus_media)
+    PRIVATE cirrus_bootstrap cirrus_netease_auth cirrus_netease_music cirrus_media cirrus_listening_state)

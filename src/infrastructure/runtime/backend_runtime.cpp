@@ -16,6 +16,7 @@
 #include "infrastructure/netease/music/together_gateway.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
+#include "infrastructure/storage/listening_state_service.h"
 
 #include <QDir>
 #include <QThread>
@@ -50,7 +51,14 @@ class BackendWorker final : public QObject
             return;
         }
         m_database = std::make_unique<storage::DatabaseWorker>(
-            m_config.databasePath, storage::InstallationStore::migrations());
+            m_config.databasePath, storage::ListeningStateStore::migrations());
+        if (m_config.persistListeningState) {
+            m_stateStore = std::make_unique<storage::ListeningStateStore>(*m_database);
+            connect(m_stateStore.get(), &storage::ListeningStateStore::completed, this,
+                    &BackendWorker::listeningStateDelivered);
+            connect(m_stateStore.get(), &storage::ListeningStateStore::idle, this,
+                    &BackendWorker::queueDrain);
+        }
         connect(m_database.get(), &storage::DatabaseWorker::opened, this,
                 [this](storage::StorageError error) {
                     if (m_closing)
@@ -259,6 +267,19 @@ class BackendWorker final : public QObject
         emit delivered(event);
     }
 
+    void listeningState(storage::ListeningStateJob job)
+    {
+        if (m_closing || !m_stateStore) {
+            emit listeningStateDelivered({job.id, storage::StorageError::NotOpen, {}});
+            return;
+        }
+        m_stateStore->submit(std::move(job));
+    }
+    void closeForListeningState(bool rejected)
+    {
+        m_stateWriteRejected = m_stateWriteRejected || rejected;
+        close();
+    }
     void close()
     {
         if (m_closing)
@@ -297,6 +318,7 @@ class BackendWorker final : public QObject
     void collectionDelivered(cirrus::application::CollectionDelivery delivery);
     void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
     void togetherDelivered(cirrus::application::TogetherDelivery delivery);
+    void listeningStateDelivered(cirrus::storage::ListeningStateResult result);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -506,9 +528,12 @@ class BackendWorker final : public QObject
             m_drainQueued = false;
             if ((m_store && m_store->pending() != 0) ||
                 (m_accountVault && !m_accountVault->isIdle()) ||
-                (m_keyVault && !m_keyVault->isIdle()))
+                (m_keyVault && !m_keyVault->isIdle()) ||
+                (m_stateStore && m_stateStore->pending() != 0))
                 return;
-            const bool failed = m_store && m_store->writeFailed();
+            const bool failed = (m_store && m_store->writeFailed()) ||
+                                (m_stateStore && m_stateStore->writeFailed()) ||
+                                m_stateWriteRejected;
             m_accountVault.reset();
             m_keyVault.reset();
             m_client.reset();
@@ -516,6 +541,7 @@ class BackendWorker final : public QObject
             m_session.reset();
             m_store.reset();
             m_installation.reset();
+            m_stateStore.reset();
             // DatabaseWorker joins its own SQL executor here, NOT on the UI thread.
             // Queued DB jobs settle and the process lock is released before stopped.
             m_database.reset();
@@ -532,6 +558,8 @@ class BackendWorker final : public QObject
     quint64 m_generation = 0;
     std::unique_ptr<storage::DatabaseWorker> m_database;
     std::unique_ptr<storage::InstallationStore> m_installation;
+    std::unique_ptr<storage::ListeningStateStore> m_stateStore;
+    bool m_stateWriteRejected = false;
     std::unique_ptr<secrets::TrackedSecretStore> m_store;
     std::unique_ptr<SessionCoordinator> m_session;
     std::unique_ptr<netease::XeapiKeyRing> m_ring;
@@ -565,6 +593,8 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
       m_fm(new PersonalFmSource(*m_facade, this)),
       m_listening(new ListeningSession(*m_facade, *m_fm, this))
 {
+    if (config.persistListeningState)
+        m_state = new storage::ListeningStateService(*m_listening, *m_facade, this);
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
@@ -574,8 +604,20 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::commandRequested, worker, &BackendWorker::command,
             Qt::QueuedConnection);
-    connect(m_facade, &BackendFacade::closeRequested, worker, &BackendWorker::close,
+    if (m_state) {
+        connect(m_state, &storage::ListeningStateService::requested, worker,
+                &BackendWorker::listeningState, Qt::QueuedConnection);
+        connect(worker, &BackendWorker::listeningStateDelivered, m_state,
+                &storage::ListeningStateService::deliver, Qt::QueuedConnection);
+    }
+    connect(m_facade, &BackendFacade::closeRequested, this, [this, worker] {
+        if (m_state)
+            m_state->close(); // final SQL jobs posted BEFORE worker close, even on destruction
+        const bool rejected = m_state && m_state->writeRejected();
+        QMetaObject::invokeMethod(
+            worker, [worker, rejected] { worker->closeForListeningState(rejected); },
             Qt::QueuedConnection);
+    });
     connect(worker, &BackendWorker::delivered, m_facade, &BackendFacade::deliver,
             Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::musicRequested, worker, &BackendWorker::music,
