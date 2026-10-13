@@ -5,6 +5,8 @@
 #include "application/playback/listening_session.h"
 #include "application/playback/playback_coordinator.h"
 #include "infrastructure/bootstrap/anonymous_bootstrap.h"
+#include "infrastructure/cache/resource_cache_service.h"
+#include "infrastructure/cache/resource_cache_worker.h"
 #include "infrastructure/media/qt_playback_backend.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
@@ -52,6 +54,19 @@ class BackendWorker final : public QObject
         }
         m_database = std::make_unique<storage::DatabaseWorker>(
             m_config.databasePath, storage::ListeningStateStore::migrations());
+        if (!m_config.resourceCacheRoot.isEmpty()) {
+            m_cache = std::make_unique<cache::ResourceCacheWorker>(
+                *m_database, m_config.resourceCacheRoot,
+                [this]() -> std::optional<domain::SessionSnapshot> {
+                    if (!m_ready || m_closing || !m_session)
+                        return {};
+                    return m_session->snapshot();
+                });
+            connect(m_cache.get(), &cache::ResourceCacheWorker::completed, this,
+                    &BackendWorker::cacheDelivered);
+            connect(m_cache.get(), &cache::ResourceCacheWorker::drained, this,
+                    &BackendWorker::queueDrain);
+        }
         if (m_config.persistListeningState) {
             m_stateStore = std::make_unique<storage::ListeningStateStore>(*m_database);
             connect(m_stateStore.get(), &storage::ListeningStateStore::completed, this,
@@ -78,6 +93,23 @@ class BackendWorker final : public QObject
                     });
                 });
         m_database->open();
+    }
+
+    void cacheRequest(cache::CacheJob job)
+    {
+        if (m_cache && !m_closing)
+            m_cache->submit(std::move(job));
+        else {
+            domain::CacheResult result;
+            result.id = job.id;
+            result.error = domain::CacheError::Disabled;
+            emit cacheDelivered(result);
+        }
+    }
+    void cancelCache(quint64 id)
+    {
+        if (m_cache)
+            m_cache->cancel(id);
     }
 
     void command(BackendCommand command)
@@ -288,6 +320,8 @@ class BackendWorker final : public QObject
             return;
         m_closing = true;
         m_ready = false;
+        if (m_cache)
+            m_cache->close();
         // Stop producers, not stored identity. In particular, do NOT call signOut
         // or anonymous.reset on normal application exit.
         m_anonymous.reset();
@@ -321,6 +355,7 @@ class BackendWorker final : public QObject
     void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
     void togetherDelivered(cirrus::application::TogetherDelivery delivery);
     void listeningStateDelivered(cirrus::storage::ListeningStateResult result);
+    void cacheDelivered(cirrus::domain::CacheResult result);
 
   private:
     BackendEvent makeEvent(Kind kind) const
@@ -335,6 +370,8 @@ class BackendWorker final : public QObject
 
     void publishSession(domain::SessionSnapshot snapshot)
     {
+        if (m_cache)
+            m_cache->contextChanged();
         auto event = makeEvent(Kind::Session);
         event.session = std::move(snapshot);
         emit delivered(event);
@@ -543,11 +580,11 @@ class BackendWorker final : public QObject
             if ((m_store && m_store->pending() != 0) ||
                 (m_accountVault && !m_accountVault->isIdle()) ||
                 (m_keyVault && !m_keyVault->isIdle()) ||
-                (m_stateStore && m_stateStore->pending() != 0))
+                (m_stateStore && m_stateStore->pending() != 0) || (m_cache && !m_cache->idle()))
                 return;
             const bool failed = (m_store && m_store->writeFailed()) ||
                                 (m_stateStore && m_stateStore->writeFailed()) ||
-                                m_stateWriteRejected;
+                                (m_cache && m_cache->writeFailed()) || m_stateWriteRejected;
             m_accountVault.reset();
             m_keyVault.reset();
             m_client.reset();
@@ -556,6 +593,7 @@ class BackendWorker final : public QObject
             m_store.reset();
             m_installation.reset();
             m_stateStore.reset();
+            m_cache.reset();
             // DatabaseWorker joins its own SQL executor here, NOT on the UI thread.
             // Queued DB jobs settle and the process lock is released before stopped.
             m_database.reset();
@@ -573,6 +611,7 @@ class BackendWorker final : public QObject
     std::unique_ptr<storage::DatabaseWorker> m_database;
     std::unique_ptr<storage::InstallationStore> m_installation;
     std::unique_ptr<storage::ListeningStateStore> m_stateStore;
+    std::unique_ptr<cache::ResourceCacheWorker> m_cache;
     bool m_stateWriteRejected = false;
     QList<storage::ListeningStateJob> m_finalStateJobs; // bounded transferred shutdown facts
     std::unique_ptr<secrets::TrackedSecretStore> m_store;
@@ -610,6 +649,8 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 {
     if (config.persistListeningState)
         m_state = new storage::ListeningStateService(*m_listening, *m_facade, this);
+    if (!config.resourceCacheRoot.isEmpty())
+        m_cache = new cache::ResourceCacheService(*m_facade, this);
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
@@ -625,7 +666,17 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
         connect(worker, &BackendWorker::listeningStateDelivered, m_state,
                 &storage::ListeningStateService::deliver, Qt::QueuedConnection);
     }
+    if (m_cache) {
+        connect(m_cache, &cache::ResourceCacheService::requested, worker,
+                &BackendWorker::cacheRequest, Qt::QueuedConnection);
+        connect(m_cache, &cache::ResourceCacheService::cancelRequested, worker,
+                &BackendWorker::cancelCache, Qt::QueuedConnection);
+        connect(worker, &BackendWorker::cacheDelivered, m_cache,
+                &cache::ResourceCacheService::deliver, Qt::QueuedConnection);
+    }
     connect(m_facade, &BackendFacade::closeRequested, this, [this, worker] {
+        if (m_cache)
+            m_cache->close();
         auto finalJobs = m_state ? m_state->close() : QList<storage::ListeningStateJob>{};
         const bool rejected = m_state && m_state->writeRejected();
         QMetaObject::invokeMethod(

@@ -7,6 +7,7 @@ target_sources(cirrus_domain INTERFACE
     domain/account/session_types.h
     domain/account/qr_login_types.h
     domain/music/music_types.h
+    domain/music/resource_cache_types.h
     domain/music/catalog_types.h
     domain/music/discovery_types.h
     domain/music/discovery_browse_types.h
@@ -264,6 +265,21 @@ add_library(cirrus_listening_state STATIC
 )
 target_link_libraries(cirrus_listening_state PUBLIC cirrus_application cirrus_storage)
 
+# Explicit resource cache; existing Qt modules only, no dependency from Core to SQL/Gui/Network.
+add_library(cirrus_resource_cache STATIC
+    infrastructure/cache/resource_cache_codec.h
+    infrastructure/cache/resource_cache_codec.cpp
+    infrastructure/cache/resource_cache_store.h
+    infrastructure/cache/resource_cache_store.cpp
+    infrastructure/cache/cover_fetcher.h
+    infrastructure/cache/cover_fetcher.cpp
+    infrastructure/cache/resource_cache_worker.h
+    infrastructure/cache/resource_cache_worker.cpp
+    infrastructure/cache/resource_cache_service.h
+    infrastructure/cache/resource_cache_service.cpp
+)
+target_link_libraries(cirrus_resource_cache PUBLIC cirrus_application cirrus_storage Qt6::Network PRIVATE Qt6::Gui)
+
 # System keyring (QtKeychain system package). Plaintext fallback is disabled.
 find_package(Qt6Keychain REQUIRED)
 add_library(cirrus_secrets STATIC
@@ -370,4 +386,4 @@ add_library(cirrus_backend STATIC
     infrastructure/runtime/backend_runtime.h
 )
 target_link_libraries(cirrus_backend PUBLIC cirrus_application
-    PRIVATE cirrus_bootstrap cirrus_netease_auth cirrus_netease_music cirrus_media cirrus_listening_state)
+    PRIVATE cirrus_bootstrap cirrus_netease_auth cirrus_netease_music cirrus_media cirrus_listening_state cirrus_resource_cache)
