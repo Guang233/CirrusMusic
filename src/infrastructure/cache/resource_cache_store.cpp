@@ -241,7 +241,11 @@ CacheResult execute(QSqlDatabase& db, const QString& path, const CacheJob& job)
         job.payload.size() > maximumCachePayload(job.kind) || job.ttlMs <= 0 ||
         job.ttlMs > maximumCacheTtl(job.kind) || job.notAfterMs > now + job.ttlMs)
         return fail(CacheError::InvalidRequest);
-    if (job.notAfterMs <= now) {
+    const auto expires =
+        job.retention
+            ? std::min(job.notAfterMs, now + std::min(job.ttlMs, job.retention->remainingMs()))
+            : job.notAfterMs;
+    if (expires <= now) {
         result.status = CacheStatus::Expired;
         return result;
     }
@@ -289,7 +293,7 @@ CacheResult execute(QSqlDatabase& db, const QString& path, const CacheJob& job)
         "VALUES(?,?,?,?,?,?,?,?,?)"));
     bindKey(q, scope, job);
     q.addBindValue(now);
-    q.addBindValue(job.notAfterMs);
+    q.addBindValue(expires);
     q.addBindValue(now);
     q.addBindValue(job.payload.size());
     q.addBindValue(QCryptographicHash::hash(job.payload, QCryptographicHash::Sha256));

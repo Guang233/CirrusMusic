@@ -29,9 +29,15 @@ class ResourceCacheService final : public QObject
     // Positive TTL is explicit caller attestation that the source permits this retention.
     // Unknown policy / no-store: do not call put. Source tokens/credentials are not serialized.
     std::optional<CacheWriteContext> writeContext() const;
-    quint64 putSong(const CacheWriteContext& context, domain::Song song, qint64 allowedTtlMs);
+    bool accepts(const CacheWriteContext& context) const
+    {
+        return validWrite(context) && !m_clearing;
+    }
+    quint64 putSong(const CacheWriteContext& context, domain::Song song, qint64 allowedTtlMs,
+                    std::optional<domain::CacheRetention> retention = std::nullopt);
     quint64 putLyrics(const CacheWriteContext& context, domain::SongLyrics lyrics,
-                      qint64 allowedTtlMs);
+                      qint64 allowedTtlMs,
+                      std::optional<domain::CacheRetention> retention = std::nullopt);
     quint64 cover(QUrl url, int size,
                   domain::CacheReadMode mode = domain::CacheReadMode::CacheOnly);
     quint64 remove(domain::CacheKind kind, domain::SongId song);
@@ -45,6 +51,7 @@ class ResourceCacheService final : public QObject
     void completed(cirrus::domain::CacheResult result);
     void requested(cirrus::cache::CacheJob job);
     void cancelRequested(quint64 id);
+    void invalidated(); // notification only; consumers must still revalidate their original permit
 
   private:
     quint64 submit(CacheJob job);

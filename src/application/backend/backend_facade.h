@@ -47,6 +47,7 @@ struct MusicDelivery {
     quint64 generation = 0;
     domain::SessionToken context;
     MusicResult result;
+    domain::CacheRetention cacheRetention{};
 };
 
 struct ListeningReportCommand {
@@ -253,6 +254,10 @@ class BackendFacade final : public QObject
     void persistenceWarning(cirrus::application::PersistenceArea area);
     void musicCompleted(quint64 id, cirrus::domain::SessionToken context,
                         cirrus::application::MusicResult result);
+    // Only standalone details/lyrics; atomic original-result + retention delivery.
+    void musicResourceCompleted(quint64 id, cirrus::domain::SessionToken context,
+                                cirrus::application::MusicResult result,
+                                cirrus::domain::CacheRetention retention);
 
     void listeningReportCompleted(quint64 id, cirrus::domain::SessionToken context,
                                   cirrus::domain::ListeningReportResult result);
@@ -296,6 +301,8 @@ class BackendFacade final : public QObject
     quint64 submit(AccountAction action, QrLoginOptions options = {});
     void setState(BackendState state);
     quint64 submitMusic(MusicQuery query);
+    void publishMusic(const MusicCommand& command, MusicResult result,
+                      domain::CacheRetention retention = {});
     quint64 submitPlayback(PlaybackCommand command);
     void invalidatePlayback();
     domain::PlaybackSnapshot m_playback;

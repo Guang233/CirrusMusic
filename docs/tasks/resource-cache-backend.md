@@ -79,9 +79,11 @@ clear当前scope或显式clearAll：**先抬升owner epoch并取消当前网络�
 
 ## 8. 已写入口与核查记录
 
+后续已接[显式缓存查询组合与服务器缓存许可](resource-cache-query-integration.md)：原Facade网络语义保留，新resourceQueries入口只组合详情／歌词。封面新响应没有明确缓存许可时不再缺省7d落盘；以下首包编译数是历史，不挪作接入包证据。
+
 - `BackendConfig::resourceCacheRoot{}` 空时不构造cache组件；显式非空时 `BackendRuntime::resourceCache()` 返回owner服务。必须等原Facade Ready、同owner线程调用；非法参数／关闭／容量不足返回0。非Linux worker明确Unsupported，不宣称跨平台支持。
 - `song(SongId)`、`lyrics(SongId)` 为cache-only；`writeContext()` 捕获私有写permit，`putSong(permit, Song, allowedTtlMs)`／`putLyrics(...)` 仅接受显式获准的剩余TTL。permit是本机顺序屏障，不是服务端缓存授权。遇到没有Cache-Control来源的原Facade结果，不能自动按最大TTL落盘。
-- `cover(url,size,mode)` 默认CacheOnly；PreferCache只在Miss/Expired发一次GET，Refresh为单独明确网络意图。返回canonical PNG字节，不给磁盘路径。`status=Network,error!=None,value=PNG,persisted=false` 表示图片获得但cache写失败，不是成功保存；无存储许可时Network/None/persisted=false是预期行为。persisted表示本次请求执行了保存，普通Hit读取不把它置true；先检查error与status，再按类别消费value。
+- `cover(url,size,mode)` 默认CacheOnly；PreferCache只在Miss/Expired发一次GET，Refresh为单独明确网络意图。返回canonical PNG字节，不给磁盘路径。`status=Network,error!=None,value=PNG,persisted=false` 表示图片获得但cache写失败，不是成功保存；无存储许可时Network/None/persisted=false是预期行为。persisted表示返回值来自持久化cache（Hit）或本次成功保存（Stored/Network），不是本次写入次数；旧文本误写Hit不置true，已按现有Store实现更正。先检查error与status，再按类别消费value。
 - `remove`／`removeCover`、`clear(false)`当前scope、`clear(true)`显式所有scope；都只删resource-cache.sqlite的资源表。clear/remove收据前拒绝新cache任务。`usage()`提供全缓存逻辑分类字节／rows与当前主DB文件大小，不返回其他账号内容；不把删除行数当物理回收空间。
 - 首次与后续Linux Qt6.11.2 Debug/Release `cirrus_backend/cirrus_resource_cache/MPRIS/native共用` 编译exit0、warning0；actual flags Clang8units（cache5cpp＋MOC、Runtime、application MOC）exit0诊断0；application17＋cache6实际VALID对象无反向／不准依赖；Core/Sql/Network/Gui whole-archive no-undefined链接0，产物未运行。13个changed C++ fresh all-server LSP0，后续5个修改源复验0；最终格式／文档／提交核查另存同前缀。
 - 证据在ignored `build/workspace-checks/resource-cache-*`，不是SQL／图片／账号／真实网络行为证明。原tests/fixtures、API107 registry、数据库v1/v2/v3 migrations、播放权限链、IPC/native协议、模板入口均不改。旧#92未解决；CMake LSP曾Unavailable，不以之称clean，实际CMake configure/build结果单列。

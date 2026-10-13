@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QPointer>
 #include <QThread>
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -61,6 +62,10 @@ quint64 ResourceCacheService::submit(CacheJob job)
     job.revision = m_revision;
     job.source = m_source;
     if (job.operation == CacheOperation::Write) {
+        if (job.retention)
+            job.ttlMs = std::min(job.ttlMs, job.retention->remainingMs());
+        if (job.ttlMs <= 0)
+            return 0;
         const auto now = QDateTime::currentMSecsSinceEpoch();
         if (now <= 0 || now > 253402300799999LL - 7 * CacheDayMs)
             return 0;
@@ -92,7 +97,7 @@ quint64 ResourceCacheService::lyrics(SongId song)
     return submit(std::move(job));
 }
 quint64 ResourceCacheService::putSong(const CacheWriteContext& context, Song song,
-                                      qint64 allowedTtlMs)
+                                      qint64 allowedTtlMs, std::optional<CacheRetention> retention)
 {
     if (!validWrite(context) || m_clearing || m_pending.size() >= 7 || allowedTtlMs <= 0 ||
         allowedTtlMs > maximumCacheTtl(CacheKind::Song))
@@ -102,13 +107,15 @@ quint64 ResourceCacheService::putSong(const CacheWriteContext& context, Song son
     job.kind = CacheKind::Song;
     job.key = song.id.value;
     job.ttlMs = allowedTtlMs;
+    job.retention = retention;
     job.payload = encodeCacheValue(CacheValue(std::move(song)), job.kind);
     if (job.payload.isEmpty())
         return 0;
     return submit(std::move(job));
 }
 quint64 ResourceCacheService::putLyrics(const CacheWriteContext& context, SongLyrics lyrics,
-                                        qint64 allowedTtlMs)
+                                        qint64 allowedTtlMs,
+                                        std::optional<CacheRetention> retention)
 {
     if (!validWrite(context) || m_clearing || m_pending.size() >= 7 || allowedTtlMs <= 0 ||
         allowedTtlMs > maximumCacheTtl(CacheKind::Lyrics))
@@ -118,6 +125,7 @@ quint64 ResourceCacheService::putLyrics(const CacheWriteContext& context, SongLy
     job.kind = CacheKind::Lyrics;
     job.key = lyrics.song.value;
     job.ttlMs = allowedTtlMs;
+    job.retention = retention;
     job.payload = encodeCacheValue(CacheValue(std::move(lyrics)), job.kind);
     if (job.payload.isEmpty())
         return 0;
@@ -213,6 +221,9 @@ bool ResourceCacheService::retire(CacheError error)
         ++m_revision;
     const auto ids = m_pending.keys();
     const QPointer<ResourceCacheService> guard(this);
+    emit invalidated();
+    if (!guard)
+        return false;
     for (const auto id : ids) {
         const auto it = m_pending.find(id);
         if (it == m_pending.end() || it->forced)

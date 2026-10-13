@@ -1,5 +1,6 @@
 #pragma once
 #include "domain/account/session_types.h"
+#include "domain/music/cache_retention.h"
 #include "domain/music/resource_cache_types.h"
 #include "infrastructure/storage/database_worker.h"
 
@@ -14,6 +15,7 @@ struct CacheJob {
     QString key;
     QByteArray payload;
     qint64 ttlMs = 0;
+    std::optional<domain::CacheRetention> retention; // in-process only; never a DB column
     qint64 notAfterMs = 0; // admission-time expiry; SQL queueing must not extend retention
     QUrl coverUrl;         // transient only, not stored in the cover row
     int coverSize = 256;

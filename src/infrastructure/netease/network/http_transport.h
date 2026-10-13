@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain/music/cache_retention.h"
 #include "infrastructure/netease/protocol/official_route.h"
 
 #include <QByteArray>
@@ -52,6 +53,7 @@ struct TransportResult {
     // present and bounded, otherwise both empty. Secret; never log.
     QByteArray xeapiSessionId;
     QByteArray xeapiSessionKey;
+    domain::CacheRetention cacheRetention{}; // no raw response headers leave infrastructure
 };
 
 // Thread-affine async POST transport. It does not sign, retry, decrypt, parse

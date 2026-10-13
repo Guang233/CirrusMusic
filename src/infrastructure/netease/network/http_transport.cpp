@@ -1,4 +1,6 @@
 #include "http_transport.h"
+#include "infrastructure/network/cache_retention_policy.h"
+#include <QElapsedTimer>
 
 #include "infrastructure/netease/protocol/comment_v3_policy.h"
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
@@ -72,6 +74,7 @@ struct HttpTransport::Pending {
     QPointer<QTimer> timer;
     QByteArray body;
     qsizetype limit = 0;
+    QElapsedTimer elapsed;
     bool xeapi = false;
     TransportError forcedError = TransportError::None;
 };
@@ -111,6 +114,7 @@ quint64 HttpTransport::post(TransportRequest request)
     const quint64 id = ++m_nextId;
     auto pending = std::make_shared<Pending>();
     pending->limit = request.responseLimit;
+    pending->elapsed.start();
     m_pending.insert(id, pending);
     // Always deferred: even validation failure/cancel-before-start can be observed
     // after post() returns. Callers must keep a receiver connected until completion.
@@ -275,6 +279,9 @@ void HttpTransport::finish(quint64 id)
                 result.xeapiSessionKey = std::move(sessionKey);
             }
         }
+        if (result.error == TransportError::None)
+            result.cacheRetention =
+                network::cacheRetention(*pending->reply, pending->elapsed.elapsed());
         pending->reply->deleteLater();
     }
     emit completed(id, result);

@@ -30,7 +30,8 @@ class ListeningStateService;
 namespace cirrus::cache
 {
 class ResourceCacheService;
-}
+class CachedMusicQueryService;
+} // namespace cirrus::cache
 
 namespace cirrus::runtime
 {
@@ -70,6 +71,10 @@ class BackendRuntime final : public QObject
     [[nodiscard]] application::PersonalFmSource& fm() const { return *m_fm; }
     [[nodiscard]] storage::ListeningStateService* listeningState() const { return m_state; }
     [[nodiscard]] cache::ResourceCacheService* resourceCache() const { return m_cache; }
+    [[nodiscard]] cache::CachedMusicQueryService* resourceQueries() const
+    {
+        return m_resourceQueries;
+    }
 
   private:
     application::BackendFacade* m_facade = nullptr;
@@ -77,6 +82,7 @@ class BackendRuntime final : public QObject
     application::ListeningSession* m_listening = nullptr;
     storage::ListeningStateService* m_state = nullptr;
     cache::ResourceCacheService* m_cache = nullptr;
+    cache::CachedMusicQueryService* m_resourceQueries = nullptr;
 };
 
 } // namespace cirrus::runtime

@@ -1,7 +1,7 @@
 #include "cover_fetcher.h"
+#include "infrastructure/network/cache_retention_policy.h"
 #include "resource_cache_codec.h"
 #include <QBuffer>
-#include <QDateTime>
 #include <QElapsedTimer>
 #include <QImageReader>
 #include <QNetworkReply>
@@ -17,62 +17,7 @@ namespace
 {
 qint64 retention(const QNetworkReply& reply, qint64 elapsed)
 {
-    qint64 ttl = maximumCacheTtl(CacheKind::Cover), age = 0;
-    const auto now = QDateTime::currentMSecsSinceEpoch();
-    if (now <= 0 || now > 253402300799999LL - 7 * CacheDayMs)
-        return 0;
-    if (!reply.rawHeader(QByteArrayLiteral("Vary")).isEmpty() ||
-        !reply.rawHeader(QByteArrayLiteral("Pragma")).isEmpty())
-        return 0;
-    const auto control = reply.rawHeader(QByteArrayLiteral("Cache-Control")).toLower();
-    bool ageSeen = false;
-    for (const auto& raw : control.split(',')) {
-        const auto token = raw.trimmed();
-        if (token == "no-store" || token.startsWith("no-cache") || token == "no-store=1")
-            return 0;
-        if (token.startsWith("max-age=")) {
-            if (ageSeen)
-                return 0;
-            ageSeen = true;
-            const auto value = token.mid(8);
-            if (value.isEmpty() || value.size() > 9 ||
-                !std::all_of(value.begin(), value.end(),
-                             [](char c) { return c >= '0' && c <= '9'; }))
-                return 0;
-            bool ok = false;
-            const auto seconds = value.toLongLong(&ok);
-            if (!ok || seconds <= 0)
-                return 0;
-            ttl = std::min(ttl, seconds * 1000);
-        } else if (!token.isEmpty() && token != "public" && token != "private" &&
-                   token != "must-revalidate" && token != "immutable")
-            return 0;
-    }
-    const auto rawAge = reply.rawHeader(QByteArrayLiteral("Age"));
-    if (!rawAge.isEmpty()) {
-        bool ok = false;
-        const auto seconds = rawAge.toLongLong(&ok);
-        if (!ok || seconds < 0 || seconds > 31536000)
-            return 0;
-        age = seconds * 1000;
-    }
-    const auto rawDate = reply.rawHeader(QByteArrayLiteral("Date"));
-    if (!rawDate.isEmpty()) {
-        const auto date = QDateTime::fromString(QString::fromLatin1(rawDate), Qt::RFC2822Date);
-        if (!date.isValid() || date.toMSecsSinceEpoch() > now || date.toMSecsSinceEpoch() <= 0)
-            return 0;
-        age = std::max(age, now - date.toMSecsSinceEpoch());
-    }
-    ttl = std::max<qint64>(0, ttl - age - elapsed); // conservative transport/resident-age allowance
-    const auto rawExpires = reply.rawHeader(QByteArrayLiteral("Expires"));
-    if (!rawExpires.isEmpty()) {
-        const auto expires =
-            QDateTime::fromString(QString::fromLatin1(rawExpires), Qt::RFC2822Date);
-        if (!expires.isValid())
-            return 0;
-        ttl = std::min(ttl, std::max<qint64>(0, expires.toMSecsSinceEpoch() - now));
-    }
-    return ttl;
+    return network::cacheRetention(reply, elapsed).remainingMs();
 }
 } // namespace
 struct CoverFetcher::Pending {

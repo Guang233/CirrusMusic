@@ -4,7 +4,9 @@
 
 > 当前状态：Qt 模板入口 + 分层原生后端（认证／查询／队列／FM播放／歌词）+ 开发文档、固定版本 API 审计及定向 Qt Test，尚未实现可用的音乐客户端功能。本文中的产品目标不是已交付功能；本项目不是网易云音乐官方客户端。
 
-**最新缓存后端**：[先设计、后实现的资源缓存首包](docs/tasks/resource-cache-backend.md)：歌曲元数据／六轨歌词显式读写、封面显式受限GET与PNG尺寸化缓存，独立cache库／原SQL线程／账号隔离／TTL／SHA256／预算LRU／清理屏障。Runtime `resourceCacheRoot` 空时关闭，不透明接管MusicQuery；写入需原查询前捕获的permit与明确获准TTL。Linux Debug／Release、Clang8units／23个实际依赖对象和链接检查通过；未新增或运行测试／SQL／图片／网络，不能据此声称运行验收通过。**本助手只负责后端，不做UI；听歌统计留最后。** 只本地commit，不push。
+**最新查询缓存接入**：[歌曲／歌词显式缓存查询](docs/tasks/resource-cache-query-integration.md)。Runtime `resourceQueries()` 提供CacheOnly／PreferCache／Refresh，复用原Facade、只补查miss歌曲，服务端许可沿原ID/context传递，未知/no-store不落盘；原permit、单调剩余期限、清理／取消与部分写入错误保持明确。封面仍按需且同步收紧未知许可；原查询默认行为／UI／播放链不改。Debug/Release、Clang16units、24个分层对象和链接检查通过；未新增或运行测试/SQL/图片/网络，仅源码与静态证据，统计仍最后。
+
+**此前缓存后端**：[先设计、后实现的资源缓存首包](docs/tasks/resource-cache-backend.md)：歌曲元数据／六轨歌词显式读写、封面显式受限GET与PNG尺寸化缓存，独立cache库／原SQL线程／账号隔离／TTL／SHA256／预算LRU／清理屏障。Runtime `resourceCacheRoot` 空时关闭，不透明接管MusicQuery；写入需原查询前捕获的permit与明确获准TTL。Linux Debug／Release、Clang8units／23个实际依赖对象和链接检查通过；未新增或运行测试／SQL／图片／网络，不能据此声称运行验收通过。**本助手只负责后端，不做UI；听歌统计留最后。** 只本地commit，不push。
 
 **此前后端增量**：[队列恢复与长期收听历史](docs/tasks/listening-state-persistence.md)。队列包本地提交 `55458e5`；复用SQLite线程、v2队列／v3长期明细与分页，独立record ID／UTC／实际已听毫秒、累计upsert不重复计账；256仅近期内存窗口，不截断数据库。纯队列恢复不load/play/lyrics，历史不还原active或自动报告；显式Runtime开关default false、不接UI。两包Debug／Release、Clang7 units／Core+Sql链接通过；无新增或运行测试／SQL／播放／服务／NetEase，不把编译当持久性或崩溃验收，#92等门禁保留，仅本地commit、不push。
 

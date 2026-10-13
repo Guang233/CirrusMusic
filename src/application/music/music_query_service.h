@@ -21,7 +21,8 @@ class MusicQueryService final : public QObject
     void cancel(quint64 id);
   signals:
     void completed(quint64 id, cirrus::domain::SessionToken context,
-                   cirrus::application::MusicResult result);
+                   cirrus::application::MusicResult result,
+                   cirrus::domain::CacheRetention retention = {});
 
   private:
     struct Pending {
@@ -31,7 +32,7 @@ class MusicQueryService final : public QObject
         std::optional<QString> authenticatedAccount; // private read's original verified scope
     };
     void rejectLater(quint64 id, MusicError error);
-    void finish(quint64 id, MusicResult result);
+    void finish(quint64 id, MusicResult result, domain::CacheRetention retention = {});
     SessionCoordinator& m_session;
     QPointer<IMusicGateway> m_gateway;
     QHash<quint64, Pending> m_pending;

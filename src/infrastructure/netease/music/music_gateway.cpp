@@ -92,7 +92,7 @@ MusicGateway::MusicGateway(SessionApiClient& client, QObject* parent)
                 else if (result.error != ApiError::None || result.decoded.businessCode != 200)
                     finish(id, failure(result));
                 else
-                    receiveSuccess(id, result.decoded.object);
+                    receiveSuccess(id, result.decoded.object, result.cacheRetention);
             });
     connect(&client, &QObject::destroyed, this, [this] {
         const auto ids = m_pending.keys();
@@ -205,7 +205,8 @@ void MusicGateway::submitApi(quint64 id, ApiOperation operation, QJsonObject par
     m_apiIds.insert(pending.apiId, id);
 }
 
-void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object)
+void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object,
+                                  domain::CacheRetention retention)
 {
     const auto pending = m_pending.value(id);
     const auto* query = std::get_if<domain::PlaylistSongsQuery>(&pending.query);
@@ -213,7 +214,7 @@ void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object)
         auto result = mapMusicResponse(pending.query, object);
         if (auto* daily = std::get_if<domain::DailyRecommendations>(&result))
             daily->receivedAtUtc = QDateTime::currentDateTimeUtc();
-        finish(id, std::move(result));
+        finish(id, std::move(result), retention);
         return;
     }
     if (!pending.page) {
@@ -272,7 +273,7 @@ void MusicGateway::cancel(quint64 id)
     QTimer::singleShot(0, this, [this, id] { finish(id, MusicFailure{MusicError::Canceled}); });
 }
 
-void MusicGateway::finish(quint64 id, MusicResult result)
+void MusicGateway::finish(quint64 id, MusicResult result, domain::CacheRetention retention)
 {
     if (!m_pending.contains(id))
         return;
@@ -282,6 +283,10 @@ void MusicGateway::finish(quint64 id, MusicResult result)
         result = MusicFailure{MusicError::Canceled};
     if (m_client && !m_client->accepts(pending.context))
         result = MusicFailure{MusicError::StaleContext};
-    emit completed(id, pending.context, std::move(result));
+    if (std::holds_alternative<MusicFailure>(result) ||
+        (!std::holds_alternative<DetailQuery>(pending.query) &&
+         !std::holds_alternative<LyricQuery>(pending.query)))
+        retention = {};
+    emit completed(id, pending.context, std::move(result), retention);
 }
 } // namespace cirrus::netease

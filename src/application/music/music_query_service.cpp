@@ -11,13 +11,14 @@ MusicQueryService::MusicQueryService(SessionCoordinator& session, IMusicGateway&
 {
     Q_ASSERT(session.thread() == thread() && gateway.thread() == thread());
     connect(&gateway, &IMusicGateway::completed, this,
-            [this](quint64 gatewayId, domain::SessionToken token, MusicResult result) {
+            [this](quint64 gatewayId, domain::SessionToken token, MusicResult result,
+                   domain::CacheRetention retention) {
                 const auto id = m_ids.value(gatewayId);
                 if (!m_pending.contains(id))
                     return;
                 if (m_pending.value(id).context != token)
                     result = MusicFailure{MusicError::StaleContext};
-                finish(id, std::move(result));
+                finish(id, std::move(result), retention);
             });
     connect(&gateway, &QObject::destroyed, this, [this] {
         for (auto id : m_pending.keys())
@@ -102,7 +103,7 @@ void MusicQueryService::cancel(quint64 id)
         m_gateway->cancel(m_pending.value(id).gatewayId);
 }
 
-void MusicQueryService::finish(quint64 id, MusicResult result)
+void MusicQueryService::finish(quint64 id, MusicResult result, domain::CacheRetention retention)
 {
     if (!m_pending.contains(id))
         return;
@@ -115,6 +116,10 @@ void MusicQueryService::finish(quint64 id, MusicResult result)
         result = MusicFailure{MusicError::StaleContext};
     else if (pending.forced)
         result = MusicFailure{*pending.forced};
-    emit completed(id, pending.context, std::move(result));
+    if (std::holds_alternative<MusicFailure>(result) ||
+        (!std::holds_alternative<domain::SongDetails>(result) &&
+         !std::holds_alternative<domain::SongLyrics>(result)))
+        retention = {};
+    emit completed(id, pending.context, std::move(result), retention);
 }
 } // namespace cirrus::application

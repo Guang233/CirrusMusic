@@ -5,6 +5,7 @@
 #include "application/playback/listening_session.h"
 #include "application/playback/playback_coordinator.h"
 #include "infrastructure/bootstrap/anonymous_bootstrap.h"
+#include "infrastructure/cache/cached_music_query_service.h"
 #include "infrastructure/cache/resource_cache_service.h"
 #include "infrastructure/cache/resource_cache_worker.h"
 #include "infrastructure/media/qt_playback_backend.h"
@@ -503,12 +504,13 @@ class BackendWorker final : public QObject
                         emit playbackDelivered({m_playbackParentGeneration, std::move(snapshot)});
                 });
         connect(m_musicService.get(), &MusicQueryService::completed, this,
-                [this](quint64 id, domain::SessionToken context, MusicResult result) {
+                [this](quint64 id, domain::SessionToken context, MusicResult result,
+                       domain::CacheRetention retention) {
                     if (!m_musicRequests.contains(id))
                         return;
                     const auto command = m_musicRequests.take(id);
                     emit musicDelivered(
-                        {command.id, command.generation, context, std::move(result)});
+                        {command.id, command.generation, context, std::move(result), retention});
                 });
         connect(m_session.get(), &SessionCoordinator::changed, this,
                 &BackendWorker::publishSession);
@@ -649,8 +651,10 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 {
     if (config.persistListeningState)
         m_state = new storage::ListeningStateService(*m_listening, *m_facade, this);
-    if (!config.resourceCacheRoot.isEmpty())
+    if (!config.resourceCacheRoot.isEmpty()) {
         m_cache = new cache::ResourceCacheService(*m_facade, this);
+        m_resourceQueries = new cache::CachedMusicQueryService(*m_facade, *m_cache, this);
+    }
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
     thread->setObjectName(QStringLiteral("CirrusBackend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
@@ -675,6 +679,8 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
                 &cache::ResourceCacheService::deliver, Qt::QueuedConnection);
     }
     connect(m_facade, &BackendFacade::closeRequested, this, [this, worker] {
+        if (m_resourceQueries)
+            m_resourceQueries->close();
         if (m_cache)
             m_cache->close();
         auto finalJobs = m_state ? m_state->close() : QList<storage::ListeningStateJob>{};
@@ -740,6 +746,8 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
 
 BackendRuntime::~BackendRuntime()
 {
+    delete m_resourceQueries; // facade/cache must outlive their explicit composition
+    m_resourceQueries = nullptr;
     if (m_state)
         m_listening
             ->finishHistoryForStorage(); // final observed total before deleting the Core owner

@@ -38,6 +38,7 @@ struct ApiResult {
     QByteArray anonymousToken;
     // Conservative write boundary: submitted to transport, MAY have reached server.
     bool submittedToTransport = false;
+    domain::CacheRetention cacheRetention{}; // only standalone song details / lyrics
 };
 
 [[nodiscard]] bool validAnonymousToken(const QByteArray& token);

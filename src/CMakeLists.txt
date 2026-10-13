@@ -8,6 +8,7 @@ target_sources(cirrus_domain INTERFACE
     domain/account/qr_login_types.h
     domain/music/music_types.h
     domain/music/resource_cache_types.h
+    domain/music/cache_retention.h
     domain/music/catalog_types.h
     domain/music/discovery_types.h
     domain/music/discovery_browse_types.h
@@ -267,6 +268,9 @@ target_link_libraries(cirrus_listening_state PUBLIC cirrus_application cirrus_st
 
 # Explicit resource cache; existing Qt modules only, no dependency from Core to SQL/Gui/Network.
 add_library(cirrus_resource_cache STATIC
+    infrastructure/network/cache_retention_policy.h
+    infrastructure/cache/cached_music_query_service.h
+    infrastructure/cache/cached_music_query_service.cpp
     infrastructure/cache/resource_cache_codec.h
     infrastructure/cache/resource_cache_codec.cpp
     infrastructure/cache/resource_cache_store.h

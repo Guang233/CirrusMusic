@@ -493,6 +493,10 @@ void SessionApiClient::receive(quint64 transportId, const TransportResult& trans
             }
         }
     }
+    if (result.error == ApiError::None && result.decoded.businessCode == 200 &&
+        (pending.operation == ApiOperation::SongDetails ||
+         pending.operation == ApiOperation::SongLyrics))
+        result.cacheRetention = transport.cacheRetention;
     finish(id, std::move(result));
 }
 
@@ -516,6 +520,7 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
         result.credentialReceipt = {};
         result.decoded.object = {}; // never leak partial/stale provider data
         result.decoded.businessCode.reset();
+        result.cacheRetention = {};
     }
     result.submittedToTransport = pending.transportId != 0;
     emit completed(id, pending.context, std::move(result));

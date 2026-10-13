@@ -22,9 +22,9 @@ class MusicGateway final : public application::IMusicGateway
         bool canceled = false;
         std::optional<domain::PlaylistSongsPage> page;
     };
-    void finish(quint64 id, application::MusicResult result);
+    void finish(quint64 id, application::MusicResult result, domain::CacheRetention retention = {});
     void submitApi(quint64 id, ApiOperation operation, QJsonObject parameters);
-    void receiveSuccess(quint64 id, const QJsonObject& object);
+    void receiveSuccess(quint64 id, const QJsonObject& object, domain::CacheRetention retention);
     QPointer<SessionApiClient> m_client;
     QHash<quint64, Pending> m_pending;
     QHash<quint64, quint64> m_apiIds;

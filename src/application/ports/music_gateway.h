@@ -2,6 +2,7 @@
 
 #include "domain/account/session_types.h"
 #include "domain/music/account_library_types.h"
+#include "domain/music/cache_retention.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/chart_types.h"
 #include "domain/music/cloud_history_types.h"
@@ -223,7 +224,8 @@ class IMusicGateway : public QObject
     virtual void cancel(quint64 id) = 0;
   signals:
     void completed(quint64 id, cirrus::domain::SessionToken context,
-                   cirrus::application::MusicResult result);
+                   cirrus::application::MusicResult result,
+                   cirrus::domain::CacheRetention retention = {});
 };
 
 } // namespace cirrus::application

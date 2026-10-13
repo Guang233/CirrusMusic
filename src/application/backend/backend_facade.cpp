@@ -402,9 +402,8 @@ void BackendFacade::cancelMusicWith(quint64 id, MusicError error)
         return;
     const auto command = m_music.take(id);
     emit musicCancelRequested(id);
-    QTimer::singleShot(0, this, [this, id, context = command.context, error] {
-        emit musicCompleted(id, context, MusicFailure{error});
-    });
+    QTimer::singleShot(0, this,
+                       [this, command, error] { publishMusic(command, MusicFailure{error}); });
 }
 
 void BackendFacade::invalidateMusic(MusicError error)
@@ -445,7 +444,29 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
         if (!page || !domain::matchingSongWikiText(*wiki, *page))
             delivery.result = MusicFailure{MusicError::InvalidResponse};
     }
-    emit musicCompleted(expected.id, expected.context, std::move(delivery.result));
+    publishMusic(expected, std::move(delivery.result), delivery.cacheRetention);
+}
+
+void BackendFacade::publishMusic(const MusicCommand& command, MusicResult result,
+                                 domain::CacheRetention retention)
+{
+    const bool resource = std::holds_alternative<DetailQuery>(command.query) ||
+                          std::holds_alternative<LyricQuery>(command.query);
+    if (!resource) {
+        emit musicCompleted(command.id, command.context, std::move(result));
+        return;
+    }
+    const auto source = m_snapshot;
+    const QPointer<BackendFacade> guard(this);
+    emit musicCompleted(command.id, command.context, result); // preserve legacy notification
+    if (!guard)
+        return;
+    if (m_snapshot != source || m_state != BackendState::Ready ||
+        m_generation != command.generation || m_snapshot.token != command.context)
+        result = MusicFailure{MusicError::StaleContext};
+    if (std::holds_alternative<MusicFailure>(result))
+        retention = {};
+    emit musicResourceCompleted(command.id, command.context, std::move(result), retention);
 }
 
 quint64 BackendFacade::reportListening(domain::ListeningReport report)
