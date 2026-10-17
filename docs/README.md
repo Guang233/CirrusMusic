@@ -70,6 +70,7 @@
 | [B-031播放状态／歌词IPC与三平台系统媒体设计](tasks/B-031-playback-observation.md) | O1 Core与O2a严格codec/framer/golden/六轨分页限定I/S；O2b逻辑连接/订阅/退役/背压fake限定I/S；O3a Linux私有资源/kernel UID harness已接；O3b1 owner→mailbox私有退役/活源验证/单票wake组合限定I/S；后续O3b2 §9.6参数化Linux真实I/O/严格发现已限定I/S；发行身份/另一OS用户负测/沙箱/部署性能与三平台adapter仍G，无产品状态server |
 | [06 播放与音频系统](06-playback-and-audio.md) | 播放状态、并发切歌、错误恢复和后端如何实现？ |
 | [07 QML 与设计系统工程](07-qml-and-design-system.md) | 如何自绘现代控件而不丢掉交互、性能和可访问性？ |
+| [UI 技术方案](ui/README.md) | 外壳 MD3E／播放页沉浸风格如何统一，UI 怎样分层、分阶段实施？（草案，替代 07 中的风格与实施路线） |
 | [08 功能流程规格](08-feature-specifications.md) | 登录、搜索、歌词、下载、云盘等具体怎样工作？ |
 | [09 存储、缓存与同步](09-storage-cache-and-sync.md) | 数据存哪里、如何迁移、冲突和退出账号怎样处理？ |
 | [10 Linux 桌面集成](10-linux-integration.md) | Wayland、MPRIS、托盘、快捷键和 Flatpak 有何限制？ |
