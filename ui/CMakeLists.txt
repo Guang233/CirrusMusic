@@ -3,6 +3,8 @@ find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick)
 # One output tree for every UI QML module so qmllint and tooling resolve imports.
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/third_party/material-color-utilities"
+                 "${CMAKE_BINARY_DIR}/third_party/material-color-utilities")
 add_subdirectory(theme)
 add_subdirectory(controls)
 add_subdirectory(samples)
