@@ -11,7 +11,6 @@ qt_add_qml_module(cirrus_ui_theme
         fonts.h
         fonts.cpp
     RESOURCES
-        fonts/GoogleSansFlex.ttf
         fonts/MaterialSymbolsRounded.ttf
 )
 

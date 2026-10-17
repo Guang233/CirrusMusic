@@ -11,7 +11,7 @@
 | [material-color-utilities](https://github.com/material-foundation/material-color-utilities) | Apache-2.0 | 封面取色、HCT、配色方案（C++ 版本） | 阶段 1 引入固定提交；需去掉 `wsmeans.cc` 对 Abseil 的依赖，并对照 TS/Java 版补 2025 规范差异 |
 | [m3shapes](https://github.com/soramanew/m3shapes) | Apache-2.0 | MD3E 形状与变形（androidx graphics-shapes 的 Qt QML 移植） | 阶段 1 评估。项目较新（16 star，最近提交 2026-09-17），Caelestia 已在使用 |
 | [Material Symbols](https://github.com/google/material-design-icons) | Apache-2.0 | 图标 | 已引入子集，见 `ui/theme/fonts/README.md` |
-| [Google Sans Flex](https://github.com/google/fonts/tree/main/ofl/googlesansflex) | OFL-1.1 | 拉丁字体 | 已引入 4.005 原文件 |
+| [Google Sans Flex](https://github.com/google/fonts/tree/main/ofl/googlesansflex) | OFL-1.1 | 拉丁字体候选 | 未打包：文字暂用系统字体（UQ-03） |
 
 ## 2. MD3／MD3E 视觉参考（Linux 社区）
 

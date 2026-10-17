@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fetch the pinned UI fonts, verify them and regenerate the bundled assets.
+"""Fetch the pinned icon font, verify it and regenerate the bundled assets.
 
-Development tool only; the application never downloads fonts. Outputs:
-  ui/theme/fonts/GoogleSansFlex.ttf          unmodified upstream file
+Development tool only; the application never downloads fonts. Text uses the
+platform UI font, so no text font is bundled (docs/ui/README.md, UQ-03). Outputs:
   ui/theme/fonts/MaterialSymbolsRounded.ttf  subset of the glyphs in symbols.txt
   ui/theme/Symbols.qml                       name -> codepoint singleton
 Requires fontTools (pyftsubset).
@@ -24,22 +24,9 @@ CACHE = ROOT / "build" / "ui-assets"
 FONTS = ROOT / "ui" / "theme" / "fonts"
 SYMBOLS_QML = ROOT / "ui" / "theme" / "Symbols.qml"
 
-GOOGLE_FONTS = "https://raw.githubusercontent.com/google/fonts/a0e3dbcdc3a3ecfafff3f071159ae0221628922d/ofl/googlesansflex/"
 MATERIAL_ICONS = "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/"
 
 PINNED = {
-    "GoogleSansFlex.ttf": (
-        GOOGLE_FONTS + "GoogleSansFlex%5BGRAD%2CROND%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf",
-        "c31a482fbecbf2e07e6890134d20078723aadf732c9b9c6c9a44f86f8265b6fe",
-    ),
-    "GoogleSansFlex-OFL.txt": (
-        GOOGLE_FONTS + "OFL.txt",
-        "fc13d69f63e36d284b6e383d4d1463d8ad404f0aa065e57cf961252d51063137",
-    ),
-    "GoogleSansFlex-TRADEMARKS.md": (
-        GOOGLE_FONTS + "TRADEMARKS.md",
-        "5cad381c0828db656f32a787a1eff76db3303c74ec4f94668ae9fc2873ffe42f",
-    ),
     "MaterialSymbolsRounded.ttf": (
         MATERIAL_ICONS + "variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf",
         "95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca",
@@ -146,9 +133,6 @@ def main() -> None:
     for name in PINNED:
         fetch(name)
 
-    shutil.copyfile(CACHE / "GoogleSansFlex.ttf", FONTS / "GoogleSansFlex.ttf")
-    shutil.copyfile(CACHE / "GoogleSansFlex-OFL.txt", FONTS / "GoogleSansFlex-OFL.txt")
-    shutil.copyfile(CACHE / "GoogleSansFlex-TRADEMARKS.md", FONTS / "GoogleSansFlex-TRADEMARKS.md")
     shutil.copyfile(CACHE / "MaterialSymbols-LICENSE", FONTS / "MaterialSymbols-LICENSE")
 
     names = read_icon_names()

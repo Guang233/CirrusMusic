@@ -96,8 +96,8 @@ flowchart TD
 ```text
 ui/
   CMakeLists.txt  所有 UI 模块输出到 build/<preset>/qml/，便于 qmllint 解析导入
-  theme/          Cirrus.Theme：fonts.{h,cpp}（注册随包字体、中文回退）、Symbols.qml（图标码位，生成）
-    fonts/        随包字体、许可文件、symbols.txt（图标清单）
+  theme/          Cirrus.Theme：fonts.{h,cpp}（文字用系统字体、注册图标字体）、Symbols.qml（图标码位，生成）
+    fonts/        图标字体子集、许可文件、symbols.txt（图标清单）
   controls/       Cirrus.Controls：Icon.qml（阶段 2 起补控件）
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
   app/            CirrusMusic：main.cpp、Main.qml（目前仍是 Qt 模板）
@@ -149,10 +149,8 @@ third_party/
 ### 4.2 字体
 
 - MD3 字体层级：15 个基础样式 + 15 个强调样式（Display、Headline、Title、Body、Label 各大中小）。
-- 拉丁字体候选：**Google Sans Flex**（OFL-1.1，可变字体，含字重、字宽、光学尺寸、圆度等轴）。Qt 6.7 起可以通过 `font.variableAxes` 设置任意轴的值。
-- **中文字体待定（UQ-03）**：Google Sans Flex 不含中文。两种方案：
-  - 使用系统字体回退（Linux 常见 Noto Sans CJK，Windows 微软雅黑，macOS 苹方）：包小，但各平台观感不同。
-  - 随包附带可变的 Noto Sans SC（OFL）：观感一致，但体积增加明显。
+- **当前决定：文字使用系统 UI 字体，不随包附带文字字体（UQ-03）。** 中文和其他文字由系统自行回退（Linux 常见 Noto Sans CJK，Windows 微软雅黑，macOS 苹方）。代价是各平台观感不同，也不能依赖字宽、圆度等可变轴，字体层级只用字号、字重、行高和字距表达。
+- 唯一的修改点是 `ui/theme/fonts.cpp` 的 `textFamily()`；QML 统一使用 `Fonts.sans`，以后改为随包字体时页面不用改。候选字体（Google Sans Flex、Noto Sans SC）的来源与限制记录在 `ui/theme/fonts/README.md`。
 - 中西文混排时检查基线和行高；播放页歌词以中文为主，字体选择要以中文效果优先。
 
 ### 4.3 形状、状态层与高度
@@ -297,7 +295,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 事项 | 处理方式 |
 | --- | --- |
 | 图形后端 | Qt RHI：Linux 为 Vulkan/OpenGL，Windows 为 D3D11，macOS 为 Metal。自定义着色器通过 ShaderTools 生成各后端版本 |
-| 字体 | 拉丁字体随包附带；中文字体见 UQ-03 |
+| 字体 | 文字用各平台系统字体（UQ-03），观感差异需分别检查；图标字体随包附带 |
 | 标题栏 | 见 §6.1 |
 | 快捷键 | 使用 `StandardKey`，自定义快捷键按平台区分 Ctrl 和 Cmd |
 | 缩放 | 测试 100%/125%/150%/200%，以及 Wayland 分数缩放 |
@@ -312,8 +310,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 资源 | 许可 | 用途 | 状态 |
 | --- | --- | --- | --- |
 | Material Symbols Rounded | Apache-2.0 | 全局图标（可变字体：填充、字重、等级、光学尺寸） | 候选，阶段 0 确认是否裁剪子集 |
-| Google Sans Flex | OFL-1.1 | 拉丁字体 | 候选 |
-| 中文字体 | 视方案而定 | 中文显示 | 待定（UQ-03） |
+| 文字字体 | — | 文字显示 | 暂用系统字体，不打包（UQ-03）；候选见 `ui/theme/fonts/README.md` |
 | material-color-utilities | Apache-2.0 | 取色与配色方案 | 计划引入固定提交（需去除 Abseil 依赖） |
 | m3shapes | Apache-2.0 | MD3E 形状与变形 | 待评估 |
 
@@ -350,7 +347,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | --- | --- | --- | --- |
 | UQ-01 | 外壳种子色默认来源：跟随封面、固定、跟随系统 | 提供三种选项，默认值看原型效果 | 阶段 1 结束 |
 | UQ-02 | 窗口标题栏方案（§6.1） | 原型对比后决定，可按平台区分 | 阶段 3 开始 |
-| UQ-03 | 中文字体：系统回退还是随包附带 | 暂用系统回退（见 §15）；随包方案的 Noto Sans SC 可变字体约 17.8 MB | 待维护者决定，不阻塞阶段 1 |
+| UQ-03 | 文字字体：系统字体还是随包附带 | **暂定使用系统字体，不打包**；以后可能改为随包，也可能一直不打包。修改点见 §4.2 | 维护者以后决定 |
 | UQ-04 | 默认配色方案变体 | 原型比较 TonalSpot 与 Expressive | 阶段 1 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
@@ -364,20 +361,20 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 **交付**
 
 - `ui/` 目录与 `Cirrus.Theme`、`Cirrus.Controls`、`Cirrus.Samples`、`CirrusMusic`、`CirrusGallery` 五个 QML 模块，结构见 §3.3；原根目录的 `main.cpp`、`Main.qml` 已迁入 `ui/app/`，可执行文件位置不变。
-- 随包字体：Google Sans Flex 4.005（原文件）与 Material Symbols Rounded 2.973 的 96 个图标子集（171 KB，保留全部可变轴），来源、SHA-256 与修改说明见 `ui/theme/fonts/README.md`。
+- 随包字体：Material Symbols Rounded 2.973 的 96 个图标子集（171 KB，保留全部可变轴），来源、SHA-256 与修改说明见 `ui/theme/fonts/README.md`。文字使用系统字体（最初引入的 Google Sans Flex 已按维护者意见撤出）。
 - 虚构示例数据：12 张程序绘制的封面、13 张专辑／38 首歌曲／5 个歌单、2 份带翻译与逐字时间的歌词，说明见 `ui/samples/README.md`。
-- Gallery 资源页：字重 100–1000、字宽、圆度、光学尺寸、倾斜等可变轴，中文／日文／希腊／西里尔／emoji 混排，全部图标（可调填充、字重、尺寸），全部示例封面。
+- Gallery 资源页：系统字体的字重 Thin–Black，中文／日文／希腊／西里尔／emoji 混排，全部图标（可调填充、字重、尺寸），全部示例封面。
 - [参考调研清单](references.md)。
 
 **验证（Linux，Qt 6.11.2）**
 
 - Debug、Release 下 `appCirrusMusic`、`appCirrusGallery`、`cirrus_backend` 构建无警告；`all_qmllint` 无警告。
-- `QT_QPA_PLATFORM=offscreen` 下 Gallery 截图检查：可变轴均生效；中文回退到系统的 Noto Sans CJK SC，并按 `font.weight` 选取相近字重；希腊、西里尔、emoji 正常回退；图标填充和字重轴生效。`appCirrusMusic` 离屏启动正常（仍是模板窗口）。
+- `QT_QPA_PLATFORM=offscreen` 下 Gallery 截图检查：系统字体与中文（Noto Sans CJK SC）按 `font.weight` 选取相近字重；日文、希腊、西里尔、emoji 正常回退；图标填充和字重轴生效。离屏模式没有桌面平台主题，系统字体显示为通用名 `Sans Serif`，真实桌面会话中取 GNOME/KDE 设置的字体。`appCirrusMusic` 离屏启动正常（仍是模板窗口）。
 - 新增 C++ 文件通过 clang-format 检查。
 - 未在 Windows、macOS 上构建或运行。
 
 **发现的问题**
 
 - 全量构建中后端测试 `tests/unit/entity_search_test.cpp:42` 编译失败：`detail::aes` 同时匹配 `cirrus::netease::detail` 与 `backend_facade.h` 中的 `cirrus::application::detail`。该问题来自后端提交 `2c164a7`（评论写入 Facade 拆分）引入的 `namespace detail`，与 UI 改动无关，UI 侧未修改后端代码。其余目标全部构建通过。
-- Google Sans Flex 4.005 只覆盖 535 个拉丁字符；商标说明限制修改版使用其名称，因此原样分发、不做裁剪。
+- Google Sans Flex 4.005 只覆盖 535 个拉丁字符，商标说明限制修改版使用其名称；已不打包，记录保留在 `ui/theme/fonts/README.md`。
 - QML 中 `onXxx` 形式的名字与信号处理器冲突，MD3 颜色角色名需在阶段 1 规避，详见 [references.md §6](references.md)。

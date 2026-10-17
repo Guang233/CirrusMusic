@@ -6,7 +6,7 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Samples
 
-// Phase 0 check: bundled fonts and variable axes, CJK fallback, icons, sample covers.
+// Phase 0 check: system text font and script fallback, bundled icons, sample covers.
 ScrollView {
     id: page
 
@@ -46,83 +46,19 @@ ScrollView {
             text: qsTr("字体")
         }
         Caption {
-            text: qsTr("拉丁：%1 · 图标：%2").arg(Fonts.sans || qsTr("未加载")).arg(Fonts.symbols || qsTr("未加载"))
-        }
-        Caption {
-            text: qsTr("中文回退（已安装）：%1").arg(Fonts.installedFallbacks.length > 0 ? Fonts.installedFallbacks.join("、") : qsTr("无，使用系统默认"))
+            text: qsTr("文字：%1（系统字体，未随包附带）· 图标：%2").arg(Fonts.sans).arg(Fonts.symbols || qsTr("未加载"))
         }
 
         Caption {
-            text: qsTr("字重 wght 100–1000（中文回退字体按 font.weight 选取最接近字重）")
+            text: qsTr("字重 Thin–Black（实际可用字重取决于系统字体）")
             Layout.topMargin: 12
         }
         Repeater {
-            model: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+            model: [100, 200, 300, 400, 500, 600, 700, 800, 900]
             delegate: Sample {
                 required property int modelData
                 text: modelData + "  Harbor Lights 落日航线 0123456789"
-                font.weight: Math.min(modelData, 900)
-                font.variableAxes: ({
-                        "wght": modelData
-                    })
-            }
-        }
-
-        Caption {
-            text: qsTr("字宽 wdth、圆度 ROND、光学尺寸 opsz、倾斜 slnt")
-            Layout.topMargin: 12
-        }
-        Repeater {
-            model: [
-                {
-                    "label": "wdth 25",
-                    "axes": {
-                        "wdth": 25
-                    }
-                },
-                {
-                    "label": "wdth 151",
-                    "axes": {
-                        "wdth": 151
-                    }
-                },
-                {
-                    "label": "ROND 0",
-                    "axes": {
-                        "ROND": 0,
-                        "wght": 700
-                    }
-                },
-                {
-                    "label": "ROND 100",
-                    "axes": {
-                        "ROND": 100,
-                        "wght": 700
-                    }
-                },
-                {
-                    "label": "opsz 6",
-                    "axes": {
-                        "opsz": 6
-                    }
-                },
-                {
-                    "label": "opsz 144",
-                    "axes": {
-                        "opsz": 144
-                    }
-                },
-                {
-                    "label": "slnt -10",
-                    "axes": {
-                        "slnt": -10
-                    }
-                }
-            ]
-            delegate: Sample {
-                required property var modelData
-                text: modelData.label + "  Expressive Music Player"
-                font.variableAxes: modelData.axes
+                font.weight: modelData
             }
         }
 
