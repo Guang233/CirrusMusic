@@ -91,27 +91,31 @@ flowchart TD
 - QML 只拿到展示用的值和不透明 key（如路由参数、封面 key）；歌曲 ID 等以字符串保存，不做数值运算。
 - 真实实现必须遵守后端规则：按请求 ID 和会话 token 丢弃过期结果；离开页面或发起新查询时取消旧请求；换号时清空私有数据。
 
-### 3.3 目录与构建（建议，阶段 0 确认）
+### 3.3 目录与构建（阶段 0 已确认）
 
 ```text
 ui/
-  CMakeLists.txt
-  theme/          QML 模块 Cirrus.Theme（C++ 取色/配色/弹簧 + QML 单例）
-  controls/       QML 模块 Cirrus.Controls
-  components/     QML 模块 Cirrus.Components
-  player/         QML 模块 Cirrus.Player
-  presentation/   QML 模块 Cirrus.Presentation（C++ ViewModel、模型、图片提供器）
-  app/            QML 模块 CirrusMusic（Main.qml、AppShell、页面、路由）
-  gallery/        appCirrusGallery 入口与预览页面
-  resources/      字体、图标、示例封面与示例数据
+  CMakeLists.txt  所有 UI 模块输出到 build/<preset>/qml/，便于 qmllint 解析导入
+  theme/          Cirrus.Theme：fonts.{h,cpp}（注册随包字体、中文回退）、Symbols.qml（图标码位，生成）
+    fonts/        随包字体、许可文件、symbols.txt（图标清单）
+  controls/       Cirrus.Controls：Icon.qml（阶段 2 起补控件）
+  samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
+  app/            CirrusMusic：main.cpp、Main.qml（目前仍是 Qt 模板）
+  gallery/        appCirrusGallery：Gallery.qml、pages/
+  （阶段 1 起按需新增 components/、player/、presentation/）
+tools/ui/
+  prepare_fonts.py      获取固定版本字体、校验 SHA-256、裁剪图标、生成 Symbols.qml
+  generate_samples.py   生成示例封面、目录、歌词与 Samples.qml
 third_party/
-  material-color-utilities/   固定提交的配色算法源码（§4.1）
+  material-color-utilities/   阶段 1 引入（§4.1）
 ```
 
-- 每个 QML 模块用 `qt_add_qml_module` 声明，C++ 类型用 `QML_ELEMENT`／`QML_SINGLETON` 注册，开启 qmllint 和 qmlcachegen。
-- 现在根目录的 `main.cpp`、`Main.qml` 在阶段 0 迁入 `ui/app/`。
-- Gallery 通过构建选项控制（如 `CIRRUS_BUILD_GALLERY`，开发预设默认开启），不打进发行包。
+- 每个 QML 模块是一个静态库加 `qt_add_qml_module`；可执行程序链接 `<target>plugin` 并在 `main.cpp` 中 `Q_IMPORT_QML_PLUGIN`。QML 单例需在 CMake 中设置 `QT_QML_SINGLETON_TYPE`。
+- 模块在第一次有实际内容时才创建，不建空模块。
+- `appCirrusMusic` 与 `appCirrusGallery` 都输出到 `build/<preset>/` 根目录。
+- Gallery 由 `CIRRUS_BUILD_GALLERY`（默认开启）控制，不打进发行包。`--grab <文件> [--page 名称] [--size WxH]` 渲染一页并保存截图后退出，可在 `QT_QPA_PLATFORM=offscreen` 下使用。
 - 后端库不链接任何 UI 模块；只有 `Cirrus.Presentation` 链接 `cirrus_backend`／`cirrus_application`。
+- 生成文件（`Symbols.qml`、`Samples.qml`、字体子集、示例数据）不要手工修改，改生成脚本或其输入后重新运行。
 
 ## 4. 主题系统（阶段 1）
 
@@ -240,11 +244,11 @@ Text {
 | --- | --- | --- | --- |
 | [illogical-impulse（end-4/dots-hyprland）](https://github.com/end-4/dots-hyprland) | GPL-3.0 | MD3 配色运用、密度、动效手感、媒体控件 | 不复制 |
 | [Caelestia shell](https://github.com/caelestia-dots/shell) | GPL-3.0 | MD3E 形状与动效、媒体面板 | 不复制 |
-| [Noctalia shell](https://github.com/noctalia-dev/noctalia-shell) | MIT | MD3 配色组织方式 | 可在保留版权声明的前提下借鉴 |
+| [Noctalia](https://github.com/noctalia-dev/noctalia) | MIT | MD3 配色组织方式 | 已改为不依赖 Qt 的 C++ 实现，代码参考价值低 |
 | [YesPlayMusic](https://github.com/qier222/YesPlayMusic) | 主分支 MIT（v2 分支为 AGPL-3.0） | 网易云客户端的信息结构、Apple Music 风格播放页 | 技术栈不同，主要借鉴设计 |
 | [AMLL](https://github.com/amll-dev/applemusic-like-lyrics) | AGPL-3.0 | Apple Music 风格逐字歌词效果 | 不复制 |
 
-以上三个桌面外壳项目基于 Quickshell，本身就是 QML 实现，参考价值高；但它们是桌面外壳而不是应用，应用的信息结构还要参考音乐客户端。项目自身许可证尚未确定，确定前不复制任何 GPL/AGPL 代码。
+illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，参考价值高；但它们是桌面外壳而不是应用，应用的信息结构还要参考音乐客户端。项目自身许可证尚未确定，确定前不复制任何 GPL/AGPL 代码。完整清单（含 MD3 音乐客户端与播放页参考）见 [references.md](references.md)。
 
 ## 7. 播放页（阶段 4）
 
@@ -319,7 +323,7 @@ Text {
 
 | 阶段 | 交付内容 | 完成条件 |
 | --- | --- | --- |
-| 0 工程基础 | `ui/` 目录和各 QML 模块的 CMake；Gallery 空壳；字体、图标入库及许可文件；示例封面和示例数据；参考调研清单 | Linux 上 Debug/Release 构建通过，Gallery 能启动，qmllint 无错误 |
+| 0 工程基础（**已完成**，见 §15） | `ui/` 目录和各 QML 模块的 CMake；Gallery 空壳；字体、图标入库及许可文件；示例封面和示例数据；参考调研清单 | Linux 上 Debug/Release 构建通过，Gallery 能启动，qmllint 无错误 |
 | 1 主题系统 | material-color-utilities 引入与改造；后台取色；主题单例（颜色、字体、形状、状态层、动效）；弹簧实验报告；Gallery 主题页（切换封面/种子色/亮暗，查看配色、字体层级、圆角、动效） | 切换封面时配色平滑过渡且不卡顿；文字与背景对比度达标 |
 | 2 MD3E 核心控件 | §5 第一批控件及 Gallery 页面 | 每个控件的状态、键盘、焦点、读屏名称在 Gallery 中可检查 |
 | 3 外壳与页面 | 先写过渡编排说明和 ViewModel 接口说明；窗口方案对比；导航、响应式、迷你播放条、§6.3 页面及其状态；展示层假实现 | 用假数据走通主要页面和导航，所有页面状态可在 Gallery 或调试开关中触发 |
@@ -333,7 +337,7 @@ Text {
 
 | 文档 | 编写时机 |
 | --- | --- |
-| `docs/ui/references.md` 参考调研清单 | 阶段 0 |
+| [`docs/ui/references.md`](references.md) 参考调研清单 | 阶段 0（已完成） |
 | `docs/ui/theme.md` 主题系统与弹簧实验结果 | 阶段 1 |
 | `docs/ui/controls.md` 控件清单与各控件规格 | 阶段 2 |
 | `docs/ui/motion-choreography.md` 过渡编排说明 | 阶段 3 开始前 |
@@ -346,9 +350,34 @@ Text {
 | --- | --- | --- | --- |
 | UQ-01 | 外壳种子色默认来源：跟随封面、固定、跟随系统 | 提供三种选项，默认值看原型效果 | 阶段 1 结束 |
 | UQ-02 | 窗口标题栏方案（§6.1） | 原型对比后决定，可按平台区分 | 阶段 3 开始 |
-| UQ-03 | 中文字体：系统回退还是随包附带 | 待比较观感和包体积 | 阶段 0 |
+| UQ-03 | 中文字体：系统回退还是随包附带 | 暂用系统回退（见 §15）；随包方案的 Noto Sans SC 可变字体约 17.8 MB | 待维护者决定，不阻塞阶段 1 |
 | UQ-04 | 默认配色方案变体 | 原型比较 TonalSpot 与 Expressive | 阶段 1 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
 | UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | 至少以 Gallery 做人工检查，自动化测试范围待定 | 阶段 2 开始 |
 | UQ-08 | m3shapes 直接依赖还是自行移植 | 阶段 1 评估后决定 | 阶段 2 开始 |
+
+## 15. 实施记录
+
+### 阶段 0：工程基础（2026-10-17）
+
+**交付**
+
+- `ui/` 目录与 `Cirrus.Theme`、`Cirrus.Controls`、`Cirrus.Samples`、`CirrusMusic`、`CirrusGallery` 五个 QML 模块，结构见 §3.3；原根目录的 `main.cpp`、`Main.qml` 已迁入 `ui/app/`，可执行文件位置不变。
+- 随包字体：Google Sans Flex 4.005（原文件）与 Material Symbols Rounded 2.973 的 96 个图标子集（171 KB，保留全部可变轴），来源、SHA-256 与修改说明见 `ui/theme/fonts/README.md`。
+- 虚构示例数据：12 张程序绘制的封面、13 张专辑／38 首歌曲／5 个歌单、2 份带翻译与逐字时间的歌词，说明见 `ui/samples/README.md`。
+- Gallery 资源页：字重 100–1000、字宽、圆度、光学尺寸、倾斜等可变轴，中文／日文／希腊／西里尔／emoji 混排，全部图标（可调填充、字重、尺寸），全部示例封面。
+- [参考调研清单](references.md)。
+
+**验证（Linux，Qt 6.11.2）**
+
+- Debug、Release 下 `appCirrusMusic`、`appCirrusGallery`、`cirrus_backend` 构建无警告；`all_qmllint` 无警告。
+- `QT_QPA_PLATFORM=offscreen` 下 Gallery 截图检查：可变轴均生效；中文回退到系统的 Noto Sans CJK SC，并按 `font.weight` 选取相近字重；希腊、西里尔、emoji 正常回退；图标填充和字重轴生效。`appCirrusMusic` 离屏启动正常（仍是模板窗口）。
+- 新增 C++ 文件通过 clang-format 检查。
+- 未在 Windows、macOS 上构建或运行。
+
+**发现的问题**
+
+- 全量构建中后端测试 `tests/unit/entity_search_test.cpp:42` 编译失败：`detail::aes` 同时匹配 `cirrus::netease::detail` 与 `backend_facade.h` 中的 `cirrus::application::detail`。该问题来自后端提交 `2c164a7`（评论写入 Facade 拆分）引入的 `namespace detail`，与 UI 改动无关，UI 侧未修改后端代码。其余目标全部构建通过。
+- Google Sans Flex 4.005 只覆盖 535 个拉丁字符；商标说明限制修改版使用其名称，因此原样分发、不做裁剪。
+- QML 中 `onXxx` 形式的名字与信号处理器冲突，MD3 颜色角色名需在阶段 1 规避，详见 [references.md §6](references.md)。
