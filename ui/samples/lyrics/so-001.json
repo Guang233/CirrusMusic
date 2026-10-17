@@ -1,0 +1,727 @@
+{
+  "songId": "so-001",
+  "note": "Invented sample lyrics; word timings are synthesized evenly.",
+  "lines": [
+    {
+      "startMs": 0,
+      "endMs": 12000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 12000,
+      "endMs": 17500,
+      "text": "把落日折成一张船票",
+      "translation": "Folding the sunset into a ferry ticket",
+      "romanization": "bǎ luò rì zhé chéng yì zhāng chuán piào",
+      "words": [
+        {
+          "startMs": 12000,
+          "endMs": 12519,
+          "text": "把"
+        },
+        {
+          "startMs": 12519,
+          "endMs": 13038,
+          "text": "落"
+        },
+        {
+          "startMs": 13038,
+          "endMs": 13558,
+          "text": "日"
+        },
+        {
+          "startMs": 13558,
+          "endMs": 14077,
+          "text": "折"
+        },
+        {
+          "startMs": 14077,
+          "endMs": 14597,
+          "text": "成"
+        },
+        {
+          "startMs": 14597,
+          "endMs": 15116,
+          "text": "一"
+        },
+        {
+          "startMs": 15116,
+          "endMs": 15636,
+          "text": "张"
+        },
+        {
+          "startMs": 15636,
+          "endMs": 16155,
+          "text": "船"
+        },
+        {
+          "startMs": 16155,
+          "endMs": 16675,
+          "text": "票"
+        }
+      ]
+    },
+    {
+      "startMs": 17500,
+      "endMs": 23000,
+      "text": "塞进你外套的口袋",
+      "translation": "Slipped into the pocket of your coat",
+      "romanization": "sāi jìn nǐ wài tào de kǒu dài",
+      "words": [
+        {
+          "startMs": 17500,
+          "endMs": 18084,
+          "text": "塞"
+        },
+        {
+          "startMs": 18084,
+          "endMs": 18668,
+          "text": "进"
+        },
+        {
+          "startMs": 18668,
+          "endMs": 19253,
+          "text": "你"
+        },
+        {
+          "startMs": 19253,
+          "endMs": 19837,
+          "text": "外"
+        },
+        {
+          "startMs": 19837,
+          "endMs": 20421,
+          "text": "套"
+        },
+        {
+          "startMs": 20421,
+          "endMs": 21006,
+          "text": "的"
+        },
+        {
+          "startMs": 21006,
+          "endMs": 21590,
+          "text": "口"
+        },
+        {
+          "startMs": 21590,
+          "endMs": 22175,
+          "text": "袋"
+        }
+      ]
+    },
+    {
+      "startMs": 23000,
+      "endMs": 29500,
+      "text": "海面上的灯一盏一盏亮起来",
+      "translation": "Lights on the sea come on one by one",
+      "romanization": "hǎi miàn shàng de dēng yì zhǎn yì zhǎn liàng qǐ lái",
+      "words": [
+        {
+          "startMs": 23000,
+          "endMs": 23460,
+          "text": "海"
+        },
+        {
+          "startMs": 23460,
+          "endMs": 23920,
+          "text": "面"
+        },
+        {
+          "startMs": 23920,
+          "endMs": 24381,
+          "text": "上"
+        },
+        {
+          "startMs": 24381,
+          "endMs": 24841,
+          "text": "的"
+        },
+        {
+          "startMs": 24841,
+          "endMs": 25302,
+          "text": "灯"
+        },
+        {
+          "startMs": 25302,
+          "endMs": 25762,
+          "text": "一"
+        },
+        {
+          "startMs": 25762,
+          "endMs": 26222,
+          "text": "盏"
+        },
+        {
+          "startMs": 26222,
+          "endMs": 26683,
+          "text": "一"
+        },
+        {
+          "startMs": 26683,
+          "endMs": 27143,
+          "text": "盏"
+        },
+        {
+          "startMs": 27143,
+          "endMs": 27604,
+          "text": "亮"
+        },
+        {
+          "startMs": 27604,
+          "endMs": 28064,
+          "text": "起"
+        },
+        {
+          "startMs": 28064,
+          "endMs": 28525,
+          "text": "来"
+        }
+      ]
+    },
+    {
+      "startMs": 29500,
+      "endMs": 37000,
+      "text": "像是有人在远方替我们说晚安",
+      "translation": "As if someone far away were saying goodnight for us",
+      "romanization": "xiàng shì yǒu rén zài yuǎn fāng tì wǒ men shuō wǎn ān",
+      "words": [
+        {
+          "startMs": 29500,
+          "endMs": 29990,
+          "text": "像"
+        },
+        {
+          "startMs": 29990,
+          "endMs": 30480,
+          "text": "是"
+        },
+        {
+          "startMs": 30480,
+          "endMs": 30971,
+          "text": "有"
+        },
+        {
+          "startMs": 30971,
+          "endMs": 31461,
+          "text": "人"
+        },
+        {
+          "startMs": 31461,
+          "endMs": 31951,
+          "text": "在"
+        },
+        {
+          "startMs": 31951,
+          "endMs": 32442,
+          "text": "远"
+        },
+        {
+          "startMs": 32442,
+          "endMs": 32932,
+          "text": "方"
+        },
+        {
+          "startMs": 32932,
+          "endMs": 33423,
+          "text": "替"
+        },
+        {
+          "startMs": 33423,
+          "endMs": 33913,
+          "text": "我"
+        },
+        {
+          "startMs": 33913,
+          "endMs": 34403,
+          "text": "们"
+        },
+        {
+          "startMs": 34403,
+          "endMs": 34894,
+          "text": "说"
+        },
+        {
+          "startMs": 34894,
+          "endMs": 35384,
+          "text": "晚"
+        },
+        {
+          "startMs": 35384,
+          "endMs": 35875,
+          "text": "安"
+        }
+      ]
+    },
+    {
+      "startMs": 37000,
+      "endMs": 44000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 44000,
+      "endMs": 49000,
+      "text": "落日航线 没有终点",
+      "translation": "The sunset route has no final stop",
+      "romanization": "luò rì háng xiàn méi yǒu zhōng diǎn",
+      "words": [
+        {
+          "startMs": 44000,
+          "endMs": 44531,
+          "text": "落"
+        },
+        {
+          "startMs": 44531,
+          "endMs": 45062,
+          "text": "日"
+        },
+        {
+          "startMs": 45062,
+          "endMs": 45593,
+          "text": "航"
+        },
+        {
+          "startMs": 45593,
+          "endMs": 46125,
+          "text": "线"
+        },
+        {
+          "startMs": 46125,
+          "endMs": 46656,
+          "text": "没"
+        },
+        {
+          "startMs": 46656,
+          "endMs": 47187,
+          "text": "有"
+        },
+        {
+          "startMs": 47187,
+          "endMs": 47718,
+          "text": "终"
+        },
+        {
+          "startMs": 47718,
+          "endMs": 48250,
+          "text": "点"
+        }
+      ]
+    },
+    {
+      "startMs": 49000,
+      "endMs": 53500,
+      "text": "只有风在耳边",
+      "translation": "Only the wind beside our ears",
+      "romanization": "zhǐ yǒu fēng zài ěr biān",
+      "words": [
+        {
+          "startMs": 49000,
+          "endMs": 49637,
+          "text": "只"
+        },
+        {
+          "startMs": 49637,
+          "endMs": 50275,
+          "text": "有"
+        },
+        {
+          "startMs": 50275,
+          "endMs": 50912,
+          "text": "风"
+        },
+        {
+          "startMs": 50912,
+          "endMs": 51550,
+          "text": "在"
+        },
+        {
+          "startMs": 51550,
+          "endMs": 52187,
+          "text": "耳"
+        },
+        {
+          "startMs": 52187,
+          "endMs": 52825,
+          "text": "边"
+        }
+      ]
+    },
+    {
+      "startMs": 53500,
+      "endMs": 58500,
+      "text": "落日航线 慢一点",
+      "translation": "Sunset route, go a little slower",
+      "romanization": "luò rì háng xiàn màn yì diǎn",
+      "words": [
+        {
+          "startMs": 53500,
+          "endMs": 54107,
+          "text": "落"
+        },
+        {
+          "startMs": 54107,
+          "endMs": 54714,
+          "text": "日"
+        },
+        {
+          "startMs": 54714,
+          "endMs": 55321,
+          "text": "航"
+        },
+        {
+          "startMs": 55321,
+          "endMs": 55928,
+          "text": "线"
+        },
+        {
+          "startMs": 55928,
+          "endMs": 56535,
+          "text": "慢"
+        },
+        {
+          "startMs": 56535,
+          "endMs": 57142,
+          "text": "一"
+        },
+        {
+          "startMs": 57142,
+          "endMs": 57750,
+          "text": "点"
+        }
+      ]
+    },
+    {
+      "startMs": 58500,
+      "endMs": 65000,
+      "text": "让这一刻再长一点点",
+      "translation": "Let this moment last a little longer",
+      "romanization": "ràng zhè yí kè zài cháng yì diǎn diǎn",
+      "words": [
+        {
+          "startMs": 58500,
+          "endMs": 59113,
+          "text": "让"
+        },
+        {
+          "startMs": 59113,
+          "endMs": 59727,
+          "text": "这"
+        },
+        {
+          "startMs": 59727,
+          "endMs": 60341,
+          "text": "一"
+        },
+        {
+          "startMs": 60341,
+          "endMs": 60955,
+          "text": "刻"
+        },
+        {
+          "startMs": 60955,
+          "endMs": 61569,
+          "text": "再"
+        },
+        {
+          "startMs": 61569,
+          "endMs": 62183,
+          "text": "长"
+        },
+        {
+          "startMs": 62183,
+          "endMs": 62797,
+          "text": "一"
+        },
+        {
+          "startMs": 62797,
+          "endMs": 63411,
+          "text": "点"
+        },
+        {
+          "startMs": 63411,
+          "endMs": 64025,
+          "text": "点"
+        }
+      ]
+    },
+    {
+      "startMs": 65000,
+      "endMs": 75000,
+      "text": "这是一句故意写得很长很长的歌词，用来测试歌词视图在窄窗口下的自动换行、行间距和逐字高亮是否正常",
+      "translation": "A deliberately long line to test wrapping, spacing and word highlighting in narrow windows",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 65000,
+          "endMs": 65180,
+          "text": "这"
+        },
+        {
+          "startMs": 65180,
+          "endMs": 65361,
+          "text": "是"
+        },
+        {
+          "startMs": 65361,
+          "endMs": 65542,
+          "text": "一"
+        },
+        {
+          "startMs": 65542,
+          "endMs": 65723,
+          "text": "句"
+        },
+        {
+          "startMs": 65723,
+          "endMs": 65904,
+          "text": "故"
+        },
+        {
+          "startMs": 65904,
+          "endMs": 66085,
+          "text": "意"
+        },
+        {
+          "startMs": 66085,
+          "endMs": 66265,
+          "text": "写"
+        },
+        {
+          "startMs": 66265,
+          "endMs": 66446,
+          "text": "得"
+        },
+        {
+          "startMs": 66446,
+          "endMs": 66627,
+          "text": "很"
+        },
+        {
+          "startMs": 66627,
+          "endMs": 66808,
+          "text": "长"
+        },
+        {
+          "startMs": 66808,
+          "endMs": 66989,
+          "text": "很"
+        },
+        {
+          "startMs": 66989,
+          "endMs": 67170,
+          "text": "长"
+        },
+        {
+          "startMs": 67170,
+          "endMs": 67351,
+          "text": "的"
+        },
+        {
+          "startMs": 67351,
+          "endMs": 67531,
+          "text": "歌"
+        },
+        {
+          "startMs": 67531,
+          "endMs": 67712,
+          "text": "词"
+        },
+        {
+          "startMs": 67712,
+          "endMs": 67893,
+          "text": "，"
+        },
+        {
+          "startMs": 67893,
+          "endMs": 68074,
+          "text": "用"
+        },
+        {
+          "startMs": 68074,
+          "endMs": 68255,
+          "text": "来"
+        },
+        {
+          "startMs": 68255,
+          "endMs": 68436,
+          "text": "测"
+        },
+        {
+          "startMs": 68436,
+          "endMs": 68617,
+          "text": "试"
+        },
+        {
+          "startMs": 68617,
+          "endMs": 68797,
+          "text": "歌"
+        },
+        {
+          "startMs": 68797,
+          "endMs": 68978,
+          "text": "词"
+        },
+        {
+          "startMs": 68978,
+          "endMs": 69159,
+          "text": "视"
+        },
+        {
+          "startMs": 69159,
+          "endMs": 69340,
+          "text": "图"
+        },
+        {
+          "startMs": 69340,
+          "endMs": 69521,
+          "text": "在"
+        },
+        {
+          "startMs": 69521,
+          "endMs": 69702,
+          "text": "窄"
+        },
+        {
+          "startMs": 69702,
+          "endMs": 69882,
+          "text": "窗"
+        },
+        {
+          "startMs": 69882,
+          "endMs": 70063,
+          "text": "口"
+        },
+        {
+          "startMs": 70063,
+          "endMs": 70244,
+          "text": "下"
+        },
+        {
+          "startMs": 70244,
+          "endMs": 70425,
+          "text": "的"
+        },
+        {
+          "startMs": 70425,
+          "endMs": 70606,
+          "text": "自"
+        },
+        {
+          "startMs": 70606,
+          "endMs": 70787,
+          "text": "动"
+        },
+        {
+          "startMs": 70787,
+          "endMs": 70968,
+          "text": "换"
+        },
+        {
+          "startMs": 70968,
+          "endMs": 71148,
+          "text": "行"
+        },
+        {
+          "startMs": 71148,
+          "endMs": 71329,
+          "text": "、"
+        },
+        {
+          "startMs": 71329,
+          "endMs": 71510,
+          "text": "行"
+        },
+        {
+          "startMs": 71510,
+          "endMs": 71691,
+          "text": "间"
+        },
+        {
+          "startMs": 71691,
+          "endMs": 71872,
+          "text": "距"
+        },
+        {
+          "startMs": 71872,
+          "endMs": 72053,
+          "text": "和"
+        },
+        {
+          "startMs": 72053,
+          "endMs": 72234,
+          "text": "逐"
+        },
+        {
+          "startMs": 72234,
+          "endMs": 72414,
+          "text": "字"
+        },
+        {
+          "startMs": 72414,
+          "endMs": 72595,
+          "text": "高"
+        },
+        {
+          "startMs": 72595,
+          "endMs": 72776,
+          "text": "亮"
+        },
+        {
+          "startMs": 72776,
+          "endMs": 72957,
+          "text": "是"
+        },
+        {
+          "startMs": 72957,
+          "endMs": 73138,
+          "text": "否"
+        },
+        {
+          "startMs": 73138,
+          "endMs": 73319,
+          "text": "正"
+        },
+        {
+          "startMs": 73319,
+          "endMs": 73500,
+          "text": "常"
+        }
+      ]
+    },
+    {
+      "startMs": 75000,
+      "endMs": 83000,
+      "text": "慢慢靠岸",
+      "translation": "Slowly coming ashore",
+      "romanization": "màn màn kào àn",
+      "words": [
+        {
+          "startMs": 75000,
+          "endMs": 76700,
+          "text": "慢"
+        },
+        {
+          "startMs": 76700,
+          "endMs": 78400,
+          "text": "慢"
+        },
+        {
+          "startMs": 78400,
+          "endMs": 80100,
+          "text": "靠"
+        },
+        {
+          "startMs": 80100,
+          "endMs": 81800,
+          "text": "岸"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,319 @@
+{
+  "songId": "so-005",
+  "note": "Invented sample lyrics; word timings are synthesized evenly.",
+  "lines": [
+    {
+      "startMs": 0,
+      "endMs": 9000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 9000,
+      "endMs": 14500,
+      "text": "The tide keeps every word we left behind",
+      "translation": "潮水留住了我们留下的每一句话",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 9000,
+          "endMs": 9584,
+          "text": "The"
+        },
+        {
+          "startMs": 9584,
+          "endMs": 10168,
+          "text": "tide"
+        },
+        {
+          "startMs": 10168,
+          "endMs": 10753,
+          "text": "keeps"
+        },
+        {
+          "startMs": 10753,
+          "endMs": 11337,
+          "text": "every"
+        },
+        {
+          "startMs": 11337,
+          "endMs": 11921,
+          "text": "word"
+        },
+        {
+          "startMs": 11921,
+          "endMs": 12506,
+          "text": "we"
+        },
+        {
+          "startMs": 12506,
+          "endMs": 13090,
+          "text": "left"
+        },
+        {
+          "startMs": 13090,
+          "endMs": 13675,
+          "text": "behind"
+        }
+      ]
+    },
+    {
+      "startMs": 14500,
+      "endMs": 20000,
+      "text": "Folded in the sand like paper boats",
+      "translation": "像纸船一样折叠在沙里",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 14500,
+          "endMs": 15167,
+          "text": "Folded"
+        },
+        {
+          "startMs": 15167,
+          "endMs": 15835,
+          "text": "in"
+        },
+        {
+          "startMs": 15835,
+          "endMs": 16503,
+          "text": "the"
+        },
+        {
+          "startMs": 16503,
+          "endMs": 17171,
+          "text": "sand"
+        },
+        {
+          "startMs": 17171,
+          "endMs": 17839,
+          "text": "like"
+        },
+        {
+          "startMs": 17839,
+          "endMs": 18507,
+          "text": "paper"
+        },
+        {
+          "startMs": 18507,
+          "endMs": 19175,
+          "text": "boats"
+        }
+      ]
+    },
+    {
+      "startMs": 20000,
+      "endMs": 26000,
+      "text": "I count the waves and lose the count again",
+      "translation": "我数着浪花，又一次数乱了",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 20000,
+          "endMs": 20566,
+          "text": "I"
+        },
+        {
+          "startMs": 20566,
+          "endMs": 21133,
+          "text": "count"
+        },
+        {
+          "startMs": 21133,
+          "endMs": 21700,
+          "text": "the"
+        },
+        {
+          "startMs": 21700,
+          "endMs": 22266,
+          "text": "waves"
+        },
+        {
+          "startMs": 22266,
+          "endMs": 22833,
+          "text": "and"
+        },
+        {
+          "startMs": 22833,
+          "endMs": 23400,
+          "text": "lose"
+        },
+        {
+          "startMs": 23400,
+          "endMs": 23966,
+          "text": "the"
+        },
+        {
+          "startMs": 23966,
+          "endMs": 24533,
+          "text": "count"
+        },
+        {
+          "startMs": 24533,
+          "endMs": 25100,
+          "text": "again"
+        }
+      ]
+    },
+    {
+      "startMs": 26000,
+      "endMs": 30500,
+      "text": "Blue hour, hold on",
+      "translation": "蓝调时刻，请再停留",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 26000,
+          "endMs": 26956,
+          "text": "Blue"
+        },
+        {
+          "startMs": 26956,
+          "endMs": 27912,
+          "text": "hour,"
+        },
+        {
+          "startMs": 27912,
+          "endMs": 28868,
+          "text": "hold"
+        },
+        {
+          "startMs": 28868,
+          "endMs": 29825,
+          "text": "on"
+        }
+      ]
+    },
+    {
+      "startMs": 30500,
+      "endMs": 38000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 38000,
+      "endMs": 43500,
+      "text": "Tidal memory, pulling me home",
+      "translation": "潮汐的记忆，把我拉回家",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 38000,
+          "endMs": 38935,
+          "text": "Tidal"
+        },
+        {
+          "startMs": 38935,
+          "endMs": 39870,
+          "text": "memory,"
+        },
+        {
+          "startMs": 39870,
+          "endMs": 40805,
+          "text": "pulling"
+        },
+        {
+          "startMs": 40805,
+          "endMs": 41740,
+          "text": "me"
+        },
+        {
+          "startMs": 41740,
+          "endMs": 42675,
+          "text": "home"
+        }
+      ]
+    },
+    {
+      "startMs": 43500,
+      "endMs": 49000,
+      "text": "Every echo knows your name",
+      "translation": "每一声回响都知道你的名字",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 43500,
+          "endMs": 44435,
+          "text": "Every"
+        },
+        {
+          "startMs": 44435,
+          "endMs": 45370,
+          "text": "echo"
+        },
+        {
+          "startMs": 45370,
+          "endMs": 46305,
+          "text": "knows"
+        },
+        {
+          "startMs": 46305,
+          "endMs": 47240,
+          "text": "your"
+        },
+        {
+          "startMs": 47240,
+          "endMs": 48175,
+          "text": "name"
+        }
+      ]
+    },
+    {
+      "startMs": 49000,
+      "endMs": 54500,
+      "text": "Tidal memory, never alone",
+      "translation": "潮汐的记忆，从不孤单",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 49000,
+          "endMs": 50168,
+          "text": "Tidal"
+        },
+        {
+          "startMs": 50168,
+          "endMs": 51337,
+          "text": "memory,"
+        },
+        {
+          "startMs": 51337,
+          "endMs": 52506,
+          "text": "never"
+        },
+        {
+          "startMs": 52506,
+          "endMs": 53675,
+          "text": "alone"
+        }
+      ]
+    },
+    {
+      "startMs": 54500,
+      "endMs": 62500,
+      "text": "Undertow and afterglow",
+      "translation": "暗流与余晖",
+      "romanization": null,
+      "words": [
+        {
+          "startMs": 54500,
+          "endMs": 56766,
+          "text": "Undertow"
+        },
+        {
+          "startMs": 56766,
+          "endMs": 59033,
+          "text": "and"
+        },
+        {
+          "startMs": 59033,
+          "endMs": 61300,
+          "text": "afterglow"
+        }
+      ]
+    }
+  ]
+}
