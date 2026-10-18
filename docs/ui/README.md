@@ -156,7 +156,7 @@ third_party/
 ### 4.3 形状、状态层与高度
 
 - **圆角刻度**：none、extra-small、small、medium、large、large-increased、extra-large、extra-large-increased、extra-extra-large、full，具体数值在阶段 1 按 MD3 官方规范核对后写入主题。
-- **形状变形**：MD3E 的标志特性（按钮按下变形、加载指示器在多种形状间变换）。候选方案 [m3shapes](https://github.com/soramanew/m3shapes)（Apache-2.0，androidx graphics-shapes 的 Qt QML 移植，Caelestia 在用）。它是较新的项目（AUR 包首次提交于 2026-07），阶段 1 评估其成熟度和渲染开销，再决定直接依赖还是自行移植。
+- **形状变形**：MD3E 的标志特性（按钮按下变形、加载指示器在多种形状间变换）。候选方案 [m3shapes](https://github.com/soramanew/m3shapes)（Apache-2.0，androidx graphics-shapes 的 Qt QML 移植，Caelestia 在用）。阶段 1 评估结果：构建 0 警告、渲染与变形正常，建议阶段 2 以固定提交引入并自写静态库 CMake，见 [theme.md §7](theme.md)。
 - **状态层**：悬停 8%、焦点 10%、按下 10%、拖动 16% 的前景色叠加，统一由控件基础组件实现。
 - **高度**：以色调层级为主，阴影只用在少数浮层（菜单、对话框、迷你播放条）。
 
@@ -179,7 +179,7 @@ third_party/
 1. 尝试用 `SpringAnimation` 拟合上表曲线，检查曲线形状以及被打断时速度是否连续。它的好处是可以直接用在 `Behavior` 里。
 2. 拟合不了时，用 C++ 实现一个弹簧值类型（基于公开 API `QAbstractAnimation`，按解析解逐帧计算，重新设定目标时保留当前速度），对 QML 暴露 `value`、`target`、`stiffness`、`dampingRatio`。代价是不能写在 `Behavior` 里，需要用绑定 `x: spring.value` 的方式使用。
 
-实验结果写入阶段 1 的细化文档。
+**实验结论（阶段 1）**：`SpringAnimation` 以固定 16 ms 欧拉积分并截断 damping，无法还原上表曲线，因此采用第 2 种方案（`Spring` 元素），另为每个令牌提供 `duration` 与对应缓动曲线供普通动画使用。详见 [theme.md §6](theme.md)。
 
 **减少动态效果**：全局开关。开启后空间动画改为短时淡入淡出，播放页背景静止，歌词不做逐字弹跳和模糊动画。各平台系统设置的读取方式待验证，至少提供应用内开关。
 
@@ -311,8 +311,8 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | --- | --- | --- | --- |
 | Material Symbols Rounded | Apache-2.0 | 全局图标（可变字体：填充、字重、等级、光学尺寸） | 候选，阶段 0 确认是否裁剪子集 |
 | 文字字体 | — | 文字显示 | 暂用系统字体，不打包（UQ-03）；候选见 `ui/theme/fonts/README.md` |
-| material-color-utilities | Apache-2.0 | 取色与配色方案 | 计划引入固定提交（需去除 Abseil 依赖） |
-| m3shapes | Apache-2.0 | MD3E 形状与变形 | 待评估 |
+| material-color-utilities | Apache-2.0 | 取色与配色方案 | 已引入固定提交 `5b3618b1`（C++，3 处本地修改），见 `third_party/material-color-utilities/README.md` |
+| m3shapes | Apache-2.0 | MD3E 形状与变形 | 已评估，建议阶段 2 引入（[theme.md §7](theme.md)） |
 
 所有随包分发的字体和代码在 `third_party/` 或资源目录中保留许可文件，并登记到依赖清单（见 [02](../02-technology-stack.md) 的依赖准入要求）。
 
@@ -321,7 +321,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 阶段 | 交付内容 | 完成条件 |
 | --- | --- | --- |
 | 0 工程基础（**已完成**，见 §15） | `ui/` 目录和各 QML 模块的 CMake；Gallery 空壳；字体、图标入库及许可文件；示例封面和示例数据；参考调研清单 | Linux 上 Debug/Release 构建通过，Gallery 能启动，qmllint 无错误 |
-| 1 主题系统 | material-color-utilities 引入与改造；后台取色；主题单例（颜色、字体、形状、状态层、动效）；弹簧实验报告；Gallery 主题页（切换封面/种子色/亮暗，查看配色、字体层级、圆角、动效） | 切换封面时配色平滑过渡且不卡顿；文字与背景对比度达标 |
+| 1 主题系统（**已完成**，配色规范版本待定，见 §15） | material-color-utilities 引入与改造；后台取色；主题单例（颜色、字体、形状、状态层、动效）；弹簧实验报告；Gallery 主题页（切换封面/种子色/亮暗，查看配色、字体层级、圆角、动效） | 切换封面时配色平滑过渡且不卡顿；文字与背景对比度达标 |
 | 2 MD3E 核心控件 | §5 第一批控件及 Gallery 页面 | 每个控件的状态、键盘、焦点、读屏名称在 Gallery 中可检查 |
 | 3 外壳与页面 | 先写过渡编排说明和 ViewModel 接口说明；窗口方案对比；导航、响应式、迷你播放条、§6.3 页面及其状态；展示层假实现 | 用假数据走通主要页面和导航，所有页面状态可在 Gallery 或调试开关中触发 |
 | 4 播放页 | 背景、封面、控制区、歌词视图、队列面板，以及与迷你条的过渡 | 用示例歌词和模拟播放进度完整运行；减少动态效果模式正常 |
@@ -335,7 +335,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 文档 | 编写时机 |
 | --- | --- |
 | [`docs/ui/references.md`](references.md) 参考调研清单 | 阶段 0（已完成） |
-| `docs/ui/theme.md` 主题系统与弹簧实验结果 | 阶段 1 |
+| [`docs/ui/theme.md`](theme.md) 主题系统与弹簧实验结果 | 阶段 1（已完成） |
 | `docs/ui/controls.md` 控件清单与各控件规格 | 阶段 2 |
 | `docs/ui/motion-choreography.md` 过渡编排说明 | 阶段 3 开始前 |
 | `docs/ui/presentation.md` ViewModel 与模型接口 | 阶段 3 开始前 |
@@ -348,11 +348,12 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | UQ-01 | 外壳种子色默认来源：跟随封面、固定、跟随系统 | 提供三种选项，默认值看原型效果 | 阶段 1 结束 |
 | UQ-02 | 窗口标题栏方案（§6.1） | 原型对比后决定，可按平台区分 | 阶段 3 开始 |
 | UQ-03 | 文字字体：系统字体还是随包附带 | **暂定使用系统字体，不打包**；以后可能改为随包，也可能一直不打包。修改点见 §4.2 | 维护者以后决定 |
-| UQ-04 | 默认配色方案变体 | 原型比较 TonalSpot 与 Expressive | 阶段 1 |
+| UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2021 版 Expressive 会把主色转离封面色相，不宜默认。待 2025 规范移植后重评（[theme.md §3](theme.md)） | 配色规范移植后 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
 | UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | 至少以 Gallery 做人工检查，自动化测试范围待定 | 阶段 2 开始 |
-| UQ-08 | m3shapes 直接依赖还是自行移植 | 阶段 1 评估后决定 | 阶段 2 开始 |
+| UQ-08 | m3shapes 直接依赖还是自行移植 | 建议以固定提交引入、自写静态库 CMake（[theme.md §7](theme.md)） | 阶段 2 开始 |
+| UQ-09 | 配色规范：移植 TS 的 2025／2026 规范到 C++，还是暂用 2021 版 | 建议移植（[theme.md §3](theme.md)） | 维护者决定 |
 
 ## 15. 实施记录
 
@@ -378,3 +379,26 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 全量构建中后端测试 `tests/unit/entity_search_test.cpp:42` 编译失败：`detail::aes` 同时匹配 `cirrus::netease::detail` 与 `backend_facade.h` 中的 `cirrus::application::detail`。该问题来自后端提交 `2c164a7`（评论写入 Facade 拆分）引入的 `namespace detail`，与 UI 改动无关，UI 侧未修改后端代码。其余目标全部构建通过。
 - Google Sans Flex 4.005 只覆盖 535 个拉丁字符，商标说明限制修改版使用其名称；已不打包，记录保留在 `ui/theme/fonts/README.md`。
 - QML 中 `onXxx` 形式的名字与信号处理器冲突，MD3 颜色角色名需在阶段 1 规避，详见 [references.md §6](references.md)。
+
+### 阶段 1：主题系统（2026-10-18）
+
+**交付**（详见 [theme.md](theme.md)）
+
+- 引入 material-color-utilities C++（固定提交 `5b3618b1`，去掉 Abseil、补一处缺失 include），独立静态库 `cirrus_mcu`，只被 UI 链接。
+- `Theme` 单例：封面取色（私有工作线程、过期结果丢弃）、三种种子来源、9 种方案变体、明暗模式、对比度；49 个颜色角色在 CAM16-UCS 中按 `defaultEffects` 弹簧过渡；近灰种子自动使用 Monochrome。
+- 令牌：MD3 30 个字体样式（androidx TypeScaleTokens）、圆角刻度、状态层、高度、9 个弹簧动效令牌（androidx MotionScheme）及减少动态效果开关。
+- `Spring` 元素：解析解逐帧计算、改目标时保持速度；每个令牌另提供 `duration` 与缓动曲线。
+- Gallery 改用主题；新增“主题”页（封面、种子来源、变体、明暗、对比度、全部角色、对比度检查、字体层级、圆角、状态层、弹簧曲线与对照）；新增 `--cover`、`--mode` 参数。
+
+**验证（Linux，Qt 6.11.2）**
+
+- Debug、Release 下 UI 目标与 `cirrus_backend` 构建无警告；`all_qmllint` 无警告；新增 C++ 文件通过 clang-format。
+- 12 张示例封面取色每张 1–7 ms；亮暗模式下 12 组文字／背景对比度均 ≥ 6.1。
+- `Spring` 与解析解最大偏差 0.5 px，改目标前后速度连续（336 → 336 px/s）。
+- C++ 配色与 TS 2021 版逐色一致（ΔE 0）。
+- 未在 Windows、macOS 上构建或运行；系统强调色未在真实桌面会话中验证。
+
+**发现的问题**
+
+- C++ 版只有 2021 配色规范，与 MD3E 使用的 2025 规范差异明显（Expressive 中位 ΔE 约 74–83），需要决定是否移植（UQ-09）。
+- 离屏截图默认走 software 渲染，自定义着色器不会绘制；检查着色器需 `QT_QUICK_BACKEND=rhi QSG_RHI_BACKEND=opengl`。

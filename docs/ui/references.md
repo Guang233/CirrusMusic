@@ -8,8 +8,8 @@
 
 | 项目 | 许可 | 用途 | 状态 |
 | --- | --- | --- | --- |
-| [material-color-utilities](https://github.com/material-foundation/material-color-utilities) | Apache-2.0 | 封面取色、HCT、配色方案（C++ 版本） | 阶段 1 引入固定提交；需去掉 `wsmeans.cc` 对 Abseil 的依赖，并对照 TS/Java 版补 2025 规范差异 |
-| [m3shapes](https://github.com/soramanew/m3shapes) | Apache-2.0 | MD3E 形状与变形（androidx graphics-shapes 的 Qt QML 移植） | 阶段 1 评估。项目较新（16 star，最近提交 2026-09-17），Caelestia 已在使用 |
+| [material-color-utilities](https://github.com/material-foundation/material-color-utilities) | Apache-2.0 | 封面取色、HCT、配色方案（C++ 版本） | 已引入 `5b3618b1`；C++ 只有 2021 规范，与 2025 规范的差异见 [theme.md §3](theme.md) |
+| [m3shapes](https://github.com/soramanew/m3shapes) | Apache-2.0 | MD3E 形状与变形（androidx graphics-shapes 的 Qt QML 移植） | 已评估（提交 `8a6fe89`）：构建 0 警告、渲染正常，建议阶段 2 引入，见 [theme.md §7](theme.md) |
 | [Material Symbols](https://github.com/google/material-design-icons) | Apache-2.0 | 图标 | 已引入子集，见 `ui/theme/fonts/README.md` |
 | [Google Sans Flex](https://github.com/google/fonts/tree/main/ofl/googlesansflex) | OFL-1.1 | 拉丁字体候选 | 未打包：文字暂用系统字体（UQ-03） |
 
