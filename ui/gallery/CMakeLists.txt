@@ -7,6 +7,7 @@ qt_add_qml_module(appCirrusGallery
     QML_FILES
         Gallery.qml
         pages/ResourcesPage.qml
+        pages/ThemePage.qml
 )
 
 set_target_properties(appCirrusGallery PROPERTIES

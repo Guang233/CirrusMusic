@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     parser.setApplicationDescription(QStringLiteral("Cirrus UI gallery"));
     parser.addHelpOption();
     const QCommandLineOption pageOption(QStringLiteral("page"), QStringLiteral("Initial page."),
-                                        QStringLiteral("name"), QStringLiteral("resources"));
+                                        QStringLiteral("name"), QStringLiteral("theme"));
     const QCommandLineOption grabOption(QStringLiteral("grab"),
                                         QStringLiteral("Save a screenshot to <file> and quit."),
                                         QStringLiteral("file"));
@@ -31,7 +31,13 @@ int main(int argc, char* argv[])
     const QCommandLineOption delayOption(QStringLiteral("delay"),
                                          QStringLiteral("Milliseconds to wait before grabbing."),
                                          QStringLiteral("ms"), QStringLiteral("1000"));
-    parser.addOptions({pageOption, grabOption, sizeOption, delayOption});
+    const QCommandLineOption coverOption(QStringLiteral("cover"),
+                                         QStringLiteral("Sample cover to theme from, e.g. sunset."),
+                                         QStringLiteral("name"), QStringLiteral("sunset"));
+    const QCommandLineOption modeOption(QStringLiteral("mode"),
+                                        QStringLiteral("Theme mode: system, light or dark."),
+                                        QStringLiteral("mode"), QStringLiteral("system"));
+    parser.addOptions({pageOption, grabOption, sizeOption, delayOption, coverOption, modeOption});
     parser.process(app);
 
     const QStringList size = parser.value(sizeOption).split(QLatin1Char('x'));
@@ -47,6 +53,8 @@ int main(int argc, char* argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.setInitialProperties({{QStringLiteral("initialPage"), parser.value(pageOption)},
+                                 {QStringLiteral("initialCover"), parser.value(coverOption)},
+                                 {QStringLiteral("initialMode"), parser.value(modeOption)},
                                  {QStringLiteral("width"), width},
                                  {QStringLiteral("height"), height}});
     engine.loadFromModule("CirrusGallery", "Gallery");

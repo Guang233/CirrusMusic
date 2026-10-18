@@ -21,11 +21,6 @@ QString registerFont(const QString& path)
     return families.constFirst();
 }
 
-// Text font decision point (UQ-03). Text currently uses the platform UI font,
-// which also provides the platform's own CJK and other-script fallback. To ship
-// a text font later, add it to RESOURCES and register it here instead.
-QString textFamily() { return QFontDatabase::systemFont(QFontDatabase::GeneralFont).family(); }
-
 struct Registered {
     QString sans;
     QString symbols;
@@ -34,12 +29,17 @@ struct Registered {
 const Registered& registered()
 {
     static const Registered fonts{
-        textFamily(),
+        textFontFamily(),
         registerFont(QStringLiteral(":/qt/qml/Cirrus/Theme/fonts/MaterialSymbolsRounded.ttf")),
     };
     return fonts;
 }
 } // namespace
+
+// Text font decision point (UQ-03). Text currently uses the platform UI font,
+// which also provides the platform's own CJK and other-script fallback. To ship
+// a text font later, add it to RESOURCES and register it here instead.
+QString textFontFamily() { return QFontDatabase::systemFont(QFontDatabase::GeneralFont).family(); }
 
 Fonts::Fonts(QObject* parent) : QObject(parent) { registered(); }
 

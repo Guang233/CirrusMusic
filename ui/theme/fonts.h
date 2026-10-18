@@ -7,6 +7,9 @@
 namespace cirrus::ui
 {
 
+// Family used for all text (UQ-03: currently the platform UI font).
+[[nodiscard]] QString textFontFamily();
+
 // Font families for QML. Text uses the platform UI font (no text font is
 // bundled yet, see UQ-03); icons use the bundled Material Symbols subset,
 // registered on first use.
