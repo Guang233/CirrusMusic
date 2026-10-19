@@ -1,6 +1,6 @@
 # 主题系统（阶段 1）
 
-> 状态：已实现并在 Linux 上验证（2026-10-18）。代码在 `ui/theme/`，Gallery“主题”页可交互检查。配色规范版本见 §3，待维护者决定。
+> 状态：已实现并在 Linux 上验证（2026-10-19）。代码在 `ui/theme/`，Gallery“主题”页可交互检查。配色采用 MD3 2025 规范（§3）。
 
 ## 1. QML 用法
 
@@ -31,14 +31,16 @@ Behavior on opacity {
 
 | 入口 | 内容 |
 | --- | --- |
-| `Theme.cover` | 当前封面 URL（`qrc:`／`file:`），设为空则不取色 |
-| `Theme.seedSource` | `Theme.SeedSource.Cover`（默认）／`Fixed`／`System` |
+| `Theme.seedSource` | `Theme.SeedSource.System`（默认，系统强调色）／`Cover`（可选）／`Fixed` |
+| `Theme.systemAccent` | 系统强调色（平台不提供时无效，此时 System 退回固定种子） |
+| `Theme.cover` | 当前封面 URL（`qrc:`／`file:`），设为空则不取色；只有种子来源为 Cover 时影响外壳配色 |
+| `Theme.specVersion` | `Theme.SpecVersion.Spec2025`（默认）／`Spec2021` |
 | `Theme.fixedSeed`、`Theme.seed` | 固定种子色（默认 MD3 基准色 `#6750a4`）；实际使用的种子色（只读） |
 | `Theme.mode`、`Theme.dark` | `Theme.Mode.System`（默认）／`Light`／`Dark`；当前是否暗色（只读） |
 | `Theme.variant`、`Theme.contrast` | 方案变体（默认 TonalSpot）；对比度 -1…1 |
 | `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个，供播放页背景） |
 | `Theme.extracting` | 是否正在取色 |
-| `Theme.color` | 全部颜色角色；`Theme.color.roles` 为角色名列表 |
+| `Theme.color` | 53 个颜色角色（含 2025 规范新增的 primaryDim、secondaryDim、tertiaryDim、errorDim）；`Theme.color.roles` 为角色名列表 |
 | `Theme.type`、`Theme.shape`、`Theme.state`、`Theme.elevation` | 字体层级、圆角、状态层与禁用透明度、高度 |
 | `Theme.motion` | 9 个弹簧令牌、`reduced`（减少动态效果）、`curve()`（采样曲线） |
 | `Theme.contrastRatio(a, b)` | WCAG 对比度 |
@@ -62,32 +64,23 @@ Theme.cover 变化 → 递增编号 → 私有单线程线程池：
 - 过渡使用 `defaultEffects` 弹簧（临界阻尼，约 231 ms）；减少动态效果时立即切换。过渡中再次切换时从屏幕上当前的颜色继续。
 - 取色耗时（Release，示例封面 640×640 JPEG）：每张 1–7 ms。
 - **近灰种子**：MD3 评分在封面几乎无彩色时会退回 Google 蓝；Cirrus 改为不过滤重新评分，并在种子色 HCT 色度 < 5 时强制使用 Monochrome 变体。修正前灰色封面会得到青色主题。
-- **种子来源 System**：读取 `QPalette::Accent`，应用调色板变化时更新。Linux 上是否有值取决于平台主题（GNOME/KDE 的 Qt 平台插件），尚未在真实桌面会话中验证。
+- **种子来源 System（默认）**：Qt 6.11 在 Linux 上不读取 xdg-desktop-portal 的强调色（无平台主题时总是返回默认蓝 `#308cc6`），使用 portal 平台主题也只读明暗。因此 `SystemAppearance` 通过 D-Bus 读取 `org.freedesktop.appearance` 的 `accent-color` 与 `color-scheme`，并监听 `SettingChanged`；GNOME、KDE、niri 等实现了该接口。在 niri 会话中验证：强调色 `#d56199`、暗色偏好均正确读取。Windows/macOS 使用 `QPalette::Accent` 与 `QStyleHints::colorScheme`（未验证）。“跟随系统”的明暗同样优先使用 portal 的值。
+- **种子来源 Cover（可选）**：外壳配色跟随当前封面。播放页的背景与文字颜色另行从封面取色，不使用 MD3 配色（阶段 4 设计），`Theme.coverPalette.dominant` 为其准备。
 - 已知现象：`neon` 封面（大面积近黑紫色背景加细亮线）的种子是暗紫色 `#130c21`，这是 MD3 评分偏向占比大的颜色的结果，主题偏暗紫而不是亮粉／青。暂不干预。
 
 **对比度**：12 张示例封面、亮暗两种模式下，Gallery 检查的 12 组文字／背景组合均 ≥ 6.1（正文要求 4.5）。
 
-## 3. 配色规范版本（待决定）
+## 3. 配色规范：2025 版（C++ 移植）
 
-material-color-utilities 的 C++ 实现只有 2021 规范（`cpp/` 最后更新于 2024-10-01）；TS/Java 已有 2025、2026 规范，MD3 Expressive 的配色规则在其中。用 12 张示例封面的种子色，对比 C++ 与 TS 0.4.0（npm）的 10 个主要角色，取每张封面最大的 CIELAB ΔE：
+material-color-utilities 的 C++ 实现只有 2021 规范，MD3 Expressive 使用的 2025 规范只在 TS/Java 中。按维护者决定，已把同一上游提交的 TS 实现移植到 C++（`third_party/material-color-utilities/cirrus/`，说明见该目录 README）：
 
-| 方案 | C++ 对 TS 2021 | C++ 对 TS 2025（中位数／最大） |
-| --- | --- | --- |
-| TonalSpot 亮色 | 0 | 23.6 ／ 37.9 |
-| TonalSpot 暗色 | 0 | 15.1 ／ 44.0 |
-| Expressive 亮色 | 0 | 74.3 ／ 86.1 |
-| Expressive 暗色 | 0 | 82.6 ／ 94.4 |
+- 范围：2021 与 2025 规范的调色板、全部颜色定义、色调计算（含 2025 的色度倍率、新的色调差约束、黄色 99 色调规则），以及 TemperatureCache、DislikeAnalyzer。不含 2026 规范与 CMF 变体。
+- 与 TS 相同，2025 规范只作用于 Neutral、TonalSpot、Expressive、Vibrant，其余 5 个变体（Content、Fidelity、Monochrome、Rainbow、FruitSalad）回退 2021。
+- **验证**：164 个种子 × 9 个变体 × 明暗 × 5 档对比度 × 2 个规范，共 1,649,840 个颜色与同一提交编译的 TS 逐一比较，84 个（0.005%）不同，均为单个通道相差 1 的浮点舍入。
+- 性能：Release 下一套 55 个角色约 0.8 ms（加入每方案色调缓存前约 3.2 ms）。
+- `Theme.specVersion` 可切回 2021，用于对比。
 
-- C++ 与 TS 2021 完全一致，说明引入和三处本地修改没有改变算法。
-- **2021 版 Expressive 不适合跟随封面**：它会把主色色相旋转开，例如 Sunset 封面（橙色种子 `#d76f51`）的 primary 是蓝色 `#495b99`，而 2025 版是 `#9c442b`。因此 Expressive 变体目前不应作为默认值。
-- 2025 版 TonalSpot 的差异主要在容器与表面的色调、色度。
-
-可选方案：
-
-1. **把 TS 的 2025（及 2026）规范移植到 C++**。规范代码约 50 KB TS，加上依赖的 `DynamicScheme`／`DynamicColor` 重构，属于较大的独立任务，但能真正得到 MD3E 配色。
-2. 暂用 2021 版 TonalSpot（当前默认），等上游 C++ 更新。上游 C++ 已两年未更新，不宜指望。
-
-建议采用方案 1，作为阶段 1 的补充任务。比较脚本与结果在 `build/reference/mcu-ts/`（未提交，可重新生成）。
+移植前的对比（C++ 2021 对 TS 2025，12 张示例封面）：TonalSpot 中位 ΔE 15–24，Expressive 74–83；2021 版 Expressive 会把主色色相转离种子色（橙色种子得到蓝色 primary），2025 版保持种子色相。默认变体仍为 TonalSpot（UQ-04 可在原型中再比较 Expressive）。
 
 ## 4. 字体层级
 
@@ -152,7 +145,7 @@ material-color-utilities 的 C++ 实现只有 2021 规范（`cpp/` 最后更新�
 
 ## 9. 待办
 
-- 配色规范 2025／2026 的 C++ 移植（§3），完成后重新评估默认变体（UQ-04）。
+- 默认变体在原型中再比较（UQ-04）；2026 规范暂不移植。
 - 系统“减少动态效果”设置的读取：目前只有应用内开关（`Theme.motion.reduced`）。
 - `Theme.cover` 目前只接受 `qrc:` 与 `file:`；阶段 5 接入真实封面时改为经图片提供器的不透明 key。
-- 系统强调色在 GNOME/KDE 真实会话中的取值，以及 Windows/macOS 上的表现。
+- 系统强调色在 GNOME/KDE 会话及 Windows/macOS 上的表现（已在 niri 验证）。
