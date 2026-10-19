@@ -27,6 +27,12 @@ add_library(cirrus_mcu STATIC
     cpp/score/score.cc
     cpp/temperature/temperature_cache.cc
     cpp/utils/utils.cc
+    # C++ port of the TypeScript 2021/2025 dynamic color specs (see README.md)
+    cirrus/dynamic_scheme.cc
+    cirrus/dynamic_color.cc
+    cirrus/color_spec_2021.cc
+    cirrus/color_spec_2025.cc
+    cirrus/temperature.cc
 )
 target_compile_features(cirrus_mcu PUBLIC cxx_std_17)
 # Upstream includes are rooted at this directory ("cpp/...").

@@ -14,9 +14,23 @@
 2. `cpp/utils/utils.cc`：同上，`HexFromArgb` 由 `absl::StrCat(absl::Hex(argb))` 改为 `snprintf("%x")`，输出格式相同（小写、无前导零）。
 3. `cpp/temperature/temperature_cache.h`：补上缺失的 `#include <optional>`（上游依赖其构建环境的传递包含，GCC 下无法编译）。
 
-## 已知差距
+## 2025 规范的 C++ 移植（`cirrus/`）
 
-C++ 版本只实现 2021 规范的动态配色（含 2024 年的 Expressive on-color 调整），没有 TS/Java 版本中的 `SpecVersion`（2025、2026）与 `Platform` 参数。比较结果见 `docs/ui/theme.md`。
+上游 C++ 只有 2021 规范（`cpp/` 最后更新 2024-10-01）。`cirrus/` 是 Cirrus 从同一提交的 TypeScript 移植的 C++ 代码，命名空间 `material_color_utilities::ts`，同样适用 Apache License 2.0：
+
+| 文件 | 移植自 |
+| --- | --- |
+| `cirrus/dynamic_scheme.*` | `typescript/dynamiccolor/dynamic_scheme.ts`（2021、2025 调色板规则）、`typescript/palettes/tonal_palette.ts` |
+| `cirrus/dynamic_color.*` | `typescript/dynamiccolor/dynamic_color.ts`、`contrast_curve.ts`、`tone_delta_pair.ts` |
+| `cirrus/color_spec.h`、`color_spec_2021.cc`、`color_spec_2025.cc` | `typescript/dynamiccolor/color_spec_2021.ts`、`color_spec_2025.ts` |
+| `cirrus/temperature.*` | `typescript/temperature/temperature_cache.ts`、`typescript/dislike/dislike_analyzer.ts` |
+| `cirrus/spec_helpers.h` | Cirrus 自写的小工具 |
+
+- 只包含 2021 与 2025 规范（含 phone / watch 平台参数），不含 2026 规范与 CMF 变体。与 TS 相同，2025 规范只作用于 Neutral、TonalSpot、Expressive、Vibrant，其余变体回退到 2021。
+- 继续使用上游 C++ 的 `Hct`、`Cam16`、对比度、量化、评分等基础算法；`TemperatureCache` 与 `DislikeAnalyzer` 改用移植版本，因为上游 C++ 版本与 TS 结果不一致。
+- 每个方案的色调计算带缓存（TS 只缓存 HCT），复制出的方案缓存为空。
+- **验证**：164 个种子（150 个伪随机 + 14 个边界色）× 9 个变体 × 明暗 × 5 档对比度 × 2 个规范，共 1,649,840 个颜色与同一提交编译的 TS 逐一比较，84 个（0.005%）不同，均为某一通道相差 1 的浮点舍入。Release 下生成一套 55 个角色约 0.8 ms。
+- 上游 `cpp/dynamiccolor` 与 `cpp/scheme` 保留在仓库中并参与构建，但 Cirrus 不再使用。
 
 ## 更新方法
 
