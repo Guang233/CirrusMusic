@@ -18,8 +18,10 @@ QStringList ColorScheme::roles()
 {
     return {
 #define CIRRUS_ROLE_NAME(name, Name) QStringLiteral(#name),
-        CIRRUS_COLOR_ROLES(CIRRUS_ROLE_NAME)
+#define CIRRUS_DIM_ROLE_NAME(name, Name, base) QStringLiteral(#name),
+        CIRRUS_COLOR_ROLES(CIRRUS_ROLE_NAME) CIRRUS_COLOR_DIM_ROLES(CIRRUS_DIM_ROLE_NAME)
 #undef CIRRUS_ROLE_NAME
+#undef CIRRUS_DIM_ROLE_NAME
     };
 }
 

@@ -88,7 +88,7 @@ ScrollView {
         }
 
         GridLayout {
-            columns: 4
+            columns: 5
             columnSpacing: 16
             rowSpacing: 4
             Caption {
@@ -101,6 +101,10 @@ ScrollView {
             }
             Caption {
                 text: qsTr("明暗")
+                Layout.fillWidth: false
+            }
+            Caption {
+                text: qsTr("配色规范")
                 Layout.fillWidth: false
             }
             Caption {
@@ -123,6 +127,11 @@ ScrollView {
                 currentIndex: Theme.mode
                 onActivated: index => Theme.mode = index
             }
+            ComboBox {
+                model: ["2021", "2025"]
+                currentIndex: Theme.specVersion
+                onActivated: index => Theme.specVersion = index
+            }
             Slider {
                 from: -1
                 to: 1
@@ -135,7 +144,19 @@ ScrollView {
         RowLayout {
             spacing: 12
             Caption {
+                text: qsTr("系统强调色")
+                Layout.fillWidth: false
+            }
+            Swatch {
+                swatch: Theme.systemAccent.valid ? Theme.systemAccent : "transparent"
+            }
+            Caption {
+                text: Theme.systemAccent.valid ? Theme.systemAccent.toString() : qsTr("无")
+                Layout.fillWidth: false
+            }
+            Caption {
                 text: qsTr("种子")
+                Layout.leftMargin: 16
                 Layout.fillWidth: false
             }
             Swatch {

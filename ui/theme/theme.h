@@ -2,6 +2,7 @@
 
 #include "color_scheme.h"
 #include "cover_palette.h"
+#include "system_appearance.h"
 #include "tokens.h"
 
 #include <QColor>
@@ -14,8 +15,8 @@ namespace cirrus::ui
 {
 
 // Single source of design tokens for QML (`import Cirrus.Theme`, then `Theme.…`).
-// Colors come from one seed: the current cover, a fixed color or the system
-// accent. Cover decoding/quantization runs on a private worker thread; stale
+// Colors come from one seed: the system accent (default), the current cover
+// or a fixed color. Cover decoding/quantization runs on a private worker thread; stale
 // results are dropped, and the scheme blends to the new colors.
 class Theme : public QObject
 {
@@ -30,6 +31,9 @@ class Theme : public QObject
     Q_PROPERTY(QColor fixedSeed READ fixedSeed WRITE setFixedSeed NOTIFY fixedSeedChanged)
     Q_PROPERTY(QColor seed READ seed NOTIFY seedChanged)
     Q_PROPERTY(Variant variant READ variant WRITE setVariant NOTIFY variantChanged)
+    Q_PROPERTY(
+        SpecVersion specVersion READ specVersion WRITE setSpecVersion NOTIFY specVersionChanged)
+    Q_PROPERTY(QColor systemAccent READ systemAccent NOTIFY systemAccentChanged)
     Q_PROPERTY(qreal contrast READ contrast WRITE setContrast NOTIFY contrastChanged)
     Q_PROPERTY(QUrl cover READ cover WRITE setCover NOTIFY coverChanged)
     Q_PROPERTY(cirrus::ui::CoverPalette coverPalette READ coverPalette NOTIFY coverPaletteChanged)
@@ -46,7 +50,7 @@ class Theme : public QObject
     Q_ENUM(Mode)
     enum class SeedSource { Cover, Fixed, System };
     Q_ENUM(SeedSource)
-    // material-color-utilities scheme variants (2021 spec, see docs/ui/theme.md).
+    // MD3 scheme variants (see docs/ui/theme.md).
     enum class Variant {
         TonalSpot,
         Expressive,
@@ -59,6 +63,10 @@ class Theme : public QObject
         FruitSalad
     };
     Q_ENUM(Variant)
+    // MD3 color spec. 2025 (MD3 Expressive) applies to Neutral, TonalSpot,
+    // Expressive and Vibrant; other variants always use 2021.
+    enum class SpecVersion { Spec2021, Spec2025 };
+    Q_ENUM(SpecVersion)
 
     explicit Theme(QObject* parent = nullptr);
     ~Theme() override;
@@ -73,6 +81,10 @@ class Theme : public QObject
     [[nodiscard]] QColor seed() const { return m_seed; }
     [[nodiscard]] Variant variant() const { return m_variant; }
     void setVariant(Variant variant);
+    [[nodiscard]] SpecVersion specVersion() const { return m_specVersion; }
+    void setSpecVersion(SpecVersion version);
+    // Platform accent (invalid when unavailable); the seed for SeedSource.System.
+    [[nodiscard]] QColor systemAccent() const { return m_system->accent(); }
     [[nodiscard]] qreal contrast() const { return m_contrast; }
     void setContrast(qreal contrast);
     [[nodiscard]] QUrl cover() const { return m_cover; }
@@ -100,13 +112,12 @@ class Theme : public QObject
     void fixedSeedChanged();
     void seedChanged();
     void variantChanged();
+    void specVersionChanged();
+    void systemAccentChanged();
     void contrastChanged();
     void coverChanged();
     void coverPaletteChanged();
     void extractingChanged();
-
-  protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
 
   private:
     void updateDark();
@@ -117,10 +128,11 @@ class Theme : public QObject
 
     Mode m_mode = Mode::System;
     bool m_dark = false;
-    SeedSource m_seedSource = SeedSource::Cover;
+    SeedSource m_seedSource = SeedSource::System;
     QColor m_fixedSeed{0x67, 0x50, 0xa4}; // MD3 baseline seed
     QColor m_seed;
     Variant m_variant = Variant::TonalSpot;
+    SpecVersion m_specVersion = SpecVersion::Spec2025;
     qreal m_contrast = 0.0;
     QUrl m_cover;
     CoverPalette m_palette;
@@ -129,6 +141,7 @@ class Theme : public QObject
     ColorScheme* m_color;
     TypeScale* m_type;
     Motion* m_motion;
+    SystemAppearance* m_system;
     QThreadPool m_worker;
 };
 

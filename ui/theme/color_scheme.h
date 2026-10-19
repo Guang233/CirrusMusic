@@ -62,6 +62,13 @@ namespace cirrus::ui
     X(scrim, Scrim)                                                                                \
     X(surfaceTint, SurfaceTint)
 
+// Added by the 2025 spec; schemes on the 2021 spec reuse the base color.
+#define CIRRUS_COLOR_DIM_ROLES(X)                                                                  \
+    X(primaryDim, PrimaryDim, primary)                                                             \
+    X(secondaryDim, SecondaryDim, secondary)                                                       \
+    X(tertiaryDim, TertiaryDim, tertiary)                                                          \
+    X(errorDim, ErrorDim, error)
+
 // Live MD3 color roles (Theme.color). Read-only for QML; when the theme changes,
 // all roles blend to the new scheme together in CAM16-UCS space.
 class ColorScheme : public QObject
@@ -118,13 +125,19 @@ class ColorScheme : public QObject
     Q_PROPERTY(QColor shadow READ shadow NOTIFY changed)
     Q_PROPERTY(QColor scrim READ scrim NOTIFY changed)
     Q_PROPERTY(QColor surfaceTint READ surfaceTint NOTIFY changed)
+    Q_PROPERTY(QColor primaryDim READ primaryDim NOTIFY changed)
+    Q_PROPERTY(QColor secondaryDim READ secondaryDim NOTIFY changed)
+    Q_PROPERTY(QColor tertiaryDim READ tertiaryDim NOTIFY changed)
+    Q_PROPERTY(QColor errorDim READ errorDim NOTIFY changed)
     Q_PROPERTY(QStringList roles READ roles CONSTANT)
 
   public:
     enum Role {
 #define CIRRUS_ROLE_ENUM(name, Name) Name,
-        CIRRUS_COLOR_ROLES(CIRRUS_ROLE_ENUM)
+#define CIRRUS_DIM_ROLE_ENUM(name, Name, base) Name,
+        CIRRUS_COLOR_ROLES(CIRRUS_ROLE_ENUM) CIRRUS_COLOR_DIM_ROLES(CIRRUS_DIM_ROLE_ENUM)
 #undef CIRRUS_ROLE_ENUM
+#undef CIRRUS_DIM_ROLE_ENUM
             RoleCount
     };
     Q_ENUM(Role)
@@ -136,6 +149,10 @@ class ColorScheme : public QObject
     [[nodiscard]] QColor name() const { return m_current[Name]; }
     CIRRUS_COLOR_ROLES(CIRRUS_ROLE_GETTER)
 #undef CIRRUS_ROLE_GETTER
+#define CIRRUS_DIM_ROLE_GETTER(name, Name, base)                                                   \
+    [[nodiscard]] QColor name() const { return m_current[Name]; }
+    CIRRUS_COLOR_DIM_ROLES(CIRRUS_DIM_ROLE_GETTER)
+#undef CIRRUS_DIM_ROLE_GETTER
 
     // Property names in declaration order (for galleries and tooling).
     [[nodiscard]] static QStringList roles();

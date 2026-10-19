@@ -2,17 +2,9 @@
 
 #include "fonts.h"
 
+#include "cirrus/color_spec.h"
 #include "cpp/cam/hct.h"
 #include "cpp/contrast/contrast.h"
-#include "cpp/scheme/scheme_content.h"
-#include "cpp/scheme/scheme_expressive.h"
-#include "cpp/scheme/scheme_fidelity.h"
-#include "cpp/scheme/scheme_fruit_salad.h"
-#include "cpp/scheme/scheme_monochrome.h"
-#include "cpp/scheme/scheme_neutral.h"
-#include "cpp/scheme/scheme_rainbow.h"
-#include "cpp/scheme/scheme_tonal_spot.h"
-#include "cpp/scheme/scheme_vibrant.h"
 #include "cpp/utils/utils.h"
 
 #include <QEvent>
@@ -27,41 +19,45 @@ namespace mcu = material_color_utilities;
 
 namespace
 {
-mcu::DynamicScheme makeScheme(Theme::Variant variant, const mcu::Hct& source, bool dark,
-                              double contrast)
+mcu::ts::Variant toMcu(Theme::Variant variant)
 {
+    using V = mcu::ts::Variant;
     switch (variant) {
     case Theme::Variant::TonalSpot:
-        return mcu::SchemeTonalSpot(source, dark, contrast);
+        return V::kTonalSpot;
     case Theme::Variant::Expressive:
-        return mcu::SchemeExpressive(source, dark, contrast);
+        return V::kExpressive;
     case Theme::Variant::Vibrant:
-        return mcu::SchemeVibrant(source, dark, contrast);
+        return V::kVibrant;
     case Theme::Variant::Content:
-        return mcu::SchemeContent(source, dark, contrast);
+        return V::kContent;
     case Theme::Variant::Fidelity:
-        return mcu::SchemeFidelity(source, dark, contrast);
+        return V::kFidelity;
     case Theme::Variant::Neutral:
-        return mcu::SchemeNeutral(source, dark, contrast);
+        return V::kNeutral;
     case Theme::Variant::Monochrome:
-        return mcu::SchemeMonochrome(source, dark, contrast);
+        return V::kMonochrome;
     case Theme::Variant::Rainbow:
-        return mcu::SchemeRainbow(source, dark, contrast);
+        return V::kRainbow;
     case Theme::Variant::FruitSalad:
-        return mcu::SchemeFruitSalad(source, dark, contrast);
+        return V::kFruitSalad;
     }
-    return mcu::SchemeTonalSpot(source, dark, contrast);
+    return V::kTonalSpot;
 }
 } // namespace
 
 Theme::Theme(QObject* parent)
     : QObject(parent), m_color(new ColorScheme(this)),
-      m_type(new TypeScale(textFontFamily(), this)), m_motion(new Motion(this))
+      m_type(new TypeScale(textFontFamily(), this)), m_motion(new Motion(this)),
+      m_system(new SystemAppearance(this))
 {
     m_worker.setMaxThreadCount(1);
-    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this,
-            &Theme::updateDark);
-    qApp->installEventFilter(this); // system accent changes arrive as palette changes
+    connect(m_system, &SystemAppearance::colorSchemeChanged, this, &Theme::updateDark);
+    connect(m_system, &SystemAppearance::accentChanged, this, [this] {
+        emit systemAccentChanged();
+        if (m_seedSource == SeedSource::System)
+            updateScheme();
+    });
     updateDark();
     updateScheme(false);
 }
@@ -71,14 +67,6 @@ Theme::~Theme()
     // Workers post results to this object; finish them before it goes away.
     m_worker.clear();
     m_worker.waitForDone();
-}
-
-bool Theme::eventFilter(QObject* watched, QEvent* event)
-{
-    if (watched == qApp && event->type() == QEvent::ApplicationPaletteChange &&
-        m_seedSource == SeedSource::System)
-        updateScheme();
-    return QObject::eventFilter(watched, event);
 }
 
 void Theme::setMode(Mode mode)
@@ -92,9 +80,8 @@ void Theme::setMode(Mode mode)
 
 void Theme::updateDark()
 {
-    const bool dark = m_mode == Mode::System
-                          ? QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark
-                          : m_mode == Mode::Dark;
+    const bool dark = m_mode == Mode::System ? m_system->colorScheme() == Qt::ColorScheme::Dark
+                                             : m_mode == Mode::Dark;
     if (dark == m_dark)
         return;
     m_dark = dark;
@@ -117,6 +104,15 @@ void Theme::setFixedSeed(const QColor& seed)
         return;
     m_fixedSeed = seed;
     emit fixedSeedChanged();
+    updateScheme();
+}
+
+void Theme::setSpecVersion(SpecVersion version)
+{
+    if (version == m_specVersion)
+        return;
+    m_specVersion = version;
+    emit specVersionChanged();
     updateScheme();
 }
 
@@ -187,10 +183,8 @@ QColor Theme::resolveSeed() const
     switch (m_seedSource) {
     case SeedSource::Cover:
         return m_palette.valid ? m_palette.seed : m_fixedSeed;
-    case SeedSource::System: {
-        const QColor accent = QGuiApplication::palette().color(QPalette::Accent);
-        return accent.isValid() ? accent : m_fixedSeed;
-    }
+    case SeedSource::System:
+        return m_system->accent().isValid() ? m_system->accent() : m_fixedSeed;
     case SeedSource::Fixed:
         break;
     }
@@ -205,12 +199,21 @@ ColorScheme::Colors Theme::computeColors(const QColor& seed, bool dark) const
     constexpr double kAchromaticChroma = 5.0;
     const Variant variant =
         source.get_chroma() < kAchromaticChroma ? Variant::Monochrome : m_variant;
-    const mcu::DynamicScheme scheme = makeScheme(variant, source, dark, m_contrast);
+    const mcu::ts::DynamicScheme scheme(source, toMcu(variant), dark, m_contrast,
+                                        m_specVersion == SpecVersion::Spec2025
+                                            ? mcu::ts::SpecVersion::k2025
+                                            : mcu::ts::SpecVersion::k2021);
+    const mcu::ts::ColorSpec2021& spec = mcu::ts::SpecFor(scheme);
     ColorScheme::Colors colors;
 #define CIRRUS_ROLE_COLOR(name, Name)                                                              \
-    colors[ColorScheme::Name] = QColor::fromRgba(scheme.Get##Name());
+    colors[ColorScheme::Name] = QColor::fromRgba(spec.name().GetArgb(scheme));
     CIRRUS_COLOR_ROLES(CIRRUS_ROLE_COLOR)
 #undef CIRRUS_ROLE_COLOR
+#define CIRRUS_DIM_ROLE_COLOR(name, Name, base)                                                    \
+    colors[ColorScheme::Name] =                                                                    \
+        QColor::fromRgba((spec.name() ? *spec.name() : spec.base()).GetArgb(scheme));
+    CIRRUS_COLOR_DIM_ROLES(CIRRUS_DIM_ROLE_COLOR)
+#undef CIRRUS_DIM_ROLE_COLOR
     return colors;
 }
 
