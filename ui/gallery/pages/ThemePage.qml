@@ -11,6 +11,12 @@ import Cirrus.Samples
 B.ScrollView {
     id: page
 
+    ScrollBar.vertical: ScrollBar {
+        parent: page
+        x: page.width - width
+        height: page.availableHeight
+    }
+
     readonly property list<string> typeStyles: ["displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"]
     readonly property list<string> shapes: ["none", "extraSmall", "small", "medium", "large", "largeIncreased", "extraLarge", "extraLargeIncreased", "extraExtraLarge", "full"]
     readonly property list<string> springs: ["fastSpatial", "defaultSpatial", "slowSpatial", "standardFastSpatial", "standardDefaultSpatial", "standardSlowSpatial", "fastEffects", "defaultEffects", "slowEffects"]
@@ -133,7 +139,7 @@ B.ScrollView {
                 currentIndex: Theme.specVersion
                 onActivated: index => Theme.specVersion = index
             }
-            B.Slider {
+            Slider {
                 from: -1
                 to: 1
                 stepSize: 0.5

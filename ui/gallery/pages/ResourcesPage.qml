@@ -10,6 +10,12 @@ import Cirrus.Samples
 B.ScrollView {
     id: page
 
+    ScrollBar.vertical: ScrollBar {
+        parent: page
+        x: page.width - width
+        height: page.availableHeight
+    }
+
     required property color foreground
     required property color foregroundMuted
 
@@ -90,7 +96,7 @@ B.ScrollView {
                 text: qsTr("字重 %1").arg(weightSlider.value)
                 color: page.foreground
             }
-            B.Slider {
+            Slider {
                 id: weightSlider
                 from: 100
                 to: 700
@@ -101,7 +107,7 @@ B.ScrollView {
                 text: qsTr("尺寸 %1").arg(sizeSlider.value)
                 color: page.foreground
             }
-            B.Slider {
+            Slider {
                 id: sizeSlider
                 from: 20
                 to: 48
