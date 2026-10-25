@@ -101,6 +101,9 @@ class Theme : public QObject
 
     // WCAG contrast ratio (1-21) between two colors.
     Q_INVOKABLE qreal contrastRatio(const QColor& a, const QColor& b) const;
+    // Linear blend in premultiplied RGBA: t = 0 gives a, 1 gives b. Controls drive
+    // `t` with a Spring so state changes animate while theme colors stay live.
+    Q_INVOKABLE QColor mix(const QColor& a, const QColor& b, qreal t) const;
     // Full MD3 scheme for an arbitrary seed without touching the live theme,
     // e.g. the dark scheme the player derives from its cover. Keys are role names.
     Q_INVOKABLE QVariantMap schemeFor(const QColor& seed, bool dark) const;

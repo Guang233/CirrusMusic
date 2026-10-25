@@ -148,6 +148,15 @@ SpringSpec Motion::spec(Token token)
     return spec;
 }
 
+SpringSpec Motion::custom(qreal dampingRatio, qreal stiffness, bool spatial) const
+{
+    SpringSpec spec;
+    spec.dampingRatio = std::max(dampingRatio, 0.01);
+    spec.stiffness = std::max(stiffness, 1.0);
+    spec.spatial = spatial;
+    return spec;
+}
+
 QList<qreal> Motion::curve(const SpringSpec& spec, int samples, qreal seconds) const
 {
     QList<qreal> points;

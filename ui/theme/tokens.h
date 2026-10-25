@@ -236,6 +236,10 @@ class Motion : public QObject
     [[nodiscard]] bool reduced() const { return reducedMotion(); }
     void setReduced(bool reduced);
 
+    // A spring outside the token set, e.g. the loading indicator's 0.6 / 200 morph.
+    Q_INVOKABLE cirrus::ui::SpringSpec custom(qreal dampingRatio, qreal stiffness,
+                                              bool spatial = true) const;
+
     // Position of a 0 -> 1 step at `samples` evenly spaced times in [0, seconds].
     Q_INVOKABLE QList<qreal> curve(const cirrus::ui::SpringSpec& spec, int samples,
                                    qreal seconds) const;

@@ -13,6 +13,8 @@
 #include <QStyleHints>
 #include <QtQml/qqmlfile.h>
 
+#include <algorithm>
+
 namespace cirrus::ui
 {
 namespace mcu = material_color_utilities;
@@ -233,6 +235,22 @@ qreal Theme::contrastRatio(const QColor& a, const QColor& b) const
 {
     return mcu::RatioOfTones(mcu::LstarFromArgb(a.rgba() | 0xff000000u),
                              mcu::LstarFromArgb(b.rgba() | 0xff000000u));
+}
+
+QColor Theme::mix(const QColor& a, const QColor& b, qreal t) const
+{
+    t = std::clamp(t, 0.0, 1.0);
+    const float aa = a.alphaF();
+    const float ba = b.alphaF();
+    const float alpha = aa + (ba - aa) * static_cast<float>(t);
+    if (alpha <= 0.0f)
+        return Qt::transparent;
+    const auto channel = [&](float ca, float cb) {
+        return std::clamp((ca * aa + (cb * ba - ca * aa) * static_cast<float>(t)) / alpha, 0.0f,
+                          1.0f);
+    };
+    return QColor::fromRgbF(channel(a.redF(), b.redF()), channel(a.greenF(), b.greenF()),
+                            channel(a.blueF(), b.blueF()), alpha);
 }
 
 QVariantMap Theme::schemeFor(const QColor& seed, bool dark) const
