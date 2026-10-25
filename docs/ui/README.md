@@ -98,7 +98,7 @@ ui/
   CMakeLists.txt  所有 UI 模块输出到 build/<preset>/qml/，便于 qmllint 解析导入
   theme/          Cirrus.Theme：fonts.{h,cpp}（文字用系统字体、注册图标字体）、Symbols.qml（图标码位，生成）
     fonts/        图标字体子集、许可文件、symbols.txt（图标清单）
-  controls/       Cirrus.Controls：Icon.qml（阶段 2 起补控件）
+  controls/       Cirrus.Controls：MD3E 控件、共享基础（状态层、焦点环、阴影、MorphShape）、md.h（Md 枚举）、shaders/（涟漪）
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
   app/            CirrusMusic：main.cpp、Main.qml（目前仍是 Qt 模板）
   gallery/        appCirrusGallery：Gallery.qml、pages/
@@ -156,7 +156,7 @@ third_party/
 ### 4.3 形状、状态层与高度
 
 - **圆角刻度**：none、extra-small、small、medium、large、large-increased、extra-large、extra-large-increased、extra-extra-large、full，具体数值在阶段 1 按 MD3 官方规范核对后写入主题。
-- **形状变形**：MD3E 的标志特性（按钮按下变形、加载指示器在多种形状间变换）。候选方案 [m3shapes](https://github.com/soramanew/m3shapes)（Apache-2.0，androidx graphics-shapes 的 Qt QML 移植，Caelestia 在用）。阶段 1 评估结果：构建 0 警告、渲染与变形正常，建议阶段 2 以固定提交引入并自写静态库 CMake，见 [theme.md §7](theme.md)。
+- **形状变形**：MD3E 的标志特性（按钮按下变形、加载指示器在多种形状间变换）。候选方案 [m3shapes](https://github.com/soramanew/m3shapes)（Apache-2.0，androidx graphics-shapes 的 Qt QML 移植，Caelestia 在用）。已在阶段 2 以固定提交 `8a6fe89` 引入（`third_party/m3shapes`，自写静态库 CMake），软件渲染下退回圆角矩形，见 [controls.md](controls.md)。
 - **状态层**：悬停 8%、焦点 10%、按下 10%、拖动 16% 的前景色叠加，统一由控件基础组件实现。
 - **高度**：以色调层级为主，阴影只用在少数浮层（菜单、对话框、迷你播放条）。
 
@@ -200,9 +200,10 @@ Text {
 ## 5. MD3E 控件（阶段 2）
 
 - 控件基于 `QtQuick.Templates` 编写，只重画外观，保留 Qt 的键盘、焦点、输入法、无障碍等行为。不用 Rectangle + MouseArea 拼按钮。
-- 不注册全局 QQuickStyle；业务代码只导入 `Cirrus.Controls`，不同时导入 `QtQuick.Controls`，以避免同名类型冲突。控件是否加前缀在阶段 2 开始前确定。
+- 不注册全局 QQuickStyle；业务代码只导入 `Cirrus.Controls`，不同时导入 `QtQuick.Controls`，以避免同名类型冲突。控件不加前缀（已决定，见 [controls.md](controls.md)）。
 - 每个控件从第一版起就具备：全部交互状态、键盘操作、可见焦点、读屏名称（`Accessible.name`）、`qsTr` 文案、减少动态效果下的表现。
 - 每个控件在 Gallery 中有独立页面，展示所有状态和亮暗两套主题。
+- 各控件规格（尺寸、颜色、形状、动效）见 [controls.md](controls.md)。
 
 **第一批（核心）**：Button（filled、tonal、outlined、text、elevated，含 MD3E 尺寸档）、IconButton、ToggleButton 和按钮组、Switch、Checkbox、RadioButton、TextField、SearchBar、Slider、线性和环形进度指示器、加载指示器、ListItem、Menu、Tooltip、ScrollBar。
 
@@ -312,7 +313,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | Material Symbols Rounded | Apache-2.0 | 全局图标（可变字体：填充、字重、等级、光学尺寸） | 候选，阶段 0 确认是否裁剪子集 |
 | 文字字体 | — | 文字显示 | 暂用系统字体，不打包（UQ-03）；候选见 `ui/theme/fonts/README.md` |
 | material-color-utilities | Apache-2.0 | 取色与配色方案 | 已引入固定提交 `5b3618b1`（C++，3 处本地修改），见 `third_party/material-color-utilities/README.md` |
-| m3shapes | Apache-2.0 | MD3E 形状与变形 | 已评估，建议阶段 2 引入（[theme.md §7](theme.md)） |
+| m3shapes | Apache-2.0 | MD3E 形状与变形 | 已引入固定提交 `8a6fe89`（未修改源码，自写 CMake），见 `third_party/m3shapes/README.md` |
 
 所有随包分发的字体和代码在 `third_party/` 或资源目录中保留许可文件，并登记到依赖清单（见 [02](../02-technology-stack.md) 的依赖准入要求）。
 
@@ -322,7 +323,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | --- | --- | --- |
 | 0 工程基础（**已完成**，见 §15） | `ui/` 目录和各 QML 模块的 CMake；Gallery 空壳；字体、图标入库及许可文件；示例封面和示例数据；参考调研清单 | Linux 上 Debug/Release 构建通过，Gallery 能启动，qmllint 无错误 |
 | 1 主题系统（**已完成**，配色规范版本待定，见 §15） | material-color-utilities 引入与改造；后台取色；主题单例（颜色、字体、形状、状态层、动效）；弹簧实验报告；Gallery 主题页（切换封面/种子色/亮暗，查看配色、字体层级、圆角、动效） | 切换封面时配色平滑过渡且不卡顿；文字与背景对比度达标 |
-| 2 MD3E 核心控件 | §5 第一批控件及 Gallery 页面 | 每个控件的状态、键盘、焦点、读屏名称在 Gallery 中可检查 |
+| 2 MD3E 核心控件（**第一批已完成**，见 §15） | §5 第一批控件及 Gallery 页面 | 每个控件的状态、键盘、焦点、读屏名称在 Gallery 中可检查 |
 | 3 外壳与页面 | 先写过渡编排说明和 ViewModel 接口说明；窗口方案对比；导航、响应式、迷你播放条、§6.3 页面及其状态；展示层假实现 | 用假数据走通主要页面和导航，所有页面状态可在 Gallery 或调试开关中触发 |
 | 4 播放页 | 背景、封面、控制区、歌词视图、队列面板，以及与迷你条的过渡 | 用示例歌词和模拟播放进度完整运行；减少动态效果模式正常 |
 | 5 业务接入 | 展示层真实实现、封面图片提供器、`main.cpp` 组装 `BackendRuntime`；按功能逐个接入：启动与登录 → 搜索 → 歌单/专辑详情 → 播放、队列与歌词 → 音乐库 → 发现 → 评论等 | 每个功能接入后在真实后端下走通，加载、错误、取消、换号行为正确 |
@@ -336,7 +337,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | --- | --- |
 | [`docs/ui/references.md`](references.md) 参考调研清单 | 阶段 0（已完成） |
 | [`docs/ui/theme.md`](theme.md) 主题系统与弹簧实验结果 | 阶段 1（已完成） |
-| `docs/ui/controls.md` 控件清单与各控件规格 | 阶段 2 |
+| [`docs/ui/controls.md`](controls.md) 控件清单与各控件规格 | 阶段 2（已完成第一批） |
 | `docs/ui/motion-choreography.md` 过渡编排说明 | 阶段 3 开始前 |
 | `docs/ui/presentation.md` ViewModel 与模型接口 | 阶段 3 开始前 |
 | `docs/ui/player.md` 播放页规格 | 阶段 4 开始前 |
@@ -351,8 +352,8 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2025 规范下 Expressive 已保持种子色相，可在原型中比较 | 阶段 3 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
-| UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | 至少以 Gallery 做人工检查，自动化测试范围待定 | 阶段 2 开始 |
-| UQ-08 | m3shapes 直接依赖还是自行移植 | 建议以固定提交引入、自写静态库 CMake（[theme.md §7](theme.md)） | 阶段 2 开始 |
+| UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | **已决定**：不写，以 Gallery 人工检查（交互 + 离屏截图）为准 | 已决定 |
+| UQ-08 | m3shapes 直接依赖还是自行移植 | **已决定**：以固定提交引入、自写静态库 CMake，软件渲染下降级 | 已决定 |
 | UQ-09 | 配色规范版本 | **已决定**：采用 2025 规范，已移植到 C++ 并与 TS 逐色验证（[theme.md §3](theme.md)） | 已决定 |
 
 ## 15. 实施记录
@@ -409,3 +410,12 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 新增 primaryDim、secondaryDim、tertiaryDim、errorDim 四个角色（共 53 个）；`Theme.specVersion` 可切回 2021。
 - 种子默认改为系统强调色。Qt 6.11 在 Linux 上不读取 portal 强调色，新增 `SystemAppearance` 经 D-Bus 读取 `org.freedesktop.appearance`（强调色、明暗）并跟随变化；niri 会话中验证通过。
 - Debug/Release 构建、qmllint 无警告；截图检查对比度仍 ≥ 6.1。
+
+### 阶段 2：MD3E 核心控件第一批（2026-10-25）
+
+- 决定：控件不加前缀；不写 Qt Quick Test（UQ-07）；m3shapes 以固定提交引入并在软件渲染下降级（UQ-08）。规格取自 androidx compose material3 的令牌与 `*Defaults` 实现，见 [controls.md](controls.md)。
+- 共享基础：`StateLayer`（悬停／焦点叠加 + 着色器涟漪，四角半径独立）、`FocusRing`、`Elevation`（`RectangularShadow`）、`MorphShape`；`Theme.mix` 与 `Theme.motion.custom`。状态颜色用“弹簧进度 + mix”过渡，主题切换时不滞后。
+- 控件：Button（5 种样式 × 5 档尺寸 × 圆／方，`checkable` 即切换按钮）、IconButton、StandardButtonGroup／ConnectedButtonGroup、Switch、CheckBox、RadioButton、TextField、SearchBar、Slider、ProgressBar、CircularProgress、LoadingIndicator、ListItem、Menu／MenuItem／MenuSeparator、ToolTip、ScrollBar。
+- Gallery 新增“按钮”“选择与输入”“进度”“列表与菜单”四页；`--grab` 时自动打开菜单与提示以便截图。Gallery 只剩 ComboBox、ScrollView 和窗口仍来自带命名空间的 Basic 样式。
+- 验证：Debug/Release 构建无警告，qmllint 无警告；亮暗主题、RHI 与软件渲染下逐页截图检查。键盘焦点与按下状态用 Gallery 中强制状态的示例静态检查；悬停、拖动、键盘操作需在桌面上交互确认。Windows/macOS 未验证。
+

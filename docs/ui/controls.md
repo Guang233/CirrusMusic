@@ -1,6 +1,6 @@
 # MD3E 控件（阶段 2）
 
-> 状态：第一批控件实现中。代码在 `ui/controls/`（QML 模块 `Cirrus.Controls`），Gallery 的“按钮”“选择与输入”“进度”“列表与菜单”页可交互检查。
+> 状态：第一批已实现并在 Linux 上验证（2026-10-25）。代码在 `ui/controls/`（QML 模块 `Cirrus.Controls`），Gallery 的“按钮”“选择与输入”“进度”“列表与菜单”页可交互检查。
 
 ## 1. 决定
 
@@ -101,3 +101,14 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 ## 9. 每个控件的检查项
 
 全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。
+
+## 10. 已知限制与待办
+
+- 只做了水平 Slider；离散滑块的刻度点、范围滑块（RangeSlider）未做。
+- 波浪形进度、Slider 的 MD3E 其余尺寸档（把手高度随轨道变化）未做。
+- 连接按钮组未处理从右到左布局（RTL）下的首末端圆角。
+- `ToolTip` 只有纯文本样式；富提示（rich tooltip）未做。
+- TextField 未做字符计数和前后缀；Outlined 标签缺口用 `gapColor` 填色，放在非 surface 背景上时要手动指定。
+- 列表项与菜单项的读屏名称只取标题文字；需要额外描述时由页面设置 `Accessible.description`。
+- 第二批（Dialog、Snackbar、Chips、Tabs、NavigationRail、Card、Divider、Badge、下拉选择）按阶段 3 页面需要再做。
+

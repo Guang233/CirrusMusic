@@ -44,6 +44,8 @@ Behavior on opacity {
 | `Theme.type`、`Theme.shape`、`Theme.state`、`Theme.elevation` | 字体层级、圆角、状态层与禁用透明度、高度 |
 | `Theme.motion` | 9 个弹簧令牌、`reduced`（减少动态效果）、`curve()`（采样曲线） |
 | `Theme.contrastRatio(a, b)` | WCAG 对比度 |
+| `Theme.mix(a, b, t)` | 预乘 RGBA 线性混合；控件状态过渡用（见 [controls.md](controls.md) §2） |
+| `Theme.motion.custom(ζ, k, spatial)` | 令牌之外的自定义弹簧 |
 | `Theme.schemeFor(seed, dark)` | 不改变当前主题，计算任意种子的完整配色（例如播放页需要的深色方案） |
 
 枚举是限定作用域的（`Theme.Mode.Dark`），因为 `Mode` 和 `SeedSource` 都有 `System`。
@@ -90,7 +92,7 @@ material-color-utilities 的 C++ 实现只有 2021 规范，MD3 Expressive 使�
 
 - 圆角：none 0、extraSmall 4、small 8、medium 12、large 16、largeIncreased 20、extraLarge 28、extraLargeIncreased 32、extraExtraLarge 48、full（9999，由 Rectangle 自动限制为半高）。与 m3.material.io 一致。
 - 状态层：hover 0.08、focus 0.10、pressed 0.10、dragged 0.16；禁用内容 0.38、禁用容器 0.12。
-- 高度：level0–5 为 0、1、3、6、8、12 dp。阴影的绘制方式在阶段 2 定。
+- 高度：level0–5 为 0、1、3、6、8、12 dp。阴影用 `RectangularShadow` 绘制（`Cirrus.Controls` 的 `Elevation`），软件渲染下不画，见 [controls.md](controls.md) §2。
 
 ## 6. 动效
 
@@ -137,7 +139,7 @@ material-color-utilities 的 C++ 实现只有 2021 规范，MD3 Expressive 使�
 - 用 Qt 6.11.2 以其自带的严格警告选项构建，0 警告；离屏 RHI（OpenGL）渲染圆、Cookie、Burst、Pill、Sunny、Flower 及半程变形，边缘平滑。
 - `morphProgress` 可写，可以由 `Spring` 驱动，与主题动效一致。
 - 引入需要自写 CMake：上游是独立工程，构建为共享库，带安装规则和仅 GCC/Clang 可用的全局编译选项，不能直接 `add_subdirectory`。
-- 建议：阶段 2 开始时以固定提交引入（只取 `include/`、`src/`，自写静态库 CMake），用于加载指示器和按钮形状变形。
+- 结论：阶段 2 已以固定提交引入（`third_party/m3shapes`），用于 `MorphShape` 和 `LoadingIndicator`。按钮的圆角变形只需 `Rectangle` 的四角半径，不经过 m3shapes。
 
 ## 8. 截图与渲染后端
 

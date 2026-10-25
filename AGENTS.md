@@ -15,6 +15,10 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - Do not copy code from GPL/AGPL reference projects; see `docs/ui/references.md`.
 - Theme API and design decisions: `docs/ui/theme.md`. Use `Theme.color.*`, `Theme.type.*`, `Theme.shape.*`, `Theme.motion.*`; never hard-code colors in product QML. Use the `Spring` element (not `SpringAnimation`) for spring motion.
 - QML-registered C++ classes must not be `final` (Qt derives from them).
+- Controls (`Cirrus.Controls`, spec in `docs/ui/controls.md`) have no prefix: product QML imports `Cirrus.Controls` and never `QtQuick.Controls` (use `import QtQuick.Templates as T` for non-visual helpers such as `T.ButtonGroup`). Gallery pages may use `import QtQuick.Controls.Basic as B` for controls that do not exist yet.
+- Animate control state colors with a `Spring` 0–1 progress plus `Theme.mix(a, b, t)`, not `Behavior on color` (it lags while the theme blends).
+- Vendored m3shapes lives in `third_party/m3shapes` (unmodified upstream sources, own CMake); executables link `m3shapesplugin` and `Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)`.
+- No Qt Quick Test for UI (UQ-07): verify in the gallery. `--grab` sets `GalleryState.capturing`, which opens menus/tooltips for screenshots.
 
 ## Build and verify
 
@@ -22,7 +26,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 cmake --preset linux-dev-local
 cmake --build --preset linux-dev-local --target appCirrusMusic appCirrusGallery
 cmake --build --preset linux-dev-local --target all_qmllint
-QT_QPA_PLATFORM=offscreen ./build/linux-dev-local/appCirrusGallery --grab /tmp/gallery.png --size 1280x2400 [--page theme|resources] [--cover sunset] [--mode light|dark]
+QT_QPA_PLATFORM=offscreen ./build/linux-dev-local/appCirrusGallery --grab /tmp/gallery.png --size 1280x2400 [--page theme|buttons|inputs|progress|lists|resources] [--cover sunset] [--mode light|dark]
 clang-format --dry-run --Werror <changed C++ files>
 ```
 
