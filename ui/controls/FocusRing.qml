@@ -13,7 +13,8 @@ Rectangle {
     property real containerBottomRightRadius: containerRadius
     property real containerBottomLeftRadius: containerRadius
 
-    readonly property real offset: 2
+    // Gap between container edge and ring; negative draws the ring inside (list items).
+    property real offset: 2
     readonly property real thickness: 3
 
     anchors.fill: parent
@@ -21,10 +22,10 @@ Rectangle {
     color: "transparent"
     border.width: thickness
     border.color: Theme.color.secondary
-    topLeftRadius: containerTopLeftRadius + offset + thickness
-    topRightRadius: containerTopRightRadius + offset + thickness
-    bottomRightRadius: containerBottomRightRadius + offset + thickness
-    bottomLeftRadius: containerBottomLeftRadius + offset + thickness
+    topLeftRadius: Math.max(0, containerTopLeftRadius + offset + thickness)
+    topRightRadius: Math.max(0, containerTopRightRadius + offset + thickness)
+    bottomRightRadius: Math.max(0, containerBottomRightRadius + offset + thickness)
+    bottomLeftRadius: Math.max(0, containerBottomLeftRadius + offset + thickness)
     visible: fade.value > 0
     opacity: fade.value
     Accessible.ignored: true

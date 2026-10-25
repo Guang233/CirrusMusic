@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
     engine.setInitialProperties({{QStringLiteral("initialPage"), parser.value(pageOption)},
                                  {QStringLiteral("initialCover"), parser.value(coverOption)},
                                  {QStringLiteral("initialMode"), parser.value(modeOption)},
+                                 {QStringLiteral("capturing"), parser.isSet(grabOption)},
                                  {QStringLiteral("width"), width},
                                  {QStringLiteral("height"), height}});
     engine.loadFromModule("CirrusGallery", "Gallery");

@@ -14,6 +14,7 @@ B.ApplicationWindow {
     required property string initialPage
     required property string initialCover
     required property string initialMode
+    required property bool capturing
 
     component PageEntry: QtObject {
         required property string key
@@ -43,6 +44,11 @@ B.ApplicationWindow {
             page: progressPage
         },
         PageEntry {
+            key: "lists"
+            title: qsTr("列表与菜单")
+            page: listsPage
+        },
+        PageEntry {
             key: "resources"
             title: qsTr("资源")
             page: resourcesPage
@@ -57,6 +63,7 @@ B.ApplicationWindow {
     font: Theme.type.bodyMedium.font
 
     Component.onCompleted: {
+        GalleryState.capturing = capturing;
         if (initialCover !== "")
             Theme.cover = Samples.cover(initialCover);
         if (initialMode === "light")
@@ -83,6 +90,11 @@ B.ApplicationWindow {
     Component {
         id: progressPage
         ProgressPage {}
+    }
+
+    Component {
+        id: listsPage
+        ListsPage {}
     }
 
     Component {
