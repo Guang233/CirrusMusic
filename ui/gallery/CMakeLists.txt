@@ -12,6 +12,7 @@ qt_add_qml_module(appCirrusGallery
         pages/SectionTitle.qml
         pages/Caption.qml
         pages/ButtonsPage.qml
+        pages/InputsPage.qml
 )
 
 set_target_properties(appCirrusGallery PROPERTIES

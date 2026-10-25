@@ -33,6 +33,11 @@ B.ApplicationWindow {
             page: buttonsPage
         },
         PageEntry {
+            key: "inputs"
+            title: qsTr("选择与输入")
+            page: inputsPage
+        },
+        PageEntry {
             key: "resources"
             title: qsTr("资源")
             page: resourcesPage
@@ -63,6 +68,11 @@ B.ApplicationWindow {
     Component {
         id: buttonsPage
         ButtonsPage {}
+    }
+
+    Component {
+        id: inputsPage
+        InputsPage {}
     }
 
     Component {
