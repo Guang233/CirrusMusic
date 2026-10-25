@@ -31,6 +31,9 @@ qt_add_qml_module(cirrus_ui_controls
         TextField.qml
         SearchBar.qml
         Slider.qml
+        ProgressBar.qml
+        CircularProgress.qml
+        LoadingIndicator.qml
 )
 
 # Embedded at :/qt/qml/Cirrus/Controls/shaders/*.qsb, next to the QML files.

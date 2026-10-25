@@ -38,6 +38,11 @@ B.ApplicationWindow {
             page: inputsPage
         },
         PageEntry {
+            key: "progress"
+            title: qsTr("进度")
+            page: progressPage
+        },
+        PageEntry {
             key: "resources"
             title: qsTr("资源")
             page: resourcesPage
@@ -73,6 +78,11 @@ B.ApplicationWindow {
     Component {
         id: inputsPage
         InputsPage {}
+    }
+
+    Component {
+        id: progressPage
+        ProgressPage {}
     }
 
     Component {
