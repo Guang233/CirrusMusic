@@ -1,13 +1,14 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls.Basic as B
 import QtQuick.Layouts
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Samples
 
 // Development gallery. The chrome still uses QtQuick.Controls.Basic until the
 // MD3E controls exist (UI phase 2); colors and type come from Cirrus.Theme.
-ApplicationWindow {
+B.ApplicationWindow {
     id: window
 
     required property string initialPage
@@ -25,6 +26,11 @@ ApplicationWindow {
             key: "theme"
             title: qsTr("主题")
             page: themePage
+        },
+        PageEntry {
+            key: "buttons"
+            title: qsTr("按钮")
+            page: buttonsPage
         },
         PageEntry {
             key: "resources"
@@ -52,6 +58,11 @@ ApplicationWindow {
     Component {
         id: themePage
         ThemePage {}
+    }
+
+    Component {
+        id: buttonsPage
+        ButtonsPage {}
     }
 
     Component {

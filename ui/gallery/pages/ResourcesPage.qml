@@ -1,13 +1,13 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls.Basic as B
 import QtQuick.Layouts
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Samples
 
 // Phase 0 check: system text font and script fallback, bundled icons, sample covers.
-ScrollView {
+B.ScrollView {
     id: page
 
     required property color foreground
@@ -15,14 +15,14 @@ ScrollView {
 
     contentWidth: availableWidth
 
-    component SectionTitle: Label {
+    component SectionTitle: B.Label {
         color: page.foreground
         font.pixelSize: 22
         font.weight: Font.DemiBold
         Layout.topMargin: 24
     }
 
-    component Caption: Label {
+    component Caption: B.Label {
         color: page.foregroundMuted
         font.pixelSize: 13
         wrapMode: Text.Wrap
@@ -79,29 +79,29 @@ ScrollView {
         }
         RowLayout {
             spacing: 16
-            Label {
+            B.Label {
                 text: qsTr("填充")
                 color: page.foreground
             }
             Switch {
                 id: fillSwitch
             }
-            Label {
+            B.Label {
                 text: qsTr("字重 %1").arg(weightSlider.value)
                 color: page.foreground
             }
-            Slider {
+            B.Slider {
                 id: weightSlider
                 from: 100
                 to: 700
                 stepSize: 100
                 value: 400
             }
-            Label {
+            B.Label {
                 text: qsTr("尺寸 %1").arg(sizeSlider.value)
                 color: page.foreground
             }
-            Slider {
+            B.Slider {
                 id: sizeSlider
                 from: 20
                 to: 48

@@ -9,6 +9,7 @@
 Q_IMPORT_QML_PLUGIN(Cirrus_ThemePlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_ControlsPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_SamplesPlugin)
+Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
 // Development preview. `--grab <file>` renders one page, saves a screenshot and
 // exits, so visual checks also work headless (QT_QPA_PLATFORM=offscreen).

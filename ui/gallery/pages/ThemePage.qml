@@ -1,13 +1,14 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls.Basic as B
 import QtQuick.Layouts
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Samples
 
 // Phase 1 check: cover-driven scheme, color roles and contrast, type scale,
 // shapes, state layers and spring motion tokens.
-ScrollView {
+B.ScrollView {
     id: page
 
     readonly property list<string> typeStyles: ["displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"]
@@ -111,28 +112,28 @@ ScrollView {
                 text: qsTr("对比度 %1").arg(Theme.contrast.toFixed(1))
                 Layout.fillWidth: false
             }
-            ComboBox {
+            B.ComboBox {
                 model: [qsTr("封面"), qsTr("固定"), qsTr("系统强调色")]
                 currentIndex: Theme.seedSource
                 onActivated: index => Theme.seedSource = index
             }
-            ComboBox {
-                implicitContentWidthPolicy: ComboBox.WidestText
+            B.ComboBox {
+                implicitContentWidthPolicy: B.ComboBox.WidestText
                 model: ["TonalSpot", "Expressive", "Vibrant", "Content", "Fidelity", "Neutral", "Monochrome", "Rainbow", "FruitSalad"]
                 currentIndex: Theme.variant
                 onActivated: index => Theme.variant = index
             }
-            ComboBox {
+            B.ComboBox {
                 model: [qsTr("跟随系统"), qsTr("亮色"), qsTr("暗色")]
                 currentIndex: Theme.mode
                 onActivated: index => Theme.mode = index
             }
-            ComboBox {
+            B.ComboBox {
                 model: ["2021", "2025"]
                 currentIndex: Theme.specVersion
                 onActivated: index => Theme.specVersion = index
             }
-            Slider {
+            B.Slider {
                 from: -1
                 to: 1
                 stepSize: 0.5

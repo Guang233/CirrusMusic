@@ -8,6 +8,10 @@ qt_add_qml_module(appCirrusGallery
         Gallery.qml
         pages/ResourcesPage.qml
         pages/ThemePage.qml
+        pages/ControlPage.qml
+        pages/SectionTitle.qml
+        pages/Caption.qml
+        pages/ButtonsPage.qml
 )
 
 set_target_properties(appCirrusGallery PROPERTIES
@@ -20,4 +24,5 @@ target_link_libraries(appCirrusGallery PRIVATE
     cirrus_ui_themeplugin
     cirrus_ui_controlsplugin
     cirrus_ui_samplesplugin
+    m3shapesplugin
 )
