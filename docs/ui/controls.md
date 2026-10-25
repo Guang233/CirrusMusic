@@ -1,0 +1,103 @@
+# MD3E 控件（阶段 2）
+
+> 状态：第一批控件实现中。代码在 `ui/controls/`（QML 模块 `Cirrus.Controls`），Gallery 的“按钮”“选择与输入”“进度”“列表与菜单”页可交互检查。
+
+## 1. 决定
+
+| 事项 | 决定 |
+| --- | --- |
+| 命名 | 不加前缀：`Button`、`Switch`、`Slider`……业务 QML 只导入 `Cirrus.Controls`，**不得**同时导入 `QtQuick.Controls`（同名类型会冲突）。需要 Qt 的非可视工具（如互斥组）时用 `import QtQuick.Templates as T`，写 `T.ButtonGroup`。 |
+| 实现基础 | 每个控件继承 `QtQuick.Templates` 的同名模板，只画外观；键盘、焦点、输入法、读屏角色、自动重复、拖动阈值等行为由 Qt 提供。不注册全局 QQuickStyle。 |
+| 规格来源 | androidx compose material3 的生成令牌（`tokens/*Tokens.kt`）与 `*Defaults` 实现（2026-10 主分支）。令牌与实现不一致时以实现为准（例如文字按钮的文字色：令牌写 OnSurfaceVariant，实现带 TODO 使用 Primary）。 |
+| 共享枚举 | C++ 命名空间 `Md`（`ui/controls/md.h`）：`Md.Filled/Tonal/Outlined/Text/Elevated/Standard`（样式）、`Md.XSmall…XLarge`（尺寸）、`Md.Round/Square`（形状）、`Md.Narrow/Default/Wide`（图标按钮宽度）、`Md.Alone/First/Middle/Last`（在连接按钮组中的位置）。 |
+| 自动化测试（UQ-07） | 不写 Qt Quick Test；以 Gallery 人工检查（交互 + 离屏截图）为准。 |
+| 形状变形（UQ-08） | 引入 m3shapes（`third_party/m3shapes`）。软件渲染后端下 m3shapes 不绘制，`MorphShape` 与 `LoadingIndicator` 自动退回圆角矩形／旋转圆弧，功能不受影响。 |
+| 密度 | 采用 MD3 标准尺寸（小号按钮 40 dp）。Compose 的“精确指针”紧凑尺寸（36 dp）暂不做，阶段 3 外壳布局时再评估。 |
+
+## 2. 共享基础
+
+| 组件 | 作用 |
+| --- | --- |
+| `StateLayer` | 悬停 8%／焦点 10% 的前景色叠加（`fastEffects` 弹簧过渡），外加按下涟漪。涟漪是着色器：圆角矩形 SDF（四角半径独立）裁剪的扩散圆，225 ms 扩散、松开后 150 ms 淡出。软件渲染下没有涟漪，改为按下 10% 叠加。 |
+| `FocusRing` | 键盘焦点指示：3 px、Secondary 色、外扩 2 px，四角半径随容器变化。只在 `visualFocus`（键盘导致的焦点）时显示。 |
+| `Elevation` | 阴影，`RectangularShadow`（Qt 6.9+）。只用于 Elevated 按钮、菜单、浮层。软件渲染下不画阴影，靠色调层级区分。 |
+| `MorphShape` | 包装 m3shapes 的 `MaterialShape`：35 种预设形状、`morphProgress` 由 `Spring` 驱动；软件渲染退回圆角矩形。 |
+| `Theme.mix(a, b, t)` | 预乘 RGBA 线性混合。控件的状态颜色过渡用“弹簧驱动的 0–1 进度 + mix”，而不是 `Behavior on color`：后者在主题配色逐帧混合时会反复重启，颜色跟不上主题。 |
+| `Theme.motion.custom(ζ, k, spatial)` | 自定义弹簧（如加载指示器的 0.6／200）。 |
+
+**状态到颜色**：禁用时容器为 OnSurface 12%、内容为 OnSurface 38%；选中（切换）状态用 `defaultEffects` 弹簧在两套颜色之间混合。
+
+## 3. 按钮
+
+**Button**（`variant`、`size`、`shape`、`glyph`、`checkable`）
+
+| 尺寸 | 高 | 左右内距 | 图标 | 图标间距 | 文字样式 | 方形圆角 | 按下圆角 | 描边 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| XSmall | 32 | 12 | 20 | 4 | labelLarge | 12 | 8 | 1 |
+| Small（默认） | 40 | 16 | 20 | 8 | labelLarge | 12 | 8 | 1 |
+| Medium | 56 | 24 | 24 | 8 | titleMedium | 16 | 12 | 1 |
+| Large | 96 | 48 | 32 | 12 | headlineSmall | 28 | 16 | 2 |
+| XLarge | 136 | 64 | 40 | 16 | headlineLarge | 28 | 16 | 3 |
+
+| 样式 | 容器／内容 | 选中（checkable）容器／内容 |
+| --- | --- | --- |
+| Filled | Primary／OnPrimary | 未选中 SurfaceContainer／OnSurfaceVariant，选中 Primary／OnPrimary |
+| Tonal | SecondaryContainer／OnSecondaryContainer | 选中 Secondary／OnSecondary |
+| Outlined | 透明＋OutlineVariant 描边／OnSurfaceVariant | 选中 InverseSurface／InverseOnSurface（无描边） |
+| Text | 透明／Primary | 不支持切换 |
+| Elevated | SurfaceContainerLow＋1 级阴影（悬停 2 级）／Primary | 选中 Primary／OnPrimary |
+
+- **形状变形**：圆形按钮按下时圆角收到“按下圆角”，用 `defaultEffects`（不回弹）；可切换按钮按下用 `fastSpatial`（带回弹），选中后圆形变方形、方形变圆形。
+- `checkable` 即 MD3E 的“切换按钮”，不另设类型。
+
+**IconButton**（`variant`：Standard／Filled／Tonal／Outlined；`size`；`widthMode`：Narrow／Default／Wide；`shape`；`glyph`；`checkable`）
+
+| 尺寸 | 高 | 图标 | 左右内距 窄／默认／宽 | 方形圆角 | 按下圆角 | 选中后圆角（圆→方） |
+| --- | --- | --- | --- | --- | --- | --- |
+| XSmall | 32 | 20 | 4／6／10 | 12 | 8 | 12 |
+| Small（默认） | 40 | 24 | 4／8／14 | 12 | 8 | 12 |
+| Medium | 56 | 24 | 12／16／24 | 16 | 12 | 16 |
+| Large | 96 | 32 | 16／32／48 | 28 | 16 | 28 |
+| XLarge | 136 | 40 | 32／48／72 | 28 | 16 | 28 |
+
+- Standard 未选中 OnSurfaceVariant、选中 Primary；Filled 未选中 SurfaceContainer、选中 Primary；Tonal 选中 Secondary；Outlined 选中 InverseSurface。
+- 选中时图标的 FILL 轴从 0 过渡到 1（例如收藏的空心心形变实心）。
+- `text` 必填：作为读屏名称和悬停提示，不显示。
+
+**按钮组**
+
+- `StandardButtonGroup`：按钮间距 12；按下的按钮宽度扩大 15%，相邻按钮让出空间（`fastSpatial`）。
+- `ConnectedButtonGroup`：按钮间距 2，组两端为全圆角、内侧圆角 8（按下 4），选中的按钮变为全圆角。可设 `exclusive` 做单选（底层 `T.ButtonGroup`）。
+
+## 4. 选择控件
+
+- **Switch**：轨道 52×32、2 px 描边；未选中把手 16（有图标时 24）、选中 24、按下 28，把手位置用 `fastSpatial` 移动，尺寸用 `fastSpatial` 变化；可选把手图标（`showIcons`，选中 ✓、未选中 ✕）。悬停／按下时选中把手变为 PrimaryContainer。
+- **CheckBox**：18×18、圆角 2、未选中 2 px OnSurfaceVariant 描边；勾选标记由路径绘制并在勾选时展开；支持三态和错误态（`error`）。状态层 40×40 圆形。
+- **RadioButton**：外环 20、2 px；选中内点 10，弹簧缩放出现。状态层 40×40 圆形。
+
+## 5. 输入
+
+- **TextField**（`variant`：Filled／Outlined；`label`、`placeholderText`、`leadingGlyph`、`trailingGlyph`、`supportingText`、`error`）：高 56；Filled 容器 SurfaceContainerHighest、上圆角 4、底部指示线 1 px（聚焦 2 px Primary）；Outlined 描边 1 px Outline（聚焦 2 px Primary）、圆角 4。标签在有内容或聚焦时上浮缩小（bodyLarge → bodySmall，`fastSpatial`）。
+- **SearchBar**：高 56、全圆角、SurfaceContainerHigh，左侧搜索图标、右侧清除按钮（有内容时出现，Esc 同样清空）。建议列表属于页面，由阶段 3 实现。
+
+## 6. Slider
+
+MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外圆角全圆、内侧圆角 2；把手为 4×44 的竖条，与两侧轨道各留 6 px 间隙，按下或聚焦时变为 2 px 宽；未激活轨道末端有 4 px 停止点。拖动时把手上方显示数值气泡（InverseSurface）。
+
+## 7. 进度
+
+- **ProgressBar**（线性）：4 px 粗、轨道与指示之间 4 px 间隙、末端 4 px 停止点（确定进度时）；不确定进度为两段交替滑动。
+- **CircularProgress**：40×40、4 px、带间隙；不确定进度为旋转并伸缩的圆弧。
+- **LoadingIndicator**：48 容器、38 指示形状，按 SoftBurst → Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval 循环变形，每 650 ms 一次（弹簧 ζ 0.6、k 200），每次额外旋转 90°，并叠加 4666 ms 一圈的匀速旋转。`contained` 时加 PrimaryContainer 圆形容器。减少动态效果时只保留缓慢旋转。
+- 波浪形（wavy）进度暂不做，播放器设计时再定。
+
+## 8. 列表、菜单、提示、滚动条
+
+- **ListItem**（继承 `T.ItemDelegate`）：一／二／三行高 56／72／88；`headline`、`supportingText`、`overline`、`trailingText`；`leading`／`trailing` 为任意项（图标、头像、封面、开关）。选中容器 SecondaryContainer。圆角随状态变化（静止 4、悬停 12、按下和选中 16），只在 `segmented`（分段列表）时启用；普通列表为直角。
+- **Menu / MenuItem / MenuSeparator**（MD3E 标准菜单）：容器 SurfaceContainerLow、圆角 16、2 级阴影、内边距 4；项高 44、圆角 4（首末项外侧 12）、选中 TertiaryContainer。打开时自锚点缩放展开（`fastSpatial`），关闭淡出（`fastEffects`）。
+- **ToolTip**：InverseSurface、圆角 4、bodySmall、最小高 24、内距 8×4；悬停 500 ms 后出现。
+- **ScrollBar**：常态 4 px 细条，悬停或拖动时变为 8 px；颜色 OnSurfaceVariant，闲置 1 s 后淡出。
+
+## 9. 每个控件的检查项
+
+全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。
