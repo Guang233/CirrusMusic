@@ -2,6 +2,14 @@
 
 Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui/README.md` (UI).
 
+## Working with the maintainer
+
+- Reply in Chinese.
+- The agent owns the UI only. Do not modify backend code; report backend problems (e.g. the `tst_entity_search` failure below) to the maintainer instead.
+- Keep verification proportional to the change; skip tests that are not needed.
+- Open design questions (UQ-xx in `docs/ui/README.md` §14) are decided by the maintainer: ask, then record the decision there.
+- Current progress and the next step are at the top of `docs/ui/README.md` §12.
+
 ## UI work
 
 - UI code lives in `ui/` (QML modules + gallery); the plan, phases and open questions are in `docs/ui/README.md`. Shell/pages use Material 3 Expressive; the player page uses an Apple Music-like style.
