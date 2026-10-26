@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+import QtCore
 import QtQuick
 import QtQuick.Controls.Basic as B
 import QtQuick.Layouts
@@ -62,14 +63,41 @@ B.ApplicationWindow {
     color: Theme.color.surface
     font: Theme.type.bodyMedium.font
 
+    // Last page, cover and mode of interactive runs, so a rebuild-and-restart (see
+    // tools/ui/gallery-watch.sh) comes back where it was. Unused by --grab runs.
+    Settings {
+        id: memory
+        category: "Gallery"
+        property string page: "theme"
+        property string mode: "system"
+        property string cover: Samples.cover("sunset").toString()
+    }
+
+    readonly property list<string> modeNames: ["system", "light", "dark"]
+    property bool restored: false
+
     Component.onCompleted: {
         GalleryState.capturing = capturing;
+        const page = initialPage !== "" ? initialPage : capturing ? "theme" : memory.page;
+        nav.currentIndex = Math.max(0, pages.findIndex(p => p.key === page));
         if (initialCover !== "")
             Theme.cover = Samples.cover(initialCover);
-        if (initialMode === "light")
-            Theme.mode = Theme.Mode.Light;
-        else if (initialMode === "dark")
-            Theme.mode = Theme.Mode.Dark;
+        else
+            Theme.cover = capturing ? Samples.cover("sunset") : memory.cover;
+        const mode = initialMode !== "" ? initialMode : capturing ? "system" : memory.mode;
+        Theme.mode = [Theme.Mode.System, Theme.Mode.Light, Theme.Mode.Dark][Math.max(0, modeNames.indexOf(mode))];
+        restored = !capturing;
+    }
+
+    Connections {
+        target: Theme
+        enabled: window.restored
+        function onModeChanged() {
+            memory.mode = window.modeNames[Theme.mode];
+        }
+        function onCoverChanged() {
+            memory.cover = Theme.cover.toString();
+        }
     }
 
     Component {
@@ -132,7 +160,8 @@ B.ApplicationWindow {
                     Layout.fillHeight: true
                     spacing: 2
                     model: window.pages
-                    currentIndex: Math.max(0, window.pages.findIndex(p => p.key === window.initialPage))
+                    onCurrentIndexChanged: if (window.restored)
+                                               memory.page = window.pages[currentIndex].key
                     delegate: Rectangle {
                         id: navItem
                         required property int index

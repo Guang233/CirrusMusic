@@ -13,16 +13,21 @@ Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
 // Development preview. `--grab <file>` renders one page, saves a screenshot and
 // exits, so visual checks also work headless (QT_QPA_PLATFORM=offscreen).
+// Interactive runs reopen the last page, cover and mode; --grab runs never use or
+// change that memory, so screenshots stay reproducible.
 int main(int argc, char* argv[])
 {
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("Cirrus Gallery"));
+    // Where the gallery remembers its last page, cover and mode (QML Settings).
+    QGuiApplication::setOrganizationName(QStringLiteral("Cirrus"));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("Cirrus UI gallery"));
     parser.addHelpOption();
-    const QCommandLineOption pageOption(QStringLiteral("page"), QStringLiteral("Initial page."),
-                                        QStringLiteral("name"), QStringLiteral("theme"));
+    const QCommandLineOption pageOption(
+        QStringLiteral("page"), QStringLiteral("Initial page (default: last used, or theme)."),
+        QStringLiteral("name"));
     const QCommandLineOption grabOption(QStringLiteral("grab"),
                                         QStringLiteral("Save a screenshot to <file> and quit."),
                                         QStringLiteral("file"));
@@ -32,12 +37,14 @@ int main(int argc, char* argv[])
     const QCommandLineOption delayOption(QStringLiteral("delay"),
                                          QStringLiteral("Milliseconds to wait before grabbing."),
                                          QStringLiteral("ms"), QStringLiteral("1000"));
-    const QCommandLineOption coverOption(QStringLiteral("cover"),
-                                         QStringLiteral("Sample cover to theme from, e.g. sunset."),
-                                         QStringLiteral("name"), QStringLiteral("sunset"));
-    const QCommandLineOption modeOption(QStringLiteral("mode"),
-                                        QStringLiteral("Theme mode: system, light or dark."),
-                                        QStringLiteral("mode"), QStringLiteral("system"));
+    const QCommandLineOption coverOption(
+        QStringLiteral("cover"),
+        QStringLiteral("Sample cover to theme from, e.g. sunset (default: last used, or sunset)."),
+        QStringLiteral("name"));
+    const QCommandLineOption modeOption(
+        QStringLiteral("mode"),
+        QStringLiteral("Theme mode: system, light or dark (default: last used, or system)."),
+        QStringLiteral("mode"));
     parser.addOptions({pageOption, grabOption, sizeOption, delayOption, coverOption, modeOption});
     parser.process(app);
 
