@@ -114,7 +114,7 @@ third_party/
 - 模块在第一次有实际内容时才创建，不建空模块。
 - `appCirrusMusic` 与 `appCirrusGallery` 都输出到 `build/<preset>/` 根目录。
 - Gallery 由 `CIRRUS_BUILD_GALLERY`（默认开启）控制，不打进发行包。`--grab <文件> [--page 名称] [--size WxH]` 渲染一页并保存截图后退出，可在 `QT_QPA_PLATFORM=offscreen` 下使用。
-- 后端库不链接任何 UI 模块；只有 `Cirrus.Presentation` 链接 `cirrus_backend`／`cirrus_application`。
+- 后端库不链接任何 UI 模块；只有展示层的 backend 子目标 `cirrus_presentation_backend` 链接 `cirrus_backend`，`Cirrus.Presentation` 本身和 Gallery 都不链接后端（见 [presentation.md §2](presentation.md)）。
 - 生成文件（`Symbols.qml`、`Samples.qml`、字体子集、示例数据）不要手工修改，改生成脚本或其输入后重新运行。
 
 ## 4. 主题系统（阶段 1）
@@ -219,7 +219,13 @@ Text {
 | B 扩展客户区 | Qt 6.9 起的 `Qt.ExpandedClientAreaHint` + `Qt.NoTitleBarBackgroundHint`，配合 `SafeArea` 避让系统按钮 | 保留系统按钮和窗口行为，内容延伸到标题栏区域 | 各平台支持程度不同，Linux 上的效果需验证 |
 | C 完全自绘 | 无边框窗口，`startSystemMove()`／`startSystemResize()` 处理拖动和缩放 | 三平台外观完全一致 | 需要自己处理缩放边缘、阴影、双击最大化；Windows 贴靠布局和 macOS 红绿灯需要额外处理 |
 
-建议在阶段 3 开始时用最小窗口原型对比三种方案后决定，可以按平台选择不同方案（例如 macOS 用 B）。
+**已决定（UQ-02）：默认使用自绘标题栏，用户可以在设置里切换成系统标题栏**，用来绕开个别桌面环境下自绘窗口的问题。
+
+- **自绘（默认）**：Linux、Windows 用方案 C，外壳顶部自己画窗口按钮，并处理拖动、缩放边缘、双击最大化。macOS 优先用方案 B，保留系统红绿灯。阶段 3 的窗口原型要在 Linux 的 Wayland 和 X11 上，分别在 GNOME、KDE、niri 下检查阴影、缩放边缘和贴边。
+- **系统标题栏**：使用原生窗口装饰，外壳不再画窗口按钮。原来放在标题栏区域的应用内容（返回、搜索等）留在内容区顶部。GNOME Wayland 下的装饰由 Qt 绘制（见上表方案 A）。
+- **切换入口**：设置项 `App.settings.titleBar`（[presentation.md §5.1](presentation.md)）。另外提供启动参数 `--system-titlebar` 和环境变量 `CIRRUS_SYSTEM_TITLEBAR=1`：自绘标题栏出问题、连设置页都操作不了时，不进设置也能切回系统标题栏。
+- 切换后先按“重启生效”实现；能否不重启、直接重建窗口，在原型中确定。
+- 播放页：自绘模式下延伸到标题栏区域，窗口按钮的颜色跟着播放页变化（[motion-choreography.md §2.2](motion-choreography.md)）；系统模式下从标题栏下方开始。
 
 ### 6.2 布局与响应式
 
@@ -277,7 +283,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 8. 过渡编排
 
-以下跨组件动画在实现前先写编排说明（时间线、谁先动谁跟随、使用哪档弹簧、被打断时如何处理），放在阶段 3 开始前的细化文档里：
+以下跨组件动画的编排说明（时间线、谁先动谁跟随、使用哪档弹簧、被打断时如何处理）见 [motion-choreography.md](motion-choreography.md)：
 
 - 迷你播放条 ↔ 播放页：封面共享元素过渡、背景铺开、控件淡入。实现上在外壳之上放一个覆盖层，用 `mapToItem` 交接封面的起止位置和尺寸。Esc 和返回操作可以中途打断并反向。
 - 页面切换与返回。
@@ -319,11 +325,11 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-25）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。**下一步**是阶段 3 的准备工作：
-1. 写 `docs/ui/motion-choreography.md`（§8 列出的四类过渡）。
-2. 写 `docs/ui/presentation.md`（§3.2 的 ViewModel、数据源接口与假实现约定，以及 §6.4 的页面状态）。
-3. 请维护者决定 UQ-02（标题栏方案），必要时先做最小窗口原型对比。
-4. 然后开始外壳、导航与页面；第二批控件按页面需要再做。
+**当前进度（2026-10-26）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。**下一步**开始阶段 3，建议顺序：
+1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。
+2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。
+3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。
+4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。
 
 | 阶段 | 交付内容 | 完成条件 |
 | --- | --- | --- |
@@ -344,8 +350,8 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | [`docs/ui/references.md`](references.md) 参考调研清单 | 阶段 0（已完成） |
 | [`docs/ui/theme.md`](theme.md) 主题系统与弹簧实验结果 | 阶段 1（已完成） |
 | [`docs/ui/controls.md`](controls.md) 控件清单与各控件规格 | 阶段 2（已完成第一批） |
-| `docs/ui/motion-choreography.md` 过渡编排说明 | 阶段 3 开始前 |
-| `docs/ui/presentation.md` ViewModel 与模型接口 | 阶段 3 开始前 |
+| [`docs/ui/motion-choreography.md`](motion-choreography.md) 过渡编排说明 | 阶段 3 开始前（已完成） |
+| [`docs/ui/presentation.md`](presentation.md) ViewModel 与数据源接口 | 阶段 3 开始前（已完成） |
 | `docs/ui/player.md` 播放页规格 | 阶段 4 开始前 |
 
 ## 14. 待决问题
@@ -353,7 +359,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 编号 | 问题 | 当前倾向 | 需要在何时决定 |
 | --- | --- | --- | --- |
 | UQ-01 | 外壳种子色默认来源 | **已决定**：默认系统强调色，封面取色为可选项；播放页另行从封面取背景与文字颜色、不用 MD3 配色 | 已决定 |
-| UQ-02 | 窗口标题栏方案（§6.1） | 原型对比后决定，可按平台区分 | 阶段 3 开始 |
+| UQ-02 | 窗口标题栏方案（§6.1） | **已决定**：默认自绘标题栏，设置中可切换为系统标题栏，另有启动参数作为逃生通道 | 已决定 |
 | UQ-03 | 文字字体：系统字体还是随包附带 | **暂定使用系统字体，不打包**；以后可能改为随包，也可能一直不打包。修改点见 §4.2 | 维护者以后决定 |
 | UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2025 规范下 Expressive 已保持种子色相，可在原型中比较 | 阶段 3 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
@@ -425,3 +431,9 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - Gallery 新增“按钮”“选择与输入”“进度”“列表与菜单”四页；`--grab` 时自动打开菜单与提示以便截图。Gallery 只剩 ComboBox、ScrollView 和窗口仍来自带命名空间的 Basic 样式。
 - 验证：Debug/Release 构建无警告，qmllint 无警告；亮暗主题、RHI 与软件渲染下逐页截图检查。键盘焦点与按下状态用 Gallery 中强制状态的示例静态检查；悬停、拖动、键盘操作需在桌面上交互确认。Windows/macOS 未验证。
 
+
+### 阶段 3 准备：前置文档与标题栏决定（2026-10-26）
+
+- 新增 [motion-choreography.md](motion-choreography.md)：令牌选择规则、单一进度弹簧驱动加区间映射（打断时整体反向）、减少动态效果版本；迷你条 ↔ 播放页、页面切换、切歌换色、导航栏展开四类过渡的时间线。
+- 新增 [presentation.md](presentation.md)：`App` 单例与页面 ViewModel、统一请求状态及 `MusicError` 映射、请求生命周期与换号规则、数据源接口、假实现调节项、阶段 5 的后端对照表。展示层拆为不链接后端的 `cirrus_presentation` 和链接后端的 `cirrus_presentation_backend`。
+- UQ-02 已决定：默认自绘标题栏，可切换为系统标题栏（§6.1）。
