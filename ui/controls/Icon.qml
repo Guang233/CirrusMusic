@@ -22,11 +22,12 @@ Item {
 
         anchors.centerIn: parent
         text: root.glyph
-        renderType: Text.QtRendering
+        renderType: Text.NativeRendering
         font.family: Fonts.symbols
         font.pixelSize: root.size
+        font.hintingPreference: Font.PreferNoHinting
         font.variableAxes: ({
-                "FILL": root.fill,
+                "FILL": Math.round(root.fill * 20) / 20,
                 "wght": root.weight,
                 "GRAD": root.grade,
                 "opsz": Math.max(20, Math.min(48, root.size))

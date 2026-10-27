@@ -25,6 +25,15 @@
 | `Theme.mix(a, b, t)` | 预乘 RGBA 线性混合。控件的状态颜色过渡用“弹簧驱动的 0–1 进度 + mix”，而不是 `Behavior on color`：后者在主题配色逐帧混合时会反复重启，颜色跟不上主题。 |
 | `Theme.motion.custom(ζ, k, spatial)` | 自定义弹簧（如加载指示器的 0.6／200）。 |
 
+**图标渲染（`Icon`）**：必须用 `Text.NativeRendering` 加 `Font.PreferNoHinting`，不能改回默认写法。原因（2026-10-27 排查，见 theme.md §8 的截图方法）：
+
+- Material Symbols 的 FILL 轴是这样实现的：每个镂空处有一条“填充轮廓”，FILL=0 时缩成一个点，FILL=1 时长成与镂空重合、方向相反的轮廓，靠非零环绕规则把镂空填上。字形里因此有**重叠、重合的轮廓**。
+- `Text.QtRendering`（距离场，Qt Quick 默认）处理不了重叠轮廓：FILL=1 时出现不规则的空洞，细笔画在小字号下发虚、变细。
+- `Text.CurveRendering` 和 `Shape` 的 CurveRenderer 在两条重合轮廓的边上会留下细缝。
+- `NativeRendering`（Linux 上是 FreeType）本身没问题，但开着字体微调（hinting）时，镂空轮廓和填充轮廓会被分别吸附到像素网格上、不再重合，某些字号和字重下就出现浅色细线。关掉微调后完全正确。
+- FILL 量化到 0.05 一档：每个不同的可变轴取值都会生成一份字形缓存，动画时不量化会无谓增加缓存。
+- 代价：原生渲染的字形在 `scale` 变换下是位图缩放，缩放动画期间会略模糊；Windows（DirectWrite）、macOS（CoreText）上的效果未验证。
+
 **状态到颜色**：禁用时容器为 OnSurface 12%、内容为 OnSurface 38%；选中（切换）状态用 `defaultEffects` 弹簧在两套颜色之间混合。
 
 ## 3. 按钮
