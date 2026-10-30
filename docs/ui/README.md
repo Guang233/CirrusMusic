@@ -99,6 +99,7 @@ ui/
   theme/          Cirrus.Theme：fonts.{h,cpp}（文字用系统字体、注册图标字体）、Symbols.qml（图标码位，生成）
     fonts/        图标字体子集、许可文件、symbols.txt（图标清单）
   controls/       Cirrus.Controls：MD3E 控件、共享基础（状态层、焦点环、阴影、MorphShape）、md.h（Md 枚举）、shaders/（涟漪）
+  window/         Cirrus.Window：AppWindow 与标题栏、窗口按钮、缩放边带、WindowFrame（§6.1），应用和 Gallery 共用
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
   app/            CirrusMusic：main.cpp、Main.qml、窗口与标题栏（§6.1）
   gallery/        appCirrusGallery：Gallery.qml、pages/
@@ -219,15 +220,16 @@ Text {
 | B 扩展客户区 | Qt 6.9 起的 `Qt.ExpandedClientAreaHint` + `Qt.NoTitleBarBackgroundHint`，配合 `SafeArea` 避让系统按钮 | 保留系统按钮和窗口行为，内容延伸到标题栏区域 | 各平台支持程度不同，Linux 上的效果需验证 |
 | C 完全自绘 | 无边框窗口，`startSystemMove()`／`startSystemResize()` 处理拖动和缩放 | 三平台外观完全一致 | 需要自己处理缩放边缘、阴影、双击最大化；Windows 贴靠布局和 macOS 红绿灯需要额外处理 |
 
-**已决定（UQ-02）：默认使用自绘标题栏，用户可以在设置里切换成系统标题栏**，用来绕开个别桌面环境下自绘窗口的问题。
+**已决定（UQ-02）：标题栏有自绘、系统、隐藏三种模式。默认自绘；平铺窗口管理器（niri、sway、Hyprland、river、i3、dwl）默认隐藏。用户可以在设置里改成任一模式**，用来绕开个别桌面环境下自绘窗口的问题。
 
 - **自绘（默认）**：Linux、Windows 用方案 C，外壳顶部自己画窗口按钮，并处理拖动、缩放边缘、双击最大化。macOS 优先用方案 B，保留系统红绿灯。阶段 3 的窗口原型要在 Linux 的 Wayland 和 X11 上，分别在 GNOME、KDE、niri 下检查阴影、缩放边缘和贴边。
 - **系统标题栏**：使用原生窗口装饰，外壳不再画窗口按钮。原来放在标题栏区域的应用内容（返回、搜索等）留在内容区顶部。GNOME Wayland 下的装饰由 Qt 绘制（见上表方案 A）。
-- **切换入口**：设置项 `App.settings.titleBar`（[presentation.md §5.1](presentation.md)）。另外提供启动参数 `--system-titlebar` 和环境变量 `CIRRUS_SYSTEM_TITLEBAR=1`：自绘标题栏出问题、连设置页都操作不了时，不进设置也能切回系统标题栏。
+- **隐藏标题栏**：无边框，不画窗口按钮、阴影和圆角，标题栏区域不能拖动、双击或右键；只保留窗口内侧的缩放边带（平铺窗口管理器里可以拖边调整列宽）。应用内容的排布与系统标题栏模式相同。平铺窗口管理器靠快捷键管理窗口、自己画边框和圆角，标题栏的功能在那里用不上。按 `XDG_CURRENT_DESKTOP` 判断，名单在 `ui/window/title_bar_mode.cpp`。
+- **切换入口**：设置项 `App.settings.titleBar`（[presentation.md §5.1](presentation.md)），用户没改过时按桌面取默认值。另外提供启动参数 `--titlebar=custom|system|hidden` 和环境变量 `CIRRUS_TITLEBAR`（优先级：启动参数 > 环境变量 > 设置 > 默认值）：某个模式出问题、连设置页都操作不了时，不进设置也能换模式。Gallery 接受同样的参数，`--grab` 截图时默认自绘，不受桌面影响。
 - 切换后先按“重启生效”实现；能否不重启、直接重建窗口，在原型中确定。
 - 播放页：自绘模式下延伸到标题栏区域，窗口按钮的颜色跟着播放页变化（[motion-choreography.md §2.2](motion-choreography.md)）；系统模式下从标题栏下方开始。
 
-**窗口原型（阶段 3 第 1 步，2026-10-30）**：代码在 `ui/app/`。`Main.qml` 组装窗口；`TitleBar`（拖动移动、双击最大化、右键窗口菜单）、`WindowButtons`、`ResizeHandles`（8 个缩放边带）；C++ 的 `WindowFrame` 负责平台部分。
+**窗口原型（阶段 3 第 1 步，2026-10-30）**：代码在 `ui/window/`（QML 模块 `Cirrus.Window`，应用和 Gallery 共用）。`AppWindow` 是带框架的顶层窗口，`titleBar` 取 `TitleBarMode.Custom／System／Hidden`，`titleContent` 放标题栏区域的应用内容，默认子项放在标题栏下方；内部由 `TitleBar`（拖动移动、双击最大化、右键窗口菜单）、`WindowButtons`、`ResizeHandles`（8 个缩放边带）和 C++ 的 `WindowFrame`（平台部分）组成。
 
 - **Wayland**：窗口四周留 24 px 透明边距画阴影，用 Qt 私有接口 `setCustomMargins` 把它排除在窗口几何之外，贴边、平铺都按可见窗口计算；`setMask` 把输入区域限制为可见窗口外扩 8 px（缩放边带），阴影处的点击落到下面的窗口。最大化、全屏、平铺时边距为 0、直角。圆角 `Theme.shape.medium`，另加 1 px 半透明 outlineVariant 描边，暗色下阴影看不清时仍能分辨窗口边缘。
 - **私有接口**：平铺状态、自定义边距、窗口菜单在 Qt 中没有公开 API，只在 `window_frame.cpp` 里通过 `Qt6::WaylandClientPrivate` 使用（找不到该模块时退化为无阴影）。私有接口不保证跨版本兼容，换 Qt 版本要重新编译并复查。
@@ -236,13 +238,14 @@ Text {
 - **内容规则**：圆角处只画窗口底色，子项不要画到圆角区域；铺满窗口的内容（播放页背景）自己按 `window.cornerRadius` 裁圆角。
 - **不重启切换**：隐藏窗口 → 改 flags → 重新显示，原生窗口重建。niri 上可行（尺寸、状态保留）；GNOME、KDE 待验证，通过后设置项改为立即生效。原型页面有切换按钮。
 - **niri 的发现**：默认配置下 niri 不发送平铺状态（configure 的 states 为空），平铺时仍有阴影和圆角，与 GTK 应用在 niri 上的表现一致；该会话也不提供 xdg-decoration，系统标题栏模式下由 Qt 自绘装饰（bradient），与 GNOME 情况相同。
-- **暂不处理**：窗口按钮固定在右侧，不读取 GNOME 的按钮布局设置；不支持最小化的环境（如 niri）仍显示最小化按钮；播放页下窗口按钮的颜色过渡留到阶段 4。
+- **窗口按钮图标**：最小化用 `remove`（居中横线；Material 的 `minimize` 贴底，与另两个图标不对齐）、最大化 `crop_square`、还原 `filter_none`、关闭 `close`。
+- **以后再做**：窗口按钮位置跟随系统设置（如 GNOME 的按钮布局，维护者决定先不做），目前固定在右侧；播放页下窗口按钮的颜色过渡留到阶段 4。
 
-桌面检查清单（拖动、双击最大化、右键菜单、各边缩放和光标、阴影、贴边／平铺、最大化后直角、两种模式切换）：
+桌面检查清单（拖动、双击最大化、右键菜单、各边缩放和光标、阴影、贴边／平铺、最大化后直角、三种模式切换、默认模式）：
 
 | 环境 | 结果 |
 | --- | --- |
-| niri（Wayland） | 窗口几何、输入区域、最小尺寸、不重启切换已用协议日志和窗口截图确认；交互项待维护者检查 |
+| niri（Wayland） | 默认隐藏；窗口几何、输入区域、最小尺寸、不重启切换已用协议日志和窗口截图确认；交互项待维护者检查 |
 | niri（X11，XWayland） | 能启动；交互项待检查 |
 | GNOME、KDE（Wayland、X11） | 待检查 |
 
@@ -378,7 +381,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 编号 | 问题 | 当前倾向 | 需要在何时决定 |
 | --- | --- | --- | --- |
 | UQ-01 | 外壳种子色默认来源 | **已决定**：默认系统强调色，封面取色为可选项；播放页另行从封面取背景与文字颜色、不用 MD3 配色 | 已决定 |
-| UQ-02 | 窗口标题栏方案（§6.1） | **已决定**：默认自绘标题栏，设置中可切换为系统标题栏，另有启动参数作为逃生通道 | 已决定 |
+| UQ-02 | 窗口标题栏方案（§6.1） | **已决定**：自绘／系统／隐藏三种模式，默认自绘、平铺窗口管理器默认隐藏；设置中可改，另有启动参数作为逃生通道 | 已决定 |
 | UQ-03 | 文字字体：系统字体还是随包附带 | **暂定使用系统字体，不打包**；以后可能改为随包，也可能一直不打包。修改点见 §4.2 | 维护者以后决定 |
 | UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2025 规范下 Expressive 已保持种子色相，可在原型中比较 | 阶段 3 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
@@ -463,3 +466,4 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 新增图标 `minimize`、`crop_square`、`filter_none`（窗口按钮），共 99 个。
 - 设置项 `App.settings.titleBar` 随第 2 步的展示层骨架接入；目前只有启动参数和环境变量。
 - 验证：Debug 构建无警告，qmllint 无警告，clang-format 通过；离屏（软件渲染）两种模式启动无 QML 警告；niri Wayland 会话中用协议日志确认窗口几何 `(24, 24, 1000, 1074)`、输入区域、最小尺寸与不重启切换，用窗口截图确认阴影与圆角；XWayland 下能启动。拖动、缩放、双击、右键菜单等交互未检查；GNOME、KDE、Windows、macOS 未验证。
+- 随后按维护者意见调整（同日）：窗口框架移到共用模块 `Cirrus.Window`，Gallery 改用同一个 `AppWindow`；标题栏增加“隐藏”模式，平铺窗口管理器默认隐藏（UQ-02 更新）；启动参数统一为 `--titlebar=custom|system|hidden`／`CIRRUS_TITLEBAR`，替换 `--system-titlebar`；最小化图标改为 `remove`（图标 98 个）。验证：构建、qmllint、clang-format 无警告；Gallery 离屏截图（自绘、隐藏）与 niri 下截图正常；niri 下应用默认隐藏（窗口几何无边距），`--titlebar custom` 恢复阴影边距，非法取值给出警告并忽略。

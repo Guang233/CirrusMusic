@@ -35,7 +35,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 cmake --preset linux-dev-local
 cmake --build --preset linux-dev-local --target appCirrusMusic appCirrusGallery
 cmake --build --preset linux-dev-local --target all_qmllint
-QT_QPA_PLATFORM=offscreen ./build/linux-dev-local/appCirrusGallery --grab /tmp/gallery.png --size 1280x2400 [--page theme|buttons|inputs|progress|lists|resources] [--cover sunset] [--mode light|dark]
+QT_QPA_PLATFORM=offscreen ./build/linux-dev-local/appCirrusGallery --grab /tmp/gallery.png --size 1280x2400 [--page theme|buttons|inputs|progress|lists|resources] [--cover sunset] [--mode light|dark] [--titlebar custom|system|hidden]
 clang-format --dry-run --Werror <changed C++ files>
 ```
 

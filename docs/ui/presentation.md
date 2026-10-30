@@ -152,7 +152,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 **`App.settings`：用户设置**（`QSettings` 持久化）
 
 - 外观：明暗模式、种子来源、配色变体、减少动态效果。由 `Main.qml` 绑定到 `Theme`。
-- 窗口：`titleBar`：`Custom`（默认）／`System`，见 README §6.1（UQ-02）。
+- 窗口：`titleBar`：`Custom`／`System`／`Hidden`；用户没改过时不保存，按桌面取默认值（平铺窗口管理器为 `Hidden`，其余 `Custom`），见 README §6.1（UQ-02）。
 - 播放：音质；歌词：显示翻译、显示音译。
 
 **`App.network`**：`online`（来自 `QNetworkInformation`）。
