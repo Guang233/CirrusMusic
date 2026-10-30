@@ -90,36 +90,50 @@ Item {
             }
         }
 
-        Row {
+        // Pressing a button widens it and squeezes its neighbours (MD3E button group).
+        // The play button is wide, square while playing and round while paused, and
+        // spins a loading indicator while the song loads.
+        StandardButtonGroup {
             id: controls
             anchors.right: time.visible ? time.left : parent.right
             anchors.rightMargin: time.visible ? 16 : 12
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
 
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.wide
                 enabled: App.player.canPrevious
+                variant: Md.Tonal
                 glyph: Symbols.skip_previous
                 iconFill: 1
                 text: qsTr("上一首")
                 onClicked: App.player.previous()
             }
             IconButton {
-                readonly property bool playing: App.player.status === Playback.Playing
-                                                || App.player.status === Playback.Loading
+                id: playButton
+                readonly property bool loading: App.player.status === Playback.Loading
+                readonly property bool playing: App.player.status === Playback.Playing || loading
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: App.player.status !== Playback.Loading
                 variant: Md.Filled
-                glyph: playing ? Symbols.pause : Symbols.play_arrow
+                widthMode: Md.Wide
+                shape: playing ? Md.Square : Md.Round
+                glyph: loading ? "" : playing ? Symbols.pause : Symbols.play_arrow
                 iconFill: 1
-                text: playing ? qsTr("暂停") : qsTr("播放")
+                text: loading ? qsTr("正在加载") : playing ? qsTr("暂停") : qsTr("播放")
                 onClicked: App.player.playPause()
+
+                LoadingIndicator {
+                    anchors.centerIn: parent
+                    implicitWidth: 28
+                    implicitHeight: 28
+                    visible: playButton.loading
+                    color: Theme.color.onPrimary
+                }
             }
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
                 enabled: App.player.canNext
+                variant: Md.Tonal
                 glyph: Symbols.skip_next
                 iconFill: 1
                 text: qsTr("下一首")
@@ -158,8 +172,7 @@ Item {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 7
             thickness: 3
-            visible: App.player.status === Playback.Loading || App.player.durationMs > 0
-            indeterminate: App.player.status === Playback.Loading
+            visible: App.player.durationMs > 0
             from: 0
             to: Math.max(1, App.player.durationMs)
             value: clock.positionMs

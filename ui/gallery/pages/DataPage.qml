@@ -201,40 +201,38 @@ ControlPage {
         }
     }
 
-    Rectangle {
+    Column {
+        id: songColumn
         Layout.preferredWidth: 560
-        Layout.preferredHeight: songColumn.implicitHeight
         visible: playlist.songs.count > 0
-        radius: Theme.shape.large
-        color: Theme.color.surfaceContainerLow
-        clip: true
+        spacing: 2
 
-        Column {
-            id: songColumn
-            width: parent.width
-            Repeater {
-                model: playlist.songs
-                delegate: ListItem {
-                    id: song
-                    required property int index
-                    required property bool current
-                    required property string title
-                    required property string artistText
-                    required property string albumTitle
-                    required property string durationText
-                    required property string coverKey
-                    width: songColumn.width
-                    highlighted: current
-                    text: title
-                    supportingText: artistText + " · " + albumTitle
-                    trailingText: durationText
-                    onClicked: App.player.playSongs(playlist.songs.keys(), index)
-                    leading: Component {
-                        CoverArt {
-                            width: 56
-                            height: 56
-                            coverKey: song.coverKey
-                        }
+        Repeater {
+            model: playlist.songs
+            delegate: ListItem {
+                id: song
+                required property int index
+                required property bool current
+                required property string title
+                required property string artistText
+                required property string albumTitle
+                required property string durationText
+                required property string coverKey
+                width: songColumn.width
+                segmented: true
+                first: index === 0
+                last: index === playlist.songs.count - 1
+                containerColor: Theme.color.surfaceContainer
+                highlighted: current
+                text: title
+                supportingText: artistText + " · " + albumTitle
+                trailingText: durationText
+                onClicked: App.player.playSongs(playlist.songs.keys(), index)
+                leading: Component {
+                    CoverArt {
+                        width: 56
+                        height: 56
+                        coverKey: song.coverKey
                     }
                 }
             }

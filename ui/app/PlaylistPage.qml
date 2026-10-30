@@ -28,6 +28,7 @@ PageScaffold {
         visible: pageModel.state === LoadState.Ready || pageModel.state === LoadState.Partial
                  || pageModel.state === LoadState.Empty
         clip: true
+        spacing: 2
         bottomMargin: 24
         boundsBehavior: Flickable.StopAtBounds
         model: pageModel.songs
@@ -102,9 +103,12 @@ PageScaffold {
             required property string albumTitle
             required property string durationText
             required property string coverKey
-            x: 8
-            width: list.width - 16
+            x: 24
+            width: list.width - 48
             segmented: true
+            first: index === 0
+            last: index === list.count - 1
+            containerColor: Theme.color.surfaceContainer
             highlighted: current
             text: title
             supportingText: artistText + " · " + albumTitle
