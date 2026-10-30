@@ -6,6 +6,8 @@
 #include "formatter.h"
 #include "network_status.h"
 #include "player.h"
+#include "qr_provider.h"
+#include "session.h"
 
 #include <QCoreApplication>
 #include <QJSEngine>
@@ -26,7 +28,8 @@ Sources::~Sources() = default;
 App::App(Sources sources)
     : m_sources(std::move(sources)), m_settings(new AppSettings(this)),
       m_format(new Formatter(this)), m_network(new NetworkStatus(this)),
-      m_player(new Player(m_sources.playback.get(), this))
+      m_player(new Player(m_sources.playback.get(), this)),
+      m_session(new Session(m_sources.session.get(), this))
 {
     if (m_sources.fakeControls)
         m_sources.fakeControls->attach(m_network);
@@ -56,5 +59,7 @@ App* App::create(QQmlEngine*, QJSEngine*)
 }
 
 QQuickAsyncImageProvider* App::makeCoverProvider() { return new CoverProvider(images()); }
+
+QQuickImageProvider* App::makeQrProvider() { return new QrProvider(m_session); }
 
 } // namespace cirrus::ui

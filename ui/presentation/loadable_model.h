@@ -66,6 +66,10 @@ class LoadableModel : public QObject
     // Clears the content when a new input (key) replaces it.
     virtual void clear() = 0;
 
+    // For account data (library, daily songs): on an account change the content goes
+    // and, unless Idle, loads again for the new account (§4.2).
+    void followAccount();
+
     // Starts loading from scratch (new input): clears content, then Loading.
     void reload();
     // Back to Idle with no content and no request (empty input).

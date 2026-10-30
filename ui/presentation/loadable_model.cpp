@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "network_status.h"
+#include "session.h"
 
 namespace cirrus::ui
 {
@@ -12,6 +13,16 @@ LoadableModel::LoadableModel(QObject* parent) : QObject(parent)
         connect(app->network(), &NetworkStatus::onlineChanged, this, [this, app]() {
             if (app->network()->online() && m_state == loadstate::Offline)
                 retry();
+        });
+    }
+}
+
+void LoadableModel::followAccount()
+{
+    if (App* app = App::instance()) {
+        connect(app->session(), &Session::accountChanged, this, [this]() {
+            if (m_state != loadstate::Idle)
+                reload();
         });
     }
 }

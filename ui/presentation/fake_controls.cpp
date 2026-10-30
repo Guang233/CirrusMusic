@@ -1,5 +1,6 @@
 #include "fake_controls.h"
 
+#include "account.h"
 #include "network_status.h"
 #include "request.h"
 
@@ -8,7 +9,19 @@
 namespace cirrus::ui
 {
 
-FakeControls::FakeControls(QObject* parent) : QObject(parent) {}
+FakeControls::FakeControls(QObject* parent) : QObject(parent), m_account(account::Guest) {}
+
+void FakeControls::setAccount(int account)
+{
+    if (account != account::Guest && account != account::SignedIn && account != account::Expired)
+        return;
+    if (m_account == account)
+        return;
+    m_account = account;
+    emit accountChanged();
+}
+
+bool FakeControls::signedIn() const { return m_account == account::SignedIn; }
 
 void FakeControls::setDelayMs(int delay)
 {

@@ -7,12 +7,14 @@ qt_add_qml_module(appCirrusMusic
     QML_FILES
         Main.qml
         AppShell.qml
-        HomePage.qml
-        PlaceholderPage.qml
         PlaylistPage.qml
         AlbumPage.qml
         ArtistPage.qml
         SearchPage.qml
+        FeedPage.qml
+        DailySongsPage.qml
+        LibraryPage.qml
+        LoginPage.qml
         SettingsPage.qml
 )
 

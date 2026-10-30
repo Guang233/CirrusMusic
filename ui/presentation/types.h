@@ -2,6 +2,9 @@
 
 #include "collection.h"
 
+#include <QObject>
+#include <QtQml/qqmlregistration.h>
+
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -87,6 +90,36 @@ struct ArtistPage {
     ArtistInfo info;
     QList<SongInfo> topSongs;
     QList<CollectionItem> albums;
+};
+
+// The signed-in account's collections.
+struct LibraryPage {
+    QList<SongInfo> likedSongs;
+    QList<CollectionItem> createdPlaylists;
+    QList<CollectionItem> savedPlaylists;
+    QList<CollectionItem> albums;
+    QList<CollectionItem> artists;
+    QList<SongInfo> recentSongs;
+};
+
+namespace feed
+{
+Q_NAMESPACE
+QML_NAMED_ELEMENT(Feed)
+enum Which { Home, Discover };
+Q_ENUM_NS(Which)
+// Shortcuts: the daily songs and personal FM cards.
+enum SectionKind { Shortcuts, Collections, Songs };
+Q_ENUM_NS(SectionKind)
+} // namespace feed
+using Feed = feed::Which;
+
+// One section of the home or discover page: a row of cards or a few songs.
+struct FeedSection {
+    feed::SectionKind kind = feed::Collections;
+    QString title;
+    QList<CollectionItem> collections;
+    QList<SongInfo> songs;
 };
 
 // One page of an offset-paged list (search results).

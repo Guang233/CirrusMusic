@@ -16,6 +16,7 @@ qt_add_qml_module(cirrus_presentation
         collection.h
         types.h
         playback.h
+        account.h
         song_item.h
         sources.h
         app.h
@@ -46,8 +47,14 @@ qt_add_qml_module(cirrus_presentation
         search_results.cpp
         search_model.h
         search_model.cpp
+        home_page_model.h
+        home_page_model.cpp
         player.h
         player.cpp
+        session.h
+        session.cpp
+        qr_provider.h
+        qr_provider.cpp
         fake_controls.h
         fake_controls.cpp
         fake_sources.h

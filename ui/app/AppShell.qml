@@ -68,6 +68,19 @@ Item {
         });
     }
 
+    function openDaily() {
+        stack.push(dailySongsPage, {
+            shell: shell
+        });
+    }
+
+    function openLogin() {
+        if (!App.session.signedIn)
+            stack.push(loginPage, {
+                shell: shell
+            });
+    }
+
     // Collection.Kind and key, as collection cards report them.
     function openCollection(kind: int, key: string) {
         if (kind === Collection.Album)
@@ -90,13 +103,16 @@ Item {
 
     Component {
         id: homePage
-        HomePage {}
+        FeedPage {
+            title: qsTr("首页")
+            feed: Feed.Home
+        }
     }
     Component {
         id: discoverPage
-        PlaceholderPage {
+        FeedPage {
             title: qsTr("发现")
-            description: qsTr("推荐歌单、榜单与新歌，阶段 3 第 4 步实现。")
+            feed: Feed.Discover
         }
     }
     Component {
@@ -105,10 +121,7 @@ Item {
     }
     Component {
         id: libraryPage
-        PlaceholderPage {
-            title: qsTr("音乐库")
-            description: qsTr("喜欢、歌单、收藏与最近播放，阶段 3 第 4 步实现。")
-        }
+        LibraryPage {}
     }
     Component {
         id: settingsPage
@@ -125,6 +138,14 @@ Item {
     Component {
         id: artistPage
         ArtistPage {}
+    }
+    Component {
+        id: dailySongsPage
+        DailySongsPage {}
+    }
+    Component {
+        id: loginPage
+        LoginPage {}
     }
 
     PageStack {

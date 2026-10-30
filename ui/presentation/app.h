@@ -17,6 +17,7 @@ class FakeControls;
 class Formatter;
 class NetworkStatus;
 class Player;
+class Session;
 
 // Root of the presentation layer for QML (`import Cirrus.Presentation`, then `App.…`).
 // main.cpp installs the data sources before loading QML:
@@ -31,12 +32,14 @@ class App : public QObject
     Q_MOC_INCLUDE("formatter.h")
     Q_MOC_INCLUDE("network_status.h")
     Q_MOC_INCLUDE("player.h")
+    Q_MOC_INCLUDE("session.h")
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
     Q_PROPERTY(cirrus::ui::Formatter* format READ format CONSTANT)
     Q_PROPERTY(cirrus::ui::NetworkStatus* network READ network CONSTANT)
     Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
+    Q_PROPERTY(cirrus::ui::Session* session READ session CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -53,13 +56,17 @@ class App : public QObject
     [[nodiscard]] Formatter* format() const { return m_format; }
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
     [[nodiscard]] Player* player() const { return m_player; }
+    [[nodiscard]] Session* session() const { return m_session; }
     [[nodiscard]] FakeControls* debug() const { return m_sources.fakeControls.get(); }
 
     [[nodiscard]] CatalogSource* catalog() const { return m_sources.catalog.get(); }
     [[nodiscard]] ImageSource* images() const { return m_sources.images.get(); }
+    [[nodiscard]] LibrarySource* library() const { return m_sources.library.get(); }
 
     // `image://cover/<key>` provider; the QML engine takes ownership.
     [[nodiscard]] QQuickAsyncImageProvider* makeCoverProvider();
+    // `image://qr/<serial>` provider for the sign-in code; the engine takes ownership.
+    [[nodiscard]] QQuickImageProvider* makeQrProvider();
 
   private:
     explicit App(Sources sources);
@@ -69,6 +76,7 @@ class App : public QObject
     Formatter* m_format;
     NetworkStatus* m_network;
     Player* m_player;
+    Session* m_session;
 };
 
 } // namespace cirrus::ui

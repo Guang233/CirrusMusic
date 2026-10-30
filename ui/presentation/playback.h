@@ -21,6 +21,8 @@ enum Order { Sequential, Shuffle };
 Q_ENUM_NS(Order)
 enum Repeat { RepeatOff, RepeatAll, RepeatOne };
 Q_ENUM_NS(Repeat)
+enum Mode { Queue, PersonalFm };
+Q_ENUM_NS(Mode)
 
 // Milliseconds on the monotonic clock that `positionAt` refers to.
 [[nodiscard]] inline qint64 now()
@@ -51,6 +53,9 @@ struct PlaybackSnapshot {
     playback::Repeat repeat = playback::RepeatOff;
     bool canNext = false;
     bool canPrevious = false;
+    playback::Mode mode = playback::Queue;
+    // Personal FM is fetching its next song.
+    bool fmWaiting = false;
 };
 
 } // namespace cirrus::ui

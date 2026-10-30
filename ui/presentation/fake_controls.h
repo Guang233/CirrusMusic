@@ -25,6 +25,8 @@ class FakeControls : public QObject
     Q_PROPERTY(bool empty READ empty WRITE setEmpty NOTIFY emptyChanged)
     // Results are marked partial.
     Q_PROPERTY(bool partial READ partial WRITE setPartial NOTIFY partialChanged)
+    // Account.Guest, Account.SignedIn or Account.Expired; QR sign-in also sets it.
+    Q_PROPERTY(int account READ account WRITE setAccount NOTIFY accountChanged)
 
   public:
     explicit FakeControls(QObject* parent = nullptr);
@@ -39,6 +41,9 @@ class FakeControls : public QObject
     void setEmpty(bool empty);
     [[nodiscard]] bool partial() const { return m_partial; }
     void setPartial(bool partial);
+    [[nodiscard]] int account() const { return m_account; }
+    void setAccount(int account);
+    [[nodiscard]] bool signedIn() const;
 
     // Delay for one request, with jitter.
     [[nodiscard]] int nextDelay() const;
@@ -53,6 +58,7 @@ class FakeControls : public QObject
     void offlineChanged();
     void emptyChanged();
     void partialChanged();
+    void accountChanged();
 
   private:
     int m_delayMs = 300;
@@ -60,6 +66,7 @@ class FakeControls : public QObject
     bool m_offline = false;
     bool m_empty = false;
     bool m_partial = false;
+    int m_account;
     NetworkStatus* m_network = nullptr;
 };
 

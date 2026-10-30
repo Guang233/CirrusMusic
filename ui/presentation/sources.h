@@ -1,5 +1,6 @@
 #pragma once
 
+#include "account.h"
 #include "playback.h"
 #include "request.h"
 #include "types.h"
@@ -33,6 +34,36 @@ class CatalogSource
                                 Reply<ResultPage<SongInfo>> reply) = 0;
     virtual Request searchCollections(collection::Kind kind, const QString& text, PageRequest page,
                                       Reply<ResultPage<CollectionItem>> reply) = 0;
+
+    // Home or discover sections.
+    virtual Request feed(Feed which, Reply<QList<FeedSection>> reply) = 0;
+    // Today's recommended songs; signed-in only.
+    virtual Request dailySongs(Reply<QList<SongInfo>> reply) = 0;
+};
+
+// The signed-in account's library; every request fails with SignedOut for guests.
+class LibrarySource
+{
+  public:
+    virtual ~LibrarySource() = default;
+    virtual Request library(Reply<LibraryPage> reply) = 0;
+};
+
+// Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.
+class SessionSource
+{
+  public:
+    virtual ~SessionSource() = default;
+
+    [[nodiscard]] virtual const SessionSnapshot& snapshot() const = 0;
+    // Called after the snapshot changed, never synchronously from a command.
+    virtual void setChangedHandler(std::function<void()> changed) = 0;
+
+    // `remember` keeps the session across restarts.
+    virtual void beginQrLogin(bool remember) = 0;
+    virtual void refreshQr() = 0;
+    virtual void cancelLogin() = 0;
+    virtual void signOut() = 0;
 };
 
 // Encoded images (JPEG, PNG) by cover key; the cover image provider decodes them.
@@ -65,6 +96,8 @@ class PlaybackSource
     virtual void setVolume(double volume) = 0;
     virtual void setOrder(playback::Order order) = 0;
     virtual void setRepeat(playback::Repeat repeat) = 0;
+    // Endless recommendations for the signed-in account (mode PersonalFm).
+    virtual void startFm() = 0;
 };
 
 struct Sources {
@@ -80,6 +113,8 @@ struct Sources {
     std::unique_ptr<CatalogSource> catalog;
     std::unique_ptr<ImageSource> images;
     std::unique_ptr<PlaybackSource> playback;
+    std::unique_ptr<SessionSource> session;
+    std::unique_ptr<LibrarySource> library;
 };
 
 } // namespace cirrus::ui

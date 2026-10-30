@@ -34,6 +34,8 @@ class Player : public QObject
     Q_PROPERTY(int repeat READ repeat NOTIFY changed) // Playback.Repeat
     Q_PROPERTY(bool canNext READ canNext NOTIFY changed)
     Q_PROPERTY(bool canPrevious READ canPrevious NOTIFY changed)
+    Q_PROPERTY(int mode READ mode NOTIFY changed) // Playback.Mode
+    Q_PROPERTY(bool fmWaiting READ fmWaiting NOTIFY changed)
 
   public:
     // Without a source (no playback in this build) the player stays Empty.
@@ -52,6 +54,8 @@ class Player : public QObject
     [[nodiscard]] int repeat() const { return m_snapshot.repeat; }
     [[nodiscard]] bool canNext() const { return m_snapshot.canNext; }
     [[nodiscard]] bool canPrevious() const { return m_snapshot.canPrevious; }
+    [[nodiscard]] int mode() const { return m_snapshot.mode; }
+    [[nodiscard]] bool fmWaiting() const { return m_snapshot.fmWaiting; }
 
     // The clock of `positionAt`, in ms.
     Q_INVOKABLE static double now() { return double(playback::now()); }
@@ -64,6 +68,7 @@ class Player : public QObject
     Q_INVOKABLE void setVolume(double volume);
     Q_INVOKABLE void setOrder(int order);
     Q_INVOKABLE void setRepeat(int repeat);
+    Q_INVOKABLE void startFm();
 
   signals:
     void currentChanged();

@@ -2,9 +2,11 @@
 
 #include "fake_controls.h"
 
+#include <QDate>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -13,6 +15,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <random>
 
 namespace cirrus::ui
 {
@@ -355,9 +358,71 @@ class FakeCatalog : public QObject, public CatalogSource
             });
     }
 
+    Request feed(Feed which, Reply<QList<FeedSection>> reply) override
+    {
+        return replyLater<QList<FeedSection>>(this, m_controls, std::move(reply), [=, this]() {
+            QList<FeedSection> sections;
+            if (m_controls->empty())
+                return Outcome<QList<FeedSection>>{sections};
+            const auto collections = [](const QString& title, const QList<CollectionItem>& items) {
+                return FeedSection{feed::Collections, title, items, {}};
+            };
+            QList<CollectionItem> playlists;
+            for (const QString& key : m_samples->playlistOrder)
+                if (!m_samples->playlists[key].songKeys.isEmpty())
+                    playlists << m_samples->playlistItem(key);
+            if (which == feed::Home) {
+                sections << FeedSection{feed::Shortcuts, {}, {}, {}};
+                sections << collections(tr("推荐歌单"), playlists);
+                FeedSection songs{feed::Songs, tr("猜你喜欢"), {}, {}};
+                for (const char* key : {"so-005", "so-017", "so-031", "so-022", "so-009"})
+                    songs.songs << m_samples->songs[QLatin1StringView(key)];
+                sections << songs;
+            } else {
+                QList<CollectionItem> albums;
+                for (const QString& key : m_samples->albumOrder)
+                    albums << m_samples->albumItem(key);
+                std::stable_sort(albums.begin(), albums.end(),
+                                 [](const CollectionItem& a, const CollectionItem& b) {
+                                     return a.year > b.year;
+                                 });
+                QList<CollectionItem> artists;
+                for (const QString& key : m_samples->artistOrder)
+                    artists << m_samples->artistItem(key);
+                sections << collections(tr("新碟上架"), albums);
+                sections << collections(tr("热门歌单"), playlists);
+                sections << collections(tr("推荐歌手"), artists);
+            }
+            return Outcome<QList<FeedSection>>{sections};
+        });
+    }
+
+    Request dailySongs(Reply<QList<SongInfo>> reply) override
+    {
+        return replyLater<QList<SongInfo>>(this, m_controls, std::move(reply), [this]() {
+            Outcome<QList<SongInfo>> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            QList<SongInfo> songs;
+            if (!m_controls->empty()) {
+                // A different but stable pick each day.
+                QStringList keys = m_samples->songOrder;
+                std::mt19937 random(QDate::currentDate().toJulianDay());
+                std::shuffle(keys.begin(), keys.end(), random);
+                for (const QString& key : keys.mid(0, kDailySongs))
+                    songs << m_samples->songs[key];
+            }
+            outcome.value = songs;
+            return outcome;
+        });
+    }
+
   private:
     static constexpr int kTopSongs = 10;
     static constexpr int kSuggestions = 8;
+    static constexpr int kDailySongs = 15;
 
     static bool matches(const QString& candidate, const QString& text)
     {
@@ -374,6 +439,203 @@ class FakeCatalog : public QObject, public CatalogSource
 
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
+};
+
+// The signed-in account's library: a fixed selection of the samples.
+class FakeLibrary : public QObject, public LibrarySource
+{
+  public:
+    FakeLibrary(FakeControls* controls, std::shared_ptr<const Samples> samples)
+        : m_controls(controls), m_samples(std::move(samples))
+    {
+    }
+
+    Request library(Reply<LibraryPage> reply) override
+    {
+        return replyLater<LibraryPage>(this, m_controls, std::move(reply), [this]() {
+            Outcome<LibraryPage> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            LibraryPage page;
+            if (!m_controls->empty()) {
+                const auto songs = [this](std::initializer_list<const char*> keys) {
+                    QList<SongInfo> list;
+                    for (const char* key : keys)
+                        list << m_samples->songs[QLatin1StringView(key)];
+                    return list;
+                };
+                page.likedSongs = songs({"so-001", "so-005", "so-011", "so-017", "so-023", "so-031",
+                                         "so-034", "so-008"});
+                page.recentSongs = songs({"so-031", "so-001", "so-019", "so-026", "so-012"});
+                for (const char* key : {"pl-01", "pl-05"})
+                    page.createdPlaylists << m_samples->playlistItem(QLatin1StringView(key));
+                for (const char* key : {"pl-02", "pl-03", "pl-04"})
+                    page.savedPlaylists << m_samples->playlistItem(QLatin1StringView(key));
+                for (const char* key : {"al-01", "al-03", "al-06", "al-13"})
+                    page.albums << m_samples->albumItem(QLatin1StringView(key));
+                for (const char* key : {"ar-01", "ar-04", "ar-11"})
+                    page.artists << m_samples->artistItem(QLatin1StringView(key));
+            }
+            outcome.value = page;
+            return outcome;
+        });
+    }
+
+  private:
+    FakeControls* m_controls;
+    std::shared_ptr<const Samples> m_samples;
+};
+
+// The account follows App.debug.account. QR sign-in plays itself out: scanned after
+// 4 s, confirming 2 s later, signed in 1 s after that; an unscanned code expires
+// after 60 s. The code is a made-up pattern, not a scannable QR code.
+class FakeSession : public QObject, public SessionSource
+{
+  public:
+    explicit FakeSession(FakeControls* controls) : m_controls(controls)
+    {
+        m_step.setSingleShot(true);
+        connect(&m_step, &QTimer::timeout, this, [this]() { advance(); });
+        connect(controls, &FakeControls::accountChanged, this, [this]() {
+            m_step.stop();
+            m_state.qrPhase = account::NoQr;
+            m_state.qrImage = {};
+            applyAccount();
+        });
+        applyAccount();
+    }
+
+    const SessionSnapshot& snapshot() const override { return m_state; }
+    void setChangedHandler(std::function<void()> changed) override
+    {
+        m_changed = std::move(changed);
+    }
+
+    void beginQrLogin(bool) override
+    {
+        if (m_state.status == account::SignedIn)
+            return;
+        m_state.status = account::SigningIn;
+        newCode();
+    }
+
+    void refreshQr() override
+    {
+        if (m_state.status == account::SigningIn)
+            newCode();
+    }
+
+    void cancelLogin() override
+    {
+        if (m_state.status != account::SigningIn)
+            return;
+        m_step.stop();
+        m_state.qrPhase = account::NoQr;
+        m_state.qrImage = {};
+        applyAccount();
+    }
+
+    void signOut() override { m_controls->setAccount(account::Guest); }
+
+  private:
+    void applyAccount()
+    {
+        const bool signedIn = m_controls->account() == account::SignedIn;
+        m_state.status = account::Status(m_controls->account());
+        m_state.accountKey = signedIn ? QStringLiteral("fake-account") : QString();
+        m_state.nickname = signedIn ? QStringLiteral("雾港听众") : QString();
+        m_state.avatarKey = signedIn ? QStringLiteral("pastel") : QString();
+        notify();
+    }
+
+    void newCode()
+    {
+        m_state.qrPhase = account::WaitingForScan;
+        m_state.qrImage = pattern(++m_state.qrSerial);
+        m_step.start(kScanMs);
+        notify();
+    }
+
+    void advance()
+    {
+        switch (m_state.qrPhase) {
+        case account::WaitingForScan:
+            m_state.qrPhase = account::WaitingForConfirmation;
+            m_step.start(kConfirmMs);
+            break;
+        case account::WaitingForConfirmation:
+            m_state.qrPhase = account::Confirming;
+            m_step.start(kSignInMs);
+            break;
+        case account::Confirming:
+            m_state.qrPhase = account::NoQr;
+            m_state.qrImage = {};
+            // applyAccount() follows through accountChanged.
+            m_controls->setAccount(account::SignedIn);
+            return;
+        default:
+            return;
+        }
+        notify();
+    }
+
+    // Finder squares in three corners and seeded noise: looks like a code, scans as
+    // nothing.
+    static QImage pattern(int seed)
+    {
+        constexpr int modules = 29;
+        QImage image(modules + 2, modules + 2, QImage::Format_Mono);
+        image.fill(0);
+        QRandomGenerator random{quint32(seed)};
+        const auto finder = [&](int fx, int fy, int x, int y) {
+            const int dx = x - fx, dy = y - fy;
+            if (dx < 0 || dy < 0 || dx > 6 || dy > 6)
+                return -1;
+            const int ring = std::min({dx, dy, 6 - dx, 6 - dy});
+            return ring == 1 ? 0 : 1;
+        };
+        for (int y = 0; y < modules; ++y) {
+            for (int x = 0; x < modules; ++x) {
+                int on = -1;
+                for (const auto& [fx, fy] : {std::pair{0, 0}, {modules - 7, 0}, {0, modules - 7}})
+                    on = std::max(on, finder(fx, fy, x, y));
+                if (on < 0)
+                    on = random.bounded(2);
+                image.setPixel(x + 1, y + 1, on ? 1 : 0);
+            }
+        }
+        // Index 0 is light (the one-module quiet zone from fill(0)), 1 is dark.
+        image.setColor(0, qRgb(255, 255, 255));
+        image.setColor(1, qRgb(0, 0, 0));
+        return image.convertToFormat(QImage::Format_RGB32);
+    }
+
+    void notify()
+    {
+        if (m_notifyPending)
+            return;
+        m_notifyPending = true;
+        QMetaObject::invokeMethod(
+            this,
+            [this]() {
+                m_notifyPending = false;
+                if (m_changed)
+                    m_changed();
+            },
+            Qt::QueuedConnection);
+    }
+
+    static constexpr int kScanMs = 4000;
+    static constexpr int kConfirmMs = 2000;
+    static constexpr int kSignInMs = 1000;
+
+    FakeControls* m_controls;
+    std::function<void()> m_changed;
+    SessionSnapshot m_state;
+    QTimer m_step;
+    bool m_notifyPending = false;
 };
 
 // Sample covers by name. Not subject to the delay and failure knobs, which are for
@@ -427,8 +689,19 @@ class FakePlayback : public QObject, public PlaybackSource
     {
         if (index < 0 || index >= keys.size())
             return;
+        m_state.mode = playback::Queue;
         m_queue = keys;
         arrange(index);
+        start();
+    }
+
+    void startFm() override
+    {
+        m_state.mode = playback::PersonalFm;
+        m_queue.clear();
+        m_sequence.clear();
+        m_pos = 0;
+        extendFm();
         start();
     }
 
@@ -458,6 +731,12 @@ class FakePlayback : public QObject, public PlaybackSource
     {
         if (m_sequence.isEmpty())
             return;
+        if (m_state.mode == playback::PersonalFm) {
+            ++m_pos;
+            extendFm();
+            start();
+            return;
+        }
         if (m_pos + 1 < m_sequence.size())
             ++m_pos;
         else if (m_state.repeat != playback::RepeatOff)
@@ -469,7 +748,7 @@ class FakePlayback : public QObject, public PlaybackSource
 
     void previous() override
     {
-        if (m_sequence.isEmpty())
+        if (m_sequence.isEmpty() || m_state.mode == playback::PersonalFm)
             return;
         const bool started =
             m_state.status == playback::Playing || m_state.status == playback::Paused;
@@ -574,6 +853,10 @@ class FakePlayback : public QObject, public PlaybackSource
 
     void songEnded()
     {
+        if (m_state.mode == playback::PersonalFm) {
+            next();
+            return;
+        }
         if (m_state.repeat == playback::RepeatOne) {
             play(0);
             notify();
@@ -619,9 +902,30 @@ class FakePlayback : public QObject, public PlaybackSource
 
     void updateNavigation()
     {
+        if (m_state.mode == playback::PersonalFm) {
+            // FM only goes forward.
+            m_state.canNext = true;
+            m_state.canPrevious = false;
+            return;
+        }
         m_state.canNext = m_pos + 1 < m_sequence.size() ||
                           (!m_sequence.isEmpty() && m_state.repeat != playback::RepeatOff);
         m_state.canPrevious = !m_sequence.isEmpty();
+    }
+
+    // Personal FM: makes sure a song waits at m_pos, picked at random from the
+    // playable samples (not the one just played).
+    void extendFm()
+    {
+        while (m_pos >= m_sequence.size()) {
+            QStringList playable;
+            for (const QString& key : m_samples->songOrder)
+                if (!m_samples->songs[key].unavailable &&
+                    (m_queue.isEmpty() || key != m_queue.last()))
+                    playable << key;
+            m_queue << playable.at(QRandomGenerator::global()->bounded(int(playable.size())));
+            m_sequence << int(m_queue.size()) - 1;
+        }
     }
 
     // Reports on the next event loop turn, once for any number of changes.
@@ -661,6 +965,8 @@ Sources makeFakeSources()
     sources.catalog = std::make_unique<FakeCatalog>(sources.fakeControls.get(), samples);
     sources.images = std::make_unique<FakeImages>();
     sources.playback = std::make_unique<FakePlayback>(sources.fakeControls.get(), samples);
+    sources.session = std::make_unique<FakeSession>(sources.fakeControls.get());
+    sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples);
     return sources;
 }
 

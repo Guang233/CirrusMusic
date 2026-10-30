@@ -93,4 +93,10 @@ void Player::setRepeat(int repeat)
         m_source->setRepeat(playback::Repeat(repeat));
 }
 
+void Player::startFm()
+{
+    if (m_source)
+        m_source->startFm();
+}
+
 } // namespace cirrus::ui

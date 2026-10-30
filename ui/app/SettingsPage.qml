@@ -94,6 +94,37 @@ PageScaffold {
             spacing: 16
 
             Section {
+                text: qsTr("账号")
+            }
+            Row {
+                spacing: 16
+                CoverArt {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 48
+                    height: 48
+                    radius: width / 2
+                    glyph: Symbols.person
+                    coverKey: App.session.avatarKey
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: column.width - 64 - 16 - accountButton.width
+                    text: App.session.signedIn ? App.session.nickname : qsTr("未登录")
+                    elide: Text.ElideRight
+                    color: Theme.color.onSurface
+                    font: Theme.type.bodyLarge.font
+                }
+                Button {
+                    id: accountButton
+                    anchors.verticalCenter: parent.verticalCenter
+                    variant: App.session.signedIn ? Md.Outlined : Md.Filled
+                    glyph: App.session.signedIn ? Symbols.logout : Symbols.login
+                    text: App.session.signedIn ? qsTr("退出登录") : qsTr("登录")
+                    onClicked: App.session.signedIn ? App.session.signOut() : page.shell.openLogin()
+                }
+            }
+
+            Section {
                 text: qsTr("外观")
             }
             Choice {

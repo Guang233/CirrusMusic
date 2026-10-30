@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.addImageProvider(QStringLiteral("cover"), presentation->makeCoverProvider());
+    engine.addImageProvider(QStringLiteral("qr"), presentation->makeQrProvider());
     engine.setInitialProperties({{QStringLiteral("titleBar"), int(titleBar)}});
     engine.loadFromModule("CirrusMusic", "Main");
 
