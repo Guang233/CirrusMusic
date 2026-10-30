@@ -22,6 +22,15 @@ QString Formatter::duration(qint64 milliseconds)
     return QStringLiteral("%1:%2").arg(seconds / 60).arg(twoDigits(seconds % 60));
 }
 
+QString Formatter::artists(const QList<ArtistRef>& artists)
+{
+    QStringList names;
+    names.reserve(artists.size());
+    for (const ArtistRef& artist : artists)
+        names << artist.name;
+    return names.join(tr(" / "));
+}
+
 QString Formatter::count(qint64 value)
 {
     const QLocale locale;

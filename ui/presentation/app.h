@@ -16,6 +16,7 @@ class AppSettings;
 class FakeControls;
 class Formatter;
 class NetworkStatus;
+class Player;
 
 // Root of the presentation layer for QML (`import Cirrus.Presentation`, then `App.…`).
 // main.cpp installs the data sources before loading QML:
@@ -29,11 +30,13 @@ class App : public QObject
     Q_MOC_INCLUDE("fake_controls.h")
     Q_MOC_INCLUDE("formatter.h")
     Q_MOC_INCLUDE("network_status.h")
+    Q_MOC_INCLUDE("player.h")
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
     Q_PROPERTY(cirrus::ui::Formatter* format READ format CONSTANT)
     Q_PROPERTY(cirrus::ui::NetworkStatus* network READ network CONSTANT)
+    Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -49,6 +52,7 @@ class App : public QObject
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
     [[nodiscard]] Formatter* format() const { return m_format; }
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
+    [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] FakeControls* debug() const { return m_sources.fakeControls.get(); }
 
     [[nodiscard]] CatalogSource* catalog() const { return m_sources.catalog.get(); }
@@ -64,6 +68,7 @@ class App : public QObject
     AppSettings* m_settings;
     Formatter* m_format;
     NetworkStatus* m_network;
+    Player* m_player;
 };
 
 } // namespace cirrus::ui

@@ -1,12 +1,36 @@
 #include "song_list_model.h"
 
+#include "app.h"
 #include "formatter.h"
+#include "player.h"
 
 #include <QHash>
 #include <QVariantMap>
 
 namespace cirrus::ui
 {
+
+SongListModel::SongListModel(QObject* parent) : QAbstractListModel(parent)
+{
+    if (const App* app = App::instance()) {
+        Player* player = app->player();
+        m_currentKey = player->current().key;
+        connect(player, &Player::currentChanged, this,
+                [this, player]() { setCurrentKey(player->current().key); });
+    }
+}
+
+void SongListModel::setCurrentKey(const QString& key)
+{
+    if (key == m_currentKey)
+        return;
+    const QString previous = std::exchange(m_currentKey, key);
+    for (int row = 0; row < m_rows.size(); ++row) {
+        const QString& rowKey = m_rows.at(row).song.key;
+        if (rowKey == previous || rowKey == key)
+            emit dataChanged(index(row), index(row), {CurrentRole});
+    }
+}
 
 void SongListModel::reset(const QStringList& keys, const QList<SongInfo>& details)
 {
@@ -65,12 +89,8 @@ QVariant SongListModel::data(const QModelIndex& index, int role) const
                                    {QStringLiteral("name"), artist.name}};
         return artists;
     }
-    case ArtistTextRole: {
-        QStringList names;
-        for (const ArtistRef& artist : song.artists)
-            names << artist.name;
-        return names.join(tr(" / "));
-    }
+    case ArtistTextRole:
+        return Formatter::artists(song.artists);
     case AlbumKeyRole:
         return song.albumKey;
     case AlbumTitleRole:
@@ -85,6 +105,8 @@ QVariant SongListModel::data(const QModelIndex& index, int role) const
         return row.loaded;
     case UnavailableRole:
         return song.unavailable;
+    case CurrentRole:
+        return !song.key.isEmpty() && song.key == m_currentKey;
     default:
         return {};
     }
@@ -105,6 +127,7 @@ QHash<int, QByteArray> SongListModel::roleNames() const
         {DurationTextRole, "durationText"},
         {LoadedRole, "loaded"},
         {UnavailableRole, "unavailable"},
+        {CurrentRole, "current"},
     };
 }
 

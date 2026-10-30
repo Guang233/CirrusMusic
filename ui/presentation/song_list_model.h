@@ -32,10 +32,11 @@ class SongListModel : public QAbstractListModel
         DurationTextRole, // "--:--" when unknown
         LoadedRole,
         UnavailableRole,
+        CurrentRole, // the song App.player is on
     };
     Q_ENUM(Role)
 
-    using QAbstractListModel::QAbstractListModel;
+    explicit SongListModel(QObject* parent = nullptr);
 
     // One row per key; details fill the rows whose keys they match.
     void reset(const QStringList& keys, const QList<SongInfo>& details);
@@ -52,11 +53,14 @@ class SongListModel : public QAbstractListModel
     void countChanged();
 
   private:
+    void setCurrentKey(const QString& key);
+
     struct Row {
         SongInfo song;
         bool loaded = false;
     };
     QList<Row> m_rows;
+    QString m_currentKey;
 };
 
 } // namespace cirrus::ui

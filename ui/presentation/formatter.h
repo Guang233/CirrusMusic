@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 #include <QObject>
 #include <QtQml/qqmlregistration.h>
 
@@ -21,6 +23,8 @@ class Formatter : public QObject
     Q_INVOKABLE static QString duration(qint64 milliseconds);
     // Compact count in the system language: "9,876", "1.2万" / "12K".
     Q_INVOKABLE static QString count(qint64 value);
+    // Artist names joined for one line: "A / B".
+    [[nodiscard]] static QString artists(const QList<ArtistRef>& artists);
 };
 
 } // namespace cirrus::ui

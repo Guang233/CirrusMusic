@@ -8,7 +8,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRandomGenerator>
 #include <QTimer>
+
+#include <algorithm>
+#include <numeric>
 
 namespace cirrus::ui
 {
@@ -60,61 +64,75 @@ QStringList strings(const QJsonValue& array)
     return list;
 }
 
+// The sample catalog, read once and shared by the fakes.
+struct Samples {
+    QHash<QString, SongInfo> songs;
+    QHash<QString, PlaylistPage> playlists;
+};
+
+std::shared_ptr<const Samples> loadSamples()
+{
+    QFile file(kSamples + QStringLiteral("catalog.json"));
+    if (!file.open(QIODevice::ReadOnly))
+        qFatal("fake catalog: %s is missing; link Cirrus.Samples", qPrintable(file.fileName()));
+    const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+    auto samples = std::make_shared<Samples>();
+
+    QHash<QString, QString> artistNames;
+    for (const QJsonValue& artist : root.value(QLatin1StringView("artists")).toArray())
+        artistNames.insert(artist[QLatin1StringView("id")].toString(),
+                           artist[QLatin1StringView("name")].toString());
+    QHash<QString, QJsonObject> albums;
+    for (const QJsonValue& album : root.value(QLatin1StringView("albums")).toArray())
+        albums.insert(album[QLatin1StringView("id")].toString(), album.toObject());
+
+    for (const QJsonValue& value : root.value(QLatin1StringView("songs")).toArray()) {
+        const QJsonObject song = value.toObject();
+        SongInfo info;
+        info.key = song.value(QLatin1StringView("id")).toString();
+        info.title = song.value(QLatin1StringView("title")).toString();
+        for (const QString& id : strings(song.value(QLatin1StringView("artistIds"))))
+            info.artists << ArtistRef{id, artistNames.value(id)};
+        info.albumKey = song.value(QLatin1StringView("albumId")).toString();
+        const QJsonObject album = albums.value(info.albumKey);
+        info.albumTitle = album.value(QLatin1StringView("title")).toString();
+        info.coverKey = coverKey(album.value(QLatin1StringView("cover")));
+        const QJsonValue duration = song.value(QLatin1StringView("durationMs"));
+        info.durationMs = duration.isDouble() ? qint64(duration.toDouble()) : -1;
+        info.unavailable = !song.value(QLatin1StringView("playable")).toBool(true);
+        samples->songs.insert(info.key, info);
+    }
+
+    for (const QJsonValue& value : root.value(QLatin1StringView("playlists")).toArray()) {
+        const QJsonObject playlist = value.toObject();
+        PlaylistPage page;
+        page.info.key = playlist.value(QLatin1StringView("id")).toString();
+        page.info.title = playlist.value(QLatin1StringView("title")).toString();
+        page.info.description = playlist.value(QLatin1StringView("description")).toString();
+        page.info.creator = playlist.value(QLatin1StringView("creator")).toString();
+        page.info.coverKey = coverKey(playlist.value(QLatin1StringView("cover")));
+        page.songKeys = strings(playlist.value(QLatin1StringView("songIds")));
+        for (const QString& key : std::as_const(page.songKeys))
+            page.songs << samples->songs.value(key);
+        samples->playlists.insert(page.info.key, page);
+    }
+    return samples;
+}
+
 class FakeCatalog : public QObject, public CatalogSource
 {
   public:
-    explicit FakeCatalog(FakeControls* controls) : m_controls(controls)
+    FakeCatalog(FakeControls* controls, std::shared_ptr<const Samples> samples)
+        : m_controls(controls), m_samples(std::move(samples))
     {
-        QFile file(kSamples + QStringLiteral("catalog.json"));
-        if (!file.open(QIODevice::ReadOnly))
-            qFatal("fake catalog: %s is missing; link Cirrus.Samples", qPrintable(file.fileName()));
-        const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
-
-        QHash<QString, QString> artistNames;
-        for (const QJsonValue& artist : root.value(QLatin1StringView("artists")).toArray())
-            artistNames.insert(artist[QLatin1StringView("id")].toString(),
-                               artist[QLatin1StringView("name")].toString());
-        QHash<QString, QJsonObject> albums;
-        for (const QJsonValue& album : root.value(QLatin1StringView("albums")).toArray())
-            albums.insert(album[QLatin1StringView("id")].toString(), album.toObject());
-
-        for (const QJsonValue& value : root.value(QLatin1StringView("songs")).toArray()) {
-            const QJsonObject song = value.toObject();
-            SongInfo info;
-            info.key = song.value(QLatin1StringView("id")).toString();
-            info.title = song.value(QLatin1StringView("title")).toString();
-            for (const QString& id : strings(song.value(QLatin1StringView("artistIds"))))
-                info.artists << ArtistRef{id, artistNames.value(id)};
-            info.albumKey = song.value(QLatin1StringView("albumId")).toString();
-            const QJsonObject album = albums.value(info.albumKey);
-            info.albumTitle = album.value(QLatin1StringView("title")).toString();
-            info.coverKey = coverKey(album.value(QLatin1StringView("cover")));
-            const QJsonValue duration = song.value(QLatin1StringView("durationMs"));
-            info.durationMs = duration.isDouble() ? qint64(duration.toDouble()) : -1;
-            m_songs.insert(info.key, info);
-        }
-
-        for (const QJsonValue& value : root.value(QLatin1StringView("playlists")).toArray()) {
-            const QJsonObject playlist = value.toObject();
-            PlaylistPage page;
-            page.info.key = playlist.value(QLatin1StringView("id")).toString();
-            page.info.title = playlist.value(QLatin1StringView("title")).toString();
-            page.info.description = playlist.value(QLatin1StringView("description")).toString();
-            page.info.creator = playlist.value(QLatin1StringView("creator")).toString();
-            page.info.coverKey = coverKey(playlist.value(QLatin1StringView("cover")));
-            page.songKeys = strings(playlist.value(QLatin1StringView("songIds")));
-            for (const QString& key : std::as_const(page.songKeys))
-                page.songs << m_songs.value(key);
-            m_playlists.insert(page.info.key, page);
-        }
     }
 
     Request playlist(const QString& key, Reply<PlaylistPage> reply) override
     {
         return replyLater<PlaylistPage>(this, m_controls, std::move(reply), [this, key]() {
             Outcome<PlaylistPage> outcome;
-            const auto found = m_playlists.constFind(key);
-            if (found == m_playlists.cend()) {
+            const auto found = m_samples->playlists.constFind(key);
+            if (found == m_samples->playlists.cend()) {
                 outcome.failure = Failure{failure::Rejected, std::nullopt};
                 return outcome;
             }
@@ -130,8 +148,7 @@ class FakeCatalog : public QObject, public CatalogSource
 
   private:
     FakeControls* m_controls;
-    QHash<QString, SongInfo> m_songs;
-    QHash<QString, PlaylistPage> m_playlists;
+    std::shared_ptr<const Samples> m_samples;
 };
 
 // Sample covers by name. Not subject to the delay and failure knobs, which are for
@@ -157,14 +174,268 @@ class FakeImages : public QObject, public ImageSource
         return Request([alive]() { *alive = false; });
     }
 };
+
+// Simulated playback on the monotonic clock (docs/ui/presentation.md §7): loading takes
+// the controlled delay, songs end by themselves, the queue follows order and repeat,
+// unavailable songs fail and so does everything while offline. Songs of unknown
+// duration play for kUnknownLengthMs.
+class FakePlayback : public QObject, public PlaybackSource
+{
+  public:
+    FakePlayback(FakeControls* controls, std::shared_ptr<const Samples> samples)
+        : m_controls(controls), m_samples(std::move(samples))
+    {
+        m_load.setSingleShot(true);
+        m_end.setSingleShot(true);
+        m_end.setTimerType(Qt::PreciseTimer);
+        connect(&m_load, &QTimer::timeout, this, [this]() { finishLoading(); });
+        connect(&m_end, &QTimer::timeout, this, [this]() { songEnded(); });
+    }
+
+    const PlaybackSnapshot& snapshot() const override { return m_state; }
+    void setChangedHandler(std::function<void()> changed) override
+    {
+        m_changed = std::move(changed);
+    }
+
+    void playSongs(const QStringList& keys, int index) override
+    {
+        if (index < 0 || index >= keys.size())
+            return;
+        m_queue = keys;
+        arrange(index);
+        start();
+    }
+
+    void playPause() override
+    {
+        switch (m_state.status) {
+        case playback::Playing:
+            hold(position());
+            break;
+        case playback::Paused:
+            play(m_state.positionMs);
+            break;
+        case playback::Ended:
+            m_pos = 0;
+            start();
+            break;
+        case playback::Failed:
+            start();
+            break;
+        default:
+            return;
+        }
+        notify();
+    }
+
+    void next() override
+    {
+        if (m_sequence.isEmpty())
+            return;
+        if (m_pos + 1 < m_sequence.size())
+            ++m_pos;
+        else if (m_state.repeat != playback::RepeatOff)
+            m_pos = 0;
+        else
+            return;
+        start();
+    }
+
+    void previous() override
+    {
+        if (m_sequence.isEmpty())
+            return;
+        const bool started =
+            m_state.status == playback::Playing || m_state.status == playback::Paused;
+        if (started && position() > kRestartWithinMs) {
+            seek(0);
+            return;
+        }
+        if (m_pos > 0)
+            --m_pos;
+        else if (m_state.repeat != playback::RepeatOff)
+            m_pos = int(m_sequence.size()) - 1;
+        start();
+    }
+
+    void seek(qint64 positionMs) override
+    {
+        if (!m_state.seekable)
+            return;
+        positionMs = std::clamp<qint64>(positionMs, 0, length());
+        if (m_state.status == playback::Playing)
+            play(positionMs);
+        else
+            hold(positionMs);
+        notify();
+    }
+
+    void setVolume(double volume) override
+    {
+        m_state.volume = volume;
+        notify();
+    }
+
+    void setOrder(playback::Order order) override
+    {
+        m_state.order = order;
+        if (!m_sequence.isEmpty())
+            arrange(m_sequence.at(m_pos));
+        notify();
+    }
+
+    void setRepeat(playback::Repeat repeat) override
+    {
+        m_state.repeat = repeat;
+        updateNavigation();
+        notify();
+    }
+
+  private:
+    static constexpr qint64 kUnknownLengthMs = 200'000;
+    static constexpr qint64 kRestartWithinMs = 3'000;
+
+    // Play order over the queue, starting at the queue entry `index`: in queue order,
+    // or `index` followed by the rest shuffled.
+    void arrange(int index)
+    {
+        m_sequence.resize(m_queue.size());
+        std::iota(m_sequence.begin(), m_sequence.end(), 0);
+        if (m_state.order == playback::Shuffle) {
+            m_sequence.removeAt(index);
+            std::shuffle(m_sequence.begin(), m_sequence.end(), *QRandomGenerator::global());
+            m_sequence.prepend(index);
+            m_pos = 0;
+        } else {
+            m_pos = index;
+        }
+        updateNavigation();
+    }
+
+    void start()
+    {
+        m_end.stop();
+        const QString key = m_queue.at(m_sequence.at(m_pos));
+        m_state.current = m_samples->songs.value(key, SongInfo{.key = key, .title = key});
+        m_state.status = playback::Loading;
+        m_state.failure.reset();
+        m_state.positionMs = 0;
+        m_state.positionAt = playback::now();
+        m_state.rate = 0;
+        m_state.durationMs = m_state.current.durationMs;
+        m_state.seekable = false;
+        updateNavigation();
+        m_load.start(m_controls->nextDelay());
+        notify();
+    }
+
+    void finishLoading()
+    {
+        std::optional<failure::Kind> failure;
+        if (m_controls->offline())
+            failure = failure::Network;
+        else if (m_state.current.unavailable)
+            failure = failure::Rejected;
+        if (failure) {
+            m_state.status = playback::Failed;
+            m_state.failure = Failure{*failure, std::nullopt};
+        } else {
+            m_state.seekable = m_state.durationMs >= 0;
+            play(0);
+        }
+        notify();
+    }
+
+    void songEnded()
+    {
+        if (m_state.repeat == playback::RepeatOne) {
+            play(0);
+            notify();
+        } else if (m_pos + 1 < m_sequence.size() || m_state.repeat == playback::RepeatAll) {
+            m_pos = (m_pos + 1) % int(m_sequence.size());
+            start();
+        } else {
+            hold(length());
+            m_state.status = playback::Ended;
+            notify();
+        }
+    }
+
+    void play(qint64 from)
+    {
+        m_state.status = playback::Playing;
+        m_state.positionMs = from;
+        m_state.positionAt = playback::now();
+        m_state.rate = 1;
+        m_end.start(int(std::max<qint64>(length() - from, 0)));
+    }
+
+    void hold(qint64 at)
+    {
+        m_end.stop();
+        if (m_state.status == playback::Playing)
+            m_state.status = playback::Paused;
+        m_state.positionMs = at;
+        m_state.positionAt = playback::now();
+        m_state.rate = 0;
+    }
+
+    [[nodiscard]] qint64 length() const
+    {
+        return m_state.durationMs >= 0 ? m_state.durationMs : kUnknownLengthMs;
+    }
+
+    [[nodiscard]] qint64 position() const
+    {
+        const auto elapsed = qint64(double(playback::now() - m_state.positionAt) * m_state.rate);
+        return std::min(m_state.positionMs + elapsed, length());
+    }
+
+    void updateNavigation()
+    {
+        m_state.canNext = m_pos + 1 < m_sequence.size() ||
+                          (!m_sequence.isEmpty() && m_state.repeat != playback::RepeatOff);
+        m_state.canPrevious = !m_sequence.isEmpty();
+    }
+
+    // Reports on the next event loop turn, once for any number of changes.
+    void notify()
+    {
+        if (m_notifyPending)
+            return;
+        m_notifyPending = true;
+        QMetaObject::invokeMethod(
+            this,
+            [this]() {
+                m_notifyPending = false;
+                if (m_changed)
+                    m_changed();
+            },
+            Qt::QueuedConnection);
+    }
+
+    FakeControls* m_controls;
+    std::shared_ptr<const Samples> m_samples;
+    std::function<void()> m_changed;
+    PlaybackSnapshot m_state;
+    QStringList m_queue;
+    QList<int> m_sequence; // queue indices in play order
+    int m_pos = 0;         // into m_sequence
+    QTimer m_load;
+    QTimer m_end;
+    bool m_notifyPending = false;
+};
 } // namespace
 
 Sources makeFakeSources()
 {
     Sources sources;
     sources.fakeControls = std::make_unique<FakeControls>();
-    sources.catalog = std::make_unique<FakeCatalog>(sources.fakeControls.get());
+    const std::shared_ptr<const Samples> samples = loadSamples();
+    sources.catalog = std::make_unique<FakeCatalog>(sources.fakeControls.get(), samples);
     sources.images = std::make_unique<FakeImages>();
+    sources.playback = std::make_unique<FakePlayback>(sources.fakeControls.get(), samples);
     return sources;
 }
 
