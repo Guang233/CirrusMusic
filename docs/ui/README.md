@@ -100,7 +100,7 @@ ui/
     fonts/        图标字体子集、许可文件、symbols.txt（图标清单）
   controls/       Cirrus.Controls：MD3E 控件、共享基础（状态层、焦点环、阴影、MorphShape）、md.h（Md 枚举）、shaders/（涟漪）
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
-  app/            CirrusMusic：main.cpp、Main.qml（目前仍是 Qt 模板）
+  app/            CirrusMusic：main.cpp、Main.qml、窗口与标题栏（§6.1）
   gallery/        appCirrusGallery：Gallery.qml、pages/
   （阶段 1 起按需新增 components/、player/、presentation/）
 tools/ui/
@@ -227,6 +227,25 @@ Text {
 - 切换后先按“重启生效”实现；能否不重启、直接重建窗口，在原型中确定。
 - 播放页：自绘模式下延伸到标题栏区域，窗口按钮的颜色跟着播放页变化（[motion-choreography.md §2.2](motion-choreography.md)）；系统模式下从标题栏下方开始。
 
+**窗口原型（阶段 3 第 1 步，2026-10-30）**：代码在 `ui/app/`。`Main.qml` 组装窗口；`TitleBar`（拖动移动、双击最大化、右键窗口菜单）、`WindowButtons`、`ResizeHandles`（8 个缩放边带）；C++ 的 `WindowFrame` 负责平台部分。
+
+- **Wayland**：窗口四周留 24 px 透明边距画阴影，用 Qt 私有接口 `setCustomMargins` 把它排除在窗口几何之外，贴边、平铺都按可见窗口计算；`setMask` 把输入区域限制为可见窗口外扩 8 px（缩放边带），阴影处的点击落到下面的窗口。最大化、全屏、平铺时边距为 0、直角。圆角 `Theme.shape.medium`，另加 1 px 半透明 outlineVariant 描边，暗色下阴影看不清时仍能分辨窗口边缘。
+- **私有接口**：平铺状态、自定义边距、窗口菜单在 Qt 中没有公开 API，只在 `window_frame.cpp` 里通过 `Qt6::WaylandClientPrivate` 使用（找不到该模块时退化为无阴影）。私有接口不保证跨版本兼容，换 Qt 版本要重新编译并复查。
+- **X11、Windows**：不依赖合成器透明，没有阴影、直角，缩放边带只在窗口内侧 4 px。Windows 未验证。
+- **macOS**：方案 B（`ExpandedClientAreaHint` + `NoTitleBarBackgroundHint`），不画窗口按钮和缩放边带，标题栏左侧为红绿灯留 72 px（估计值）。未验证。
+- **内容规则**：圆角处只画窗口底色，子项不要画到圆角区域；铺满窗口的内容（播放页背景）自己按 `window.cornerRadius` 裁圆角。
+- **不重启切换**：隐藏窗口 → 改 flags → 重新显示，原生窗口重建。niri 上可行（尺寸、状态保留）；GNOME、KDE 待验证，通过后设置项改为立即生效。原型页面有切换按钮。
+- **niri 的发现**：默认配置下 niri 不发送平铺状态（configure 的 states 为空），平铺时仍有阴影和圆角，与 GTK 应用在 niri 上的表现一致；该会话也不提供 xdg-decoration，系统标题栏模式下由 Qt 自绘装饰（bradient），与 GNOME 情况相同。
+- **暂不处理**：窗口按钮固定在右侧，不读取 GNOME 的按钮布局设置；不支持最小化的环境（如 niri）仍显示最小化按钮；播放页下窗口按钮的颜色过渡留到阶段 4。
+
+桌面检查清单（拖动、双击最大化、右键菜单、各边缩放和光标、阴影、贴边／平铺、最大化后直角、两种模式切换）：
+
+| 环境 | 结果 |
+| --- | --- |
+| niri（Wayland） | 窗口几何、输入区域、最小尺寸、不重启切换已用协议日志和窗口截图确认；交互项待维护者检查 |
+| niri（X11，XWayland） | 能启动；交互项待检查 |
+| GNOME、KDE（Wayland、X11） | 待检查 |
+
 ### 6.2 布局与响应式
 
 - 按 MD3 窗口尺寸分级：compact（<600）、medium（600–839）、expanded（840–1199）、large（1200–1599）、extra-large（≥1600），桌面端主要处理 medium 及以上，compact 下保证播放、导航、退出可用。
@@ -325,8 +344,8 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-26）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。**下一步**开始阶段 3，建议顺序：
-1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。
+**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）。阶段 3 建议顺序：
+1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。
 4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。
@@ -437,3 +456,10 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 新增 [motion-choreography.md](motion-choreography.md)：令牌选择规则、单一进度弹簧驱动加区间映射（打断时整体反向）、减少动态效果版本；迷你条 ↔ 播放页、页面切换、切歌换色、导航栏展开四类过渡的时间线。
 - 新增 [presentation.md](presentation.md)：`App` 单例与页面 ViewModel、统一请求状态及 `MusicError` 映射、请求生命周期与换号规则、数据源接口、假实现调节项、阶段 5 的后端对照表。展示层拆为不链接后端的 `cirrus_presentation` 和链接后端的 `cirrus_presentation_backend`。
 - UQ-02 已决定：默认自绘标题栏，可切换为系统标题栏（§6.1）。
+
+### 阶段 3 第 1 步：窗口原型（2026-10-30）
+
+- `appCirrusMusic` 不再是 Qt 模板：`Window` + 自绘标题栏（默认）／系统标题栏，`--system-titlebar` 与 `CIRRUS_SYSTEM_TITLEBAR=1` 可切到系统标题栏；内容区暂为原型页（显示标题栏模式、平台、窗口状态、阴影边距，可不重启切换模式）。实现与发现见 §6.1。
+- 新增图标 `minimize`、`crop_square`、`filter_none`（窗口按钮），共 99 个。
+- 设置项 `App.settings.titleBar` 随第 2 步的展示层骨架接入；目前只有启动参数和环境变量。
+- 验证：Debug 构建无警告，qmllint 无警告，clang-format 通过；离屏（软件渲染）两种模式启动无 QML 警告；niri Wayland 会话中用协议日志确认窗口几何 `(24, 24, 1000, 1074)`、输入区域、最小尺寸与不重启切换，用窗口截图确认阴影与圆角；XWayland 下能启动。拖动、缩放、双击、右键菜单等交互未检查；GNOME、KDE、Windows、macOS 未验证。
