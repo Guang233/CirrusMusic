@@ -119,7 +119,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 | --- | --- |
 | `current` | `songItem`：key、标题、副标题、歌手、专辑、`coverKey`、时长 |
 | `status` | `Empty`／`Loading`／`Playing`／`Paused`／`Ended`／`Failed` |
-| `failure` | 失败时的已翻译文案和是否可跳过 |
+| `failureMessage` | 失败时的已翻译文案，否则为空；能否跳过看 `canNext` |
 | `positionMs`、`positionAt`、`rate` | 播放位置的**基准值**：基准位置、对应的单调时钟时刻、速率（播放中为 1，否则为 0）。见下方“播放位置” |
 | `durationMs`、`seekable`、`volume` | 时长未知时为 -1 |
 | `mode` | `Queue`／`PersonalFm`；`fmWaiting` 表示 FM 正在取下一首 |
@@ -299,6 +299,16 @@ public:
 | `PlaylistPageModel` | 示范页面模型：设置 `playlistKey` 即加载 |
 | 假数据源 | `fake_sources.cpp` 读 `Cirrus.Samples` 的 `catalog.json`；封面 key 为示例封面名（如 `sunset`）。封面请求不受延迟和失败注入影响 |
 
-尚未实现：`App.session`、`App.player`、`App.queue`、`App.lyrics`、`App.library`（第 3 步做迷你播放条时加 `App.player`），`CollectionListModel` 与其他页面模型（随第 4 步的页面加），大歌单按需批量取详情，账号变化处理（§4.2）。
+第 3 步（外壳）加入：
+
+| 已实现 | 说明 |
+| --- | --- |
+| `PlaybackSource` | `sources.h`：`snapshot()` 返回完整的 `PlaybackSnapshot`（`playback.h`），变化后经 `setChangedHandler` 的回调通知（不在命令调用里同步回调）；命令 `playSongs`、`playPause`、`next`、`previous`（播放超过 3 秒时回到开头）、`seek`、`setVolume`、`setOrder`、`setRepeat`。`playNext`、`append`、`startFm` 随阶段 4 的队列面板加 |
+| `App.player`（`Player`） | §5.1 的成员，枚举在 QML 中为 `Playback.Playing`、`Playback.Shuffle`、`Playback.RepeatOne`；`current` 是 `songItem` 值类型（与 `SongListModel` 角色同名）；`now()` 给出 `positionAt` 所用的单调时钟（毫秒） |
+| `PlaybackClock`（`Cirrus.Components`） | `positionMs` 逐帧外推，只在播放中且 `active` 时运行 |
+| `SongListModel.current` | 跟随 `App.player.current`，只更新受影响的行 |
+| `FakePlayback` | 加载耗时取 `App.debug.delayMs`；歌曲自然结束后按顺序／随机、循环（关、列表、单曲）继续；列表放完进入 `Ended`；`so-012` 与离线时进入 `Failed`；时长未知的 `so-008` 按 200 秒模拟且不能拖动。示例目录的 `playable: false` 现在映射为 `unavailable` |
+
+尚未实现：`App.session`、`App.queue`、`App.lyrics`、`App.library`，`CollectionListModel` 与其他页面模型（随第 4 步的页面加），大歌单按需批量取详情，账号变化处理（§4.2）。
 
 验证：用临时检查程序（未提交）在离屏下跑通 13 项状态转换（加载、空、拒绝、网络失败与重试、刷新失败保留内容、离线与恢复后自动重试、未登录、部分数据、新请求取代旧请求、空 key 回到 Idle），以及时长、数量格式化。

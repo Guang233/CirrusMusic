@@ -104,7 +104,8 @@ ui/
   app/            CirrusMusic：main.cpp、Main.qml、窗口与标题栏（§6.1）
   gallery/        appCirrusGallery：Gallery.qml、pages/
   presentation/   Cirrus.Presentation：App 单例、ViewModel、数据源接口与假实现、封面图片提供器（presentation.md）
-  （按需新增 components/、player/）
+  components/     Cirrus.Components：页面栈、页面骨架、封面、迷你播放条、PlaybackClock 等业务组件
+  （按需新增 player/）
 tools/ui/
   prepare_fonts.py      获取固定版本字体、校验 SHA-256、裁剪图标、生成 Symbols.qml
   generate_samples.py   生成示例封面、目录、歌词与 Samples.qml
@@ -349,10 +350,10 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架已完成，**下一步是第 3 步外壳**。阶段 3 建议顺序：
+**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成，**下一步是第 4 步：页面状态组件、歌曲列表和 §6.3 的页面**。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
-3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。
+3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
 4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。
 
 | 阶段 | 交付内容 | 完成条件 |
@@ -478,3 +479,19 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 应用与 Gallery 都装入假数据源；标题栏模式改由 `App.settings.titleBar` 记住（Gallery 原来的临时设置项取消），应用的外观绑定到 `App.settings`。应用暂时链接 `Cirrus.Samples` 供假数据使用。
 - Gallery 新增“数据与状态”页（`--page data`）。
 - 验证：构建、qmllint（仅 `ButtonContainer.qml` 原有的一条未使用导入提示）、clang-format 无警告；离屏截图检查数据页；临时检查程序跑通 13 项状态转换；应用离屏启动无警告。
+
+### 阶段 3 第 3 步：外壳（2026-10-30）
+
+- 第二批控件 `NavigationRail`、`NavigationRailItem`（MD3E 宽导航栏，收起 96、展开 220–360，展开时指示器与标签一起变形；规格见 [controls.md §8a](controls.md)）。
+- 新模块 `Cirrus.Components`（`ui/components/`）：
+  - `PageStack`：自建页面栈，`push`／`pop`／`replaceAll`，前进、返回、淡入淡出三种切换，单一进度弹簧驱动、中途可反向；最多缓存 4 个页面，返回时重新创建被释放的页面（[motion-choreography.md §3](motion-choreography.md)）。
+  - `PageScaffold`：页面标题行（返回按钮、标题、操作区）加内容区。
+  - `CoverArt`：按 key 显示封面，圆角遮罩加占位图标；换封面时等新图解码完成再交叉淡入，最多两层（motion-choreography.md §4.1）。软件渲染下没有遮罩，封面为直角。
+  - `PlaybackClock`：按 `App.player` 的位置基准逐帧外推播放位置（`FrameAnimation`）。
+  - `MiniPlayer`：悬浮的迷你播放条（封面、标题／歌手或失败原因、上一首／播放暂停／下一首、时间、进度线），有歌曲时从底部滑入；窄于 560 时去掉“上一首”和时间。点击发出 `openRequested`，播放页在阶段 4 接上。
+- 应用外壳 `AppShell`：窗口宽 ≥ 1200 时导航栏常驻并推开内容，较窄时收起、展开后浮在内容上并加遮罩；跨越断点时不做动画。目的地为首页、发现、搜索、音乐库、设置，切换目的地清空历史；Esc、返回键、鼠标侧键返回。页面栈下方为迷你播放条留出空间。首页暂为示例歌单入口，发现、搜索、音乐库为占位页（第 4 步实现）。
+- 设置页：明暗、主题色来源、减少动态效果、标题栏（立即生效，不重启）、歌词翻译与音译，都存入 `App.settings`。
+- 展示层加 `App.player`（`PlaybackSource` 接口、`FakePlayback` 假播放器）与 `SongListModel` 的 `current` 角色，详见 [presentation.md §10](presentation.md)。歌单页点歌曲或“播放全部”开始播放，正在播放的行高亮。
+- Gallery：“导航”页（`--page navigation`）演示导航栏三种形态与页面栈；“数据与状态”页加播放区（顺序、循环、进度、迷你播放条），`--grab` 时自动开始播放。
+- 待定：“跟随封面”的主题色来源还没有接到当前歌曲的封面（`Theme.cover` 只接受本地文件或 qrc，需要封面缓存给出文件路径），随阶段 4 的切歌换色一起做。
+- 验证：构建、qmllint（仅原有的一条提示）、clang-format 无警告；离屏截图检查宽 1300、900 的外壳、歌单页、设置页、播放中与失败状态的迷你播放条；用临时钩子（未提交）检查页面栈的连续前进与返回、中途反向、缓存释放与重建，以及播放的自然结束、列表结束、列表循环、单曲循环和 so-012 失败。
