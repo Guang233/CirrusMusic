@@ -28,7 +28,7 @@ T.Button {
     readonly property typeStyle labelStyle: [Theme.type.labelLarge, Theme.type.labelLarge,
         Theme.type.titleMedium, Theme.type.headlineSmall, Theme.type.headlineLarge][sizeIndex]
     readonly property real naturalWidth: Math.max(containerHeight,
-                                                  implicitContentWidth + leftPadding + rightPadding)
+                                                  implicitContentWidth + 2 * sidePadding)
 
     readonly property bool toggled: checkable && checked
     readonly property real fullRadius: containerHeight / 2
@@ -79,11 +79,15 @@ T.Button {
         }
     }
 
+    // A group neighbour gives up at most this much width, taken from its side padding.
+    readonly property real shrinkLimit: Math.max(0, 2 * (sidePadding - 4))
+
     implicitWidth: naturalWidth + widthSpring.value
     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
                              implicitContentHeight + topPadding + bottomPadding)
-    leftPadding: sidePadding
-    rightPadding: sidePadding
+    // Group compression comes out of the padding, so the label keeps its width.
+    leftPadding: Math.max(0, sidePadding + Math.min(0, widthSpring.value) / 2)
+    rightPadding: leftPadding
     topPadding: 0
     bottomPadding: 0
     spacing: iconGap

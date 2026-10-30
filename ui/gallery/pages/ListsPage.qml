@@ -40,6 +40,8 @@ ControlPage {
                     required property var modelData
                     required property int index
                     width: songList.width
+                    first: index === 0
+                    last: index === page.songs.length - 1
                     text: modelData.title
                     supportingText: modelData.artist + " · " + modelData.album
                     trailingText: modelData.time
@@ -76,6 +78,7 @@ ControlPage {
             width: parent.width
             ListItem {
                 width: parent.width
+                first: true
                 text: qsTr("音质")
                 leadingGlyph: Symbols.graphic_eq
                 trailingGlyph: Symbols.chevron_right
@@ -100,13 +103,14 @@ ControlPage {
                 text: qsTr("雾港听众")
                 supportingText: qsTr("黑胶会员 · 2027-03-01 到期；三行列表项的辅助文字可以换行，最多显示两行。")
                 supportingMaximumLines: 2
+                last: true
                 leadingGlyph: Symbols.account_circle
             }
         }
     }
 
     Caption {
-        text: qsTr("分段列表（segmented）：静止 4 px 圆角，悬停 12 px，按下／选中 16 px。")
+        text: qsTr("分段列表（segmented）：项间距 2，静止 4 px 圆角，悬停 12 px，按下／选中 16 px；首末项外侧 16 px（first／last）。放在圆角容器里的普通列表也设 first／last，悬停层和涟漪跟随容器圆角。")
     }
     Column {
         spacing: 2
@@ -117,6 +121,8 @@ ControlPage {
                 required property int index
                 width: 360
                 segmented: true
+                first: index === 0
+                last: index === 2
                 containerColor: Theme.color.surfaceContainer
                 highlighted: index === 0
                 text: modelData

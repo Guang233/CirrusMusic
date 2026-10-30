@@ -6,6 +6,9 @@ import Cirrus.Theme
 // MD3 list item (one to three lines). `text` is the headline. Leading/trailing take
 // a glyph or any component (cover, avatar, Switch...). `highlighted` is the selected
 // state. `segmented` turns on the MD3E per-state corner rounding for gap lists.
+// `first` / `last` round the outer corners of a list's ends by `outerRadius`, for
+// segmented lists and for plain lists in a rounded container, so the state layer
+// and ripple follow the container's corners.
 //   ListItem { text: song.title; supportingText: song.artist; leadingGlyph: Symbols.music_note }
 T.ItemDelegate {
     id: control
@@ -18,6 +21,9 @@ T.ItemDelegate {
     property Component leading
     property Component trailing
     property bool segmented: false
+    property bool first: false
+    property bool last: false
+    property real outerRadius: Theme.shape.large
     property color containerColor: "transparent"
     // 0 picks from content: 2 with supporting text, 3 with an overline or two-line support.
     property int lines: 0
@@ -154,13 +160,24 @@ T.ItemDelegate {
     }
 
     background: Rectangle {
+        id: container
         implicitHeight: 56
+        readonly property real inner: Math.max(0, corner.value)
+        readonly property real topRadius: control.first ? Math.max(control.outerRadius, inner) : inner
+        readonly property real bottomRadius: control.last ? Math.max(control.outerRadius, inner) : inner
+
         color: Theme.mix(control.containerColor, Theme.color.secondaryContainer, selection.value)
-        radius: Math.max(0, corner.value)
+        topLeftRadius: topRadius
+        topRightRadius: topRadius
+        bottomLeftRadius: bottomRadius
+        bottomRightRadius: bottomRadius
 
         StateLayer {
             anchors.fill: parent
-            radius: parent.radius
+            topLeftRadius: container.topRadius
+            topRightRadius: container.topRadius
+            bottomLeftRadius: container.bottomRadius
+            bottomRightRadius: container.bottomRadius
             color: Theme.color.onSurface
             hovered: control.hovered && control.enabled
             pressed: control.down
@@ -172,7 +189,10 @@ T.ItemDelegate {
         FocusRing {
             shown: control.visualFocus
             offset: -5
-            containerRadius: parent.radius
+            containerTopLeftRadius: container.topRadius
+            containerTopRightRadius: container.topRadius
+            containerBottomLeftRadius: container.bottomRadius
+            containerBottomRightRadius: container.bottomRadius
         }
     }
 }

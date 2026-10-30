@@ -29,6 +29,8 @@ T.Button {
     readonly property real pressedRadius: [8, 8, 12, 16, 16][sizeIndex]
     readonly property real outlineWidth: [1, 1, 1, 2, 3][sizeIndex]
     readonly property real naturalWidth: iconSize + 2 * sidePadding
+    // A group neighbour gives up at most this much width, keeping 4 px beside the icon.
+    readonly property real shrinkLimit: Math.max(0, 2 * (sidePadding - 4))
 
     readonly property bool toggled: checkable && checked
     readonly property real fullRadius: containerHeight / 2

@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Templates as T
 
 // Shared row behind StandardButtonGroup and ConnectedButtonGroup. Children are
-// Buttons/IconButtons: the pressed one grows by `expandedRatio` of its width and
-// its neighbours give up the same amount (via their widthDelta springs).
+// Buttons/IconButtons: the pressed one grows by up to `expandedRatio` of its width and
+// its neighbours give up the same amount (via their widthDelta springs). Neighbours
+// only give up padding (`shrinkLimit`), so their labels never elide; the pressed
+// button grows by what they give.
 Row {
     id: root
 
@@ -30,9 +32,12 @@ Row {
         if (pressed >= 0) {
             const grow = buttons[pressed].naturalWidth * root.expandedRatio;
             const neighbours = [pressed - 1, pressed + 1].filter(i => i >= 0 && i < buttons.length);
-            deltas[pressed] = grow;
-            for (const i of neighbours)
-                deltas[i] = -grow / neighbours.length;
+            let given = 0;
+            for (const i of neighbours) {
+                deltas[i] = -Math.min(grow / neighbours.length, buttons[i].shrinkLimit);
+                given -= deltas[i];
+            }
+            deltas[pressed] = neighbours.length > 0 ? given : grow;
         }
         buttons.forEach((b, i) => b.widthDelta = deltas[i]);
     }
