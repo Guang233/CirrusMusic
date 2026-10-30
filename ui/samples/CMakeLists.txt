@@ -1,4 +1,5 @@
-# Fictional sample catalog for the gallery and prototype fakes; not linked by the product app.
+# Fictional sample catalog for the gallery and the fake data sources. The app links it
+# only while it runs on fake data (UI phases 3-4); never part of a release.
 qt_add_library(cirrus_ui_samples STATIC)
 
 set_source_files_properties(Samples.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)

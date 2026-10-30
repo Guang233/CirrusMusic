@@ -27,6 +27,10 @@ target_link_libraries(appCirrusMusic PRIVATE
     cirrus_ui_controlsplugin
     cirrus_ui_window
     cirrus_ui_windowplugin
+    cirrus_presentation
+    cirrus_presentationplugin
+    # Fake data until the backend sources exist (UI phase 5).
+    cirrus_ui_samplesplugin
     m3shapesplugin
 )
 

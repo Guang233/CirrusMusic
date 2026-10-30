@@ -3,9 +3,10 @@ import QtQuick
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Window
+import Cirrus.Presentation
 
 // Application window. `titleBar` comes from main.cpp (--titlebar, CIRRUS_TITLEBAR,
-// else the desktop default); see docs/ui/README.md §6.1.
+// App.settings.titleBar, else the desktop default); see docs/ui/README.md §6.1.
 AppWindow {
     id: window
 
@@ -13,6 +14,28 @@ AppWindow {
     height: 800
     visible: true
     title: qsTr("Cirrus Music")
+
+    // Appearance follows the user's settings.
+    Binding {
+        target: Theme
+        property: "mode"
+        value: App.settings.themeMode
+    }
+    Binding {
+        target: Theme
+        property: "seedSource"
+        value: App.settings.seedSource
+    }
+    Binding {
+        target: Theme
+        property: "variant"
+        value: App.settings.variant
+    }
+    Binding {
+        target: Theme.motion
+        property: "reduced"
+        value: App.settings.reducedMotion
+    }
 
     // Prototype content until the app shell exists (UI phase 3, step 3).
     Column {
@@ -59,7 +82,10 @@ AppWindow {
                     checkable: true
                     checked: window.titleBar === modelData.mode
                     text: modelData.label
-                    onClicked: window.setTitleBar(modelData.mode)
+                    onClicked: {
+                        App.settings.titleBar = modelData.mode;
+                        window.setTitleBar(modelData.mode);
+                    }
                 }
             }
         }

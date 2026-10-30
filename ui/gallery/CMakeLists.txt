@@ -18,6 +18,7 @@ qt_add_qml_module(appCirrusGallery
         pages/InputsPage.qml
         pages/ProgressPage.qml
         pages/ListsPage.qml
+        pages/DataPage.qml
 )
 
 set_target_properties(appCirrusGallery PROPERTIES
@@ -32,5 +33,7 @@ target_link_libraries(appCirrusGallery PRIVATE
     cirrus_ui_samplesplugin
     cirrus_ui_window
     cirrus_ui_windowplugin
+    cirrus_presentation
+    cirrus_presentationplugin
     m3shapesplugin
 )

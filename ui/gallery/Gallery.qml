@@ -6,6 +6,7 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Samples
 import Cirrus.Window
+import Cirrus.Presentation
 
 // Development gallery, in the same AppWindow frame as the app (--titlebar picks
 // the title bar mode). A few pages still use QtQuick.Controls.Basic as B.
@@ -50,6 +51,11 @@ AppWindow {
             page: listsPage
         },
         PageEntry {
+            key: "data"
+            title: qsTr("数据与状态")
+            page: dataPage
+        },
+        PageEntry {
             key: "resources"
             title: qsTr("资源")
             page: resourcesPage
@@ -69,12 +75,9 @@ AppWindow {
         property string page: "theme"
         property string mode: "system"
         property string cover: Samples.cover("sunset").toString()
-        // Read by main.cpp before the window is created.
-        property string titleBar
     }
 
     readonly property list<string> modeNames: ["system", "light", "dark"]
-    readonly property list<string> titleBarNames: ["custom", "system", "hidden"]
     property bool restored: false
 
     Component.onCompleted: {
@@ -89,9 +92,6 @@ AppWindow {
         Theme.mode = [Theme.Mode.System, Theme.Mode.Light, Theme.Mode.Dark][Math.max(0, modeNames.indexOf(mode))];
         restored = !capturing;
     }
-
-    onTitleBarChanged: if (restored)
-                           memory.titleBar = titleBarNames[titleBar]
 
     Connections {
         target: Theme
@@ -127,6 +127,11 @@ AppWindow {
     Component {
         id: listsPage
         ListsPage {}
+    }
+
+    Component {
+        id: dataPage
+        DataPage {}
     }
 
     Component {
@@ -210,7 +215,12 @@ AppWindow {
                             checkable: true
                             checked: window.titleBar === modelData.mode
                             text: modelData.label
-                            onClicked: window.setTitleBar(modelData.mode)
+                            onClicked: {
+                                // Reopened by main.cpp on the next interactive run.
+                                if (window.restored)
+                                    App.settings.titleBar = modelData.mode;
+                                window.setTitleBar(modelData.mode);
+                            }
                         }
                     }
                 }

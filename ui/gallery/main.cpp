@@ -1,3 +1,6 @@
+#include "app.h"
+#include "app_settings.h"
+#include "fake_sources.h"
 #include "title_bar_mode.h"
 
 #include <QCommandLineParser>
@@ -5,7 +8,6 @@
 #include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
-#include <QSettings>
 #include <QTimer>
 #include <QtQml/QQmlExtensionPlugin>
 
@@ -13,6 +15,7 @@ Q_IMPORT_QML_PLUGIN(Cirrus_ThemePlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_ControlsPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_SamplesPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_WindowPlugin)
+Q_IMPORT_QML_PLUGIN(Cirrus_PresentationPlugin)
 Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
 // Development preview. `--grab <file>` renders one page, saves a screenshot and
@@ -61,21 +64,24 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    // Pages always run on the fake data sources.
+    cirrus::ui::App::install(cirrus::ui::makeFakeSources());
+    auto* presentation = cirrus::ui::App::instance();
+
     // --titlebar/CIRRUS_TITLEBAR win; screenshots otherwise use the custom title bar,
-    // whatever the desktop; interactive runs reopen the last mode. Read here rather
-    // than by the QML Settings: changing the mode after the window is shown
-    // recreates the native window.
+    // whatever the desktop; interactive runs reopen the last mode (App.settings).
     namespace titlebar = cirrus::ui::titlebar;
-    const titlebar::Mode titleBar = titlebar::requested(parser).value_or(
-        parser.isSet(grabOption)
-            ? titlebar::Custom
-            : titlebar::fromName(QSettings().value(QStringLiteral("Gallery/titleBar")).toString())
-                  .value_or(titlebar::platformDefault()));
+    const int savedTitleBar = presentation->settings()->titleBar();
+    const titlebar::Mode titleBar =
+        titlebar::requested(parser).value_or(parser.isSet(grabOption) ? titlebar::Custom
+                                             : savedTitleBar >= 0 ? titlebar::Mode(savedTitleBar)
+                                                                  : titlebar::platformDefault());
 
     QQmlApplicationEngine engine;
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
+    engine.addImageProvider(QStringLiteral("cover"), presentation->makeCoverProvider());
     engine.setInitialProperties({{QStringLiteral("initialPage"), parser.value(pageOption)},
                                  {QStringLiteral("initialCover"), parser.value(coverOption)},
                                  {QStringLiteral("initialMode"), parser.value(modeOption)},
