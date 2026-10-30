@@ -3,6 +3,7 @@ import QtQuick
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
+import Cirrus.Presentation
 
 // The shell (docs/ui/README.md §6.2): navigation rail, page stack and mini player. Large windows
 // (≥ 1200) keep the rail expanded beside the content and push it when toggled;
@@ -53,6 +54,30 @@ Item {
         });
     }
 
+    function openAlbum(key: string) {
+        stack.push(albumPage, {
+            shell: shell,
+            albumKey: key
+        });
+    }
+
+    function openArtist(key: string) {
+        stack.push(artistPage, {
+            shell: shell,
+            artistKey: key
+        });
+    }
+
+    // Collection.Kind and key, as collection cards report them.
+    function openCollection(kind: int, key: string) {
+        if (kind === Collection.Album)
+            openAlbum(key);
+        else if (kind === Collection.Artist)
+            openArtist(key);
+        else
+            openPlaylist(key);
+    }
+
     function back() {
         stack.pop();
     }
@@ -95,6 +120,14 @@ Item {
     Component {
         id: playlistPage
         PlaylistPage {}
+    }
+    Component {
+        id: albumPage
+        AlbumPage {}
+    }
+    Component {
+        id: artistPage
+        ArtistPage {}
     }
 
     PageStack {

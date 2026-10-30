@@ -34,6 +34,8 @@ PageScaffold {
         opacity: pageState.contentOpacity
         visible: opacity > 0
         model: pageModel.songs
+        onAlbumRequested: key => page.shell.openAlbum(key)
+        onArtistRequested: key => page.shell.openArtist(key)
 
         header: Column {
             x: list.sideMargin

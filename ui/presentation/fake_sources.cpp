@@ -68,6 +68,44 @@ QStringList strings(const QJsonValue& array)
 struct Samples {
     QHash<QString, SongInfo> songs;
     QHash<QString, PlaylistPage> playlists;
+    QHash<QString, AlbumPage> albums;
+    QHash<QString, ArtistInfo> artists;
+    // In catalog order.
+    QStringList songOrder;
+    QStringList playlistOrder;
+    QStringList albumOrder;
+    QStringList artistOrder;
+    // By artist key, in catalog order.
+    QHash<QString, QStringList> artistSongs;
+    QHash<QString, QStringList> artistAlbums;
+
+    [[nodiscard]] CollectionItem playlistItem(const QString& key) const
+    {
+        const PlaylistPage& page = playlists[key];
+        return {page.info.key,
+                collection::Playlist,
+                page.info.title,
+                page.info.creator,
+                0,
+                int(page.songKeys.size()),
+                page.info.coverKey};
+    }
+    [[nodiscard]] CollectionItem albumItem(const QString& key) const
+    {
+        const AlbumPage& page = albums[key];
+        QStringList names;
+        for (const ArtistRef& artist : page.info.artists)
+            names << artist.name;
+        return {page.info.key,     collection::Album,
+                page.info.title,   names.join(QStringLiteral(" / ")),
+                page.info.year,    int(page.songKeys.size()),
+                page.info.coverKey};
+    }
+    [[nodiscard]] CollectionItem artistItem(const QString& key) const
+    {
+        const ArtistInfo& info = artists[key];
+        return {info.key, collection::Artist, info.name, {}, 0, info.albumCount, info.avatarKey};
+    }
 };
 
 std::shared_ptr<const Samples> loadSamples()
@@ -85,6 +123,11 @@ std::shared_ptr<const Samples> loadSamples()
     QHash<QString, QJsonObject> albums;
     for (const QJsonValue& album : root.value(QLatin1StringView("albums")).toArray())
         albums.insert(album[QLatin1StringView("id")].toString(), album.toObject());
+    for (const QJsonValue& artist : root.value(QLatin1StringView("artists")).toArray()) {
+        const QString key = artist[QLatin1StringView("id")].toString();
+        samples->artists.insert(key, ArtistInfo{.key = key, .name = artistNames.value(key)});
+        samples->artistOrder << key;
+    }
 
     for (const QJsonValue& value : root.value(QLatin1StringView("songs")).toArray()) {
         const QJsonObject song = value.toObject();
@@ -101,6 +144,33 @@ std::shared_ptr<const Samples> loadSamples()
         info.durationMs = duration.isDouble() ? qint64(duration.toDouble()) : -1;
         info.unavailable = !song.value(QLatin1StringView("playable")).toBool(true);
         samples->songs.insert(info.key, info);
+        samples->songOrder << info.key;
+        for (const ArtistRef& artist : std::as_const(info.artists))
+            samples->artistSongs[artist.key] << info.key;
+    }
+
+    for (const QJsonValue& value : root.value(QLatin1StringView("albums")).toArray()) {
+        const QJsonObject album = value.toObject();
+        AlbumPage page;
+        page.info.key = album.value(QLatin1StringView("id")).toString();
+        page.info.title = album.value(QLatin1StringView("title")).toString();
+        for (const QString& id : strings(album.value(QLatin1StringView("artistIds")))) {
+            page.info.artists << ArtistRef{id, artistNames.value(id)};
+            samples->artistAlbums[id] << page.info.key;
+        }
+        page.info.year = album.value(QLatin1StringView("year")).toInt();
+        page.info.coverKey = coverKey(album.value(QLatin1StringView("cover")));
+        page.songKeys = strings(album.value(QLatin1StringView("songIds")));
+        for (const QString& key : std::as_const(page.songKeys))
+            page.songs << samples->songs.value(key);
+        samples->albums.insert(page.info.key, page);
+        samples->albumOrder << page.info.key;
+    }
+
+    // The samples have no artist pictures or bios: avatars stay empty (placeholder).
+    for (ArtistInfo& artist : samples->artists) {
+        artist.songCount = int(samples->artistSongs.value(artist.key).size());
+        artist.albumCount = int(samples->artistAlbums.value(artist.key).size());
     }
 
     for (const QJsonValue& value : root.value(QLatin1StringView("playlists")).toArray()) {
@@ -115,6 +185,7 @@ std::shared_ptr<const Samples> loadSamples()
         for (const QString& key : std::as_const(page.songKeys))
             page.songs << samples->songs.value(key);
         samples->playlists.insert(page.info.key, page);
+        samples->playlistOrder << page.info.key;
     }
     return samples;
 }
@@ -146,7 +217,55 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
+    Request album(const QString& key, Reply<AlbumPage> reply) override
+    {
+        return replyLater<AlbumPage>(this, m_controls, std::move(reply), [this, key]() {
+            Outcome<AlbumPage> outcome;
+            const auto found = m_samples->albums.constFind(key);
+            if (found == m_samples->albums.cend()) {
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+                return outcome;
+            }
+            AlbumPage page = *found;
+            if (m_controls->empty()) {
+                page.songKeys.clear();
+                page.songs.clear();
+            }
+            outcome.value = page;
+            return outcome;
+        });
+    }
+
+    Request artist(const QString& key, Reply<ArtistPage> reply) override
+    {
+        return replyLater<ArtistPage>(this, m_controls, std::move(reply), [this, key]() {
+            Outcome<ArtistPage> outcome;
+            const auto found = m_samples->artists.constFind(key);
+            if (found == m_samples->artists.cend()) {
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+                return outcome;
+            }
+            ArtistPage page;
+            page.info = *found;
+            if (!m_controls->empty()) {
+                for (const QString& song : m_samples->artistSongs.value(key).mid(0, kTopSongs))
+                    page.topSongs << m_samples->songs.value(song);
+                for (const QString& album : m_samples->artistAlbums.value(key))
+                    page.albums << m_samples->albumItem(album);
+                // Newest first.
+                std::stable_sort(page.albums.begin(), page.albums.end(),
+                                 [](const CollectionItem& a, const CollectionItem& b) {
+                                     return a.year > b.year;
+                                 });
+            }
+            outcome.value = page;
+            return outcome;
+        });
+    }
+
   private:
+    static constexpr int kTopSongs = 10;
+
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
 };

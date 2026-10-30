@@ -21,6 +21,8 @@ qt_add_qml_module(cirrus_ui_components
         NoticeBar.qml
         PageState.qml
         SongList.qml
+        CollectionCard.qml
+        CollectionGrid.qml
 )
 
 target_link_libraries(cirrus_ui_components

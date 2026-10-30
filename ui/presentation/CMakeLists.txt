@@ -13,6 +13,7 @@ qt_add_qml_module(cirrus_presentation
     SOURCES
         load_state.h
         request.h
+        collection.h
         types.h
         playback.h
         song_item.h
@@ -33,6 +34,12 @@ qt_add_qml_module(cirrus_presentation
         song_list_model.cpp
         playlist_page_model.h
         playlist_page_model.cpp
+        collection_list_model.h
+        collection_list_model.cpp
+        album_page_model.h
+        album_page_model.cpp
+        artist_page_model.h
+        artist_page_model.cpp
         player.h
         player.cpp
         fake_controls.h

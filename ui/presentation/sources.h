@@ -23,6 +23,8 @@ class CatalogSource
   public:
     virtual ~CatalogSource() = default;
     virtual Request playlist(const QString& key, Reply<PlaylistPage> reply) = 0;
+    virtual Request album(const QString& key, Reply<AlbumPage> reply) = 0;
+    virtual Request artist(const QString& key, Reply<ArtistPage> reply) = 0;
 };
 
 // Encoded images (JPEG, PNG) by cover key; the cover image provider decodes them.
