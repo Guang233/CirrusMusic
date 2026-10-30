@@ -157,6 +157,15 @@ SpringSpec Motion::custom(qreal dampingRatio, qreal stiffness, bool spatial) con
     return spec;
 }
 
+qreal Motion::segment(qreal p, qreal from, qreal to) const
+{
+    if (to <= from)
+        return p >= to ? 1.0 : 0.0;
+    return std::clamp((p - from) / (to - from), 0.0, 1.0);
+}
+
+qreal Motion::lerp(qreal a, qreal b, qreal p) const { return a + (b - a) * p; }
+
 QList<qreal> Motion::curve(const SpringSpec& spec, int samples, qreal seconds) const
 {
     QList<qreal> points;

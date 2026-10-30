@@ -240,6 +240,13 @@ class Motion : public QObject
     Q_INVOKABLE cirrus::ui::SpringSpec custom(qreal dampingRatio, qreal stiffness,
                                               bool spatial = true) const;
 
+    // Progress `p` mapped from [from, to] to 0-1 and clamped: the slice of a shared
+    // transition progress one element animates in (docs/ui/motion-choreography.md §1.2).
+    // Use for opacity and color; geometry uses lerp() to keep the spring's overshoot.
+    Q_INVOKABLE qreal segment(qreal p, qreal from, qreal to) const;
+    // `a` at p = 0, `b` at p = 1; not clamped.
+    Q_INVOKABLE qreal lerp(qreal a, qreal b, qreal p) const;
+
     // Position of a 0 -> 1 step at `samples` evenly spaced times in [0, seconds].
     Q_INVOKABLE QList<qreal> curve(const cirrus::ui::SpringSpec& spec, int samples,
                                    qreal seconds) const;

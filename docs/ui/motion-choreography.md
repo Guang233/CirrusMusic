@@ -40,7 +40,7 @@ x: Theme.motion.lerp(miniRect.x, fullRect.x, open.value)
 - **交互不等动画结束**：目标状态一确定，新界面立即接受点击和键盘输入，旧界面立即停止接受；不设“动画期间锁住输入”。
 - **不要用 `Behavior` 串联跨组件动画**，也不要用 `SequentialAnimation` 写时间线：它们被打断时只能跳到终点或从头开始。
 
-`segment` 与 `lerp` 是阶段 3 要加进 `Theme.motion` 的两个辅助函数（纯计算，无状态）。
+`Theme.motion.segment` 与 `Theme.motion.lerp` 是两个纯计算的辅助函数（无状态）。
 
 ### 1.3 减少动态效果
 
@@ -172,7 +172,6 @@ MD3E 的导航栏（androidx `WideNavigationRail`）有收起和展开两种形�
 
 ## 6. 待办
 
-- `Theme.motion` 增加 `segment()`、`lerp()` 两个辅助函数（阶段 3）。
 - `Spring` 增加带初速度起步的接口（做拖动关闭播放页时）。
 - 容器变换（列表 → 详情）在第一轮页面完成后评估。
 - 播放页内部的动画（歌词滚动、逐字高亮、播放/暂停时封面缩放）写在 `player.md`，阶段 4 开始前完成。
