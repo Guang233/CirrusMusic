@@ -14,7 +14,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 
 - UI code lives in `ui/` (QML modules + gallery); the plan, phases and open questions are in `docs/ui/README.md`. Shell/pages use Material 3 Expressive; the player page uses an Apple Music-like style.
 - Cross-platform project, Linux first. Windows/macOS are not verified locally.
-- Commit often (small conventional commits: `feat(ui): ...`, `docs(ui): ...`). Do not push.
+- Commit often (small conventional commits: `feat(ui): ...`, `docs(ui): ...`), without a Claude co-author trailer. The remote `origin` is a private GitHub repo; push only when the maintainer asks, never automatically after commits.
 - Do not hand-edit generated files: `ui/theme/Symbols.qml`, `ui/theme/fonts/*.ttf`, `ui/samples/**`. Regenerate with:
   - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools)
   - `python3 tools/ui/generate_samples.py` (needs Pillow)
