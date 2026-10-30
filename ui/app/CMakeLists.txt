@@ -6,12 +6,6 @@ qt_add_qml_module(appCirrusMusic
     URI CirrusMusic
     QML_FILES
         Main.qml
-        TitleBar.qml
-        WindowButtons.qml
-        ResizeHandles.qml
-    SOURCES
-        window_frame.h
-        window_frame.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -31,23 +25,10 @@ target_link_libraries(appCirrusMusic PRIVATE
     Qt6::Quick
     cirrus_ui_themeplugin
     cirrus_ui_controlsplugin
+    cirrus_ui_window
+    cirrus_ui_windowplugin
     m3shapesplugin
 )
-
-# Custom title bar on Wayland (window_frame.cpp): shadow margins outside the window
-# geometry, tiling states and the window menu are only reachable through Qt's
-# private Wayland client API, so it is optional and pinned to the Qt version built against.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(QT_NO_PRIVATE_MODULE_WARNING ON) # deliberate, see above
-    find_package(Qt6 QUIET COMPONENTS GuiPrivate WaylandClientPrivate)
-    if(TARGET Qt6::WaylandClientPrivate)
-        target_link_libraries(appCirrusMusic PRIVATE Qt6::GuiPrivate Qt6::WaylandClientPrivate)
-        target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_HAVE_WAYLAND)
-    else()
-        message(WARNING "Qt6::WaylandClientPrivate not found: the custom title bar has no "
-                        "shadow or tiling support on Wayland")
-    endif()
-endif()
 
 install(TARGETS appCirrusMusic
     BUNDLE DESTINATION .

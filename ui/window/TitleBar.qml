@@ -1,9 +1,9 @@
 import QtQuick
 
-// Top bar of the window. With the custom title bar it moves the window (drag),
+// Top row of AppWindow. With the custom title bar it moves the window (drag),
 // maximizes it (double click), opens the compositor's window menu (right click)
-// and shows the window buttons. With the system title bar it only hosts the app's
-// own content (back, search), which stays at the top of the content area.
+// and shows the window buttons. With the system or hidden title bar it only hosts
+// the app's own content (back, search), which stays at the top of the content area.
 Item {
     id: root
 

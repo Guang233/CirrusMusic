@@ -1,15 +1,15 @@
 pragma ComponentBehavior: Bound
 import QtCore
 import QtQuick
-import QtQuick.Controls.Basic as B
 import QtQuick.Layouts
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Samples
+import Cirrus.Window
 
-// Development gallery. The chrome still uses QtQuick.Controls.Basic until the
-// MD3E controls exist (UI phase 2); colors and type come from Cirrus.Theme.
-B.ApplicationWindow {
+// Development gallery, in the same AppWindow frame as the app (--titlebar picks
+// the title bar mode). A few pages still use QtQuick.Controls.Basic as B.
+AppWindow {
     id: window
 
     required property string initialPage
@@ -60,8 +60,6 @@ B.ApplicationWindow {
     title: qsTr("Cirrus Gallery")
     minimumWidth: 720
     minimumHeight: 480
-    color: Theme.color.surface
-    font: Theme.type.bodyMedium.font
 
     // Last page, cover and mode of interactive runs, so a rebuild-and-restart (see
     // tools/ui/gallery-watch.sh) comes back where it was. Unused by --grab runs.
@@ -133,6 +131,13 @@ B.ApplicationWindow {
         }
     }
 
+    titleContent: Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: window.title
+        color: Theme.color.onSurfaceVariant
+        font: Theme.type.titleSmall.font
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -141,18 +146,12 @@ B.ApplicationWindow {
             Layout.fillHeight: true
             Layout.preferredWidth: 200
             color: Theme.color.surfaceContainer
+            bottomLeftRadius: window.cornerRadius
 
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 12
                 spacing: 4
-
-                Text {
-                    text: qsTr("Cirrus Gallery")
-                    color: Theme.color.onSurface
-                    font: Theme.type.titleLarge.font
-                    Layout.bottomMargin: 8
-                }
 
                 ListView {
                     id: nav

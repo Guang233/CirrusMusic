@@ -87,7 +87,6 @@ expand_less
 keyboard_arrow_down
 open_in_full
 close_fullscreen
-minimize
 crop_square
 filter_none
 

@@ -1,3 +1,5 @@
+#include "title_bar_mode.h"
+
 #include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QImage>
@@ -9,6 +11,7 @@
 Q_IMPORT_QML_PLUGIN(Cirrus_ThemePlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_ControlsPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_SamplesPlugin)
+Q_IMPORT_QML_PLUGIN(Cirrus_WindowPlugin)
 Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
 // Development preview. `--grab <file>` renders one page, saves a screenshot and
@@ -45,7 +48,8 @@ int main(int argc, char* argv[])
         QStringLiteral("mode"),
         QStringLiteral("Theme mode: system, light or dark (default: last used, or system)."),
         QStringLiteral("mode"));
-    parser.addOptions({pageOption, grabOption, sizeOption, delayOption, coverOption, modeOption});
+    parser.addOptions({pageOption, grabOption, sizeOption, delayOption, coverOption, modeOption,
+                       cirrus::ui::titlebar::option()});
     parser.process(app);
 
     const QStringList size = parser.value(sizeOption).split(QLatin1Char('x'));
@@ -56,6 +60,12 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    // Screenshots use the custom title bar unless asked otherwise, whatever the desktop.
+    namespace titlebar = cirrus::ui::titlebar;
+    const titlebar::Mode titleBar = parser.isSet(grabOption) && !parser.isSet(titlebar::option())
+                                        ? titlebar::Custom
+                                        : titlebar::resolve(parser);
+
     QQmlApplicationEngine engine;
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
@@ -64,6 +74,7 @@ int main(int argc, char* argv[])
                                  {QStringLiteral("initialCover"), parser.value(coverOption)},
                                  {QStringLiteral("initialMode"), parser.value(modeOption)},
                                  {QStringLiteral("capturing"), parser.isSet(grabOption)},
+                                 {QStringLiteral("titleBar"), int(titleBar)},
                                  {QStringLiteral("width"), width},
                                  {QStringLiteral("height"), height}});
     engine.loadFromModule("CirrusGallery", "Gallery");

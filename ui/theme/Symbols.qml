@@ -82,7 +82,6 @@ QtObject {
     readonly property string keyboard_arrow_down: "\ue313"
     readonly property string open_in_full: "\uf1ce"
     readonly property string close_fullscreen: "\uf1cf"
-    readonly property string minimize: "\ue931"
     readonly property string crop_square: "\ue3c6"
     readonly property string filter_none: "\ue3e0"
     readonly property string login: "\uea77"
@@ -184,7 +183,6 @@ QtObject {
         "keyboard_arrow_down",
         "open_in_full",
         "close_fullscreen",
-        "minimize",
         "crop_square",
         "filter_none",
         "login",

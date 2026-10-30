@@ -20,7 +20,7 @@ Row {
 
     IconButton {
         size: Md.XSmall
-        glyph: Symbols.minimize
+        glyph: Symbols.remove
         text: qsTr("最小化")
         onClicked: root.Window.window.showMinimized()
     }

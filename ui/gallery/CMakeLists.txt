@@ -30,5 +30,7 @@ target_link_libraries(appCirrusGallery PRIVATE
     cirrus_ui_themeplugin
     cirrus_ui_controlsplugin
     cirrus_ui_samplesplugin
+    cirrus_ui_window
+    cirrus_ui_windowplugin
     m3shapesplugin
 )
