@@ -17,6 +17,7 @@ add_subdirectory(theme)
 add_subdirectory(controls)
 add_subdirectory(window)
 add_subdirectory(presentation)
+add_subdirectory(components)
 add_subdirectory(samples)
 add_subdirectory(app)
 

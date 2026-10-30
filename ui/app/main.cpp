@@ -12,6 +12,7 @@ Q_IMPORT_QML_PLUGIN(Cirrus_ThemePlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_ControlsPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_WindowPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_PresentationPlugin)
+Q_IMPORT_QML_PLUGIN(Cirrus_ComponentsPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_SamplesPlugin)
 Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 

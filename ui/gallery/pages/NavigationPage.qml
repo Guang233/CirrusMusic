@@ -3,8 +3,10 @@ import QtQuick
 import QtQuick.Layouts
 import Cirrus.Theme
 import Cirrus.Controls
+import Cirrus.Components
 
-// Phase 3 check: navigation rail (collapsed, expanded, modal, and the morph between).
+// Phase 3 check: navigation rail (collapsed, expanded, modal, and the morph between)
+// and the page stack transitions.
 ControlPage {
     id: page
 
@@ -104,5 +106,95 @@ ControlPage {
     Demo {
         expanded: true
         modal: true
+    }
+
+    SectionTitle {
+        text: qsTr("页面栈")
+    }
+    Caption {
+        text: qsTr("PageStack：前进／返回为横向共享轴（位移 30），切换目的地为淡出后缩放淡入；一个 standardDefaultSpatial 进度驱动。前进途中点返回会反向播放；连续点击时新页面从当前画面开始过渡。减少动态效果时只做 fastEffects 交叉淡入淡出。")
+    }
+    RowLayout {
+        spacing: 12
+        Button {
+            size: Md.XSmall
+            variant: Md.Tonal
+            glyph: Symbols.arrow_forward
+            text: qsTr("前进")
+            onClicked: stack.push(demoPage, {
+                number: stack.counter++
+            })
+        }
+        Button {
+            size: Md.XSmall
+            variant: Md.Tonal
+            glyph: Symbols.arrow_back
+            text: qsTr("返回")
+            enabled: stack.depth > 1
+            onClicked: stack.pop()
+        }
+        Button {
+            size: Md.XSmall
+            variant: Md.Tonal
+            glyph: Symbols.home
+            text: qsTr("切换目的地")
+            onClicked: stack.replaceAll(demoPage, {
+                number: stack.counter++
+            })
+        }
+        Switch {
+            text: qsTr("减少动态效果")
+            checked: Theme.motion.reduced
+            onToggled: Theme.motion.reduced = checked
+        }
+    }
+    Rectangle {
+        Layout.preferredWidth: 560
+        Layout.preferredHeight: 240
+        color: Theme.color.surface
+        radius: Theme.shape.medium
+        border.width: 1
+        border.color: Theme.color.outlineVariant
+        clip: true
+
+        PageStack {
+            id: stack
+            property int counter: 1
+            anchors.fill: parent
+            anchors.margins: 1
+            Component.onCompleted: replaceAll(demoPage, {
+                number: counter++
+            })
+        }
+        Text {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 12
+            text: qsTr("深度 %1").arg(stack.depth)
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.labelMedium.font
+        }
+    }
+
+    Component {
+        id: demoPage
+        Item {
+            id: demo
+            property int number
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 16
+                radius: Theme.shape.large
+                color: [Theme.color.primaryContainer, Theme.color.secondaryContainer,
+                    Theme.color.tertiaryContainer][demo.number % 3]
+                Text {
+                    anchors.centerIn: parent
+                    text: qsTr("页面 %1").arg(demo.number)
+                    color: [Theme.color.onPrimaryContainer, Theme.color.onSecondaryContainer,
+                        Theme.color.onTertiaryContainer][demo.number % 3]
+                    font: Theme.type.headlineMedium.font
+                }
+            }
+        }
     }
 }
