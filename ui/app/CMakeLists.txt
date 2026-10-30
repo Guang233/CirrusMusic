@@ -6,6 +6,11 @@ qt_add_qml_module(appCirrusMusic
     URI CirrusMusic
     QML_FILES
         Main.qml
+        AppShell.qml
+        HomePage.qml
+        PlaceholderPage.qml
+        PlaylistPage.qml
+        SettingsPage.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
