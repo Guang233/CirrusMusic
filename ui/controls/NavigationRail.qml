@@ -6,7 +6,8 @@ import Cirrus.Theme
 // expanded (fits the widest label). Children are NavigationRailItems; `currentIndex`
 // follows clicks and `activated(index)` reports them. `header` holds e.g. the menu
 // button, left-aligned with the indicators (center a 40 px button with x: 8).
-// `modal` is the look of a rail floating over the content (the shell adds the scrim).
+// `modal`: the rail expands over the content (the shell adds the scrim); its floating
+// look (SurfaceContainer, rounded trailing corners, shadow) grows with the expansion.
 //   NavigationRail {
 //       expanded: wide
 //       NavigationRailItem { glyph: Symbols.home; text: qsTr("首页") }
@@ -27,6 +28,12 @@ Rectangle {
     property real widestItem: 0
 
     signal activated(int index)
+
+    // Sets `expanded` without animating, e.g. when the window crosses a breakpoint.
+    function snap(value: bool) {
+        expanded = value;
+        widthSpring.snapTo(value ? 1 : 0);
+    }
 
     function railItems() {
         const result = [];
@@ -70,15 +77,19 @@ Rectangle {
         threshold: 0.001
     }
 
+    // How far the floating look has grown: the expansion progress of a modal rail.
+    readonly property real floating: modal ? progress : 0
+
     implicitWidth: Theme.motion.lerp(collapsedWidth, expandedWidth, progress)
-    color: modal ? Theme.color.surfaceContainer : Theme.color.surface
-    topRightRadius: modal ? Theme.shape.large : 0
-    bottomRightRadius: modal ? Theme.shape.large : 0
+    color: Theme.mix(Theme.color.surface, Theme.color.surfaceContainer, floating)
+    topRightRadius: Theme.shape.large * floating
+    bottomRightRadius: Theme.shape.large * floating
 
     Elevation {
         anchors.fill: parent
         z: -1
-        level: root.modal ? Theme.elevation.level2 : 0
+        level: Theme.elevation.level2
+        opacity: root.floating
         topRightRadius: root.topRightRadius
         bottomRightRadius: root.bottomRightRadius
     }

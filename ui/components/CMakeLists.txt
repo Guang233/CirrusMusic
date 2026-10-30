@@ -10,6 +10,7 @@ qt_add_qml_module(cirrus_ui_components
         Cirrus.Controls
     QML_FILES
         PageStack.qml
+        PageScaffold.qml
 )
 
 target_link_libraries(cirrus_ui_components PRIVATE Qt6::Quick cirrus_ui_theme cirrus_ui_controls)
