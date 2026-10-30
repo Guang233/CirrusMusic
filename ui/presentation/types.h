@@ -6,6 +6,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 // Display values the data sources hand to ViewModels. Defined by the UI rather than
 // reusing backend domain types, so fakes need no backend and QML never sees DTOs
 // (docs/ui/presentation.md §2). Keys are opaque strings (§4.3).
@@ -85,6 +87,18 @@ struct ArtistPage {
     ArtistInfo info;
     QList<SongInfo> topSongs;
     QList<CollectionItem> albums;
+};
+
+// One page of an offset-paged list (search results).
+struct PageRequest {
+    int offset = 0;
+    int limit = 30;
+};
+
+template <class T> struct ResultPage {
+    QList<T> items;
+    // Unknown when the source can't tell: treated as "maybe", until an empty page.
+    std::optional<bool> hasMore;
 };
 
 } // namespace cirrus::ui

@@ -23,6 +23,8 @@ qt_add_qml_module(cirrus_ui_components
         SongList.qml
         CollectionCard.qml
         CollectionGrid.qml
+        CollectionView.qml
+        LoadMoreFooter.qml
 )
 
 target_link_libraries(cirrus_ui_components

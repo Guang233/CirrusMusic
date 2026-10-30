@@ -41,6 +41,8 @@ class SongListModel : public QAbstractListModel
     // One row per key; details fill the rows whose keys they match.
     void reset(const QStringList& keys, const QList<SongInfo>& details);
     void clear();
+    // More loaded songs at the end (paged lists).
+    void append(const QList<SongInfo>& songs);
 
     // Every key, e.g. for "play all".
     Q_INVOKABLE QStringList keys() const;

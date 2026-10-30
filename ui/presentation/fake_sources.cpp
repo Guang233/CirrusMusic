@@ -23,13 +23,14 @@ namespace
 const QString kSamples = QStringLiteral(":/qt/qml/Cirrus/Samples/");
 
 // Replies after the controlled delay, unless canceled or `context` is gone first.
-// The failure to inject is decided when the request starts.
+// The failure to inject is decided when the request starts; requests that pages don't
+// show as states (search suggestions, trending keywords) leave it for the next one.
 template <class T>
 Request replyLater(QObject* context, FakeControls* controls, Reply<T> reply,
-                   std::function<Outcome<T>()> produce)
+                   std::function<Outcome<T>()> produce, bool injectFailures = true)
 {
     auto alive = std::make_shared<bool>(true);
-    const int failure = controls->takeFailure();
+    const int failure = injectFailures ? controls->takeFailure() : -1;
     QTimer::singleShot(
         controls->nextDelay(), context,
         [alive, failure, controls, reply = std::move(reply), produce = std::move(produce)]() {
@@ -263,8 +264,113 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
+    Request suggestions(const QString& text, Reply<QStringList> reply) override
+    {
+        return replyLater<QStringList>(
+            this, m_controls, std::move(reply),
+            [this, text]() {
+                QStringList found;
+                const auto offer = [&](const QString& candidate) {
+                    if (found.size() < kSuggestions && matches(candidate, text) &&
+                        !found.contains(candidate))
+                        found << candidate;
+                };
+                for (const QString& key : m_samples->songOrder)
+                    offer(m_samples->songs[key].title);
+                for (const QString& key : m_samples->artistOrder)
+                    offer(m_samples->artists[key].name);
+                for (const QString& key : m_samples->albumOrder)
+                    offer(m_samples->albums[key].info.title);
+                return Outcome<QStringList>{found};
+            },
+            false);
+    }
+
+    Request hotKeywords(Reply<QStringList> reply) override
+    {
+        return replyLater<QStringList>(
+            this, m_controls, std::move(reply),
+            [this]() {
+                // A fixed mix of songs and artists from the samples.
+                QStringList keywords;
+                for (const char* key : {"so-001", "so-003", "so-031", "so-014", "so-017", "so-019"})
+                    keywords << m_samples->songs[QLatin1StringView(key)].title;
+                for (const char* key : {"ar-01", "ar-04"})
+                    keywords << m_samples->artists[QLatin1StringView(key)].name;
+                return Outcome<QStringList>{keywords};
+            },
+            false);
+    }
+
+    Request searchSongs(const QString& text, PageRequest page,
+                        Reply<ResultPage<SongInfo>> reply) override
+    {
+        return replyLater<ResultPage<SongInfo>>(this, m_controls, std::move(reply), [=, this]() {
+            QList<SongInfo> found;
+            if (!m_controls->empty()) {
+                for (const QString& key : m_samples->songOrder) {
+                    const SongInfo& song = m_samples->songs[key];
+                    bool hit = matches(song.title, text) || matches(song.albumTitle, text);
+                    for (const ArtistRef& artist : song.artists)
+                        hit = hit || matches(artist.name, text);
+                    if (hit)
+                        found << song;
+                }
+            }
+            return Outcome<ResultPage<SongInfo>>{slice(found, page)};
+        });
+    }
+
+    Request searchCollections(collection::Kind kind, const QString& text, PageRequest page,
+                              Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [=, this]() {
+                QList<CollectionItem> found;
+                if (!m_controls->empty()) {
+                    switch (kind) {
+                    case collection::Album:
+                        for (const QString& key : m_samples->albumOrder) {
+                            const CollectionItem item = m_samples->albumItem(key);
+                            if (matches(item.title, text) || matches(item.byline, text))
+                                found << item;
+                        }
+                        break;
+                    case collection::Artist:
+                        for (const QString& key : m_samples->artistOrder)
+                            if (matches(m_samples->artists[key].name, text))
+                                found << m_samples->artistItem(key);
+                        break;
+                    case collection::Playlist:
+                        for (const QString& key : m_samples->playlistOrder) {
+                            const PlaylistInfo& info = m_samples->playlists[key].info;
+                            if (matches(info.title, text) || matches(info.description, text) ||
+                                matches(info.creator, text))
+                                found << m_samples->playlistItem(key);
+                        }
+                        break;
+                    }
+                }
+                return Outcome<ResultPage<CollectionItem>>{slice(found, page)};
+            });
+    }
+
   private:
     static constexpr int kTopSongs = 10;
+    static constexpr int kSuggestions = 8;
+
+    static bool matches(const QString& candidate, const QString& text)
+    {
+        return candidate.contains(text, Qt::CaseInsensitive);
+    }
+
+    template <class T> static ResultPage<T> slice(const QList<T>& all, PageRequest page)
+    {
+        ResultPage<T> result;
+        result.items = all.mid(page.offset, page.limit);
+        result.hasMore = page.offset + page.limit < all.size();
+        return result;
+    }
 
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;

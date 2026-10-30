@@ -71,6 +71,9 @@ class LoadableModel : public QObject
     // Back to Idle with no content and no request (empty input).
     void reset();
 
+    // The page-facing error for a failure (§4.1), and the state it maps to.
+    [[nodiscard]] LoadError describe(const Failure& failure, int* state = nullptr) const;
+
     // Reply adapter: `apply(value)` stores the content and returns whether it is empty.
     template <class T, class Apply> Reply<T> handle(Apply apply)
     {

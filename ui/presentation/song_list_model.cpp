@@ -55,6 +55,18 @@ void SongListModel::reset(const QStringList& keys, const QList<SongInfo>& detail
 
 void SongListModel::clear() { reset({}, {}); }
 
+void SongListModel::append(const QList<SongInfo>& songs)
+{
+    if (songs.isEmpty())
+        return;
+    const int first = rowCount();
+    beginInsertRows({}, first, first + int(songs.size()) - 1);
+    for (const SongInfo& song : songs)
+        m_rows.append({song, true});
+    endInsertRows();
+    emit countChanged();
+}
+
 QStringList SongListModel::keys() const
 {
     QStringList keys;

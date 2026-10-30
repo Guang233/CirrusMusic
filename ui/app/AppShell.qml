@@ -101,10 +101,7 @@ Item {
     }
     Component {
         id: searchPage
-        PlaceholderPage {
-            title: qsTr("搜索")
-            description: qsTr("搜索建议、热搜与分类结果，阶段 3 第 4 步实现。")
-        }
+        SearchPage {}
     }
     Component {
         id: libraryPage

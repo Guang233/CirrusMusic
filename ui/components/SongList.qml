@@ -19,6 +19,15 @@ ListView {
     property real sideMargin: 24
     // Off on the album's own page.
     property bool showAlbumAction: true
+    // Paged lists load the next page as the end comes near (set footer to a
+    // LoadMoreFooter for the indicator). A failed page waits for its retry button.
+    property PagedModel pager
+
+    function maybeLoadMore(): void {
+        if (pager && pager.canLoadMore && pager.loadMoreError.kind < 0
+                && contentY + height > contentHeight + originY - 600)
+            pager.loadMore();
+    }
 
     signal activated(int index)
     signal albumRequested(string key)
@@ -29,7 +38,11 @@ ListView {
     // moves originY, and the view would otherwise keep showing the old top.
     property bool pinnedToTop: true
 
-    onContentYChanged: pinnedToTop = contentY <= originY + 1
+    onContentYChanged: {
+        pinnedToTop = contentY <= originY + 1;
+        maybeLoadMore();
+    }
+    onCountChanged: Qt.callLater(maybeLoadMore)
     onOriginYChanged: {
         if (pinnedToTop)
             contentY = originY;

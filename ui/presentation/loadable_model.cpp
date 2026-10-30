@@ -72,18 +72,18 @@ void LoadableModel::succeed(bool empty, bool partial)
     setState(empty ? loadstate::Empty : partial ? loadstate::Partial : loadstate::Ready);
 }
 
-void LoadableModel::fail(const Failure& failure)
+LoadError LoadableModel::describe(const Failure& failure, int* state) const
 {
     LoadError error;
     error.kind = failure.kind;
     error.retryAfterMs = failure.retryAfterMs.value_or(0);
-    int state = loadstate::Error;
+    int mapped = loadstate::Error;
     switch (failure.kind) {
     case failure::Network:
     case failure::Timeout: {
         const App* app = App::instance();
         if (app && !app->network()->online()) {
-            state = loadstate::Offline;
+            mapped = loadstate::Offline;
             error.message = tr("网络不可用，恢复后会自动重试");
         } else {
             error.message = failure.kind == failure::Timeout ? tr("请求超时") : tr("网络连接失败");
@@ -97,7 +97,7 @@ void LoadableModel::fail(const Failure& failure)
         error.retryable = true;
         break;
     case failure::SignedOut:
-        state = loadstate::SignedOut;
+        mapped = loadstate::SignedOut;
         error.message = tr("登录后才能查看");
         break;
     case failure::Rejected:
@@ -113,6 +113,15 @@ void LoadableModel::fail(const Failure& failure)
         error.retryable = true;
         break;
     }
+    if (state)
+        *state = mapped;
+    return error;
+}
+
+void LoadableModel::fail(const Failure& failure)
+{
+    int state = loadstate::Error;
+    const LoadError error = describe(failure, &state);
     setError(error);
     // A failed refresh keeps the content; the page reports `error` on its own.
     const bool keepContent = m_refreshing && hasContent();

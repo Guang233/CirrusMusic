@@ -25,6 +25,14 @@ class CatalogSource
     virtual Request playlist(const QString& key, Reply<PlaylistPage> reply) = 0;
     virtual Request album(const QString& key, Reply<AlbumPage> reply) = 0;
     virtual Request artist(const QString& key, Reply<ArtistPage> reply) = 0;
+
+    // Search: completions for what is typed, trending keywords, and paged results.
+    virtual Request suggestions(const QString& text, Reply<QStringList> reply) = 0;
+    virtual Request hotKeywords(Reply<QStringList> reply) = 0;
+    virtual Request searchSongs(const QString& text, PageRequest page,
+                                Reply<ResultPage<SongInfo>> reply) = 0;
+    virtual Request searchCollections(collection::Kind kind, const QString& text, PageRequest page,
+                                      Reply<ResultPage<CollectionItem>> reply) = 0;
 };
 
 // Encoded images (JPEG, PNG) by cover key; the cover image provider decodes them.

@@ -17,6 +17,17 @@ void CollectionListModel::reset(const QList<CollectionItem>& items)
 
 void CollectionListModel::clear() { reset({}); }
 
+void CollectionListModel::append(const QList<CollectionItem>& items)
+{
+    if (items.isEmpty())
+        return;
+    const int first = rowCount();
+    beginInsertRows({}, first, first + int(items.size()) - 1);
+    m_items.append(items);
+    endInsertRows();
+    emit countChanged();
+}
+
 int CollectionListModel::rowCount(const QModelIndex& parent) const
 {
     return parent.isValid() ? 0 : int(m_items.size());
