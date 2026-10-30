@@ -27,6 +27,8 @@ Q_ENUM_NS(Mode)
 [[nodiscard]] std::optional<Mode> fromName(QStringView name);
 // --titlebar=<mode>; an escape hatch when a mode misbehaves on some desktop.
 [[nodiscard]] QCommandLineOption option();
-// The --titlebar option, else CIRRUS_TITLEBAR, else platformDefault().
+// The mode asked for by the --titlebar option, else by CIRRUS_TITLEBAR.
+[[nodiscard]] std::optional<Mode> requested(const QCommandLineParser& parser);
+// requested(), else platformDefault().
 [[nodiscard]] Mode resolve(const QCommandLineParser& parser);
 } // namespace cirrus::ui::titlebar

@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QSettings>
 #include <QTimer>
 #include <QtQml/QQmlExtensionPlugin>
 
@@ -16,8 +17,8 @@ Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
 // Development preview. `--grab <file>` renders one page, saves a screenshot and
 // exits, so visual checks also work headless (QT_QPA_PLATFORM=offscreen).
-// Interactive runs reopen the last page, cover and mode; --grab runs never use or
-// change that memory, so screenshots stay reproducible.
+// Interactive runs reopen the last page, cover, mode and title bar; --grab runs never
+// use or change that memory, so screenshots stay reproducible.
 int main(int argc, char* argv[])
 {
     QGuiApplication app(argc, argv);
@@ -60,11 +61,16 @@ int main(int argc, char* argv[])
         return 2;
     }
 
-    // Screenshots use the custom title bar unless asked otherwise, whatever the desktop.
+    // --titlebar/CIRRUS_TITLEBAR win; screenshots otherwise use the custom title bar,
+    // whatever the desktop; interactive runs reopen the last mode. Read here rather
+    // than by the QML Settings: changing the mode after the window is shown
+    // recreates the native window.
     namespace titlebar = cirrus::ui::titlebar;
-    const titlebar::Mode titleBar = parser.isSet(grabOption) && !parser.isSet(titlebar::option())
-                                        ? titlebar::Custom
-                                        : titlebar::resolve(parser);
+    const titlebar::Mode titleBar = titlebar::requested(parser).value_or(
+        parser.isSet(grabOption)
+            ? titlebar::Custom
+            : titlebar::fromName(QSettings().value(QStringLiteral("Gallery/titleBar")).toString())
+                  .value_or(titlebar::platformDefault()));
 
     QQmlApplicationEngine engine;
     QObject::connect(

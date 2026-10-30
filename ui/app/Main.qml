@@ -14,13 +14,6 @@ AppWindow {
     visible: true
     title: qsTr("Cirrus Music")
 
-    titleContent: Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: window.title
-        color: Theme.color.onSurfaceVariant
-        font: Theme.type.titleSmall.font
-    }
-
     // Prototype content until the app shell exists (UI phase 3, step 3).
     Column {
         anchors.centerIn: parent

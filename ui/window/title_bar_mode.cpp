@@ -56,13 +56,16 @@ QCommandLineOption option()
         QStringLiteral("mode"));
 }
 
-Mode resolve(const QCommandLineParser& parser)
+std::optional<Mode> requested(const QCommandLineParser& parser)
 {
     if (const auto mode = named(parser.value(option()), "--titlebar"))
-        return *mode;
-    if (const auto mode = named(qEnvironmentVariable("CIRRUS_TITLEBAR"), "CIRRUS_TITLEBAR"))
-        return *mode;
-    return platformDefault();
+        return mode;
+    return named(qEnvironmentVariable("CIRRUS_TITLEBAR"), "CIRRUS_TITLEBAR");
+}
+
+Mode resolve(const QCommandLineParser& parser)
+{
+    return requested(parser).value_or(platformDefault());
 }
 
 } // namespace cirrus::ui::titlebar

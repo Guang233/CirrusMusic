@@ -69,9 +69,12 @@ AppWindow {
         property string page: "theme"
         property string mode: "system"
         property string cover: Samples.cover("sunset").toString()
+        // Read by main.cpp before the window is created.
+        property string titleBar
     }
 
     readonly property list<string> modeNames: ["system", "light", "dark"]
+    readonly property list<string> titleBarNames: ["custom", "system", "hidden"]
     property bool restored: false
 
     Component.onCompleted: {
@@ -86,6 +89,9 @@ AppWindow {
         Theme.mode = [Theme.Mode.System, Theme.Mode.Light, Theme.Mode.Dark][Math.max(0, modeNames.indexOf(mode))];
         restored = !capturing;
     }
+
+    onTitleBarChanged: if (restored)
+                           memory.titleBar = titleBarNames[titleBar]
 
     Connections {
         target: Theme
@@ -131,13 +137,6 @@ AppWindow {
         }
     }
 
-    titleContent: Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: window.title
-        color: Theme.color.onSurfaceVariant
-        font: Theme.type.titleSmall.font
-    }
-
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -179,6 +178,39 @@ AppWindow {
                         }
                         TapHandler {
                             onTapped: nav.currentIndex = navItem.index
+                        }
+                    }
+                }
+
+                Text {
+                    text: qsTr("标题栏")
+                    color: Theme.color.onSurfaceVariant
+                    font: Theme.type.labelMedium.font
+                }
+                // Switches without a restart (AppWindow.setTitleBar).
+                ConnectedButtonGroup {
+                    exclusive: true
+                    Layout.bottomMargin: 8
+
+                    Repeater {
+                        model: [{
+                                mode: TitleBarMode.Custom,
+                                label: qsTr("自绘")
+                            }, {
+                                mode: TitleBarMode.System,
+                                label: qsTr("系统")
+                            }, {
+                                mode: TitleBarMode.Hidden,
+                                label: qsTr("隐藏")
+                            }]
+                        delegate: Button {
+                            required property var modelData
+                            size: Md.XSmall
+                            variant: Md.Tonal
+                            checkable: true
+                            checked: window.titleBar === modelData.mode
+                            text: modelData.label
+                            onClicked: window.setTitleBar(modelData.mode)
                         }
                     }
                 }

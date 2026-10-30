@@ -8,9 +8,11 @@ import Cirrus.Theme
 //   bands, window buttons); macOS keeps the traffic lights over an expanded client area.
 // - System: native decorations.
 // - Hidden: no decorations and no title bar controls (tiling window managers).
-// The title bar row stays in every mode for the app's own content (`titleContent`);
-// default children fill the area below it.
-//   AppWindow { titleContent: Text { … }  Page { anchors.fill: parent } }
+// The custom title bar shows `title`. The app's own content for the title bar row
+// (`titleContent`, e.g. back and search) stays there in every mode; with the system
+// or hidden title bar and no such content the row collapses. Default children fill
+// the area below it.
+//   AppWindow { title: qsTr("Cirrus Music"); Page { anchors.fill: parent } }
 Window {
     id: window
 
@@ -79,6 +81,7 @@ Window {
             anchors.right: parent.right
             anchors.top: parent.top
             frame: windowFrame
+            title: window.title
             windowControls: window.titleBar === TitleBarMode.Custom
             windowButtons: window.customFrame
             leadingInset: window.titleBar === TitleBarMode.Custom && window.macOS ? 72 : 16

@@ -223,9 +223,10 @@ Text {
 **已决定（UQ-02）：标题栏有自绘、系统、隐藏三种模式。默认自绘；平铺窗口管理器（niri、sway、Hyprland、river、i3、dwl）默认隐藏。用户可以在设置里改成任一模式**，用来绕开个别桌面环境下自绘窗口的问题。
 
 - **自绘（默认）**：Linux、Windows 用方案 C，外壳顶部自己画窗口按钮，并处理拖动、缩放边缘、双击最大化。macOS 优先用方案 B，保留系统红绿灯。阶段 3 的窗口原型要在 Linux 的 Wayland 和 X11 上，分别在 GNOME、KDE、niri 下检查阴影、缩放边缘和贴边。
-- **系统标题栏**：使用原生窗口装饰，外壳不再画窗口按钮。原来放在标题栏区域的应用内容（返回、搜索等）留在内容区顶部。GNOME Wayland 下的装饰由 Qt 绘制（见上表方案 A）。
-- **隐藏标题栏**：无边框，不画窗口按钮、阴影和圆角，标题栏区域不能拖动、双击或右键；只保留窗口内侧的缩放边带（平铺窗口管理器里可以拖边调整列宽）。应用内容的排布与系统标题栏模式相同。平铺窗口管理器靠快捷键管理窗口、自己画边框和圆角，标题栏的功能在那里用不上。按 `XDG_CURRENT_DESKTOP` 判断，名单在 `ui/window/title_bar_mode.cpp`。
-- **切换入口**：设置项 `App.settings.titleBar`（[presentation.md §5.1](presentation.md)），用户没改过时按桌面取默认值。另外提供启动参数 `--titlebar=custom|system|hidden` 和环境变量 `CIRRUS_TITLEBAR`（优先级：启动参数 > 环境变量 > 设置 > 默认值）：某个模式出问题、连设置页都操作不了时，不进设置也能换模式。Gallery 接受同样的参数，`--grab` 截图时默认自绘，不受桌面影响。
+- **系统标题栏**：使用原生窗口装饰，外壳不画自己的标题栏。
+- **标题栏那一行**：窗口标题只在自绘模式显示。原来放在标题栏区域的应用内容（返回、搜索等）在系统、隐藏模式下留在内容区顶部；没有这类内容时整行收起，内容从窗口顶部开始。GNOME Wayland 下的装饰由 Qt 绘制（见上表方案 A）。
+- **隐藏标题栏**：无边框，没有标题栏、窗口按钮、阴影和圆角；只保留窗口内侧的缩放边带（平铺窗口管理器里可以拖边调整列宽）。平铺窗口管理器靠快捷键管理窗口、自己画边框和圆角，标题栏的功能在那里用不上。按 `XDG_CURRENT_DESKTOP` 判断，名单在 `ui/window/title_bar_mode.cpp`。
+- **切换入口**：设置项 `App.settings.titleBar`（[presentation.md §5.1](presentation.md)），用户没改过时按桌面取默认值。另外提供启动参数 `--titlebar=custom|system|hidden` 和环境变量 `CIRRUS_TITLEBAR`（优先级：启动参数 > 环境变量 > 设置 > 默认值）：某个模式出问题、连设置页都操作不了时，不进设置也能换模式。Gallery 接受同样的参数，`--grab` 截图时默认自绘，不受桌面影响；侧栏有“标题栏”切换（不重启），交互运行时记住上次的模式。
 - 切换后先按“重启生效”实现；能否不重启、直接重建窗口，在原型中确定。
 - 播放页：自绘模式下延伸到标题栏区域，窗口按钮的颜色跟着播放页变化（[motion-choreography.md §2.2](motion-choreography.md)）；系统模式下从标题栏下方开始。
 
@@ -467,3 +468,4 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 设置项 `App.settings.titleBar` 随第 2 步的展示层骨架接入；目前只有启动参数和环境变量。
 - 验证：Debug 构建无警告，qmllint 无警告，clang-format 通过；离屏（软件渲染）两种模式启动无 QML 警告；niri Wayland 会话中用协议日志确认窗口几何 `(24, 24, 1000, 1074)`、输入区域、最小尺寸与不重启切换，用窗口截图确认阴影与圆角；XWayland 下能启动。拖动、缩放、双击、右键菜单等交互未检查；GNOME、KDE、Windows、macOS 未验证。
 - 随后按维护者意见调整（同日）：窗口框架移到共用模块 `Cirrus.Window`，Gallery 改用同一个 `AppWindow`；标题栏增加“隐藏”模式，平铺窗口管理器默认隐藏（UQ-02 更新）；启动参数统一为 `--titlebar=custom|system|hidden`／`CIRRUS_TITLEBAR`，替换 `--system-titlebar`；最小化图标改为 `remove`（图标 98 个）。验证：构建、qmllint、clang-format 无警告；Gallery 离屏截图（自绘、隐藏）与 niri 下截图正常；niri 下应用默认隐藏（窗口几何无边距），`--titlebar custom` 恢复阴影边距，非法取值给出警告并忽略。
+- 再次调整（同日）：隐藏模式与系统模式下，标题栏那一行没有应用内容时整行收起（此前隐藏模式只去掉了窗口按钮，仍留着一行标题，没有意义）；窗口标题改由 `AppWindow` 只在自绘模式显示。Gallery 侧栏加“标题栏”三选一切换，并记住上次的模式。离屏截图检查自绘、隐藏两种模式正常。
