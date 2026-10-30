@@ -36,29 +36,15 @@ PageScaffold {
         header: Row {
             x: 24
             width: list.width - 48
-            height: 184
+            height: 200
             spacing: 24
 
-            Rectangle {
+            CoverArt {
                 width: 160
                 height: 160
                 radius: Theme.shape.large
-                color: Theme.color.surfaceContainerHighest
-                clip: true
-                Icon {
-                    anchors.centerIn: parent
-                    visible: cover.status !== Image.Ready
-                    glyph: Symbols.queue_music
-                    size: 48
-                    color: Theme.color.onSurfaceVariant
-                }
-                Image {
-                    id: cover
-                    anchors.fill: parent
-                    source: pageModel.coverKey !== "" ? "image://cover/" + pageModel.coverKey : ""
-                    sourceSize: Qt.size(320, 320)
-                    fillMode: Image.PreserveAspectCrop
-                }
+                glyph: Symbols.queue_music
+                coverKey: pageModel.coverKey
             }
             Column {
                 width: parent.width - 184
@@ -97,11 +83,20 @@ PageScaffold {
                     color: Theme.color.onSurfaceVariant
                     font: Theme.type.bodyMedium.font
                 }
+                Button {
+                    visible: pageModel.songs.count > 0
+                    variant: Md.Filled
+                    glyph: Symbols.play_arrow
+                    text: qsTr("播放全部")
+                    onClicked: App.player.playSongs(pageModel.songs.keys(), 0)
+                }
             }
         }
 
         delegate: ListItem {
             id: song
+            required property int index
+            required property bool current
             required property string title
             required property string artistText
             required property string albumTitle
@@ -110,16 +105,16 @@ PageScaffold {
             x: 8
             width: list.width - 16
             segmented: true
+            highlighted: current
             text: title
             supportingText: artistText + " · " + albumTitle
             trailingText: durationText
+            onClicked: App.player.playSongs(pageModel.songs.keys(), index)
             leading: Component {
-                Image {
+                CoverArt {
                     width: 48
                     height: 48
-                    source: song.coverKey !== "" ? "image://cover/" + song.coverKey : ""
-                    sourceSize: Qt.size(96, 96)
-                    fillMode: Image.PreserveAspectCrop
+                    coverKey: song.coverKey
                 }
             }
         }

@@ -4,7 +4,7 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
 
-// The shell (docs/ui/README.md §6.2): navigation rail and page stack. Large windows
+// The shell (docs/ui/README.md §6.2): navigation rail, page stack and mini player. Large windows
 // (≥ 1200) keep the rail expanded beside the content and push it when toggled;
 // narrower ones keep it collapsed and expand it over the content with a scrim.
 // Crossing the breakpoint switches without animation (motion-choreography.md §5).
@@ -102,7 +102,14 @@ Item {
         // Pushed aside by a large window's rail; under the floating rail otherwise.
         x: shell.large ? rail.width : rail.collapsedWidth
         width: shell.width - x
-        height: shell.height
+        height: shell.height - miniPlayer.reservedHeight
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        x: stack.x + 12
+        width: stack.width - 24
+        y: shell.height - implicitHeight - bottomMargin
     }
 
     // Blocks the content while the rail floats over it.
