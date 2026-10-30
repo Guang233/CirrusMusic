@@ -34,11 +34,12 @@ QString registerFont(const QString& path)
     return families.constFirst();
 }
 
-// CSS weight -> MiSans `wght`, through its named instances (Thin 150, ExtraLight 200,
-// Light 250, Regular 330, Medium 380, Semibold 520, Bold 630, Heavy 700).
-qreal misansWeight(int weight)
+// CSS weight -> MiSans `wght` (continuous, 150–700), interpolating linearly between its
+// named instances: Thin 150, ExtraLight 200, Light 250, Regular 330, Medium 380,
+// Semibold 520, Bold 630, Heavy 700.
+qreal misansWeight(qreal weight)
 {
-    static constexpr std::array<std::pair<int, qreal>, 9> stops{{
+    static constexpr std::array<std::pair<qreal, qreal>, 9> stops{{
         {100, 150},
         {200, 200},
         {300, 250},
@@ -49,12 +50,12 @@ qreal misansWeight(int weight)
         {800, 700},
         {900, 700},
     }};
-    weight = std::clamp(weight, 100, 900);
+    weight = std::clamp(weight, qreal(100), qreal(900));
     for (size_t i = 1; i < stops.size(); ++i) {
         const auto [w1, a1] = stops[i];
         if (weight <= w1) {
             const auto [w0, a0] = stops[i - 1];
-            return a0 + (a1 - a0) * (weight - w0) / qreal(w1 - w0);
+            return a0 + (a1 - a0) * (weight - w0) / (w1 - w0);
         }
     }
     return stops.back().second;
@@ -128,7 +129,7 @@ void Fonts::update()
     emit sansChanged();
 }
 
-QFont Fonts::font(int weight, qreal pixelSize) const
+QFont Fonts::font(qreal weight, qreal pixelSize) const
 {
     QFont font(m_sans);
     font.setPixelSize(qRound(pixelSize));
@@ -137,7 +138,7 @@ QFont Fonts::font(int weight, qreal pixelSize) const
         font.setWeight(QFont::Normal);
         font.setVariableAxis(kWeightAxis, float(misansWeight(weight)));
     } else {
-        font.setWeight(QFont::Weight(std::clamp(weight, 1, 1000)));
+        font.setWeight(QFont::Weight(std::clamp(qRound(weight), 1, 1000)));
     }
     return font;
 }

@@ -16,9 +16,10 @@ namespace cirrus::ui
 // (`source`, `customFamily`, set from App.settings). Missing glyphs (Korean, emoji…)
 // fall back to the system fonts. Icons always use the bundled Material Symbols.
 //
-// MiSans is one variable font whose `wght` axis runs from 150 to 700 (Regular is 330,
-// Bold 630) and Qt does not map QFont weights onto it, so text fonts come from font():
-// it maps CSS weights onto the axis for MiSans and uses plain weights otherwise.
+// MiSans is one variable font whose `wght` axis runs continuously from 150 to 700, on
+// its own scale (Regular is 330, Bold 630), and Qt does not map QFont weights onto it.
+// So text fonts come from font(): for MiSans it maps CSS weights onto the axis (any
+// value, so weights can animate); other families get plain weights.
 class Fonts : public QObject
 {
     Q_OBJECT
@@ -52,8 +53,9 @@ class Fonts : public QObject
     [[nodiscard]] bool bundledAvailable() const { return !m_bundled.isEmpty(); }
     [[nodiscard]] QString systemFamily() const { return m_system; }
 
-    // Text font at a CSS weight (100–900) and pixel size, in the family in use.
-    Q_INVOKABLE QFont font(int weight, qreal pixelSize) const;
+    // Text font at a CSS weight (100–900, fractional allowed) and pixel size, in the
+    // family in use.
+    Q_INVOKABLE QFont font(qreal weight, qreal pixelSize) const;
     // Installed families, for picking a custom font.
     Q_INVOKABLE QStringList families() const;
 

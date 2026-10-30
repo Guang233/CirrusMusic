@@ -29,9 +29,9 @@ qt_add_qml_module(cirrus_ui_theme
         fonts/MaterialSymbolsRounded.ttf
 )
 
-# The default text font, MiSans (fonts/MiSans-LICENSE.txt): git-ignored because it may
-# not be distributed on its own, fetched by tools/ui/prepare_fonts.py. 20 MB, so it is
-# compiled as a big resource rather than a C array.
+# The default text font, MiSans (fonts/MiSans-LICENSE.txt). 20 MB, so it is compiled as
+# a big resource rather than a C array. Builds without the file fall back to the system
+# font (for a smaller package without it, later).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fonts/MiSansVF.ttf")
     qt_add_resources(cirrus_ui_theme cirrus_ui_theme_misans
         BIG_RESOURCES
@@ -39,8 +39,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fonts/MiSansVF.ttf")
         FILES fonts/MiSansVF.ttf
     )
 else()
-    message(WARNING "ui/theme/fonts/MiSansVF.ttf is missing; run tools/ui/prepare_fonts.py. "
-                    "Building without the bundled text font: text uses the system font.")
+    message(WARNING "ui/theme/fonts/MiSansVF.ttf is missing (tools/ui/prepare_fonts.py fetches "
+                    "it). Building without the bundled text font: text uses the system font.")
 endif()
 
 target_compile_features(cirrus_ui_theme PUBLIC cxx_std_20)

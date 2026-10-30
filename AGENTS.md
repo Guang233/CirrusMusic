@@ -16,7 +16,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - Cross-platform project, Linux first. Windows/macOS are not verified locally.
 - Commit often (small conventional commits: `feat(ui): ...`, `docs(ui): ...`), without a Claude co-author trailer. The remote `origin` is a private GitHub repo; push only when the maintainer asks, never automatically after commits.
 - Do not hand-edit generated files: `ui/theme/Symbols.qml`, `ui/theme/fonts/*.ttf`, `ui/samples/**`. Regenerate with:
-  - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools). It also downloads the default text font MiSans (`ui/theme/fonts/MiSansVF.ttf`), which is git-ignored because its license forbids distributing it on its own: run the script once after cloning, or builds fall back to the system font with a CMake warning.
+  - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools). It also fetches the default text font MiSans (`ui/theme/fonts/MiSansVF.ttf`, committed unmodified; its license forbids modifying it, so never subset it). Builds without the file fall back to the system font with a CMake warning.
   - `python3 tools/ui/generate_samples.py` (needs Pillow)
 - QML singletons need `QT_QML_SINGLETON_TYPE` in CMake; executables link `<module>plugin` and use `Q_IMPORT_QML_PLUGIN`.
 - Avoid QML property names of the form `onXxx` (parsed as signal handlers) and ECMAScript reserved words.

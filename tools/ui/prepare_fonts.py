@@ -5,9 +5,8 @@ Development tool only; the application never downloads fonts. Outputs:
   ui/theme/fonts/MaterialSymbolsRounded.ttf  subset of the glyphs in symbols.txt
   ui/theme/Symbols.qml                       name -> codepoint singleton
   ui/theme/fonts/MiSansVF.ttf                the default text font, unmodified
-MiSans may not be modified or distributed on its own (fonts/MiSans-LICENSE.txt), so
-MiSansVF.ttf is git-ignored: this script fetches it and the build embeds it in the
-executables. Requires fontTools (pyftsubset).
+MiSans may not be modified (fonts/MiSans-LICENSE.txt): it is committed as downloaded,
+never subset. Requires fontTools (pyftsubset).
 """
 
 import argparse

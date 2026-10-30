@@ -6,11 +6,11 @@
 | --- | --- | --- | --- | --- |
 | `MaterialSymbolsRounded.ttf` | [google/material-design-icons](https://github.com/google/material-design-icons/tree/737e3324305806514d7909874fa1818ae1808232/variablefont) `variablefont/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf`，提交 `737e3324` | 2.973 | Apache License 2.0，见 `MaterialSymbols-LICENSE` | **已修改**：用 fontTools 裁剪为 `symbols.txt` 列出的字形，并移除 OpenType 布局特性（不再支持连字输入）；保留全部可变轴 |
 
-| `MiSansVF.ttf`（**不进 git**） | 小米 [MiSans](https://hyperos.mi.com/font/download) 字体包 `https://hyperos.mi.com/font-download/MiSans.zip` 中的 `MiSans/可变字体/MiSansVF.ttf` | 4.009 | MiSans 字体知识产权许可协议，见 `MiSans-LICENSE.txt` | 未修改 |
+| `MiSansVF.ttf` | 小米 [MiSans](https://hyperos.mi.com/font/download) 字体包 `https://hyperos.mi.com/font-download/MiSans.zip` 中的 `MiSans/可变字体/MiSansVF.ttf` | 4.009 | MiSans 字体知识产权许可协议，见 `MiSans-LICENSE.txt` | 未修改 |
 
 MiSansVF.ttf 的 SHA-256：`0ddef90648998900175cfdca9a6f087a2544c182f130b0ad4f7e94a03a115e79`（2026-10-30 下载的字体包为 `b6aa1fc8…`，字体包本身不固定，网站可能重新打包）。
 
-MiSans 许可的三条要求与做法：在软件中注明使用了 MiSans（设置页字体选项的说明）；不得修改（原样打包，不裁剪子集）；不得单独分发字体（文件不进 git，由脚本下载，构建时嵌入可执行文件）。可变字体只有 `wght` 轴（150–700，Regular 330、Medium 380、Semibold 520、Bold 630），字重映射见 `../fonts.cpp`。
+MiSans 许可的三条要求与做法：在软件中注明使用了 MiSans（设置页字体选项的说明）；不得修改（原样入库、原样打包，不裁剪子集）；不得单独分发字体（只随应用分发，构建时嵌入可执行文件）。以后发行时另出一个不含 MiSans 的小包，构建在缺少这个文件时自动改用系统字体。可变字体的 `wght` 轴为 150–700 无级调节（命名实例 Regular 330、Medium 380、Semibold 520、Bold 630），CSS 字重到轴值的映射见 `../fonts.cpp`。
 
 Material Symbols 上游原始文件 SHA-256：`95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca`
 
