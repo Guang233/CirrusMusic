@@ -18,6 +18,7 @@ qt_add_qml_module(appCirrusGallery
         pages/InputsPage.qml
         pages/ProgressPage.qml
         pages/ListsPage.qml
+        pages/NavigationPage.qml
         pages/DataPage.qml
 )
 

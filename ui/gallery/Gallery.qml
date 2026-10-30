@@ -51,6 +51,11 @@ AppWindow {
             page: listsPage
         },
         PageEntry {
+            key: "navigation"
+            title: qsTr("导航")
+            page: navigationPage
+        },
+        PageEntry {
             key: "data"
             title: qsTr("数据与状态")
             page: dataPage
@@ -127,6 +132,11 @@ AppWindow {
     Component {
         id: listsPage
         ListsPage {}
+    }
+
+    Component {
+        id: navigationPage
+        NavigationPage {}
     }
 
     Component {

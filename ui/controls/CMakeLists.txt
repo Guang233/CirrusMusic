@@ -38,6 +38,8 @@ qt_add_qml_module(cirrus_ui_controls
         Menu.qml
         MenuItem.qml
         MenuSeparator.qml
+        NavigationRail.qml
+        NavigationRailItem.qml
 )
 
 # Embedded at :/qt/qml/Cirrus/Controls/shaders/*.qsb, next to the QML files.

@@ -107,6 +107,15 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 - **ToolTip**：InverseSurface、圆角 4、bodySmall、最小高 24、内距 8×4；悬停 500 ms 后出现。
 - **ScrollBar**：常态 4 px 细条，悬停或拖动时变为 8 px；颜色 OnSurfaceVariant，闲置 1 s 后淡出。
 
+## 8a. 导航栏（第二批，阶段 3）
+
+规格取自 androidx `WideNavigationRail` 与 `NavigationRail*Tokens`。
+
+- **NavigationRail**：收起宽 96，展开宽 220–360（按最长的项）；内容距顶部 44，有 `header`（菜单按钮等）时 header 下方留 40；收起时项间距 4，展开时 0。容器 Surface；`modal`（浮在内容上）时为 SurfaceContainer、右侧 large 圆角、2 级阴影，遮罩由外壳画。`expanded` 由一个 0–1 进度弹簧驱动宽度和每一项的形态：推挤内容时用 `standardDefaultSpatial`，浮层用 `defaultSpatial`（见 [motion-choreography.md §5](motion-choreography.md)；androidx 两者分别用 DefaultSpatial、FastSpatial，这里按推挤布局不回弹的规则改用标准弹簧）。`currentIndex` 随点击更新，并发出 `activated(index)`。
+- **NavigationRailItem**：收起时项高 64，指示条 56×32、距项顶 6，图标 24 在指示条中，标签 labelMedium 在指示条下方 4；展开时项高 56，指示条高 56、内边距 16／图标标签间距 8／16，标签 labelLarge 在图标右侧。左侧内距两种形态都是 20，所以图标的横向位置不变。过渡中顶部标签在进度 0–0.3 淡出、侧边标签在 0.6–1 淡入，指示条尺寸与图标纵向位置线性插值。
+- 颜色：指示条 SecondaryContainer，选中图标 OnSecondaryContainer（并填充），选中标签收起时 Secondary、展开时 OnSecondaryContainer，未选中 OnSurfaceVariant；状态层与涟漪画在指示条形状上，颜色 OnSecondaryContainer。选中时指示条从中心展开（`fastSpatial`）。
+- 读屏角色 PageTab；Tab 键在项之间移动，Space／Enter 选中。
+
 ## 9. 每个控件的检查项
 
 全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。
@@ -119,5 +128,6 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 - `ToolTip` 只有纯文本样式；富提示（rich tooltip）未做。
 - TextField 未做字符计数和前后缀；Outlined 标签缺口用 `gapColor` 填色，放在非 surface 背景上时要手动指定。
 - 列表项与菜单项的读屏名称只取标题文字；需要额外描述时由页面设置 `Accessible.description`。
-- 第二批（Dialog、Snackbar、Chips、Tabs、NavigationRail、Card、Divider、Badge、下拉选择）按阶段 3 页面需要再做。
+- 第二批已做 NavigationRail（§8a）；其余（Dialog、Snackbar、Chips、Tabs、Card、Divider、Badge、下拉选择）按页面需要再做。
+- NavigationRail 未做：方向键在项之间移动、徽标（Badge）、项过多时滚动。
 
