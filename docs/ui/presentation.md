@@ -1,6 +1,6 @@
 # 展示层：ViewModel 与数据源接口
 
-> 状态：设计稿（2026-10-26）。阶段 3、4 按此实现假数据版本，阶段 5 接入后端时只新增真实数据源，不改 QML。总体原则见 [README §3.2](README.md)；后端契约见 [HANDOFF](../HANDOFF.md)、[后台装配](../api/backend-runtime.md)、[队列与歌词时钟](../api/queue-and-lyric-clock.md)。
+> 状态：设计稿（2026-10-26）；骨架已实现（2026-10-30），实现情况见 §10。阶段 3、4 按此实现假数据版本，阶段 5 接入后端时只新增真实数据源，不改 QML。总体原则见 [README §3.2](README.md)；后端契约见 [HANDOFF](../HANDOFF.md)、[后台装配](../api/backend-runtime.md)、[队列与歌词时钟](../api/queue-and-lyric-clock.md)。
 
 ## 1. 目标
 
@@ -205,7 +205,7 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 
 ## 6. 数据源接口
 
-纯 C++ 抽象类，放在 `ui/presentation/sources/`。示意：
+纯 C++ 抽象类，放在 `ui/presentation/sources.h`。示意：
 
 ```cpp
 namespace cirrus::ui {
@@ -278,3 +278,27 @@ public:
 - **队列排序**：后端暂不支持移动队列条目。
 - **翻译与原文的对齐规则**：阶段 4 写入 `player.md`。
 - **切换标题栏模式是否需要重启**：见 README §6.1，原型中确定。
+
+## 10. 实现情况（阶段 3 第 2 步，2026-10-30）
+
+代码在 `ui/presentation/`（静态库 `cirrus_presentation`，QML 模块 `Cirrus.Presentation`），应用和 Gallery 都链接它并装入假数据源；Gallery 的“数据与状态”页可以操作 `App.debug`、检查各种状态。
+
+| 已实现 | 说明 |
+| --- | --- |
+| `LoadState`、`Failure` | QML 中为 `LoadState.Ready`、`Failure.Network` |
+| `Request`、`Outcome<T>`、`Reply<T>` | `request.h`；句柄析构即取消 |
+| `CatalogSource`、`ImageSource`、`Sources` | `sources.h`；接口方法随页面需要逐个添加，目前只有 `playlist()` 与 `image()` |
+| `App` | `settings`、`format`、`network`、`debug`；`makeCoverProvider()` |
+| `App.settings` | 外观（明暗、种子来源、配色变体、减少动态效果，存 Theme 枚举的整数值）、`titleBar`（未设置为 -1，按桌面取默认）、歌词翻译／音译；QSettings 位置用开发占位的组织名和应用名（UQ-06）。`Main.qml` 用 `Binding` 把外观绑到 Theme |
+| `App.format` | `duration(ms)`、`count(n)`（中日文按万／亿，其他按 K／M／B） |
+| `App.network` | `QNetworkInformation` 可达性，无后端时视为在线；假数据的“离线”开关也作用于它 |
+| `App.debug`（`FakeControls`） | 延迟（默认 300 ms，±30% 抖动）、下一次失败、离线、空结果、部分数据；只在装入假数据源时存在 |
+| 封面图片提供器 | `image://cover/<key>`：在 GUI 线程向 `ImageSource` 取编码数据，在线程池按 `sourceSize` 解码缩放（覆盖请求尺寸、不放大），解码结果进 64 MiB 内存缓存。被取消的请求仍会完成并写入缓存，只是不再交付 |
+| `LoadableModel` | 加载型 ViewModel 的基类：单个在途请求、§4.1 的状态与错误映射、`retry()`／`refresh()`、刷新失败保留内容、`Offline` 下网络恢复后自动重试 |
+| `SongListModel` | §5.3 的角色，`current`、`liked` 留到 `App.player`、`App.library` 实现时加 |
+| `PlaylistPageModel` | 示范页面模型：设置 `playlistKey` 即加载 |
+| 假数据源 | `fake_sources.cpp` 读 `Cirrus.Samples` 的 `catalog.json`；封面 key 为示例封面名（如 `sunset`）。封面请求不受延迟和失败注入影响 |
+
+尚未实现：`App.session`、`App.player`、`App.queue`、`App.lyrics`、`App.library`（第 3 步做迷你播放条时加 `App.player`），`CollectionListModel` 与其他页面模型（随第 4 步的页面加），大歌单按需批量取详情，账号变化处理（§4.2）。
+
+验证：用临时检查程序（未提交）在离屏下跑通 13 项状态转换（加载、空、拒绝、网络失败与重试、刷新失败保留内容、离线与恢复后自动重试、未登录、部分数据、新请求取代旧请求、空 key 回到 Idle），以及时长、数量格式化。

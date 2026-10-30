@@ -103,7 +103,8 @@ ui/
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
   app/            CirrusMusic：main.cpp、Main.qml、窗口与标题栏（§6.1）
   gallery/        appCirrusGallery：Gallery.qml、pages/
-  （阶段 1 起按需新增 components/、player/、presentation/）
+  presentation/   Cirrus.Presentation：App 单例、ViewModel、数据源接口与假实现、封面图片提供器（presentation.md）
+  （按需新增 components/、player/）
 tools/ui/
   prepare_fonts.py      获取固定版本字体、校验 SHA-256、裁剪图标、生成 Symbols.qml
   generate_samples.py   生成示例封面、目录、歌词与 Samples.qml
@@ -348,9 +349,9 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）。阶段 3 建议顺序：
+**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架已完成，**下一步是第 3 步外壳**。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
-2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。
+2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。
 4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。
 
@@ -469,3 +470,11 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 验证：Debug 构建无警告，qmllint 无警告，clang-format 通过；离屏（软件渲染）两种模式启动无 QML 警告；niri Wayland 会话中用协议日志确认窗口几何 `(24, 24, 1000, 1074)`、输入区域、最小尺寸与不重启切换，用窗口截图确认阴影与圆角；XWayland 下能启动。拖动、缩放、双击、右键菜单等交互未检查；GNOME、KDE、Windows、macOS 未验证。
 - 随后按维护者意见调整（同日）：窗口框架移到共用模块 `Cirrus.Window`，Gallery 改用同一个 `AppWindow`；标题栏增加“隐藏”模式，平铺窗口管理器默认隐藏（UQ-02 更新）；启动参数统一为 `--titlebar=custom|system|hidden`／`CIRRUS_TITLEBAR`，替换 `--system-titlebar`；最小化图标改为 `remove`（图标 98 个）。验证：构建、qmllint、clang-format 无警告；Gallery 离屏截图（自绘、隐藏）与 niri 下截图正常；niri 下应用默认隐藏（窗口几何无边距），`--titlebar custom` 恢复阴影边距，非法取值给出警告并忽略。
 - 再次调整（同日）：隐藏模式与系统模式下，标题栏那一行没有应用内容时整行收起（此前隐藏模式只去掉了窗口按钮，仍留着一行标题，没有意义）；窗口标题改由 `AppWindow` 只在自绘模式显示。Gallery 侧栏加“标题栏”三选一切换，并记住上次的模式。离屏截图检查自绘、隐藏两种模式正常。
+
+### 阶段 3 第 2 步：展示层骨架（2026-10-30）
+
+- `Theme.motion.segment()`、`lerp()`。
+- 新模块 `Cirrus.Presentation`（`ui/presentation/`）：`App` 单例（settings、format、network、debug）、`LoadState`／`Failure`、请求句柄与数据源接口、假数据源、封面图片提供器、`LoadableModel`、`SongListModel`、示范用的 `PlaylistPageModel`，详见 [presentation.md §10](presentation.md)。
+- 应用与 Gallery 都装入假数据源；标题栏模式改由 `App.settings.titleBar` 记住（Gallery 原来的临时设置项取消），应用的外观绑定到 `App.settings`。应用暂时链接 `Cirrus.Samples` 供假数据使用。
+- Gallery 新增“数据与状态”页（`--page data`）。
+- 验证：构建、qmllint（仅 `ButtonContainer.qml` 原有的一条未使用导入提示）、clang-format 无警告；离屏截图检查数据页；临时检查程序跑通 13 项状态转换；应用离屏启动无警告。
