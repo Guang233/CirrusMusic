@@ -16,6 +16,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/third_party/m3shapes"
 add_subdirectory(theme)
 add_subdirectory(controls)
 add_subdirectory(window)
+add_subdirectory(presentation)
 add_subdirectory(samples)
 add_subdirectory(app)
 
