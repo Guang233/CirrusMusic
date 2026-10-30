@@ -197,4 +197,46 @@ ControlPage {
             }
         }
     }
+
+    SectionTitle {
+        text: qsTr("标签页")
+    }
+    Caption {
+        text: qsTr("MD3 主标签页：选中为 Primary，3 px 指示条与标签同宽，切换时滑动（fastSpatial）；放不下时可横向滚动。第二组带图标（高 64）。")
+    }
+    TabBar {
+        Layout.preferredWidth: 560
+        TabButton {
+            text: qsTr("歌曲")
+        }
+        TabButton {
+            text: qsTr("专辑")
+        }
+        TabButton {
+            text: qsTr("歌手")
+        }
+        TabButton {
+            text: qsTr("歌单")
+        }
+    }
+    TabBar {
+        Layout.preferredWidth: 560
+        currentIndex: 1
+        TabButton {
+            glyph: Symbols.favorite
+            text: qsTr("喜欢")
+        }
+        TabButton {
+            glyph: Symbols.queue_music
+            text: qsTr("歌单")
+        }
+        TabButton {
+            glyph: Symbols.album
+            text: qsTr("专辑")
+        }
+        TabButton {
+            glyph: Symbols.history
+            text: qsTr("最近播放")
+        }
+    }
 }
