@@ -61,6 +61,11 @@ AppWindow {
             page: dataPage
         },
         PageEntry {
+            key: "states"
+            title: qsTr("页面状态")
+            page: statesPage
+        },
+        PageEntry {
             key: "resources"
             title: qsTr("资源")
             page: resourcesPage
@@ -142,6 +147,11 @@ AppWindow {
     Component {
         id: dataPage
         DataPage {}
+    }
+
+    Component {
+        id: statesPage
+        StatesPage {}
     }
 
     Component {

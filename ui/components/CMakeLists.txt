@@ -15,6 +15,12 @@ qt_add_qml_module(cirrus_ui_components
         CoverArt.qml
         PlaybackClock.qml
         MiniPlayer.qml
+        Skeleton.qml
+        ListSkeleton.qml
+        StateMessage.qml
+        NoticeBar.qml
+        PageState.qml
+        SongList.qml
 )
 
 target_link_libraries(cirrus_ui_components

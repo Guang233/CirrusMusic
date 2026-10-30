@@ -20,6 +20,7 @@ qt_add_qml_module(appCirrusGallery
         pages/ListsPage.qml
         pages/NavigationPage.qml
         pages/DataPage.qml
+        pages/StatesPage.qml
 )
 
 set_target_properties(appCirrusGallery PROPERTIES

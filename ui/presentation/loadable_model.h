@@ -9,15 +9,17 @@
 namespace cirrus::ui
 {
 
-// What went wrong, for the page to show (`model.error.message`).
+// What went wrong, for the page to show (`model.error.message`). Writable so QML can
+// build one, e.g. `({message: "…", retryable: true})` in the gallery.
 class LoadError
 {
     Q_GADGET
     QML_VALUE_TYPE(loadError)
-    Q_PROPERTY(int kind MEMBER kind CONSTANT)           // Failure.Kind, -1 for none
-    Q_PROPERTY(QString message MEMBER message CONSTANT) // translated
-    Q_PROPERTY(bool retryable MEMBER retryable CONSTANT)
-    Q_PROPERTY(qint64 retryAfterMs MEMBER retryAfterMs CONSTANT) // 0 when not given
+    QML_STRUCTURED_VALUE
+    Q_PROPERTY(int kind MEMBER kind)           // Failure.Kind, -1 for none
+    Q_PROPERTY(QString message MEMBER message) // translated
+    Q_PROPERTY(bool retryable MEMBER retryable)
+    Q_PROPERTY(qint64 retryAfterMs MEMBER retryAfterMs) // 0 when not given
 
   public:
     int kind = -1;
@@ -34,7 +36,8 @@ class LoadError
 class LoadableModel : public QObject
 {
     Q_OBJECT
-    QML_ANONYMOUS
+    QML_ELEMENT
+    QML_UNCREATABLE("Base of the page models")
     Q_PROPERTY(int state READ state NOTIFY stateChanged) // LoadState
     // Reloading while content stays on screen; `state` keeps its value meanwhile.
     Q_PROPERTY(bool refreshing READ refreshing NOTIFY refreshingChanged)
