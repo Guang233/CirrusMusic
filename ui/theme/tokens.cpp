@@ -1,5 +1,6 @@
 #include "tokens.h"
 
+#include "fonts.h"
 #include "spring_math.h"
 
 #include <array>
@@ -17,16 +18,14 @@ struct TypeToken {
     qreal tracking;
 };
 
-TypeStyle makeStyle(const QString& family, TypeToken token)
+TypeStyle makeStyle(TypeToken token)
 {
     TypeStyle style;
     style.size = token.size;
     style.lineHeight = token.lineHeight;
     style.weight = token.weight;
     style.tracking = token.tracking;
-    style.font.setFamily(family);
-    style.font.setPixelSize(qRound(token.size));
-    style.font.setWeight(static_cast<QFont::Weight>(token.weight));
+    style.font = Fonts::instance()->font(token.weight, token.size);
     style.font.setLetterSpacing(QFont::AbsoluteSpacing, token.tracking);
     return style;
 }
@@ -84,39 +83,48 @@ std::atomic<bool> g_reducedMotion{false};
 
 } // namespace
 
-TypeScale::TypeScale(const QString& family, QObject* parent) : QObject(parent)
+TypeScale::TypeScale(QObject* parent) : QObject(parent)
+{
+    rebuild();
+    connect(Fonts::instance(), &Fonts::sansChanged, this, [this]() {
+        rebuild();
+        emit changed();
+    });
+}
+
+void TypeScale::rebuild()
 {
     // size, line height, weight, tracking; baseline then emphasized.
-    m_displayLarge = makeStyle(family, {57, 64, 400, -0.2});
-    m_displayLargeEmphasized = makeStyle(family, {57, 64, 500, 0});
-    m_displayMedium = makeStyle(family, {45, 52, 400, 0});
-    m_displayMediumEmphasized = makeStyle(family, {45, 52, 500, 0});
-    m_displaySmall = makeStyle(family, {36, 44, 400, 0});
-    m_displaySmallEmphasized = makeStyle(family, {36, 44, 500, 0});
-    m_headlineLarge = makeStyle(family, {32, 40, 400, 0});
-    m_headlineLargeEmphasized = makeStyle(family, {32, 40, 500, 0});
-    m_headlineMedium = makeStyle(family, {28, 36, 400, 0});
-    m_headlineMediumEmphasized = makeStyle(family, {28, 36, 500, 0});
-    m_headlineSmall = makeStyle(family, {24, 32, 400, 0});
-    m_headlineSmallEmphasized = makeStyle(family, {24, 32, 500, 0});
-    m_titleLarge = makeStyle(family, {22, 28, 400, 0});
-    m_titleLargeEmphasized = makeStyle(family, {22, 28, 500, 0});
-    m_titleMedium = makeStyle(family, {16, 24, 500, 0.2});
-    m_titleMediumEmphasized = makeStyle(family, {16, 24, 700, 0.15});
-    m_titleSmall = makeStyle(family, {14, 20, 500, 0.1});
-    m_titleSmallEmphasized = makeStyle(family, {14, 20, 700, 0.1});
-    m_bodyLarge = makeStyle(family, {16, 24, 400, 0.5});
-    m_bodyLargeEmphasized = makeStyle(family, {16, 24, 500, 0.15});
-    m_bodyMedium = makeStyle(family, {14, 20, 400, 0.2});
-    m_bodyMediumEmphasized = makeStyle(family, {14, 20, 500, 0.25});
-    m_bodySmall = makeStyle(family, {12, 16, 400, 0.4});
-    m_bodySmallEmphasized = makeStyle(family, {12, 16, 500, 0.4});
-    m_labelLarge = makeStyle(family, {14, 20, 500, 0.1});
-    m_labelLargeEmphasized = makeStyle(family, {14, 20, 700, 0.1});
-    m_labelMedium = makeStyle(family, {12, 16, 500, 0.5});
-    m_labelMediumEmphasized = makeStyle(family, {12, 16, 700, 0.5});
-    m_labelSmall = makeStyle(family, {11, 16, 500, 0.5});
-    m_labelSmallEmphasized = makeStyle(family, {11, 16, 700, 0.5});
+    m_displayLarge = makeStyle({57, 64, 400, -0.2});
+    m_displayLargeEmphasized = makeStyle({57, 64, 500, 0});
+    m_displayMedium = makeStyle({45, 52, 400, 0});
+    m_displayMediumEmphasized = makeStyle({45, 52, 500, 0});
+    m_displaySmall = makeStyle({36, 44, 400, 0});
+    m_displaySmallEmphasized = makeStyle({36, 44, 500, 0});
+    m_headlineLarge = makeStyle({32, 40, 400, 0});
+    m_headlineLargeEmphasized = makeStyle({32, 40, 500, 0});
+    m_headlineMedium = makeStyle({28, 36, 400, 0});
+    m_headlineMediumEmphasized = makeStyle({28, 36, 500, 0});
+    m_headlineSmall = makeStyle({24, 32, 400, 0});
+    m_headlineSmallEmphasized = makeStyle({24, 32, 500, 0});
+    m_titleLarge = makeStyle({22, 28, 400, 0});
+    m_titleLargeEmphasized = makeStyle({22, 28, 500, 0});
+    m_titleMedium = makeStyle({16, 24, 500, 0.2});
+    m_titleMediumEmphasized = makeStyle({16, 24, 700, 0.15});
+    m_titleSmall = makeStyle({14, 20, 500, 0.1});
+    m_titleSmallEmphasized = makeStyle({14, 20, 700, 0.1});
+    m_bodyLarge = makeStyle({16, 24, 400, 0.5});
+    m_bodyLargeEmphasized = makeStyle({16, 24, 500, 0.15});
+    m_bodyMedium = makeStyle({14, 20, 400, 0.2});
+    m_bodyMediumEmphasized = makeStyle({14, 20, 500, 0.25});
+    m_bodySmall = makeStyle({12, 16, 400, 0.4});
+    m_bodySmallEmphasized = makeStyle({12, 16, 500, 0.4});
+    m_labelLarge = makeStyle({14, 20, 500, 0.1});
+    m_labelLargeEmphasized = makeStyle({14, 20, 700, 0.1});
+    m_labelMedium = makeStyle({12, 16, 500, 0.5});
+    m_labelMediumEmphasized = makeStyle({12, 16, 700, 0.5});
+    m_labelSmall = makeStyle({11, 16, 500, 0.5});
+    m_labelSmallEmphasized = makeStyle({11, 16, 700, 0.5});
 }
 
 int SpringSpec::duration() const

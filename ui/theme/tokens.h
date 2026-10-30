@@ -51,40 +51,48 @@ class TypeScale : public QObject
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Use Theme.type")
-    Q_PROPERTY(cirrus::ui::TypeStyle displayLarge READ displayLarge CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle displayMedium READ displayMedium CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle displaySmall READ displaySmall CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle headlineLarge READ headlineLarge CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle headlineMedium READ headlineMedium CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle headlineSmall READ headlineSmall CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleLarge READ titleLarge CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleMedium READ titleMedium CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleSmall READ titleSmall CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodyLarge READ bodyLarge CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodyMedium READ bodyMedium CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodySmall READ bodySmall CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelLarge READ labelLarge CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelMedium READ labelMedium CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelSmall READ labelSmall CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle displayLargeEmphasized READ displayLargeEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle displayMediumEmphasized READ displayMediumEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle displaySmallEmphasized READ displaySmallEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle headlineLargeEmphasized READ headlineLargeEmphasized CONSTANT)
+    Q_PROPERTY(cirrus::ui::TypeStyle displayLarge READ displayLarge NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle displayMedium READ displayMedium NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle displaySmall READ displaySmall NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle headlineLarge READ headlineLarge NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle headlineMedium READ headlineMedium NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle headlineSmall READ headlineSmall NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle titleLarge READ titleLarge NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle titleMedium READ titleMedium NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle titleSmall READ titleSmall NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodyLarge READ bodyLarge NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodyMedium READ bodyMedium NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodySmall READ bodySmall NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle labelLarge READ labelLarge NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle labelMedium READ labelMedium NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle labelSmall READ labelSmall NOTIFY changed)
     Q_PROPERTY(
-        cirrus::ui::TypeStyle headlineMediumEmphasized READ headlineMediumEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle headlineSmallEmphasized READ headlineSmallEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleLargeEmphasized READ titleLargeEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleMediumEmphasized READ titleMediumEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle titleSmallEmphasized READ titleSmallEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodyLargeEmphasized READ bodyLargeEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodyMediumEmphasized READ bodyMediumEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle bodySmallEmphasized READ bodySmallEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelLargeEmphasized READ labelLargeEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelMediumEmphasized READ labelMediumEmphasized CONSTANT)
-    Q_PROPERTY(cirrus::ui::TypeStyle labelSmallEmphasized READ labelSmallEmphasized CONSTANT)
+        cirrus::ui::TypeStyle displayLargeEmphasized READ displayLargeEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle displayMediumEmphasized READ displayMediumEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle displaySmallEmphasized READ displaySmallEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle headlineLargeEmphasized READ headlineLargeEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle headlineMediumEmphasized READ headlineMediumEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle headlineSmallEmphasized READ headlineSmallEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle titleLargeEmphasized READ titleLargeEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle titleMediumEmphasized READ titleMediumEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle titleSmallEmphasized READ titleSmallEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodyLargeEmphasized READ bodyLargeEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodyMediumEmphasized READ bodyMediumEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle bodySmallEmphasized READ bodySmallEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle labelLargeEmphasized READ labelLargeEmphasized NOTIFY changed)
+    Q_PROPERTY(
+        cirrus::ui::TypeStyle labelMediumEmphasized READ labelMediumEmphasized NOTIFY changed)
+    Q_PROPERTY(cirrus::ui::TypeStyle labelSmallEmphasized READ labelSmallEmphasized NOTIFY changed)
 
   public:
-    explicit TypeScale(const QString& family, QObject* parent = nullptr);
+    // Follows Fonts: rebuilt when the text font changes.
+    explicit TypeScale(QObject* parent = nullptr);
 
 #define CIRRUS_TYPE_GETTERS(name)                                                                  \
     [[nodiscard]] TypeStyle name() const { return m_##name; }                                      \
@@ -92,7 +100,12 @@ class TypeScale : public QObject
     CIRRUS_TYPE_STYLES(CIRRUS_TYPE_GETTERS)
 #undef CIRRUS_TYPE_GETTERS
 
+  signals:
+    void changed();
+
   private:
+    void rebuild();
+
 #define CIRRUS_TYPE_MEMBERS(name)                                                                  \
     TypeStyle m_##name;                                                                            \
     TypeStyle m_##name##Emphasized;

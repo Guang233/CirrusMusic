@@ -35,6 +35,16 @@ AppWindow {
         property: "reduced"
         value: App.settings.reducedMotion
     }
+    Binding {
+        target: Fonts
+        property: "source"
+        value: App.settings.fontSource
+    }
+    Binding {
+        target: Fonts
+        property: "customFamily"
+        value: App.settings.customFontFamily
+    }
 
     AppShell {
         anchors.fill: parent

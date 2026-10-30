@@ -1,31 +1,75 @@
 #pragma once
 
+#include <QFont>
 #include <QObject>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
+class QJSEngine;
+class QQmlEngine;
+
 namespace cirrus::ui
 {
 
-// Family used for all text (UQ-03: currently the platform UI font).
-[[nodiscard]] QString textFontFamily();
-
-// Font families for QML. Text uses the platform UI font (no text font is
-// bundled yet, see UQ-03); icons use the bundled Material Symbols subset,
-// registered on first use.
-class Fonts final : public QObject
+// Fonts for the whole UI (docs/ui/README.md §4.2, UQ-03). Text uses the bundled MiSans
+// by default; the user may pick the system UI font or any installed family instead
+// (`source`, `customFamily`, set from App.settings). Missing glyphs (Korean, emoji…)
+// fall back to the system fonts. Icons always use the bundled Material Symbols.
+//
+// MiSans is one variable font whose `wght` axis runs from 150 to 700 (Regular is 330,
+// Bold 630) and Qt does not map QFont weights onto it, so text fonts come from font():
+// it maps CSS weights onto the axis for MiSans and uses plain weights otherwise.
+class Fonts : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    Q_PROPERTY(QString sans READ sans CONSTANT)
+    Q_PROPERTY(TextSource source READ source WRITE setSource NOTIFY sansChanged)
+    // For source Custom; an empty or missing family falls back to the bundled font.
+    Q_PROPERTY(QString customFamily READ customFamily WRITE setCustomFamily NOTIFY sansChanged)
+    // The text family in use.
+    Q_PROPERTY(QString sans READ sans NOTIFY sansChanged)
     Q_PROPERTY(QString symbols READ symbols CONSTANT)
+    // False when the build has no bundled text font (prepare_fonts.py not run).
+    Q_PROPERTY(bool bundledAvailable READ bundledAvailable CONSTANT)
+    Q_PROPERTY(QString systemFamily READ systemFamily CONSTANT)
 
   public:
-    explicit Fonts(QObject* parent = nullptr);
+    enum TextSource { Bundled, System, Custom };
+    Q_ENUM(TextSource)
 
-    [[nodiscard]] QString sans() const;
-    [[nodiscard]] QString symbols() const;
+    // The one instance, created on first use (needs QGuiApplication).
+    [[nodiscard]] static Fonts* instance();
+    // QML singleton factory: the instance, owned by C++.
+    static Fonts* create(QQmlEngine* qml, QJSEngine* js);
+
+    [[nodiscard]] TextSource source() const { return m_source; }
+    void setSource(TextSource source);
+    [[nodiscard]] QString customFamily() const { return m_customFamily; }
+    void setCustomFamily(const QString& family);
+    [[nodiscard]] QString sans() const { return m_sans; }
+    [[nodiscard]] QString symbols() const { return m_symbols; }
+    [[nodiscard]] bool bundledAvailable() const { return !m_bundled.isEmpty(); }
+    [[nodiscard]] QString systemFamily() const { return m_system; }
+
+    // Text font at a CSS weight (100–900) and pixel size, in the family in use.
+    Q_INVOKABLE QFont font(int weight, qreal pixelSize) const;
+    // Installed families, for picking a custom font.
+    Q_INVOKABLE QStringList families() const;
+
+  signals:
+    void sansChanged();
+
+  private:
+    explicit Fonts(QObject* parent = nullptr);
+    void update();
+
+    TextSource m_source = Bundled;
+    QString m_customFamily;
+    QString m_sans;
+    QString m_symbols;
+    QString m_bundled;
+    QString m_system;
 };
 
 } // namespace cirrus::ui

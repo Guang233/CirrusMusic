@@ -85,6 +85,9 @@ CMakeLists.txt.user*
 /.cache/
 /compile_commands.json
 
+# MiSans may not be distributed on its own: tools/ui/prepare_fonts.py fetches it
+/ui/theme/fonts/MiSansVF.ttf
+
 # Machine-local CMake configuration (commit the .example instead)
 /CMakeUserPresets.json
 

@@ -16,11 +16,12 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - Cross-platform project, Linux first. Windows/macOS are not verified locally.
 - Commit often (small conventional commits: `feat(ui): ...`, `docs(ui): ...`), without a Claude co-author trailer. The remote `origin` is a private GitHub repo; push only when the maintainer asks, never automatically after commits.
 - Do not hand-edit generated files: `ui/theme/Symbols.qml`, `ui/theme/fonts/*.ttf`, `ui/samples/**`. Regenerate with:
-  - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools)
+  - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools). It also downloads the default text font MiSans (`ui/theme/fonts/MiSansVF.ttf`), which is git-ignored because its license forbids distributing it on its own: run the script once after cloning, or builds fall back to the system font with a CMake warning.
   - `python3 tools/ui/generate_samples.py` (needs Pillow)
 - QML singletons need `QT_QML_SINGLETON_TYPE` in CMake; executables link `<module>plugin` and use `Q_IMPORT_QML_PLUGIN`.
 - Avoid QML property names of the form `onXxx` (parsed as signal handlers) and ECMAScript reserved words.
 - Do not copy code from GPL/AGPL reference projects; see `docs/ui/references.md`.
+- Text fonts come from `Theme.type.*` or `Fonts.font(weight, size)`; never set `font.weight` in QML (MiSans's weight axis is non-standard, see `docs/ui/README.md` §4.2).
 - Theme API and design decisions: `docs/ui/theme.md`. Use `Theme.color.*`, `Theme.type.*`, `Theme.shape.*`, `Theme.motion.*`; never hard-code colors in product QML. Use the `Spring` element (not `SpringAnimation`) for spring motion.
 - QML-registered C++ classes must not be `final` (Qt derives from them).
 - Controls (`Cirrus.Controls`, spec in `docs/ui/controls.md`) have no prefix: product QML imports `Cirrus.Controls` and never `QtQuick.Controls` (use `import QtQuick.Templates as T` for non-visual helpers such as `T.ButtonGroup`). Gallery pages may use `import QtQuick.Controls.Basic as B` for controls that do not exist yet.

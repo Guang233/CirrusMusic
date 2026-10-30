@@ -6,7 +6,8 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Samples
 
-// Phase 0 check: system text font and script fallback, bundled icons, sample covers.
+// Text font (bundled MiSans, system or a custom family) with its weights and script
+// fallback, bundled icons, sample covers.
 B.ScrollView {
     id: page
 
@@ -36,9 +37,11 @@ B.ScrollView {
     }
 
     component Sample: Text {
+        property int weight: 400
+        property real size: 22
         color: page.foreground
-        font.family: Fonts.sans
-        font.pixelSize: 22
+        // Fonts.font() maps the weight onto MiSans's axis; font.weight would not.
+        font: Fonts.font(weight, size)
         elide: Text.ElideRight
         Layout.fillWidth: true
     }
@@ -52,11 +55,34 @@ B.ScrollView {
             text: qsTr("字体")
         }
         Caption {
-            text: qsTr("文字：%1（系统字体，未随包附带）· 图标：%2").arg(Fonts.sans).arg(Fonts.symbols || qsTr("未加载"))
+            text: qsTr("文字：%1 · 图标：%2。内置字体为 MiSans（小米，可变字体，字重轴 150–700）；也可以用系统字体（%3）。这里切换不会保存，应用里在设置页选择。")
+                .arg(Fonts.sans).arg(Fonts.symbols || qsTr("未加载")).arg(Fonts.systemFamily)
+        }
+        ConnectedButtonGroup {
+            exclusive: true
+            Repeater {
+                model: [{
+                        value: Fonts.Bundled,
+                        label: qsTr("内置（MiSans）")
+                    }, {
+                        value: Fonts.System,
+                        label: qsTr("系统字体")
+                    }]
+                delegate: Button {
+                    required property var modelData
+                    size: Md.XSmall
+                    variant: Md.Tonal
+                    checkable: true
+                    enabled: modelData.value !== Fonts.Bundled || Fonts.bundledAvailable
+                    checked: Fonts.source === modelData.value
+                    text: modelData.label
+                    onClicked: Fonts.source = modelData.value
+                }
+            }
         }
 
         Caption {
-            text: qsTr("字重 Thin–Black（实际可用字重取决于系统字体）")
+            text: qsTr("字重 100–900（CSS 刻度；MiSans 映射到它的命名实例：400 Regular、500 Medium、600 Semibold、700 Bold）")
             Layout.topMargin: 12
         }
         Repeater {
@@ -64,7 +90,7 @@ B.ScrollView {
             delegate: Sample {
                 required property int modelData
                 text: modelData + "  Harbor Lights 落日航线 0123456789"
-                font.weight: modelData
+                weight: modelData
             }
         }
 
@@ -77,7 +103,7 @@ B.ScrollView {
         }
         Sample {
             text: "播放中：Last Train Home — Night Transit, Prism Theory (2025)"
-            font.pixelSize: 15
+            size: 15
         }
 
         SectionTitle {

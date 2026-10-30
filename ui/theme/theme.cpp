@@ -49,9 +49,8 @@ mcu::ts::Variant toMcu(Theme::Variant variant)
 } // namespace
 
 Theme::Theme(QObject* parent)
-    : QObject(parent), m_color(new ColorScheme(this)),
-      m_type(new TypeScale(textFontFamily(), this)), m_motion(new Motion(this)),
-      m_system(new SystemAppearance(this))
+    : QObject(parent), m_color(new ColorScheme(this)), m_type(new TypeScale(this)),
+      m_motion(new Motion(this)), m_system(new SystemAppearance(this))
 {
     m_worker.setMaxThreadCount(1);
     connect(m_system, &SystemAppearance::colorSchemeChanged, this, &Theme::updateDark);

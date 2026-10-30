@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Fetch the pinned icon font, verify it and regenerate the bundled assets.
+"""Fetch the pinned fonts, verify them and regenerate the bundled assets.
 
-Development tool only; the application never downloads fonts. Text uses the
-platform UI font, so no text font is bundled (docs/ui/README.md, UQ-03). Outputs:
+Development tool only; the application never downloads fonts. Outputs:
   ui/theme/fonts/MaterialSymbolsRounded.ttf  subset of the glyphs in symbols.txt
   ui/theme/Symbols.qml                       name -> codepoint singleton
-Requires fontTools (pyftsubset).
+  ui/theme/fonts/MiSansVF.ttf                the default text font, unmodified
+MiSans may not be modified or distributed on its own (fonts/MiSans-LICENSE.txt), so
+MiSansVF.ttf is git-ignored: this script fetches it and the build embeds it in the
+executables. Requires fontTools (pyftsubset).
 """
 
 import argparse
@@ -14,6 +16,7 @@ import re
 import shutil
 import sys
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from fontTools import subset
@@ -40,6 +43,14 @@ PINNED = {
         "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
     ),
 }
+
+# MiSans 4.009 (Xiaomi). Only the variable font is used; the archive also holds ten
+# static weights in TTF/OTF/WOFF. The archive is not pinned (the site may repack
+# it), the extracted font is.
+MISANS_ARCHIVE = "https://hyperos.mi.com/font-download/MiSans.zip"
+# Inside the archive's 可变字体 folder, whose name is not stored as UTF-8: matched by file name.
+MISANS_MEMBER = "MiSansVF.ttf"
+MISANS_SHA256 = "0ddef90648998900175cfdca9a6f087a2544c182f130b0ad4f7e94a03a115e79"
 
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
 # ECMAScript/QML words that cannot be property names; such icons get a trailing "_".
@@ -73,6 +84,30 @@ def fetch(name: str) -> Path:
     if actual != expected:
         sys.exit(f"{name}: SHA-256 mismatch ({actual}), refusing to continue")
     return target
+
+
+def fetch_misans() -> None:
+    target = FONTS / "MiSansVF.ttf"
+    if target.exists() and sha256(target) == MISANS_SHA256:
+        return
+    archive = CACHE / "MiSans.zip"
+    if not archive.exists():
+        CACHE.mkdir(parents=True, exist_ok=True)
+        print("download MiSans.zip (about 230 MB)")
+        with urllib.request.urlopen(MISANS_ARCHIVE, timeout=600) as response, \
+                archive.open("wb") as out:
+            shutil.copyfileobj(response, out)
+    with zipfile.ZipFile(archive) as zf:
+        members = [n for n in zf.namelist()
+                   if n.endswith("/" + MISANS_MEMBER) and not n.startswith("__MACOSX/")]
+        if len(members) != 1:
+            sys.exit(f"MiSans.zip: expected one {MISANS_MEMBER}, found {members}")
+        target.write_bytes(zf.read(members[0]))
+    actual = sha256(target)
+    if actual != MISANS_SHA256:
+        target.unlink()
+        sys.exit(f"MiSansVF.ttf: SHA-256 mismatch ({actual}); delete {archive} to download "
+                 "again, or check whether MiSans was updated upstream")
 
 
 def read_icon_names() -> list[str]:
@@ -129,9 +164,15 @@ def write_symbols_qml(names: list[str], table: dict[str, int]) -> None:
 
 
 def main() -> None:
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--skip-misans", action="store_true",
+                        help="only the icon font (builds then fall back to the system font)")
+    args = parser.parse_args()
     for name in PINNED:
         fetch(name)
+    if not args.skip_misans:
+        fetch_misans()
 
     shutil.copyfile(CACHE / "MaterialSymbols-LICENSE", FONTS / "MaterialSymbols-LICENSE")
 

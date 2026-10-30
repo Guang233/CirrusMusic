@@ -96,8 +96,8 @@ flowchart TD
 ```text
 ui/
   CMakeLists.txt  所有 UI 模块输出到 build/<preset>/qml/，便于 qmllint 解析导入
-  theme/          Cirrus.Theme：fonts.{h,cpp}（文字用系统字体、注册图标字体）、Symbols.qml（图标码位，生成）
-    fonts/        图标字体子集、许可文件、symbols.txt（图标清单）
+  theme/          Cirrus.Theme：fonts.{h,cpp}（文字字体来源与字重映射、注册随包字体）、Symbols.qml（图标码位，生成）
+    fonts/        图标字体子集、MiSans（下载，不进 git）、许可文件、symbols.txt（图标清单）
   controls/       Cirrus.Controls：MD3E 控件、共享基础（状态层、焦点环、阴影、MorphShape）、md.h（Md 枚举）、shaders/（涟漪）
   window/         Cirrus.Window：AppWindow 与标题栏、窗口按钮、缩放边带、WindowFrame（§6.1），应用和 Gallery 共用
   samples/        Cirrus.Samples：虚构示例封面、目录、歌词（生成），只供 Gallery 和假数据实现
@@ -107,7 +107,7 @@ ui/
   components/     Cirrus.Components：页面栈、页面骨架、封面、迷你播放条、PlaybackClock 等业务组件
   （按需新增 player/）
 tools/ui/
-  prepare_fonts.py      获取固定版本字体、校验 SHA-256、裁剪图标、生成 Symbols.qml
+  prepare_fonts.py      获取固定版本字体（图标、MiSans）、校验 SHA-256、裁剪图标、生成 Symbols.qml
   generate_samples.py   生成示例封面、目录、歌词与 Samples.qml
 third_party/
   material-color-utilities/   阶段 1 引入（§4.1）
@@ -152,8 +152,9 @@ third_party/
 ### 4.2 字体
 
 - MD3 字体层级：15 个基础样式 + 15 个强调样式（Display、Headline、Title、Body、Label 各大中小）。
-- **当前决定：文字使用系统 UI 字体，不随包附带文字字体（UQ-03）。** 中文和其他文字由系统自行回退（Linux 常见 Noto Sans CJK，Windows 微软雅黑，macOS 苹方）。代价是各平台观感不同，也不能依赖字宽、圆度等可变轴，字体层级只用字号、字重、行高和字距表达。
-- 唯一的修改点是 `ui/theme/fonts.cpp` 的 `textFamily()`；QML 统一使用 `Fonts.sans`，以后改为随包字体时页面不用改。候选字体（Google Sans Flex、Noto Sans SC）的来源与限制记录在 `ui/theme/fonts/README.md`。
+- **决定（UQ-03，2026-10-30）：默认使用随包的 MiSans（小米），用户可在设置里改为系统字体或任选一个已安装的字体（`App.settings.fontSource`、`customFontFamily`）。** MiSans 4.009 可变字体（`MiSansVF.ttf`，20 MB，`wght` 150–700）覆盖简繁中文、日文假名、拉丁、希腊、西里尔；缺少的字符（韩文、emoji 等）由系统字体回退。
+- MiSans 的许可（`ui/theme/fonts/MiSans-LICENSE.txt`）要求在软件中注明使用了 MiSans、不得修改、不得单独分发，所以：原样打包（不裁剪子集）；字体文件不进 git，由 `tools/ui/prepare_fonts.py` 下载并校验 SHA-256，构建时嵌入可执行文件；设置页的字体选项注明“内置字体为小米 MiSans”。缺少字体文件时构建给出警告并改用系统字体。
+- MiSans 的字重轴不是标准刻度（Regular 330、Medium 380、Semibold 520、Bold 630），Qt 也不会把 `QFont` 字重映射到这条轴上（只用默认值，700 及以上还会人为加粗）。所以文字字体统一由 `Fonts.font(weight, pixelSize)` 生成：使用 MiSans 时把 CSS 字重按命名实例映射到轴上，其他字体照常设置字重。`Theme.type` 的样式都经由它生成，字体切换时整套样式重建并通知；没有设置字体的 `Text` 跟随应用默认字体（同样随设置切换）。QML 里需要特定字重时用 `Fonts.font()`，不要写 `font.weight`。
 - 中西文混排时检查基线和行高；播放页歌词以中文为主，字体选择要以中文效果优先。
 
 ### 4.3 形状、状态层与高度
@@ -327,7 +328,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 事项 | 处理方式 |
 | --- | --- |
 | 图形后端 | Qt RHI：Linux 为 Vulkan/OpenGL，Windows 为 D3D11，macOS 为 Metal。自定义着色器通过 ShaderTools 生成各后端版本 |
-| 字体 | 文字用各平台系统字体（UQ-03），观感差异需分别检查；图标字体随包附带 |
+| 字体 | 文字默认用随包的 MiSans，各平台一致；用户选系统字体时观感随平台不同（UQ-03）。图标字体随包附带 |
 | 标题栏 | 见 §6.1 |
 | 快捷键 | 使用 `StandardKey`，自定义快捷键按平台区分 Ctrl 和 Cmd |
 | 缩放 | 测试 100%/125%/150%/200%，以及 Wayland 分数缩放 |
@@ -342,7 +343,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | 资源 | 许可 | 用途 | 状态 |
 | --- | --- | --- | --- |
 | Material Symbols Rounded | Apache-2.0 | 全局图标（可变字体：填充、字重、等级、光学尺寸） | 候选，阶段 0 确认是否裁剪子集 |
-| 文字字体 | — | 文字显示 | 暂用系统字体，不打包（UQ-03）；候选见 `ui/theme/fonts/README.md` |
+| MiSans 4.009（可变字体） | MiSans 字体知识产权许可协议（免费商用；须注明使用、不得修改、不得单独分发） | 默认文字字体 | 已采用（UQ-03）：不进 git，`prepare_fonts.py` 下载后构建时嵌入，见 `ui/theme/fonts/README.md` |
 | material-color-utilities | Apache-2.0 | 取色与配色方案 | 已引入固定提交 `5b3618b1`（C++，3 处本地修改），见 `third_party/material-color-utilities/README.md` |
 | m3shapes | Apache-2.0 | MD3E 形状与变形 | 已引入固定提交 `8a6fe89`（未修改源码，自写 CMake），见 `third_party/m3shapes/README.md` |
 
@@ -350,11 +351,11 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成，**下一步是第 4 步：页面状态组件、歌曲列表和 §6.3 的页面**。阶段 3 建议顺序：
+**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：下一步是写页面设计，从首页开始**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
-4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。
+4. `Cirrus.Components` 的页面状态组件和歌曲列表，再逐个做 §6.3 的页面；其余第二批控件按页面需要再做。**通用部分已完成；页面先出设计、经维护者确认后再实现（现有页面只是原型）。**
 
 | 阶段 | 交付内容 | 完成条件 |
 | --- | --- | --- |
@@ -385,7 +386,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | --- | --- | --- | --- |
 | UQ-01 | 外壳种子色默认来源 | **已决定**：默认系统强调色，封面取色为可选项；播放页另行从封面取背景与文字颜色、不用 MD3 配色 | 已决定 |
 | UQ-02 | 窗口标题栏方案（§6.1） | **已决定**：自绘／系统／隐藏三种模式，默认自绘、平铺窗口管理器默认隐藏；设置中可改，另有启动参数作为逃生通道 | 已决定 |
-| UQ-03 | 文字字体：系统字体还是随包附带 | **暂定使用系统字体，不打包**；以后可能改为随包，也可能一直不打包。修改点见 §4.2 | 维护者以后决定 |
+| UQ-03 | 文字字体：系统字体还是随包附带 | **已决定（2026-10-30）**：默认随包 MiSans，用户可选系统字体或自定义字体，见 §4.2 | 已关闭 |
 | UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2025 规范下 Expressive 已保持种子色相，可在原型中比较 | 阶段 3 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
@@ -495,3 +496,18 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - Gallery：“导航”页（`--page navigation`）演示导航栏三种形态与页面栈；“数据与状态”页加播放区（顺序、循环、进度、迷你播放条），`--grab` 时自动开始播放。
 - 待定：“跟随封面”的主题色来源还没有接到当前歌曲的封面（`Theme.cover` 只接受本地文件或 qrc，需要封面缓存给出文件路径），随阶段 4 的切歌换色一起做。
 - 验证：构建、qmllint（仅原有的一条提示）、clang-format 无警告；离屏截图检查宽 1300、900 的外壳、歌单页、设置页、播放中与失败状态的迷你播放条；用临时钩子（未提交）检查页面栈的连续前进与返回、中途反向、缓存释放与重建，以及播放的自然结束、列表结束、列表循环、单曲循环和 so-012 失败。
+
+### 阶段 3 第 4 步（进行中）：页面状态、通用列表与页面原型（2026-10-30）
+
+- `Cirrus.Components`：`PageState`（骨架屏、空、错误、离线、未登录，刷新时的加载指示器）、`Skeleton`／`ListSkeleton`、`StateMessage`、`NoticeBar`、`SongList`（分段列表、歌曲菜单、分页）、`CollectionCard`／`CollectionGrid`／`CollectionView`、`LoadMoreFooter`。Gallery 新增“页面状态”页（`--page states`）。
+- 第二批控件：`TabBar`／`TabButton`、`Chip`（controls.md §8b）。
+- 展示层：专辑、歌手、搜索（建议、热搜、分页结果）、首页／发现、每日推荐、音乐库的页面模型，`PagedModel`、`CollectionListModel`，`App.session`（扫码登录，假实现自动走完流程，二维码为不可扫描的示意图）、私人 FM，以及对应的假数据源。
+- 页面原型：首页、发现、搜索、专辑、歌手、每日推荐、音乐库、登录，设置页的“账号”一节。**这些页面没有经过设计评审**，只用于验证模型和组件；维护者要求先设计后实现，正式页面按设计重写。
+
+### 文字字体：MiSans（2026-10-30）
+
+- UQ-03 关闭：默认文字字体改为随包的 MiSans 4.009 可变字体，用户可在设置里改为系统字体或自定义字体（§4.2）。
+- `tools/ui/prepare_fonts.py` 从小米官网下载 MiSans 字体包，取出 `MiSansVF.ttf` 并校验 SHA-256（`--skip-misans` 只处理图标字体）；文件按许可不进 git，构建时作为大资源嵌入可执行文件（约 20 MB）。
+- `Fonts` 改为全局单例：`source`（内置／系统／自定义）、`customFamily`、`sans`、`bundledAvailable`、`systemFamily`、`font(weight, pixelSize)`、`families()`；`Theme.type` 随字体切换重建。`App.settings` 加 `fontSource`、`customFontFamily`，`Main.qml` 绑定到 `Fonts`；设置页加“字体”选项（自定义时从已安装字体中选）。Gallery 默认使用 MiSans，资源页可临时切换内置／系统字体并显示 100–900 字重。
+- 验证：构建、qmllint、clang-format 无警告；离屏截图检查 Gallery 资源页的字重（此前用 `font.weight` 时 100–700 都是同一粗细、700 以上为人工加粗）、混排回退，以及应用设置页切换到系统字体后整页立即更新。
+

@@ -160,6 +160,61 @@ PageScaffold {
                 value: App.settings.seedSource
                 onChosen: value => App.settings.seedSource = value
             }
+            Choice {
+                width: column.width
+                label: qsTr("字体")
+                hint: Fonts.bundledAvailable
+                      ? qsTr("内置字体为小米 MiSans。字体缺少的字符（如韩文、emoji）由系统字体补全。")
+                      : qsTr("这个版本没有内置字体，使用系统字体。")
+                options: [{
+                        value: Fonts.Bundled,
+                        text: qsTr("内置（MiSans）")
+                    }, {
+                        value: Fonts.System,
+                        text: qsTr("系统字体")
+                    }, {
+                        value: Fonts.Custom,
+                        text: qsTr("自定义")
+                    }]
+                value: App.settings.fontSource
+                onChosen: value => App.settings.fontSource = value
+            }
+            // The custom family, from the installed fonts.
+            Row {
+                visible: App.settings.fontSource === Fonts.Custom
+                spacing: 12
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("字体族")
+                    color: Theme.color.onSurfaceVariant
+                    font: Theme.type.bodyMedium.font
+                }
+                Button {
+                    id: familyButton
+                    variant: Md.Outlined
+                    trailingGlyph: Symbols.keyboard_arrow_down
+                    text: Fonts.customFamily !== "" && Fonts.sans === Fonts.customFamily
+                          ? Fonts.customFamily : qsTr("选择字体")
+                    onClicked: familyMenu.popup(familyButton, 0, familyButton.height)
+                }
+                Menu {
+                    id: familyMenu
+                    Instantiator {
+                        // Built when first needed: there can be hundreds.
+                        active: App.settings.fontSource === Fonts.Custom
+                        model: active ? Fonts.families() : []
+                        delegate: MenuItem {
+                            required property string modelData
+                            checkable: true
+                            checked: modelData === App.settings.customFontFamily
+                            text: modelData
+                            onTriggered: App.settings.customFontFamily = modelData
+                        }
+                        onObjectAdded: (index, object) => familyMenu.insertItem(index, object as MenuItem)
+                        onObjectRemoved: (index, object) => familyMenu.removeItem(object as MenuItem)
+                    }
+                }
+            }
             Toggle {
                 text: qsTr("减少动态效果")
                 supportingText: qsTr("页面切换改为淡入淡出，不做位移和缩放")

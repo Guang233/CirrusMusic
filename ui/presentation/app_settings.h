@@ -8,8 +8,8 @@ namespace cirrus::ui
 {
 
 // User settings (App.settings), persisted with QSettings. Appearance values are the
-// integer values of the matching Theme enums, which Main.qml binds to Theme; this
-// layer does not depend on the theme module.
+// integer values of the matching Theme and Fonts enums, which Main.qml binds to them;
+// this layer does not depend on the theme module.
 class AppSettings : public QObject
 {
     Q_OBJECT
@@ -23,6 +23,11 @@ class AppSettings : public QObject
     Q_PROPERTY(int variant READ variant WRITE setVariant NOTIFY variantChanged)
     Q_PROPERTY(
         bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY reducedMotionChanged)
+    // Fonts.TextSource: Bundled (0, MiSans, default), System, Custom.
+    Q_PROPERTY(int fontSource READ fontSource WRITE setFontSource NOTIFY fontSourceChanged)
+    // Family for fontSource Custom.
+    Q_PROPERTY(QString customFontFamily READ customFontFamily WRITE setCustomFontFamily NOTIFY
+                   customFontFamilyChanged)
     // TitleBarMode (Cirrus.Window), or -1 until the user picks one: the default then
     // follows the desktop. Applied at startup; see docs/ui/README.md §6.1.
     Q_PROPERTY(int titleBar READ titleBar WRITE setTitleBar NOTIFY titleBarChanged)
@@ -42,6 +47,10 @@ class AppSettings : public QObject
     void setVariant(int variant);
     [[nodiscard]] bool reducedMotion() const;
     void setReducedMotion(bool reduced);
+    [[nodiscard]] int fontSource() const;
+    void setFontSource(int source);
+    [[nodiscard]] QString customFontFamily() const;
+    void setCustomFontFamily(const QString& family);
     [[nodiscard]] int titleBar() const;
     void setTitleBar(int mode);
     [[nodiscard]] bool showTranslation() const;
@@ -54,6 +63,8 @@ class AppSettings : public QObject
     void seedSourceChanged();
     void variantChanged();
     void reducedMotionChanged();
+    void fontSourceChanged();
+    void customFontFamilyChanged();
     void titleBarChanged();
     void showTranslationChanged();
     void showRomanizationChanged();

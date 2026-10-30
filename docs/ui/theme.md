@@ -87,7 +87,7 @@ material-color-utilities 的 C++ 实现只有 2021 规范，MD3 Expressive 使�
 
 ## 4. 字体层级
 
-30 个样式的字号、行高、字重、字距取自 androidx compose material3 `TypeScaleTokens`（该文件最后提交 2026-08-05）。强调样式与基础样式同字号同行高，字重提高（Display/Headline/Title Large/Body 为 500，Title Medium/Small 与 Label 为 700），部分字距不同。字体统一使用 `Fonts.sans`（系统字体，见 UQ-03）；MD3 的 sp 按 1:1 映射为逻辑像素。
+30 个样式的字号、行高、字重、字距取自 androidx compose material3 `TypeScaleTokens`（该文件最后提交 2026-08-05）。强调样式与基础样式同字号同行高，字重提高（Display/Headline/Title Large/Body 为 500，Title Medium/Small 与 Label 为 700），部分字距不同。字体由 `Fonts.font(weight, size)` 生成（默认 MiSans，可选系统或自定义字体，见 README §4.2）：MiSans 的字重经它映射到可变轴，所以 QML 里需要特定字重时用 `Fonts.font()`，不写 `font.weight`。字体切换时 `Theme.type` 重建并通知。MD3 的 sp 按 1:1 映射为逻辑像素。
 
 ## 5. 圆角、状态层、高度
 

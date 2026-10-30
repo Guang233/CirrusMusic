@@ -56,6 +56,25 @@ void AppSettings::setReducedMotion(bool reduced)
         emit reducedMotionChanged();
 }
 
+int AppSettings::fontSource() const { return read("appearance/fontSource", 0); }
+
+void AppSettings::setFontSource(int source)
+{
+    if (write("appearance/fontSource", source, 0))
+        emit fontSourceChanged();
+}
+
+QString AppSettings::customFontFamily() const
+{
+    return read("appearance/customFontFamily", QString());
+}
+
+void AppSettings::setCustomFontFamily(const QString& family)
+{
+    if (write("appearance/customFontFamily", family, QString()))
+        emit customFontFamilyChanged();
+}
+
 int AppSettings::titleBar() const { return read("window/titleBar", -1); }
 
 void AppSettings::setTitleBar(int mode)
