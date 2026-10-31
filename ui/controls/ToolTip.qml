@@ -2,13 +2,18 @@ import QtQuick
 import QtQuick.Templates as T
 import Cirrus.Theme
 
-// MD3 plain tooltip. Centered above its parent; shows after 500 ms.
+// MD3 plain tooltip. Centered above its parent, or below it near the top of the
+// window (the top bar), where above would land in the window's shadow margin or off
+// screen; shows after 500 ms.
 //   ToolTip { parent: someItem; text: qsTr("下一首"); visible: someItem.hovered }
 T.ToolTip {
     id: control
 
+    // Decided when the tooltip is created (on first hover); top bar items stay put.
+    readonly property bool below: parent ? parent.mapToItem(null, 0, 0).y < 72 : false
+
     x: parent ? Math.round((parent.width - width) / 2) : 0
-    y: -height - 4
+    y: below ? (parent ? parent.height : 0) + 4 : -height - 4
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,

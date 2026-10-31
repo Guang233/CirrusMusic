@@ -44,7 +44,8 @@ Item {
         Fade
     }
 
-    function push(component: Component, properties: var): Item {
+    // `transition`: PageStack.Kind.Forward (default) or Fade (e.g. switching sections).
+    function push(component: Component, properties: var, transition: int): Item {
         const previous = currentItem;
         const item = create(component, properties ?? {});
         entries = entries.concat([{
@@ -54,7 +55,8 @@ Item {
                 state: undefined
             }]);
         trim();
-        begin(item, PageStack.Kind.Forward, false, previous);
+        begin(item, transition === PageStack.Kind.Fade ? PageStack.Kind.Fade : PageStack.Kind.Forward,
+              false, previous);
         return item;
     }
 

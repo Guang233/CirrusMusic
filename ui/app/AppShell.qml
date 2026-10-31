@@ -26,7 +26,11 @@ Item {
     readonly property SearchModel searchModel: searchModelObject
     // The search input, in the top bar; Main connects it.
     property SearchField searchField
-    // Pages left with back, for forward (component and properties).
+    // History like a browser's: every page visited is an entry of the page stack, and
+    // `sections` holds the rail destination of each entry (for the rail's selection).
+    // Back returns to the page visited before; forward revisits pages left with back
+    // ({component, properties, section}) until something new is opened.
+    property var sections: []
     property var forwardEntries: []
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
@@ -48,21 +52,29 @@ Item {
         rail.expanded = !rail.expanded;
     }
 
-    // A new page on top; forward history ends here, as in a browser.
+    // A new page on top, in the current section; forward history ends here.
     function go(component: Component, properties: var) {
-        forwardEntries = [];
-        stack.push(component, properties);
+        visit(component, properties, rail.currentIndex, PageStack.Kind.Forward);
     }
 
-    // Top-level destination: clears the history.
+    // A rail destination, as a new history entry (fading in). Nothing happens when it
+    // is the page already shown.
     function select(index: int) {
-        rail.currentIndex = index;
-        forwardEntries = [];
-        stack.replaceAll(destinations[index].page, {
-            shell: shell
-        });
         if (!large)
             rail.expanded = false;
+        const top = stack.entries[stack.entries.length - 1];
+        if (top && top.component === destinations[index].page)
+            return;
+        visit(destinations[index].page, {
+            shell: shell
+        }, index, PageStack.Kind.Fade);
+    }
+
+    function visit(component: Component, properties: var, section: int, transition: int) {
+        forwardEntries = [];
+        sections = sections.concat([section]);
+        rail.currentIndex = section;
+        stack.push(component, properties, transition);
     }
 
     function openPlaylist(key: string) {
@@ -161,11 +173,15 @@ Item {
         if (stack.depth < 2)
             return;
         const leaving = stack.entries[stack.entries.length - 1];
-        if (stack.pop())
-            forwardEntries = forwardEntries.concat([{
-                    component: leaving.component,
-                    properties: leaving.properties
-                }]);
+        if (!stack.pop())
+            return;
+        forwardEntries = forwardEntries.concat([{
+                component: leaving.component,
+                properties: leaving.properties,
+                section: sections[sections.length - 1]
+            }]);
+        sections = sections.slice(0, -1);
+        rail.currentIndex = sections[sections.length - 1];
     }
 
     function forward() {
@@ -173,12 +189,19 @@ Item {
             return;
         const next = forwardEntries[forwardEntries.length - 1];
         forwardEntries = forwardEntries.slice(0, -1);
-        stack.push(next.component, next.properties);
+        sections = sections.concat([next.section]);
+        rail.currentIndex = next.section;
+        stack.push(next.component, next.properties,
+                   next.component === destinations[next.section].page ? PageStack.Kind.Fade
+                                                                      : PageStack.Kind.Forward);
     }
 
     Component.onCompleted: {
         rail.snap(large);
-        select(0);
+        sections = [0];
+        stack.replaceAll(homePage, {
+            shell: shell
+        });
     }
     onLargeChanged: rail.snap(large)
 

@@ -7,7 +7,8 @@ import Cirrus.Theme
 // follows clicks and `activated(index)` reports them. `header` holds e.g. the menu
 // button, left-aligned with the indicators (center a 40 px button with x: 8).
 // `modal`: the rail expands over the content (the shell adds the scrim); its floating
-// look (SurfaceContainer, rounded trailing corners, shadow) grows with the expansion.
+// look (SurfaceContainer, rounded trailing corners) grows with the expansion. No
+// shadow: the scrim already sets it apart.
 // `footer` sits at the bottom (e.g. account and settings; it lays itself out for
 // `progress`). `expandedContent` fills the space between the items and the footer
 // while expanded (e.g. the user's playlists): it is laid out at the expanded width,
@@ -96,14 +97,6 @@ Rectangle {
     topRightRadius: Theme.shape.large * floating
     bottomRightRadius: Theme.shape.large * floating
 
-    Elevation {
-        anchors.fill: parent
-        z: -1
-        level: Theme.elevation.level2
-        opacity: root.floating
-        topRightRadius: root.topRightRadius
-        bottomRightRadius: root.bottomRightRadius
-    }
 
     Loader {
         id: headerLoader

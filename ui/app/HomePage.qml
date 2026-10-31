@@ -164,7 +164,7 @@ Item {
         Column {
             id: column
             x: (page.width - width) / 2
-            y: 8
+            y: 24
             width: page.columnWidth
             spacing: 40
 

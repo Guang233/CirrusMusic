@@ -4,8 +4,9 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// The persistent mini player (docs/ui/README.md §6.2): a floating bar with the cover,
-// title, transport controls, time and a progress line. It slides in once something is
+// The persistent mini player (docs/ui/README.md §6.2): a bar with the cover, title,
+// transport controls, time and a progress line. Flat, no shadow: in the app it is
+// part of the frame under the content panel (docs/ui/pages/shell.md §0). It slides in once something is
 // queued; the shell keeps `reservedHeight` free below the pages. Narrow bars drop
 // "previous" and the time.
 Item {
@@ -13,7 +14,7 @@ Item {
 
     readonly property bool active: App.player.status !== Playback.Empty
     // Space to keep free below the content, including the bottom margin.
-    property real bottomMargin: 12
+    property real bottomMargin: 4
     readonly property real reservedHeight: (implicitHeight + bottomMargin) * reveal.value
     readonly property bool wide: width >= 560
 
@@ -43,14 +44,7 @@ Item {
         // Slides up from below the window edge.
         y: (1 - reveal.value) * (height + root.bottomMargin)
         radius: Theme.shape.large
-        color: Theme.color.surfaceContainerHigh
-
-        Elevation {
-            anchors.fill: parent
-            z: -1
-            level: Theme.elevation.level2
-            radius: card.radius
-        }
+        color: "transparent"
 
         TapHandler {
             onTapped: root.openRequested()
