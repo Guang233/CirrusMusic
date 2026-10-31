@@ -351,7 +351,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-30）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页设计已写完（[pages/home.md](pages/home.md)），等待评审和 D1–D5 的决定**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），等待维护者看效果；之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -378,7 +378,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | [`docs/ui/controls.md`](controls.md) 控件清单与各控件规格 | 阶段 2（已完成第一批） |
 | [`docs/ui/motion-choreography.md`](motion-choreography.md) 过渡编排说明 | 阶段 3 开始前（已完成） |
 | [`docs/ui/presentation.md`](presentation.md) ViewModel 与数据源接口 | 阶段 3 开始前（已完成） |
-| `docs/ui/pages/*.md` 各页面设计（[首页](pages/home.md)已写，待评审） | 每个页面实现前 |
+| `docs/ui/pages/*.md` 各页面设计（[首页](pages/home.md)、[外壳](pages/shell.md)已写） | 每个页面实现前 |
 | `docs/ui/player.md` 播放页规格 | 阶段 4 开始前 |
 
 ## 14. 待决问题
@@ -512,3 +512,10 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - `Fonts` 改为全局单例：`source`（内置／系统／自定义）、`customFamily`、`sans`、`bundledAvailable`、`systemFamily`、`font(weight, pixelSize)`、`families()`；`Theme.type` 随字体切换重建。`App.settings` 加 `fontSource`、`customFontFamily`，`Main.qml` 绑定到 `Fonts`；设置页加“字体”选项（自定义时从已安装字体中选）。Gallery 默认使用 MiSans，资源页可临时切换内置／系统字体并显示 100–900 字重。
 - 验证：构建、qmllint、clang-format 无警告；离屏截图检查 Gallery 资源页的字重（此前用 `font.weight` 时 100–700 都是同一粗细、700 以上为人工加粗）、混排回退，以及应用设置页切换到系统字体后整页立即更新。
 
+**首页与外壳第一版（2026-10-31）**
+
+- 按 [pages/home.md](pages/home.md) 重写首页：顶部"今日"卡片（大号日期数字，播放今日推荐时字重从 200 弹到 630；前 4 首封面叠放；第一首和推荐理由）和私人 FM 卡片，下面是最近听过（两列分段列表）、每日推荐歌单；未登录时是登录邀请、推荐歌单、新碟上架。各区块分别加载和失败（`HomeSection`）。维护者决定相似歌曲不放首页。
+- 按 [pages/shell.md](pages/shell.md) 改外壳：导航目的地只剩首页、发现、音乐库；展开的侧边栏加"我的"和创建／收藏的歌单（可折叠），底部是账号和设置；搜索改为标题栏那一行的入口（Ctrl+K／Ctrl+F）。`NavigationRail` 加 `footer`、`expandedContent`、`minimumExpandedWidth`。
+- 展示层：`RecentSongsModel`、`ShelfModel`（`Feed.Shelf`），`DailySongsPageModel.lead`／`coverKeys`，`SongInfo.reason`，`SongListModel.containsCurrent`；数据源加 `CatalogSource::shelf()`、`LibrarySource::recentSongs()`，假数据补齐。
+- 私人 FM 卡片原定 `tertiaryContainer`，2025 规范暗色方案里它比"今日"亮很多、喧宾夺主，改为 `surfaceContainerHigh`。
+- 验证：构建、qmllint、clang-format 无警告；离屏截图（临时改 `main.cpp` 设置窗口尺寸和执行脚本，未提交）检查了宽、中、窄三档，亮暗两种模式，登录与未登录，播放今日推荐（数字变粗）和私人 FM 播放中。

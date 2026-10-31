@@ -111,7 +111,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 规格取自 androidx `WideNavigationRail` 与 `NavigationRail*Tokens`。
 
-- **NavigationRail**：收起宽 96，展开宽 220–360（按最长的项）；内容距顶部 44，有 `header`（菜单按钮等）时 header 下方留 40；收起时项间距 4，展开时 0。容器 Surface；`modal`（浮在内容上）时为 SurfaceContainer、右侧 large 圆角、2 级阴影，遮罩由外壳画。`expanded` 由一个 0–1 进度弹簧驱动宽度和每一项的形态：推挤内容时用 `standardDefaultSpatial`，浮层用 `defaultSpatial`（见 [motion-choreography.md §5](motion-choreography.md)；androidx 两者分别用 DefaultSpatial、FastSpatial，这里按推挤布局不回弹的规则改用标准弹簧）。`currentIndex` 随点击更新，并发出 `activated(index)`。
+- **NavigationRail**：收起宽 96，展开宽 220–360（按最长的项）；内容距顶部 44，有 `header`（菜单按钮等）时 header 下方留 40；收起时项间距 4，展开时 0。容器 Surface；`modal`（浮在内容上）时为 SurfaceContainer、右侧 large 圆角、2 级阴影，遮罩由外壳画。`expanded` 由一个 0–1 进度弹簧驱动宽度和每一项的形态：推挤内容时用 `standardDefaultSpatial`，浮层用 `defaultSpatial`（见 [motion-choreography.md §5](motion-choreography.md)；androidx 两者分别用 DefaultSpatial、FastSpatial，这里按推挤布局不回弹的规则改用标准弹簧）。`currentIndex` 随点击更新，并发出 `activated(index)`。`footer` 放在底部（如账号、设置，按 `progress` 自行布局）；`expandedContent` 填在导航项和 footer 之间，只在展开时出现：按展开宽度布局、由导航栏裁剪、进度 0.5–1 淡入（外壳用它放歌单，见 [pages/shell.md](pages/shell.md)）。`minimumExpandedWidth` 默认 220。
 - **NavigationRailItem**：收起时项高 64，指示条 56×32、距项顶 6，图标 24 在指示条中，标签 labelMedium 在指示条下方 4；展开时项高 56，指示条高 56、内边距 16／图标标签间距 8／16，标签 labelLarge 在图标右侧。左侧内距两种形态都是 20，所以图标的横向位置不变。过渡中顶部标签在进度 0–0.3 淡出、侧边标签在 0.6–1 淡入，指示条尺寸与图标纵向位置线性插值。
 - 颜色：指示条 SecondaryContainer，选中图标 OnSecondaryContainer（并填充），选中标签收起时 Secondary、展开时 OnSecondaryContainer，未选中 OnSurfaceVariant；状态层与涟漪画在指示条形状上，颜色 OnSecondaryContainer。选中时指示条从中心展开（`fastSpatial`）。
 - 读屏角色 PageTab；Tab 键在项之间移动，Space／Enter 选中。
