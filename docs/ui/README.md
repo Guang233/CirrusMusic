@@ -519,3 +519,11 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 展示层：`RecentSongsModel`、`ShelfModel`（`Feed.Shelf`），`DailySongsPageModel.lead`／`coverKeys`，`SongInfo.reason`，`SongListModel.containsCurrent`；数据源加 `CatalogSource::shelf()`、`LibrarySource::recentSongs()`，假数据补齐。
 - 私人 FM 卡片原定 `tertiaryContainer`，2025 规范暗色方案里它比"今日"亮很多、喧宾夺主，改为 `surfaceContainerHigh`。
 - 验证：构建、qmllint、clang-format 无警告；离屏截图（临时改 `main.cpp` 设置窗口尺寸和执行脚本，未提交）检查了宽、中、窄三档，亮暗两种模式，登录与未登录，播放今日推荐（数字变粗）和私人 FM 播放中。
+
+**首页与外壳第二版（2026-10-31）**
+
+- 维护者看过第一版后的反馈：搜索框太贴边、内容滚动时盖住搜索框、首页推荐内容太少、FM 播放时暂停按钮贴着封面；登录这类功能改用对话框。
+- 标题栏那一行有应用内容时高 56（搜索框上下留 8）；页面栈裁剪到自己的区域。
+- 首页加推荐歌单、榜单（`ChartsModel`，卡片带前三名）、新碟上架（登录后也有）、热门歌手（`Feed.PopularArtists`）；FM 封面播放时 72 px。
+- 新控件 `Dialog`（[controls.md §8c](controls.md)，Gallery 导航页有示例）；登录页改为 `LoginDialog`，在当前页面上打开，登录成功自动关闭。
+- 验证：构建、qmllint、clang-format 无警告；离屏截图检查了整页（登录）、滚动后的标题栏、FM 播放中、亮暗两种模式下的登录对话框，以及假扫码登录完成后对话框自动关闭、首页切换到登录内容。

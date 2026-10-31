@@ -1,8 +1,10 @@
 # 首页设计
 
-状态：**第一版已实现，等待维护者看效果**（2026-10-31）。代码在 `ui/app/HomePage.qml`、`TodayCard.qml`、`FmCard.qml`、`HomeSection.qml`；外壳和侧边栏见 [shell.md](shell.md)。
+状态：**第二版**（2026-10-31）。代码在 `ui/app/HomePage.qml`、`TodayCard.qml`、`FmCard.qml`、`HomeSection.qml`、`ChartCard.qml`；外壳和侧边栏见 [shell.md](shell.md)。
 
-已定：相似歌曲不放首页（维护者，2026-10-31）。§8 的 D1–D5 按建议先做进了第一版，维护者看过效果后再确认。
+已定（维护者，2026-10-31）：相似歌曲不放首页；首页要多放推荐内容（因此 D5 推翻，登录后也有新碟，另加推荐歌单、榜单、热门歌手）。D1–D4 按建议做了，待维护者确认。
+
+第一版反馈后的修改：加推荐内容（§2）；FM 播放时封面缩到 72 px，与暂停按钮之间留出 24 px。
 
 ## 1. 首页做什么
 
@@ -13,10 +15,10 @@
 | | 首页 | 发现 |
 | --- | --- | --- |
 | 问题 | 我现在听什么？ | 还有什么可听？ |
-| 内容 | 今日推荐、私人 FM、最近听过、推荐歌单 | 榜单、歌单分类与精品歌单、新碟、歌手、相似推荐 |
+| 内容 | 今日推荐、私人 FM、最近听过、每日推荐歌单，以及各类推荐的一行预览（推荐歌单、榜单前三、新碟、热门歌手） | 完整的榜单、歌单分类与精品歌单、新碟、歌手、相似推荐 |
 | 依据 | 账号（未登录时退化） | 公共目录 |
 
-首页不放轮播横幅（后端没有横幅接口，也不想要广告位）、不放问候语（"早上好，xx"不帮用户做任何事）、不做无限滚动，一屏多一点就能看到底。
+首页不放轮播横幅（后端没有横幅接口，也不想要广告位）、不放问候语（"早上好，xx"不帮用户做任何事）、不做无限滚动。推荐区块每个只放一行，"查看全部"进发现页。
 
 ## 2. 可用数据
 
@@ -27,8 +29,13 @@
 | 今日推荐 | `DailyRecommendations`（[discovery-and-fm.md](../../api/discovery-and-fm.md)） | 是 | 每首歌带推荐理由（按歌曲 ID 对应，可能没有）；读取不强制服务端换一批 |
 | 私人 FM | `PersonalFm` + 已有的 FM 连续播放 | 是 | 首页不预取，点播放才开始 |
 | 最近听过 | `recentSongs`（[cloud-history-reads.md](../../api/cloud-history-reads.md)） | 是 | 网易云的云端记录，取前 6 首 |
-| 推荐歌单 | 登录：`DailyRecommendedPlaylists`；未登录：`RecommendedPlaylists`（personalized） | 前者是 | 两个不同接口，标题也不同："每日推荐歌单"／"推荐歌单" |
-| 新碟上架 | `LatestAlbums`（[discovery-browse-reads.md](../../api/discovery-browse-reads.md)） | 否 | 只在未登录时放在首页（D5） |
+| 每日推荐歌单 | `DailyRecommendedPlaylists`（[daily-recommended-playlists.md](../../api/daily-recommended-playlists.md)） | 是 | 一行卡片 |
+| 推荐歌单 | `RecommendedPlaylists`（personalized，[playlist-discovery-reads.md](../../api/playlist-discovery-reads.md)） | 否 | 一行卡片 |
+| 榜单 | `ChartsWithPreviews`（[chart-reads.md](../../api/chart-reads.md)） | 否 | 榜单是歌单；预览是服务端给的文字（歌名、歌手），不是歌曲，取前 3 条 |
+| 新碟上架 | `LatestAlbums`（[discovery-browse-reads.md](../../api/discovery-browse-reads.md)） | 否 | 一行卡片 |
+| 热门歌手 | `PopularArtists`（同上） | 否 | 一行圆形头像 |
+
+顺序：今日 + FM → 最近听过 → 每日推荐歌单 → 推荐歌单 → 榜单 → 新碟上架 → 热门歌手。未登录时没有今日推荐内容（换成登录邀请）、FM、最近听过和每日推荐歌单。
 
 官方客户端首页的"私人雷达""心动模式"后端没有：心动模式在 [selected-endpoints.md](../../api/selected-endpoints.md) 里只是候选，私人雷达没有对应接口。
 
@@ -98,8 +105,9 @@ MD3 Expressive 外壳语言，颜色只用动态配色角色。大部分区块�
 ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐   一行，卡片最小 176 px，列数随宽度
 ```
 
-- FM 播放时，卡片左上换成当前歌曲的封面（96 px），右上是暂停和下一首，底部是歌名和"私人 FM · 歌手"。
-- 歌单只放一行，多出的不显示，靠"查看全部"进入发现页；桌面上横向滚动不顺手，不做。
+- FM 播放时，卡片左上换成当前歌曲的封面（72 px），右上是暂停和下一首，底部是歌名和"私人 FM · 歌手"。
+- 歌单、新碟、歌手各一行（卡片最小 176，歌手 144），多出的不显示，靠"查看全部"进入发现页；桌面上横向滚动不顺手，不做。
+- 榜单卡片：SurfaceContainer、large 圆角，左上 72 px 封面，右边榜名（titleMedium）和更新频率（bodySmall）；下面三行"名次 歌名 · 歌手"，名次用 Primary（这里的编号是真实名次）。每张最小 260 宽，宽窗口一行四张。点卡片打开榜单（歌单详情）。
 - 卡片宽 560 以下时不显示封面堆。
 
 ### 4.2 中等（内容列 < 792）
@@ -112,7 +120,7 @@ FM 变成卡片下方一条 72 px 高的横条（图标、"私人 FM"、播放�
 
 ### 4.4 未登录
 
-"今日"卡片保留日期（不会变粗），文字改为"登录后，这里每天都有一组为你挑的歌。私人 FM 也需要登录。"，按钮"扫码登录"；没有 FM 卡片和最近听过。下面是"推荐歌单"和"新碟上架"。登录过期时文字改为"登录已过期，重新扫码登录后恢复今日推荐和私人 FM。"
+"今日"卡片保留日期（不会变粗），文字改为"登录后，这里每天都有一组为你挑的歌。私人 FM 也需要登录。"，按钮"扫码登录"（打开登录对话框）；没有 FM 卡片、最近听过和每日推荐歌单，其余推荐区块照常。登录过期时文字改为"登录已过期，重新扫码登录后恢复今日推荐和私人 FM。"
 
 ## 5. 交互
 
@@ -125,7 +133,7 @@ FM 变成卡片下方一条 72 px 高的横条（图标、"私人 FM"、播放�
 | FM | 下一首 | 只在 FM 模式出现；等待下一首时禁用 |
 | 歌曲行 | 单击 | 以这个区块的 6 首为队列，从这首开始播放 |
 | 卡片 | 单击 | 打开歌单／专辑详情 |
-| 区块标题 | "查看全部" | 最近听过 → 音乐库的"最近播放"；推荐歌单、新碟 → 发现页 |
+| 区块标题 | "查看全部" | 最近听过 → 音乐库的"最近播放"；推荐歌单、榜单、新碟、歌手 → 发现页（每日推荐歌单没有"查看全部"，一行就是全部） |
 | 页面 | F5 | 重新读取所有区块。不放刷新按钮，也不叫"换一批"（服务端不保证换内容） |
 
 ## 6. 状态
@@ -154,7 +162,7 @@ FM 变成卡片下方一条 72 px 高的横条（图标、"私人 FM"、播放�
 | D2 | 封面堆不做异形遮罩（软件渲染不支持，异形会裁掉封面） | 不做 |
 | D3 | "最近听过"只放歌曲，不混入最近播放的歌单／专辑（两个接口没有共同的时间顺序） | 只放歌曲 |
 | D4 | 内容最宽 1200 px 居中 | 居中 |
-| D5 | 登录后首页不放"新碟上架"，留给发现页 | 不放 |
+| D5 | ~~登录后首页不放"新碟上架"~~ | 维护者推翻：首页多放推荐内容 |
 
 ## 8. 还没做
 
@@ -168,6 +176,7 @@ FM 变成卡片下方一条 72 px 高的横条（图标、"私人 FM"、播放�
 
 - `DailySongsPageModel` 增加 `lead`（第一首，`SongItem`）和 `coverKeys`（前 4 张封面）。
 - `RecentSongsModel`：`limit`（默认 6）、`songs`；未登录为 `SignedOut`。数据源 `LibrarySource::recentSongs(limit)`。
-- `ShelfModel`：`shelf`（`Feed.DailyPlaylists`／`RecommendedPlaylists`／`NewAlbums`）、`items`；数据源 `CatalogSource::shelf()`，`DailyPlaylists` 未登录为 `SignedOut`。
+- `ShelfModel`：`shelf`（`Feed.DailyPlaylists`／`RecommendedPlaylists`／`NewAlbums`／`PopularArtists`）、`items`；数据源 `CatalogSource::shelf()`，`DailyPlaylists` 未登录为 `SignedOut`。
+- `ChartsModel`：`charts`（`ChartListModel`，角色 `key`、`title`、`updateLabel`、`coverKey`、`previews`）；数据源 `CatalogSource::charts()`。假数据的四个榜单是用示例歌曲拼的歌单，可以打开。
 - `SongInfo`／`SongItem` 增加 `reason`，`SongListModel` 增加 `reason` 角色和 `containsCurrent`（当前歌曲在不在这个列表里）。
 - 首页不再使用 `HomePageModel`；它和 `FeedPage` 暂时只给发现页用，发现页设计时再改。

@@ -121,6 +121,10 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 - **TabBar／TabButton**（MD3 主标签页）：项高 48，带图标 64（图标在标签上方）；标签 titleSmall，未选中 OnSurfaceVariant、选中 Primary（`defaultEffects` 过渡，图标同时填充）；状态层颜色选中为 Primary、否则 OnSurface。底部 1 px 分隔线 SurfaceContainerHighest；指示条 3 px、上方圆角 3、与标签同宽（至少 24），换标签时位置和宽度用 `fastSpatial` 滑动，首次布局不做动画。标签平分宽度，放不下时横向滚动。
 - **Chip**：高 32、圆角 8（small），左右内距 16（有前置图标时左 8），图标 18、间距 8，标签 labelLarge。默认是建议／辅助纸片：OutlineVariant 1 px 描边，标签 OnSurface，图标 Primary。`checkable` 为筛选纸片：未选中标签 OnSurfaceVariant；选中填充 SecondaryContainer、去掉描边、前置对勾，内容 OnSecondaryContainer（`defaultEffects`）。
 
+## 8c. 对话框（第二批，阶段 3）
+
+- **Dialog**（MD3 基础对话框）：基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 280–560（不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24。内容是一列，间距 16：可选图标 `glyph`（24，Secondary，居中，此时标题也居中）、标题 `title`（headlineSmall，OnSurface）、说明 `supportingText`（bodyMedium，OnSurfaceVariant）、子项（任意内容），最后是 `buttons`（文字按钮，右对齐，间距 8，与上方相隔 24）。模态，遮罩 Scrim 32 %。进入时缩放 0.9→1（`standardDefaultSpatial`）并淡入（`defaultEffects`），退出淡出（`fastEffects`）。Esc 和点击外面关闭（`closePolicy`）。Gallery 导航页有示例。
+
 ## 9. 每个控件的检查项
 
 全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。
@@ -133,6 +137,6 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 - `ToolTip` 只有纯文本样式；富提示（rich tooltip）未做。
 - TextField 未做字符计数和前后缀；Outlined 标签缺口用 `gapColor` 填色，放在非 surface 背景上时要手动指定。
 - 列表项与菜单项的读屏名称只取标题文字；需要额外描述时由页面设置 `Accessible.description`。
-- 第二批已做 NavigationRail（§8a）、Tabs 与 Chips（§8b）；其余（Dialog、Snackbar、Card、Divider、Badge、下拉选择）按页面需要再做。次级标签页、输入纸片（带删除按钮）、带阴影的纸片未做。
+- 第二批已做 NavigationRail（§8a）、Tabs 与 Chips（§8b）、Dialog（§8c）；其余（Snackbar、Card、Divider、Badge、下拉选择）按页面需要再做。次级标签页、输入纸片（带删除按钮）、带阴影的纸片未做。
 - NavigationRail 未做：方向键在项之间移动、徽标（Badge）、项过多时滚动。
 
