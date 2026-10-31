@@ -20,7 +20,8 @@ Item {
 
     readonly property bool hasContent: content.visibleChildren.length > 0
 
-    implicitHeight: windowControls || hasContent ? 48 : 0
+    // Taller with app content (a 40 px search field), so it keeps 8 px around it.
+    implicitHeight: hasContent ? 56 : windowControls ? 48 : 0
     visible: implicitHeight > 0
 
     // Under the content and the buttons, so presses on them never move the window.

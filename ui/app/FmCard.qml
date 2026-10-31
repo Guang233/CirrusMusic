@@ -37,7 +37,7 @@ Rectangle {
         id: art
         x: card.strip ? 16 : 24
         y: card.strip ? (card.height - height) / 2 : 24
-        width: card.strip ? 40 : (card.hasSong ? 96 : 48)
+        width: card.strip ? 40 : (card.hasSong ? 72 : 48)
         height: width
 
         CoverArt {

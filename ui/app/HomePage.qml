@@ -5,9 +5,10 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// The home page (docs/ui/pages/home.md): "today" and personal FM on top, then the
-// songs played lately and today's playlists; guests get the sign-in invitation,
-// recommended playlists and new albums. Every section loads and fails on its own.
+// The home page (docs/ui/pages/home.md): "today" and personal FM on top, the songs
+// played lately, today's and recommended playlists, charts, new albums and popular
+// artists; guests get the sign-in invitation instead of the private parts. Every
+// section loads and fails on its own.
 Item {
     id: page
 
@@ -22,12 +23,14 @@ Item {
     // Everything the account can see failed: one page-level message instead.
     readonly property bool allFailed: {
         const failed = m => m.state === LoadState.Error || m.state === LoadState.Offline;
-        return signedIn ? failed(daily) && failed(recent) && failed(playlists)
-                        : failed(playlists) && failed(newAlbums);
+        const common = failed(recommended) && failed(charts) && failed(newAlbums)
+                       && failed(artists);
+        return signedIn ? common && failed(daily) && failed(recent) && failed(dailyPlaylists)
+                        : common;
     }
 
     function refresh() {
-        for (const m of [daily, recent, playlists, newAlbums])
+        for (const m of [daily, recent, dailyPlaylists, recommended, charts, newAlbums, artists])
             m.retry();
     }
 
@@ -39,12 +42,23 @@ Item {
         limit: 6
     }
     ShelfModel {
-        id: playlists
-        shelf: page.signedIn ? Feed.DailyPlaylists : Feed.RecommendedPlaylists
+        id: dailyPlaylists
+        shelf: Feed.DailyPlaylists
+    }
+    ShelfModel {
+        id: recommended
+        shelf: Feed.RecommendedPlaylists
+    }
+    ChartsModel {
+        id: charts
     }
     ShelfModel {
         id: newAlbums
         shelf: Feed.NewAlbums
+    }
+    ShelfModel {
+        id: artists
+        shelf: Feed.PopularArtists
     }
 
     Shortcut {
@@ -74,6 +88,15 @@ Item {
                 radius: Theme.shape.large
             }
         }
+    }
+
+    // One row of cards, as many as fit.
+    component Cards: CollectionGrid {
+        width: page.columnWidth + 16
+        x: -8
+        minimumCardWidth: 176
+        maximumRows: 1
+        onActivated: (kind, key) => page.shell.openCollection(kind, key)
     }
 
     // A few songs in one or two segmented columns; a row plays the section's songs.
@@ -185,38 +208,83 @@ Item {
 
             HomeSection {
                 width: column.width
-                title: page.signedIn ? qsTr("每日推荐歌单") : qsTr("推荐歌单")
-                showsAll: true
-                model: playlists
+                visible: page.signedIn && (hasContent || failed || loading)
+                title: qsTr("每日推荐歌单")
+                model: dailyPlaylists
                 skeleton: CardsPlaceholder {}
-                onAllRequested: page.shell.select(1)
 
-                CollectionGrid {
-                    width: column.width + 16
-                    x: -8
-                    minimumCardWidth: 176
-                    maximumRows: 1
-                    model: playlists.items
-                    onActivated: (kind, key) => page.shell.openCollection(kind, key)
+                Cards {
+                    model: dailyPlaylists.items
                 }
             }
 
             HomeSection {
                 width: column.width
-                visible: !page.signedIn && (hasContent || failed || loading)
+                title: qsTr("推荐歌单")
+                showsAll: true
+                model: recommended
+                skeleton: CardsPlaceholder {}
+                onAllRequested: page.shell.select(1)
+
+                Cards {
+                    model: recommended.items
+                }
+            }
+
+            HomeSection {
+                width: column.width
+                title: qsTr("榜单")
+                showsAll: true
+                model: charts
+                skeleton: CardsPlaceholder {}
+                onAllRequested: page.shell.select(1)
+
+                Flow {
+                    id: chartFlow
+                    readonly property int columns: Math.max(1, Math.floor((width + spacing) / 276))
+                    width: column.width
+                    spacing: 16
+                    Repeater {
+                        model: charts.charts
+                        ChartCard {
+                            required property string key
+                            required property string title
+                            required updateLabel
+                            required coverKey
+                            required previews
+                            width: (chartFlow.width - (chartFlow.columns - 1) * chartFlow.spacing)
+                                   / chartFlow.columns
+                            text: title
+                            onClicked: page.shell.openPlaylist(key)
+                        }
+                    }
+                }
+            }
+
+            HomeSection {
+                width: column.width
                 title: qsTr("新碟上架")
                 showsAll: true
                 model: newAlbums
                 skeleton: CardsPlaceholder {}
                 onAllRequested: page.shell.select(1)
 
-                CollectionGrid {
-                    width: column.width + 16
-                    x: -8
-                    minimumCardWidth: 176
-                    maximumRows: 1
+                Cards {
                     model: newAlbums.items
-                    onActivated: (kind, key) => page.shell.openCollection(kind, key)
+                }
+            }
+
+            HomeSection {
+                width: column.width
+                title: qsTr("热门歌手")
+                showsAll: true
+                model: artists
+                skeleton: CardsPlaceholder {}
+                onAllRequested: page.shell.select(1)
+
+                Cards {
+                    minimumCardWidth: 144
+                    model: artists.items
                 }
             }
         }

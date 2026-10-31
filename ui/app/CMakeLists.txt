@@ -14,7 +14,8 @@ qt_add_qml_module(appCirrusMusic
         FeedPage.qml
         DailySongsPage.qml
         LibraryPage.qml
-        LoginPage.qml
+        LoginDialog.qml
+        ChartCard.qml
         SettingsPage.qml
         HomePage.qml
         TodayCard.qml

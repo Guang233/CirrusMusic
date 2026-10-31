@@ -94,11 +94,10 @@ Item {
         });
     }
 
+    // QR sign-in in a dialog, over the current page.
     function openLogin() {
         if (!App.session.signedIn)
-            stack.push(loginPage, {
-                shell: shell
-            });
+            loginDialog.open();
     }
 
     // Collection.Kind and key, as collection cards report them.
@@ -160,13 +159,11 @@ Item {
         id: dailySongsPage
         DailySongsPage {}
     }
-    Component {
-        id: loginPage
-        LoginPage {}
-    }
 
     PageStack {
         id: stack
+        // Scrolled content must not draw over the title bar row above.
+        clip: true
         // Pushed aside by a large window's rail; under the floating rail otherwise.
         x: shell.large ? rail.width : rail.collapsedWidth
         width: shell.width - x
@@ -259,5 +256,9 @@ Item {
     TapHandler {
         acceptedButtons: Qt.BackButton
         onTapped: shell.back()
+    }
+
+    LoginDialog {
+        id: loginDialog
     }
 }
