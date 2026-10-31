@@ -30,6 +30,7 @@ qt_add_qml_module(cirrus_ui_controls
         ScrollBar.qml
         TextField.qml
         SearchBar.qml
+        Dialog.qml
         Slider.qml
         ProgressBar.qml
         CircularProgress.qml

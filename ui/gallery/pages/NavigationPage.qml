@@ -5,8 +5,8 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
 
-// Phase 3 check: navigation rail (collapsed, expanded, modal, and the morph between)
-// and the page stack transitions.
+// Phase 3 check: navigation rail (collapsed, expanded, modal, and the morph between),
+// the page stack transitions, tabs and dialogs.
 ControlPage {
     id: page
 
@@ -238,5 +238,61 @@ ControlPage {
             glyph: Symbols.history
             text: qsTr("最近播放")
         }
+    }
+
+    SectionTitle {
+        text: qsTr("对话框")
+    }
+    Caption {
+        text: qsTr("MD3 基础对话框：可选图标、标题、说明文字、任意内容和右下角的文字按钮；Esc 或点击外面关闭。")
+    }
+    RowLayout {
+        spacing: 12
+        Button {
+            variant: Md.Tonal
+            text: qsTr("带图标")
+            onClicked: iconDialog.open()
+        }
+        Button {
+            variant: Md.Tonal
+            text: qsTr("只有文字")
+            onClicked: plainDialog.open()
+        }
+    }
+
+    Dialog {
+        id: iconDialog
+        glyph: Symbols.delete_
+        title: qsTr("删除歌单？")
+        supportingText: qsTr("“深夜通勤”和其中的 9 首歌会从你的音乐库移除，歌曲本身不受影响。")
+        buttons: [
+            Button {
+                variant: Md.Text
+                text: qsTr("取消")
+                onClicked: iconDialog.close()
+            },
+            Button {
+                variant: Md.Text
+                text: qsTr("删除")
+                onClicked: iconDialog.close()
+            }
+        ]
+    }
+    Dialog {
+        id: plainDialog
+        title: qsTr("退出登录？")
+        supportingText: qsTr("退出后，今日推荐、私人 FM 和你的歌单需要重新登录才能看到。")
+        buttons: [
+            Button {
+                variant: Md.Text
+                text: qsTr("取消")
+                onClicked: plainDialog.close()
+            },
+            Button {
+                variant: Md.Text
+                text: qsTr("退出登录")
+                onClicked: plainDialog.close()
+            }
+        ]
     }
 }
