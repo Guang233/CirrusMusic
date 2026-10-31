@@ -20,8 +20,6 @@ PageScaffold {
     }
 
     title: qsTr("搜索")
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     // Before the first search.
     Column {

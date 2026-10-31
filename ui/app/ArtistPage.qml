@@ -13,8 +13,6 @@ PageScaffold {
     property alias artistKey: pageModel.artistKey
 
     title: pageModel.name
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     ArtistPageModel {
         id: pageModel

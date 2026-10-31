@@ -13,8 +13,6 @@ PageScaffold {
     required property AppShell shell
 
     title: qsTr("设置")
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     // A label above a single-choice connected button group.
     component Choice: Column {
@@ -227,17 +225,17 @@ PageScaffold {
             }
             Choice {
                 width: column.width
-                label: qsTr("标题栏")
-                hint: qsTr("自绘：窗口按钮与阴影由应用绘制。系统：使用桌面的标题栏。隐藏：不显示标题栏，适合平铺窗口管理器。也可以用启动参数 --titlebar 临时指定。")
+                label: qsTr("窗口装饰")
+                hint: qsTr("顶栏（导航按钮、搜索）始终都在。应用绘制：窗口按钮、阴影和圆角由应用绘制。无：不画窗口按钮和阴影，适合 niri、sway、Hyprland 等平铺窗口管理器。系统：使用桌面自己的标题栏，出问题时再用。也可以用启动参数 --titlebar=custom|hidden|system 临时指定。")
                 options: [{
                         value: TitleBarMode.Custom,
-                        text: qsTr("自绘")
+                        text: qsTr("应用绘制")
+                    }, {
+                        value: TitleBarMode.Hidden,
+                        text: qsTr("无")
                     }, {
                         value: TitleBarMode.System,
                         text: qsTr("系统")
-                    }, {
-                        value: TitleBarMode.Hidden,
-                        text: qsTr("隐藏")
                     }]
                 value: (page.Window.window as AppWindow)?.titleBar ?? -1
                 onChosen: value => {

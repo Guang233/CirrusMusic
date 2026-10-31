@@ -12,8 +12,6 @@ PageScaffold {
     required property AppShell shell
 
     title: qsTr("每日推荐")
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     DailySongsPageModel {
         id: pageModel

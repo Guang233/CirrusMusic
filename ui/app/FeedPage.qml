@@ -13,8 +13,6 @@ PageScaffold {
     required property AppShell shell
     property alias feed: pageModel.feed
 
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     HomePageModel {
         id: pageModel

@@ -14,10 +14,11 @@ namespace cirrus::ui::titlebar
 Q_NAMESPACE
 QML_NAMED_ELEMENT(TitleBarMode)
 
-// Custom: our own title bar, frame and window buttons.
+// Window decorations; the app's top bar is there in every mode.
+// Custom: drawn by the app: window buttons, frame and shadow.
 // System: native decorations.
-// Hidden: no title bar controls, frame or shadow; for tiling window managers,
-// which manage windows from the keyboard and draw their own borders.
+// Hidden: none (no buttons, frame or shadow); for tiling window managers, which
+// manage windows from the keyboard and draw their own borders.
 enum Mode { Custom, System, Hidden };
 Q_ENUM_NS(Mode)
 

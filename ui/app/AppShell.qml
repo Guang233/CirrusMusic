@@ -5,34 +5,29 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// The shell (docs/ui/README.md §6.2): navigation rail, page stack and mini player. Large windows
-// (≥ 1200) keep the rail expanded beside the content and push it when toggled;
-// narrower ones keep it collapsed and expand it over the content with a scrim.
-// Crossing the breakpoint switches without animation (motion-choreography.md §5).
-// Pages get `shell` and navigate through it. The expanded rail also lists the
-// account's playlists; search lives in the title bar row (docs/ui/pages/shell.md).
+// The shell (docs/ui/pages/shell.md): navigation rail and a rounded content panel
+// with the page stack, in a frame that the top bar (TopBar, in the window's title
+// bar row) continues; the mini player sits under the panel. Large windows (≥ 1200)
+// keep the rail expanded beside the panel and push it when toggled; narrower ones
+// keep it collapsed and expand it over the panel with a scrim. Crossing the
+// breakpoint switches without animation (motion-choreography.md §5). Pages get
+// `shell` and navigate through it; back and forward keep a browser-like history.
 Item {
     id: shell
 
     readonly property bool large: width >= 1200
     readonly property bool canGoBack: stack.depth > 1
-    // Left edge of the page area, for content lined up with it (the title bar search).
-    readonly property real contentX: stack.x
+    readonly property bool canGoForward: forwardEntries.length > 0
+    // Width the rail takes beside the panel (the floating rail does not push).
+    readonly property real navWidth: large ? rail.width : rail.collapsedWidth
+    readonly property real railProgress: rail.progress
+    readonly property bool railExpanded: rail.expanded
     readonly property bool searching: (stack.currentItem as SearchPage) !== null
-    // The search input; Main puts it in the title bar row.
-    readonly property SearchField searchField: SearchField {
-        x: Math.max(0, shell.contentX + 24 - (parent ? parent.x : 0))
-        y: parent ? (parent.height - height) / 2 : 0
-        width: parent ? Math.max(0, Math.min(400, parent.width - x - 16)) : 360
-        suggestions: searchModel.suggestions
-        trending: searchModel.hotKeywords
-        onTextEdited: {
-            if (!shell.searching && text.trim() !== "")
-                shell.openSearch();
-        }
-        onSubmitted: value => shell.search(value)
-        onDismissed: shell.focusContent()
-    }
+    readonly property SearchModel searchModel: searchModelObject
+    // The search input, in the top bar; Main connects it.
+    property SearchField searchField
+    // Pages left with back, for forward (component and properties).
+    property var forwardEntries: []
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
@@ -49,9 +44,20 @@ Item {
             page: libraryPage
         }]
 
+    function toggleRail() {
+        rail.expanded = !rail.expanded;
+    }
+
+    // A new page on top; forward history ends here, as in a browser.
+    function go(component: Component, properties: var) {
+        forwardEntries = [];
+        stack.push(component, properties);
+    }
+
     // Top-level destination: clears the history.
     function select(index: int) {
         rail.currentIndex = index;
+        forwardEntries = [];
         stack.replaceAll(destinations[index].page, {
             shell: shell
         });
@@ -60,21 +66,21 @@ Item {
     }
 
     function openPlaylist(key: string) {
-        stack.push(playlistPage, {
+        shell.go(playlistPage, {
             shell: shell,
             playlistKey: key
         });
     }
 
     function openAlbum(key: string) {
-        stack.push(albumPage, {
+        shell.go(albumPage, {
             shell: shell,
             albumKey: key
         });
     }
 
     function openArtist(key: string) {
-        stack.push(artistPage, {
+        shell.go(artistPage, {
             shell: shell,
             artistKey: key
         });
@@ -82,16 +88,16 @@ Item {
 
     function openSearch() {
         if (!searching)
-            stack.push(searchPage, {
+            shell.go(searchPage, {
                 shell: shell,
-                search: searchModel
+                search: shell.searchModel
             });
     }
 
     // Searches from anywhere: the search page shows the results.
     function search(text: string) {
         openSearch();
-        searchModel.submit(text);
+        searchModelObject.submit(text);
     }
 
     // Keyboard focus back to the page, e.g. after Esc in the search field.
@@ -101,6 +107,8 @@ Item {
 
     // The field shows what the search page shows, and nothing elsewhere.
     onSearchingChanged: {
+        if (!searchField)
+            return;
         if (!searching)
             searchField.clear();
         else if (searchField.text === "")
@@ -108,27 +116,27 @@ Item {
     }
 
     SearchModel {
-        id: searchModel
-        text: shell.searchField.text
+        id: searchModelObject
+        text: shell.searchField ? shell.searchField.text : ""
     }
 
     function openSettings() {
         if ((stack.currentItem as SettingsPage) === null)
-            stack.push(settingsPage, {
+            shell.go(settingsPage, {
                 shell: shell
             });
     }
 
     // The library page on one of its tabs (0 liked songs … 4 recently played).
     function openLibrary(tab: int) {
-        stack.push(libraryPage, {
+        shell.go(libraryPage, {
             shell: shell,
             initialTab: tab
         });
     }
 
     function openDaily() {
-        stack.push(dailySongsPage, {
+        shell.go(dailySongsPage, {
             shell: shell
         });
     }
@@ -150,7 +158,22 @@ Item {
     }
 
     function back() {
-        stack.pop();
+        if (stack.depth < 2)
+            return;
+        const leaving = stack.entries[stack.entries.length - 1];
+        if (stack.pop())
+            forwardEntries = forwardEntries.concat([{
+                    component: leaving.component,
+                    properties: leaving.properties
+                }]);
+    }
+
+    function forward() {
+        if (!canGoForward)
+            return;
+        const next = forwardEntries[forwardEntries.length - 1];
+        forwardEntries = forwardEntries.slice(0, -1);
+        stack.push(next.component, next.properties);
     }
 
     Component.onCompleted: {
@@ -199,20 +222,39 @@ Item {
         DailySongsPage {}
     }
 
-    PageStack {
-        id: stack
-        // Scrolled content must not draw over the title bar row above.
-        clip: true
-        // Pushed aside by a large window's rail; under the floating rail otherwise.
-        x: shell.large ? rail.width : rail.collapsedWidth
-        width: shell.width - x
-        height: shell.height - miniPlayer.reservedHeight
+    // The content panel: rounded, on the frame color (Main sets the window's surface
+    // to SurfaceContainer); the corners are masked so scrolled pages stay inside.
+    Rectangle {
+        id: panel
+        x: shell.navWidth
+        width: shell.width - x - 8
+        height: shell.height - 8 - miniPlayer.reservedHeight
+        radius: Theme.shape.largeIncreased
+        color: Theme.color.surface
+
+        PageStack {
+            id: stack
+            anchors.fill: parent
+            clip: true
+        }
+
+        Repeater {
+            model: 4
+            PanelCorner {
+                required property int index
+                radius: panel.radius
+                color: Theme.color.surfaceContainer
+                x: index === 1 || index === 2 ? panel.width - radius : 0
+                y: index >= 2 ? panel.height - radius : 0
+                rotation: index * 90
+            }
+        }
     }
 
     MiniPlayer {
         id: miniPlayer
-        x: stack.x + 12
-        width: stack.width - 24
+        x: panel.x
+        width: panel.width
         y: shell.height - implicitHeight - bottomMargin
     }
 
@@ -242,14 +284,8 @@ Item {
         anchors.bottom: parent.bottom
         modal: !shell.large
         minimumExpandedWidth: 272
-        header: Component {
-            IconButton {
-                x: 8
-                glyph: rail.expanded ? Symbols.menu_open : Symbols.menu
-                text: rail.expanded ? qsTr("收起导航栏") : qsTr("展开导航栏")
-                onClicked: rail.expanded = !rail.expanded
-            }
-        }
+        topInset: 8
+        restColor: Theme.color.surfaceContainer
         expandedContent: Component {
             RailPlaylists {
                 library: myLibrary
@@ -295,9 +331,19 @@ Item {
         enabled: shell.canGoBack
         onActivated: shell.back()
     }
+    Shortcut {
+        sequences: [StandardKey.Forward]
+        enabled: shell.canGoForward
+        onActivated: shell.forward()
+    }
     TapHandler {
-        acceptedButtons: Qt.BackButton
-        onTapped: shell.back()
+        acceptedButtons: Qt.BackButton | Qt.ForwardButton
+        onTapped: (eventPoint, button) => {
+            if (button === Qt.BackButton)
+                shell.back();
+            else
+                shell.forward();
+        }
     }
 
     LoginDialog {

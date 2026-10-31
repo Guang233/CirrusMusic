@@ -9,7 +9,7 @@ Item {
     id: root
 
     required property WindowFrame frame
-    // Moving, maximizing, the window menu and the title.
+    // Moving, maximizing, the window menu (custom and no decorations).
     property bool windowControls
     // Minimize/maximize/close; off on macOS, where the system draws them.
     property bool windowButtons
@@ -21,7 +21,7 @@ Item {
     readonly property bool hasContent: content.visibleChildren.length > 0
 
     // Taller with app content (a 40 px search field), so it keeps 8 px around it.
-    implicitHeight: hasContent ? 56 : windowControls ? 48 : 0
+    implicitHeight: hasContent ? 56 : windowButtons ? 48 : 0
     // Collapsed by height, never hidden: hiding would make the content's children
     // invisible too, so `hasContent` could never turn true again.
     clip: implicitHeight === 0

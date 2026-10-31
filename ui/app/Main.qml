@@ -46,10 +46,18 @@ AppWindow {
         value: App.settings.customFontFamily
     }
 
-    titleContent: [shell.searchField]
+    // The frame (top bar and rail) is SurfaceContainer; pages sit on a Surface panel.
+    showTitle: false
+    surfaceColor: Theme.color.surfaceContainer
+    titleContent: TopBar {
+        id: topBar
+        anchors.fill: parent
+        shell: shell
+    }
 
     AppShell {
         id: shell
         anchors.fill: parent
+        searchField: topBar.searchField
     }
 }

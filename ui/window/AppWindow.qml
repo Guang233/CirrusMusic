@@ -3,15 +3,18 @@ import QtQuick
 import QtQuick.Effects
 import Cirrus.Theme
 
-// Top-level window with the Cirrus frame (docs/ui/README.md §6.1). `titleBar`:
-// - Custom: draws the frame itself (shadow and rounded corners on Wayland, resize
-//   bands, window buttons); macOS keeps the traffic lights over an expanded client area.
+// Top-level window with the Cirrus frame (docs/ui/README.md §6.1). `titleBar` picks
+// the window decorations:
+// - Custom: drawn by the app (shadow and rounded corners on Wayland, resize bands,
+//   window buttons); macOS keeps the traffic lights over an expanded client area.
 // - System: native decorations.
-// - Hidden: no decorations and no title bar controls (tiling window managers).
-// The custom title bar shows `title`. The app's own content for the title bar row
-// (`titleContent`, e.g. back and search) stays there in every mode; with the system
-// or hidden title bar and no such content the row collapses. Default children fill
-// the area below it.
+// - Hidden: none, for tiling window managers: no buttons, shadow or corners; the
+//   title bar row still moves the window and resize bands stay.
+// The app's own content for the title bar row (`titleContent`: the app's top bar,
+// docs/ui/pages/shell.md) stays there in every mode; without it the row collapses
+// unless it has window controls. `showTitle` shows `title` in the row (the gallery;
+// the app draws its name itself). Default children fill the area below the row,
+// over `surfaceColor`.
 //   AppWindow { title: qsTr("Cirrus Music"); Page { anchors.fill: parent } }
 Window {
     id: window
@@ -20,6 +23,8 @@ Window {
     default property alias content: body.data
     property alias titleContent: titleBarItem.content
     property alias frame: windowFrame
+    property bool showTitle: true
+    property color surfaceColor: Theme.color.surface
 
     readonly property bool macOS: Qt.platform.os === "osx"
     readonly property bool customFrame: titleBar === TitleBarMode.Custom && !macOS
@@ -72,7 +77,7 @@ Window {
         anchors.fill: parent
         anchors.margins: windowFrame.margin
         radius: window.cornerRadius
-        color: Theme.color.surface
+        color: window.surfaceColor
 
         TitleBar {
             id: titleBarItem
@@ -81,10 +86,11 @@ Window {
             anchors.right: parent.right
             anchors.top: parent.top
             frame: windowFrame
-            title: window.title
-            windowControls: window.titleBar === TitleBarMode.Custom
+            title: window.showTitle ? window.title : ""
+            windowControls: window.titleBar !== TitleBarMode.System
             windowButtons: window.customFrame
-            leadingInset: window.titleBar === TitleBarMode.Custom && window.macOS ? 72 : 16
+            leadingInset: window.titleBar === TitleBarMode.Custom && window.macOS ? 72
+                                                                                 : window.showTitle ? 16 : 0
         }
 
         Item {

@@ -14,8 +14,6 @@ PageScaffold {
     property alias albumKey: pageModel.albumKey
 
     title: pageModel.title
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     AlbumPageModel {
         id: pageModel

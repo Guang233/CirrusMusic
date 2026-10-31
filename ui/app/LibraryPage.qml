@@ -15,8 +15,6 @@ PageScaffold {
     property int initialTab: 0
 
     title: qsTr("音乐库")
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     LibraryPageModel {
         id: pageModel

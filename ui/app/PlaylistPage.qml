@@ -14,8 +14,6 @@ PageScaffold {
     property alias playlistKey: pageModel.playlistKey
 
     title: pageModel.title
-    canGoBack: shell.canGoBack
-    onBackRequested: shell.back()
 
     PlaylistPageModel {
         id: pageModel

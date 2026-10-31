@@ -26,6 +26,10 @@ Rectangle {
     property Component footer
     property Component expandedContent
     property real minimumExpandedWidth: 220
+    // Space above the header (or the items without one).
+    property real topInset: 44
+    // Color while docked; floating it becomes SurfaceContainer.
+    property color restColor: Theme.color.surface
     default property alias items: column.data
 
     // 0 collapsed, 1 expanded; drives the width and every item's layout.
@@ -88,7 +92,7 @@ Rectangle {
     readonly property real floating: modal ? progress : 0
 
     implicitWidth: Theme.motion.lerp(collapsedWidth, expandedWidth, progress)
-    color: Theme.mix(Theme.color.surface, Theme.color.surfaceContainer, floating)
+    color: Theme.mix(restColor, Theme.color.surfaceContainer, floating)
     topRightRadius: Theme.shape.large * floating
     bottomRightRadius: Theme.shape.large * floating
 
@@ -104,13 +108,13 @@ Rectangle {
     Loader {
         id: headerLoader
         x: 20
-        y: 44
+        y: root.topInset
         sourceComponent: root.header
     }
 
     Column {
         id: column
-        y: headerLoader.item ? headerLoader.y + headerLoader.height + 40 : 44
+        y: headerLoader.item ? headerLoader.y + headerLoader.height + 40 : root.topInset
         width: root.width
         spacing: Theme.motion.lerp(4, 0, root.progress)
         onChildrenChanged: Qt.callLater(root.attach)
