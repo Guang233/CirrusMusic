@@ -1,6 +1,7 @@
 #pragma once
 
 #include "loadable_model.h"
+#include "song_item.h"
 #include "types.h"
 
 #include <QAbstractListModel>
@@ -84,23 +85,100 @@ class HomePageModel : public LoadableModel, public QQmlParserStatus
 };
 
 // Today's recommended songs; SignedOut for guests, reloads on account changes.
+// `lead` and `coverKeys` summarize them for the home page.
 class DailySongsPageModel : public LoadableModel
 {
     Q_OBJECT
     Q_MOC_INCLUDE("song_list_model.h")
     QML_ELEMENT
     Q_PROPERTY(cirrus::ui::SongListModel* songs READ songs CONSTANT)
+    // The first song (empty key when there is none) and the first few covers.
+    Q_PROPERTY(cirrus::ui::SongItem lead READ lead NOTIFY summaryChanged)
+    Q_PROPERTY(QStringList coverKeys READ coverKeys NOTIFY summaryChanged)
 
   public:
     explicit DailySongsPageModel(QObject* parent = nullptr);
     [[nodiscard]] SongListModel* songs() const { return m_songs; }
+    [[nodiscard]] SongItem lead() const { return m_lead; }
+    [[nodiscard]] QStringList coverKeys() const { return m_coverKeys; }
+
+  signals:
+    void summaryChanged();
 
   protected:
     Request load() override;
     void clear() override;
 
   private:
+    void summarize(const QList<SongInfo>& songs);
+
     SongListModel* m_songs;
+    SongItem m_lead;
+    QStringList m_coverKeys;
+};
+
+// The account's latest played songs (`limit` of them); SignedOut for guests.
+class RecentSongsModel : public LoadableModel, public QQmlParserStatus
+{
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
+    Q_MOC_INCLUDE("song_list_model.h")
+    QML_ELEMENT
+    Q_PROPERTY(int limit READ limit WRITE setLimit NOTIFY limitChanged)
+    Q_PROPERTY(cirrus::ui::SongListModel* songs READ songs CONSTANT)
+
+  public:
+    explicit RecentSongsModel(QObject* parent = nullptr);
+    [[nodiscard]] int limit() const { return m_limit; }
+    void setLimit(int limit);
+    [[nodiscard]] SongListModel* songs() const { return m_songs; }
+
+    void classBegin() override {}
+    void componentComplete() override;
+
+  signals:
+    void limitChanged();
+
+  protected:
+    Request load() override;
+    void clear() override;
+
+  private:
+    int m_limit = 6;
+    bool m_complete = false;
+    SongListModel* m_songs;
+};
+
+// One row of cards (Feed.Shelf); reloads when `shelf` or the account changes.
+class ShelfModel : public LoadableModel, public QQmlParserStatus
+{
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
+    Q_MOC_INCLUDE("collection_list_model.h")
+    QML_ELEMENT
+    Q_PROPERTY(int shelf READ shelf WRITE setShelf NOTIFY shelfChanged) // Feed.Shelf
+    Q_PROPERTY(cirrus::ui::CollectionListModel* items READ items CONSTANT)
+
+  public:
+    explicit ShelfModel(QObject* parent = nullptr);
+    [[nodiscard]] int shelf() const { return m_shelf; }
+    void setShelf(int shelf);
+    [[nodiscard]] CollectionListModel* items() const { return m_items; }
+
+    void classBegin() override {}
+    void componentComplete() override;
+
+  signals:
+    void shelfChanged();
+
+  protected:
+    Request load() override;
+    void clear() override;
+
+  private:
+    int m_shelf = feed::RecommendedPlaylists;
+    bool m_complete = false;
+    CollectionListModel* m_items;
 };
 
 // The account's library (docs/ui/presentation.md §5.2); SignedOut for guests.

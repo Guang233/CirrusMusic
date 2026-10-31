@@ -24,6 +24,7 @@ class SongItem
     Q_PROPERTY(QString coverKey MEMBER coverKey CONSTANT)
     Q_PROPERTY(qint64 durationMs MEMBER durationMs CONSTANT) // -1 when unknown
     Q_PROPERTY(bool unavailable MEMBER unavailable CONSTANT)
+    Q_PROPERTY(QString reason MEMBER reason CONSTANT) // recommendation reason, may be empty
 
   public:
     SongItem() = default;
@@ -31,7 +32,7 @@ class SongItem
         : key(song.key), title(song.title), secondaryTitle(song.secondaryTitle),
           artistText(Formatter::artists(song.artists)), albumKey(song.albumKey),
           albumTitle(song.albumTitle), coverKey(song.coverKey), durationMs(song.durationMs),
-          unavailable(song.unavailable)
+          unavailable(song.unavailable), reason(song.reason)
     {
     }
 
@@ -44,6 +45,7 @@ class SongItem
     QString coverKey;
     qint64 durationMs = -1;
     bool unavailable = false;
+    QString reason;
     friend bool operator==(const SongItem&, const SongItem&) = default;
 };
 

@@ -4,6 +4,8 @@
 #include "collection_list_model.h"
 #include "song_list_model.h"
 
+#include <algorithm>
+
 namespace cirrus::ui
 {
 
@@ -118,11 +120,100 @@ Request DailySongsPageModel::load()
     return App::instance()->catalog()->dailySongs(
         handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
             m_songs->reset(keysOf(songs), songs);
+            summarize(songs);
             return songs.isEmpty();
         }));
 }
 
-void DailySongsPageModel::clear() { m_songs->clear(); }
+void DailySongsPageModel::clear()
+{
+    m_songs->clear();
+    summarize({});
+}
+
+void DailySongsPageModel::summarize(const QList<SongInfo>& songs)
+{
+    constexpr int kCovers = 4;
+    SongItem lead = songs.isEmpty() ? SongItem() : SongItem(songs.first());
+    QStringList covers;
+    for (const SongInfo& song : songs) {
+        if (covers.size() == kCovers)
+            break;
+        covers << song.coverKey;
+    }
+    if (lead == m_lead && covers == m_coverKeys)
+        return;
+    m_lead = std::move(lead);
+    m_coverKeys = std::move(covers);
+    emit summaryChanged();
+}
+
+RecentSongsModel::RecentSongsModel(QObject* parent)
+    : LoadableModel(parent), m_songs(new SongListModel(this))
+{
+    followAccount();
+}
+
+void RecentSongsModel::setLimit(int limit)
+{
+    limit = std::clamp(limit, 1, 100);
+    if (limit == m_limit)
+        return;
+    m_limit = limit;
+    emit limitChanged();
+    if (m_complete)
+        reload();
+}
+
+void RecentSongsModel::componentComplete()
+{
+    m_complete = true;
+    reload();
+}
+
+Request RecentSongsModel::load()
+{
+    return App::instance()->library()->recentSongs(
+        m_limit, handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
+            m_songs->reset(keysOf(songs), songs);
+            return songs.isEmpty();
+        }));
+}
+
+void RecentSongsModel::clear() { m_songs->clear(); }
+
+ShelfModel::ShelfModel(QObject* parent)
+    : LoadableModel(parent), m_items(new CollectionListModel(this))
+{
+    followAccount();
+}
+
+void ShelfModel::setShelf(int shelf)
+{
+    if (shelf < feed::DailyPlaylists || shelf > feed::NewAlbums || shelf == m_shelf)
+        return;
+    m_shelf = shelf;
+    emit shelfChanged();
+    if (m_complete)
+        reload();
+}
+
+void ShelfModel::componentComplete()
+{
+    m_complete = true;
+    reload();
+}
+
+Request ShelfModel::load()
+{
+    return App::instance()->catalog()->shelf(
+        feed::Shelf(m_shelf), handle<QList<CollectionItem>>([this](QList<CollectionItem> items) {
+            m_items->reset(items);
+            return items.isEmpty();
+        }));
+}
+
+void ShelfModel::clear() { m_items->clear(); }
 
 LibraryPageModel::LibraryPageModel(QObject* parent)
     : LoadableModel(parent), m_likedSongs(new SongListModel(this)),

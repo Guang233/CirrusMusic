@@ -17,6 +17,8 @@ class SongListModel : public QAbstractListModel
     QML_ELEMENT
     QML_UNCREATABLE("Owned by a page model")
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // App.player's current song is one of the rows.
+    Q_PROPERTY(bool containsCurrent READ containsCurrent NOTIFY containsCurrentChanged)
 
   public:
     enum Role {
@@ -33,6 +35,7 @@ class SongListModel : public QAbstractListModel
         LoadedRole,
         UnavailableRole,
         CurrentRole, // the song App.player is on
+        ReasonRole,  // recommendation reason, may be empty
     };
     Q_ENUM(Role)
 
@@ -46,6 +49,7 @@ class SongListModel : public QAbstractListModel
 
     // Every key, e.g. for "play all".
     Q_INVOKABLE QStringList keys() const;
+    [[nodiscard]] bool containsCurrent() const { return m_containsCurrent; }
 
     int rowCount(const QModelIndex& parent = {}) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -53,9 +57,11 @@ class SongListModel : public QAbstractListModel
 
   signals:
     void countChanged();
+    void containsCurrentChanged();
 
   private:
     void setCurrentKey(const QString& key);
+    void updateContainsCurrent();
 
     struct Row {
         SongInfo song;
@@ -63,6 +69,7 @@ class SongListModel : public QAbstractListModel
     };
     QList<Row> m_rows;
     QString m_currentKey;
+    bool m_containsCurrent = false;
 };
 
 } // namespace cirrus::ui

@@ -7,6 +7,8 @@
 #include <QHash>
 #include <QVariantMap>
 
+#include <algorithm>
+
 namespace cirrus::ui
 {
 
@@ -30,6 +32,19 @@ void SongListModel::setCurrentKey(const QString& key)
         if (rowKey == previous || rowKey == key)
             emit dataChanged(index(row), index(row), {CurrentRole});
     }
+    updateContainsCurrent();
+}
+
+void SongListModel::updateContainsCurrent()
+{
+    const bool contains = !m_currentKey.isEmpty() &&
+                          std::any_of(m_rows.cbegin(), m_rows.cend(), [this](const Row& row) {
+                              return row.song.key == m_currentKey;
+                          });
+    if (contains == m_containsCurrent)
+        return;
+    m_containsCurrent = contains;
+    emit containsCurrentChanged();
 }
 
 void SongListModel::reset(const QStringList& keys, const QList<SongInfo>& details)
@@ -51,6 +66,7 @@ void SongListModel::reset(const QStringList& keys, const QList<SongInfo>& detail
     endResetModel();
     if (rowCount() != oldCount)
         emit countChanged();
+    updateContainsCurrent();
 }
 
 void SongListModel::clear() { reset({}, {}); }
@@ -65,6 +81,7 @@ void SongListModel::append(const QList<SongInfo>& songs)
         m_rows.append({song, true});
     endInsertRows();
     emit countChanged();
+    updateContainsCurrent();
 }
 
 QStringList SongListModel::keys() const
@@ -119,6 +136,8 @@ QVariant SongListModel::data(const QModelIndex& index, int role) const
         return song.unavailable;
     case CurrentRole:
         return !song.key.isEmpty() && song.key == m_currentKey;
+    case ReasonRole:
+        return song.reason;
     default:
         return {};
     }
@@ -140,6 +159,7 @@ QHash<int, QByteArray> SongListModel::roleNames() const
         {LoadedRole, "loaded"},
         {UnavailableRole, "unavailable"},
         {CurrentRole, "current"},
+        {ReasonRole, "reason"},
     };
 }
 

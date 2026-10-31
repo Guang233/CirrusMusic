@@ -32,6 +32,8 @@ struct SongInfo {
     QString coverKey;
     qint64 durationMs = -1; // -1 when unknown
     bool unavailable = false;
+    // Why it was recommended (daily songs), as the service words it; may be empty.
+    QString reason;
 };
 
 struct PlaylistInfo {
@@ -111,6 +113,10 @@ Q_ENUM_NS(Which)
 // Shortcuts: the daily songs and personal FM cards.
 enum SectionKind { Shortcuts, Collections, Songs };
 Q_ENUM_NS(SectionKind)
+// Card rows of the home page: today's playlists (signed in), recommended playlists
+// (anyone), the newest albums.
+enum Shelf { DailyPlaylists, RecommendedPlaylists, NewAlbums };
+Q_ENUM_NS(Shelf)
 } // namespace feed
 using Feed = feed::Which;
 

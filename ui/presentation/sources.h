@@ -39,6 +39,8 @@ class CatalogSource
     virtual Request feed(Feed which, Reply<QList<FeedSection>> reply) = 0;
     // Today's recommended songs; signed-in only.
     virtual Request dailySongs(Reply<QList<SongInfo>> reply) = 0;
+    // A row of cards; DailyPlaylists is signed-in only.
+    virtual Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) = 0;
 };
 
 // The signed-in account's library; every request fails with SignedOut for guests.
@@ -47,6 +49,8 @@ class LibrarySource
   public:
     virtual ~LibrarySource() = default;
     virtual Request library(Reply<LibraryPage> reply) = 0;
+    // The latest songs played on any device, newest first.
+    virtual Request recentSongs(int limit, Reply<QList<SongInfo>> reply) = 0;
 };
 
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.

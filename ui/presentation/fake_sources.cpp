@@ -413,8 +413,53 @@ class FakeCatalog : public QObject, public CatalogSource
                 std::shuffle(keys.begin(), keys.end(), random);
                 for (const QString& key : keys.mid(0, kDailySongs))
                     songs << m_samples->songs[key];
+                // Reasons for some songs, worded like the service's.
+                for (qsizetype i = 0; i < songs.size(); i += 2) {
+                    SongInfo& song = songs[i];
+                    if (song.artists.isEmpty())
+                        continue;
+                    song.reason = i % 4 == 0
+                                      ? tr("根据你喜欢的%1推荐").arg(song.artists.first().name)
+                                      : tr("与你最近常听的歌风格相似");
+                }
             }
             outcome.value = songs;
+            return outcome;
+        });
+    }
+
+    Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) override
+    {
+        return replyLater<QList<CollectionItem>>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<QList<CollectionItem>> outcome;
+            if (which == feed::DailyPlaylists && !m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            QList<CollectionItem> items;
+            if (!m_controls->empty()) {
+                if (which == feed::NewAlbums) {
+                    for (const QString& key : m_samples->albumOrder)
+                        items << m_samples->albumItem(key);
+                    std::stable_sort(items.begin(), items.end(),
+                                     [](const CollectionItem& a, const CollectionItem& b) {
+                                         return a.year > b.year;
+                                     });
+                } else {
+                    QStringList keys;
+                    for (const QString& key : m_samples->playlistOrder)
+                        if (!m_samples->playlists[key].songKeys.isEmpty())
+                            keys << key;
+                    if (which == feed::DailyPlaylists) {
+                        // A different but stable order each day.
+                        std::mt19937 random(QDate::currentDate().toJulianDay() + 1);
+                        std::shuffle(keys.begin(), keys.end(), random);
+                    }
+                    for (const QString& key : std::as_const(keys))
+                        items << m_samples->playlistItem(key);
+                }
+            }
+            outcome.value = items;
             return outcome;
         });
     }
@@ -468,7 +513,8 @@ class FakeLibrary : public QObject, public LibrarySource
                 };
                 page.likedSongs = songs({"so-001", "so-005", "so-011", "so-017", "so-023", "so-031",
                                          "so-034", "so-008"});
-                page.recentSongs = songs({"so-031", "so-001", "so-019", "so-026", "so-012"});
+                for (const QString& key : recentKeys())
+                    page.recentSongs << m_samples->songs[key];
                 for (const char* key : {"pl-01", "pl-05"})
                     page.createdPlaylists << m_samples->playlistItem(QLatin1StringView(key));
                 for (const char* key : {"pl-02", "pl-03", "pl-04"})
@@ -483,7 +529,29 @@ class FakeLibrary : public QObject, public LibrarySource
         });
     }
 
+    Request recentSongs(int limit, Reply<QList<SongInfo>> reply) override
+    {
+        return replyLater<QList<SongInfo>>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<QList<SongInfo>> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            QList<SongInfo> songs;
+            if (!m_controls->empty())
+                for (const QString& key : recentKeys().mid(0, limit))
+                    songs << m_samples->songs[key];
+            outcome.value = songs;
+            return outcome;
+        });
+    }
+
   private:
+    static QStringList recentKeys()
+    {
+        return {"so-031", "so-001", "so-019", "so-026", "so-012", "so-007", "so-022", "so-014"};
+    }
+
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
 };
