@@ -9,12 +9,18 @@ import Cirrus.Presentation
 // (≥ 1200) keep the rail expanded beside the content and push it when toggled;
 // narrower ones keep it collapsed and expand it over the content with a scrim.
 // Crossing the breakpoint switches without animation (motion-choreography.md §5).
-// Pages get `shell` and navigate through it.
+// Pages get `shell` and navigate through it. The expanded rail also lists the
+// account's playlists; search lives in the title bar row (docs/ui/pages/shell.md).
 Item {
     id: shell
 
     readonly property bool large: width >= 1200
     readonly property bool canGoBack: stack.depth > 1
+    // Left edge of the page area, for content lined up with it (the title bar search).
+    readonly property real contentX: stack.x
+    readonly property bool searching: (stack.currentItem as SearchPage) !== null
+    // The playlist the current page shows, for the rail's playlist rows.
+    readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
             glyph: Symbols.home,
             text: qsTr("首页"),
@@ -24,17 +30,9 @@ Item {
             text: qsTr("发现"),
             page: discoverPage
         }, {
-            glyph: Symbols.search,
-            text: qsTr("搜索"),
-            page: searchPage
-        }, {
             glyph: Symbols.library_music,
             text: qsTr("音乐库"),
             page: libraryPage
-        }, {
-            glyph: Symbols.settings,
-            text: qsTr("设置"),
-            page: settingsPage
         }]
 
     // Top-level destination: clears the history.
@@ -65,6 +63,28 @@ Item {
         stack.push(artistPage, {
             shell: shell,
             artistKey: key
+        });
+    }
+
+    function openSearch() {
+        if (!searching)
+            stack.push(searchPage, {
+                shell: shell
+            });
+    }
+
+    function openSettings() {
+        if ((stack.currentItem as SettingsPage) === null)
+            stack.push(settingsPage, {
+                shell: shell
+            });
+    }
+
+    // The library page on one of its tabs (0 liked songs … 4 recently played).
+    function openLibrary(tab: int) {
+        stack.push(libraryPage, {
+            shell: shell,
+            initialTab: tab
         });
     }
 
@@ -103,10 +123,7 @@ Item {
 
     Component {
         id: homePage
-        FeedPage {
-            title: qsTr("首页")
-            feed: Feed.Home
-        }
+        HomePage {}
     }
     Component {
         id: discoverPage
@@ -178,17 +195,39 @@ Item {
         }
     }
 
+    // The account's playlists for the rail.
+    LibraryPageModel {
+        id: myLibrary
+    }
+
     NavigationRail {
         id: rail
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         modal: !shell.large
+        minimumExpandedWidth: 272
         header: Component {
             IconButton {
                 x: 8
                 glyph: rail.expanded ? Symbols.menu_open : Symbols.menu
                 text: rail.expanded ? qsTr("收起导航栏") : qsTr("展开导航栏")
                 onClicked: rail.expanded = !rail.expanded
+            }
+        }
+        expandedContent: Component {
+            RailPlaylists {
+                library: myLibrary
+                selectedKey: shell.openPlaylistKey
+                onPlaylistRequested: key => shell.openPlaylist(key)
+                onLibraryRequested: tab => shell.openLibrary(tab)
+                onSignInRequested: shell.openLogin()
+            }
+        }
+        footer: Component {
+            RailAccount {
+                progress: rail.progress
+                onSignInRequested: shell.openLogin()
+                onSettingsRequested: shell.openSettings()
             }
         }
         onActivated: index => shell.select(index)
@@ -207,6 +246,10 @@ Item {
         sequence: "Esc"
         enabled: !shell.large && rail.expanded
         onActivated: rail.expanded = false
+    }
+    Shortcut {
+        sequences: ["Ctrl+K", StandardKey.Find]
+        onActivated: shell.openSearch()
     }
     Shortcut {
         sequences: [StandardKey.Back]

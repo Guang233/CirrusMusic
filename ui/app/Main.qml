@@ -46,7 +46,16 @@ AppWindow {
         value: App.settings.customFontFamily
     }
 
+    titleContent: SearchLauncher {
+        x: Math.max(0, shell.contentX + 24 - parent.x)
+        width: Math.max(0, Math.min(360, parent.width - x - 16))
+        anchors.verticalCenter: parent.verticalCenter
+        visible: !shell.searching
+        onClicked: shell.openSearch()
+    }
+
     AppShell {
+        id: shell
         anchors.fill: parent
     }
 }

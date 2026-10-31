@@ -11,6 +11,8 @@ PageScaffold {
     id: page
 
     required property AppShell shell
+    // The tab to open on (0 liked songs … 4 recently played).
+    property int initialTab: 0
 
     title: qsTr("音乐库")
     canGoBack: shell.canGoBack
@@ -52,6 +54,7 @@ PageScaffold {
 
         TabBar {
             id: tabs
+            Component.onCompleted: currentIndex = page.initialTab
             x: 24
             width: Math.min(parent.width - 48, 720)
             TabButton {

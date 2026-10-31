@@ -1,0 +1,112 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import Cirrus.Theme
+import Cirrus.Controls
+import Cirrus.Components
+import Cirrus.Presentation
+
+// One section of the home page (docs/ui/pages/home.md §6): title, "see all", and its
+// own states. It loads and fails on its own: a skeleton while loading, one line with
+// retry when it failed, hidden when empty or signed out. The content rises in when
+// it first arrives.
+Column {
+    id: section
+
+    property string title
+    property bool showsAll: false
+    property LoadableModel model
+    property Component skeleton
+    default property alias content: body.data
+
+    signal allRequested
+
+    readonly property int loadState: model ? model.state : LoadState.Idle
+    readonly property bool hasContent: loadState === LoadState.Ready
+                                       || loadState === LoadState.Partial
+    readonly property bool failed: loadState === LoadState.Error
+                                   || loadState === LoadState.Offline
+    readonly property bool loading: loadState === LoadState.Loading
+
+    visible: hasContent || failed || loading
+    spacing: 12
+
+    Spring {
+        id: reveal
+        target: section.hasContent ? 1 : 0
+        spec: Theme.motion.standardDefaultSpatial
+        threshold: 0.002
+    }
+
+    Item {
+        width: section.width
+        height: 40
+
+        Text {
+            anchors.left: parent.left
+            anchors.right: allButton.visible ? allButton.left : parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: section.title
+            elide: Text.ElideRight
+            color: Theme.color.onSurface
+            font: Theme.type.titleLarge.font
+            Accessible.role: Accessible.Heading
+        }
+        Button {
+            id: allButton
+            anchors.right: parent.right
+            anchors.rightMargin: -12
+            anchors.verticalCenter: parent.verticalCenter
+            visible: section.showsAll && section.hasContent
+            variant: Md.Text
+            size: Md.Small
+            text: qsTr("查看全部")
+            trailingGlyph: Symbols.chevron_right
+            onClicked: section.allRequested()
+        }
+    }
+
+    Loader {
+        width: section.width
+        active: section.loading && !section.hasContent
+        visible: active
+        sourceComponent: section.skeleton
+    }
+
+    // Failed without content: one line with retry, not a whole-page error.
+    Row {
+        visible: section.failed && !section.hasContent
+        height: 40
+        spacing: 12
+        Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: section.loadState === LoadState.Offline ? Symbols.wifi_off : Symbols.error
+            size: 20
+            color: Theme.color.onSurfaceVariant
+        }
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: section.loadState === LoadState.Offline
+                  ? qsTr("网络不可用，%1没有加载出来").arg(section.title)
+                  : qsTr("%1没有加载出来").arg(section.title)
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.bodyMedium.font
+        }
+        Button {
+            anchors.verticalCenter: parent.verticalCenter
+            variant: Md.Text
+            size: Md.Small
+            text: qsTr("重试")
+            onClicked: section.model.retry()
+        }
+    }
+
+    Column {
+        id: body
+        width: section.width
+        visible: section.hasContent
+        opacity: reveal.value
+        transform: Translate {
+            y: 16 * (1 - reveal.value)
+        }
+    }
+}

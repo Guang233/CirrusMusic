@@ -8,6 +8,10 @@ import Cirrus.Theme
 // button, left-aligned with the indicators (center a 40 px button with x: 8).
 // `modal`: the rail expands over the content (the shell adds the scrim); its floating
 // look (SurfaceContainer, rounded trailing corners, shadow) grows with the expansion.
+// `footer` sits at the bottom (e.g. account and settings; it lays itself out for
+// `progress`). `expandedContent` fills the space between the items and the footer
+// while expanded (e.g. the user's playlists): it is laid out at the expanded width,
+// clipped by the rail and fades in late in the expansion.
 //   NavigationRail {
 //       expanded: wide
 //       NavigationRailItem { glyph: Symbols.home; text: qsTr("首页") }
@@ -19,12 +23,15 @@ Rectangle {
     property bool modal: false
     property int currentIndex: 0
     property Component header
+    property Component footer
+    property Component expandedContent
+    property real minimumExpandedWidth: 220
     default property alias items: column.data
 
     // 0 collapsed, 1 expanded; drives the width and every item's layout.
     readonly property real progress: widthSpring.value
     readonly property real collapsedWidth: 96
-    readonly property real expandedWidth: Math.max(220, Math.min(360, widestItem))
+    readonly property real expandedWidth: Math.max(minimumExpandedWidth, Math.min(360, widestItem))
     property real widestItem: 0
 
     signal activated(int index)
@@ -107,5 +114,28 @@ Rectangle {
         width: root.width
         spacing: Theme.motion.lerp(4, 0, root.progress)
         onChildrenChanged: Qt.callLater(root.attach)
+    }
+
+    Item {
+        id: expandedArea
+        y: column.y + column.height + 8
+        width: root.width
+        height: Math.max(0, (footerLoader.item ? footerLoader.y : root.height) - y - 8)
+        clip: true
+        opacity: Theme.motion.segment(root.progress, 0.5, 1)
+        visible: opacity > 0 && root.expandedContent !== null
+
+        Loader {
+            width: root.expandedWidth
+            height: parent.height
+            sourceComponent: root.expandedContent
+        }
+    }
+
+    Loader {
+        id: footerLoader
+        y: root.height - height - 16
+        width: root.width
+        sourceComponent: root.footer
     }
 }

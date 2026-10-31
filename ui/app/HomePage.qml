@@ -1,0 +1,236 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import Cirrus.Theme
+import Cirrus.Controls
+import Cirrus.Components
+import Cirrus.Presentation
+
+// The home page (docs/ui/pages/home.md): "today" and personal FM on top, then the
+// songs played lately and today's playlists; guests get the sign-in invitation,
+// recommended playlists and new albums. Every section loads and fails on its own.
+Item {
+    id: page
+
+    required property AppShell shell
+
+    readonly property bool signedIn: App.session.signedIn
+    // Content column: at most 1200 wide, centered (§4).
+    readonly property real columnWidth: Math.min(width - 48, 1200)
+    readonly property bool wide: columnWidth >= 792
+    readonly property bool narrow: width < 600
+
+    // Everything the account can see failed: one page-level message instead.
+    readonly property bool allFailed: {
+        const failed = m => m.state === LoadState.Error || m.state === LoadState.Offline;
+        return signedIn ? failed(daily) && failed(recent) && failed(playlists)
+                        : failed(playlists) && failed(newAlbums);
+    }
+
+    function refresh() {
+        for (const m of [daily, recent, playlists, newAlbums])
+            m.retry();
+    }
+
+    DailySongsPageModel {
+        id: daily
+    }
+    RecentSongsModel {
+        id: recent
+        limit: 6
+    }
+    ShelfModel {
+        id: playlists
+        shelf: page.signedIn ? Feed.DailyPlaylists : Feed.RecommendedPlaylists
+    }
+    ShelfModel {
+        id: newAlbums
+        shelf: Feed.NewAlbums
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Refresh]
+        enabled: page.visible
+        onActivated: page.refresh()
+    }
+
+    component Placeholder: Column {
+        spacing: 8
+        Repeater {
+            model: 3
+            Skeleton {
+                width: page.columnWidth
+                height: 64
+                radius: Theme.shape.large
+            }
+        }
+    }
+    component CardsPlaceholder: Row {
+        spacing: 16
+        Repeater {
+            model: Math.max(1, Math.floor(page.columnWidth / 176))
+            Skeleton {
+                width: 160
+                height: 200
+                radius: Theme.shape.large
+            }
+        }
+    }
+
+    // A few songs in one or two segmented columns; a row plays the section's songs.
+    component SongColumns: Row {
+        id: songColumns
+        required property SongListModel songs
+        readonly property int columns: page.wide ? 2 : 1
+        readonly property int perColumn: Math.ceil(songs.count / columns)
+        width: page.columnWidth
+        spacing: 16
+        Repeater {
+            model: songColumns.columns
+            Column {
+                id: songColumn
+                required property int index
+                readonly property int firstRow: index * songColumns.perColumn
+                width: (songColumns.width - (songColumns.columns - 1) * songColumns.spacing)
+                       / songColumns.columns
+                spacing: 2
+                Repeater {
+                    model: songColumns.songs
+                    ListItem {
+                        id: row
+                        required property int index
+                        required property string title
+                        required property string artistText
+                        required property string coverKey
+                        required property string durationText
+                        required property bool current
+                        readonly property int lastRow: Math.min(songColumns.songs.count,
+                                                             songColumn.firstRow
+                                                             + songColumns.perColumn) - 1
+                        width: songColumn.width
+                        visible: index >= songColumn.firstRow && index <= lastRow
+                        segmented: true
+                        first: index === songColumn.firstRow
+                        last: index === row.lastRow
+                        containerColor: Theme.color.surfaceContainer
+                        highlighted: current
+                        text: title
+                        supportingText: artistText
+                        trailingText: durationText
+                        onClicked: App.player.playSongs(songColumns.songs.keys(), index)
+                        leading: Component {
+                            CoverArt {
+                                width: 48
+                                height: 48
+                                coverKey: row.coverKey
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Flickable {
+        id: flick
+        anchors.fill: parent
+        visible: !page.allFailed
+        contentHeight: column.height + 48
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {}
+
+        Column {
+            id: column
+            x: (page.width - width) / 2
+            y: 8
+            width: page.columnWidth
+            spacing: 40
+
+            // Today and personal FM: side by side when wide, FM as a strip below otherwise.
+            Item {
+                width: column.width
+                height: today.height + (fm.visible && !page.wide ? fm.height + 12 : 0)
+
+                TodayCard {
+                    id: today
+                    shell: page.shell
+                    daily: daily
+                    compact: page.narrow
+                    width: fm.visible && page.wide ? parent.width - 280 - 16 : parent.width
+                    height: page.narrow ? 200 : 280
+                }
+                FmCard {
+                    id: fm
+                    visible: page.signedIn
+                    strip: !page.wide
+                    x: page.wide ? today.width + 16 : 0
+                    y: page.wide ? 0 : today.height + 12
+                    width: page.wide ? 280 : parent.width
+                    height: page.wide ? 280 : 72
+                }
+            }
+
+            HomeSection {
+                width: column.width
+                visible: page.signedIn && (hasContent || failed || loading)
+                title: qsTr("最近听过")
+                showsAll: true
+                model: recent
+                skeleton: Placeholder {}
+                onAllRequested: page.shell.openLibrary(4)
+
+                SongColumns {
+                    songs: recent.songs
+                }
+            }
+
+            HomeSection {
+                width: column.width
+                title: page.signedIn ? qsTr("每日推荐歌单") : qsTr("推荐歌单")
+                showsAll: true
+                model: playlists
+                skeleton: CardsPlaceholder {}
+                onAllRequested: page.shell.select(1)
+
+                CollectionGrid {
+                    width: column.width + 16
+                    x: -8
+                    minimumCardWidth: 176
+                    maximumRows: 1
+                    model: playlists.items
+                    onActivated: (kind, key) => page.shell.openCollection(kind, key)
+                }
+            }
+
+            HomeSection {
+                width: column.width
+                visible: !page.signedIn && (hasContent || failed || loading)
+                title: qsTr("新碟上架")
+                showsAll: true
+                model: newAlbums
+                skeleton: CardsPlaceholder {}
+                onAllRequested: page.shell.select(1)
+
+                CollectionGrid {
+                    width: column.width + 16
+                    x: -8
+                    minimumCardWidth: 176
+                    maximumRows: 1
+                    model: newAlbums.items
+                    onActivated: (kind, key) => page.shell.openCollection(kind, key)
+                }
+            }
+        }
+    }
+
+    StateMessage {
+        anchors.centerIn: parent
+        width: Math.min(parent.width - 48, 480)
+        visible: page.allFailed
+        glyph: Symbols.wifi_off
+        title: qsTr("连不上网易云音乐")
+        message: qsTr("检查网络后重试。")
+        actionText: qsTr("重试")
+        actionGlyph: Symbols.refresh
+        onActionTriggered: page.refresh()
+    }
+}
