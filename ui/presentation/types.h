@@ -115,7 +115,7 @@ enum SectionKind { Shortcuts, Collections, Songs };
 Q_ENUM_NS(SectionKind)
 // Card rows of the home page: today's playlists (signed in), recommended playlists
 // (anyone), the newest albums.
-enum Shelf { DailyPlaylists, RecommendedPlaylists, NewAlbums };
+enum Shelf { DailyPlaylists, RecommendedPlaylists, NewAlbums, PopularArtists };
 Q_ENUM_NS(Shelf)
 } // namespace feed
 using Feed = feed::Which;
@@ -126,6 +126,21 @@ struct FeedSection {
     QString title;
     QList<CollectionItem> collections;
     QList<SongInfo> songs;
+};
+
+// A chart: a playlist, with its first few songs as the service previews them (text
+// only, not songs).
+struct ChartPreview {
+    QString title;
+    QString subtitle; // may be empty
+};
+
+struct ChartInfo {
+    QString key; // a playlist key
+    QString title;
+    QString updateLabel; // e.g. "每天更新", as the service words it; may be empty
+    QString coverKey;
+    QList<ChartPreview> previews;
 };
 
 // One page of an offset-paged list (search results).

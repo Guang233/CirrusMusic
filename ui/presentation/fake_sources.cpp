@@ -1,6 +1,7 @@
 #include "fake_sources.h"
 
 #include "fake_controls.h"
+#include "formatter.h"
 
 #include <QDate>
 #include <QFile>
@@ -200,18 +201,44 @@ class FakeCatalog : public QObject, public CatalogSource
     FakeCatalog(FakeControls* controls, std::shared_ptr<const Samples> samples)
         : m_controls(controls), m_samples(std::move(samples))
     {
+        // Charts are playlists of their own, made from the sample songs.
+        const struct {
+            const char* key;
+            const char* title;
+            const char* update;
+            const char* cover;
+        } charts[] = {{"ch-soar", QT_TR_NOOP("飙升榜"), QT_TR_NOOP("每天更新"), "crimson"},
+                      {"ch-new", QT_TR_NOOP("新歌榜"), QT_TR_NOOP("每天更新"), "ocean"},
+                      {"ch-original", QT_TR_NOOP("原创榜"), QT_TR_NOOP("每周四更新"), "forest"},
+                      {"ch-hot", QT_TR_NOOP("热歌榜"), QT_TR_NOOP("每周四更新"), "sunset"}};
+        std::mt19937 random(7);
+        for (const auto& chart : charts) {
+            QStringList keys = m_samples->songOrder;
+            std::shuffle(keys.begin(), keys.end(), random);
+            keys = keys.mid(0, kChartSongs);
+            PlaylistPage page;
+            page.info = {QString::fromLatin1(chart.key), tr(chart.title), tr(chart.update),
+                         tr("Cirrus 示例"), QString::fromLatin1(chart.cover)};
+            page.songKeys = keys;
+            for (const QString& key : std::as_const(keys))
+                page.songs << m_samples->songs[key];
+            m_charts << page;
+        }
     }
 
     Request playlist(const QString& key, Reply<PlaylistPage> reply) override
     {
         return replyLater<PlaylistPage>(this, m_controls, std::move(reply), [this, key]() {
             Outcome<PlaylistPage> outcome;
+            const auto chart =
+                std::find_if(m_charts.cbegin(), m_charts.cend(),
+                             [&](const PlaylistPage& c) { return c.info.key == key; });
             const auto found = m_samples->playlists.constFind(key);
-            if (found == m_samples->playlists.cend()) {
+            if (chart == m_charts.cend() && found == m_samples->playlists.cend()) {
                 outcome.failure = Failure{failure::Rejected, std::nullopt};
                 return outcome;
             }
-            PlaylistPage page = *found;
+            PlaylistPage page = chart != m_charts.cend() ? *chart : *found;
             if (m_controls->empty()) {
                 page.songKeys.clear();
                 page.songs.clear();
@@ -438,7 +465,10 @@ class FakeCatalog : public QObject, public CatalogSource
             }
             QList<CollectionItem> items;
             if (!m_controls->empty()) {
-                if (which == feed::NewAlbums) {
+                if (which == feed::PopularArtists) {
+                    for (const QString& key : m_samples->artistOrder)
+                        items << m_samples->artistItem(key);
+                } else if (which == feed::NewAlbums) {
                     for (const QString& key : m_samples->albumOrder)
                         items << m_samples->albumItem(key);
                     std::stable_sort(items.begin(), items.end(),
@@ -464,8 +494,31 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
+    Request charts(Reply<QList<ChartInfo>> reply) override
+    {
+        return replyLater<QList<ChartInfo>>(this, m_controls, std::move(reply), [this]() {
+            QList<ChartInfo> charts;
+            if (!m_controls->empty()) {
+                for (const PlaylistPage& page : std::as_const(m_charts)) {
+                    ChartInfo chart{page.info.key,
+                                    page.info.title,
+                                    page.info.description,
+                                    page.info.coverKey,
+                                    {}};
+                    for (const SongInfo& song : page.songs.mid(0, kChartPreviews))
+                        chart.previews
+                            << ChartPreview{song.title, Formatter::artists(song.artists)};
+                    charts << chart;
+                }
+            }
+            return Outcome<QList<ChartInfo>>{charts};
+        });
+    }
+
   private:
     static constexpr int kTopSongs = 10;
+    static constexpr int kChartSongs = 20;
+    static constexpr int kChartPreviews = 3;
     static constexpr int kSuggestions = 8;
     static constexpr int kDailySongs = 15;
 
@@ -484,6 +537,7 @@ class FakeCatalog : public QObject, public CatalogSource
 
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
+    QList<PlaylistPage> m_charts;
 };
 
 // The signed-in account's library: a fixed selection of the samples.

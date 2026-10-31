@@ -181,6 +181,59 @@ class ShelfModel : public LoadableModel, public QQmlParserStatus
     CollectionListModel* m_items;
 };
 
+// Charts as cards: key (a playlist), title, updateLabel, coverKey, and previews
+// ([{title, subtitle}], the first few songs).
+class ChartListModel : public QAbstractListModel
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Owned by ChartsModel")
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+
+  public:
+    enum Role {
+        KeyRole = Qt::UserRole + 1,
+        TitleRole,
+        UpdateLabelRole,
+        CoverKeyRole,
+        PreviewsRole
+    };
+    Q_ENUM(Role)
+
+    using QAbstractListModel::QAbstractListModel;
+
+    void reset(const QList<ChartInfo>& charts);
+
+    int rowCount(const QModelIndex& parent = {}) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+  signals:
+    void countChanged();
+
+  private:
+    QList<ChartInfo> m_charts;
+};
+
+// The charts for the home page.
+class ChartsModel : public LoadableModel
+{
+    Q_OBJECT
+    QML_ELEMENT
+    Q_PROPERTY(cirrus::ui::ChartListModel* charts READ charts CONSTANT)
+
+  public:
+    explicit ChartsModel(QObject* parent = nullptr);
+    [[nodiscard]] ChartListModel* charts() const { return m_charts; }
+
+  protected:
+    Request load() override;
+    void clear() override;
+
+  private:
+    ChartListModel* m_charts;
+};
+
 // The account's library (docs/ui/presentation.md §5.2); SignedOut for guests.
 class LibraryPageModel : public LoadableModel
 {

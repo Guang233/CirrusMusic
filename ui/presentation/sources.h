@@ -41,6 +41,8 @@ class CatalogSource
     virtual Request dailySongs(Reply<QList<SongInfo>> reply) = 0;
     // A row of cards; DailyPlaylists is signed-in only.
     virtual Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) = 0;
+    // The charts with previews of their top songs.
+    virtual Request charts(Reply<QList<ChartInfo>> reply) = 0;
 };
 
 // The signed-in account's library; every request fails with SignedOut for guests.

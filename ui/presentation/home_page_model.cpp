@@ -190,7 +190,7 @@ ShelfModel::ShelfModel(QObject* parent)
 
 void ShelfModel::setShelf(int shelf)
 {
-    if (shelf < feed::DailyPlaylists || shelf > feed::NewAlbums || shelf == m_shelf)
+    if (shelf < feed::DailyPlaylists || shelf > feed::PopularArtists || shelf == m_shelf)
         return;
     m_shelf = shelf;
     emit shelfChanged();
@@ -214,6 +214,73 @@ Request ShelfModel::load()
 }
 
 void ShelfModel::clear() { m_items->clear(); }
+
+void ChartListModel::reset(const QList<ChartInfo>& charts)
+{
+    const int oldCount = rowCount();
+    beginResetModel();
+    m_charts = charts;
+    endResetModel();
+    if (rowCount() != oldCount)
+        emit countChanged();
+}
+
+int ChartListModel::rowCount(const QModelIndex& parent) const
+{
+    return parent.isValid() ? 0 : int(m_charts.size());
+}
+
+QVariant ChartListModel::data(const QModelIndex& index, int role) const
+{
+    if (!checkIndex(index, CheckIndexOption::IndexIsValid | CheckIndexOption::ParentIsInvalid))
+        return {};
+    const ChartInfo& chart = m_charts.at(index.row());
+    switch (role) {
+    case KeyRole:
+        return chart.key;
+    case TitleRole:
+        return chart.title;
+    case UpdateLabelRole:
+        return chart.updateLabel;
+    case CoverKeyRole:
+        return chart.coverKey;
+    case PreviewsRole: {
+        QVariantList previews;
+        for (const ChartPreview& preview : chart.previews)
+            previews << QVariantMap{{QStringLiteral("title"), preview.title},
+                                    {QStringLiteral("subtitle"), preview.subtitle}};
+        return previews;
+    }
+    default:
+        return {};
+    }
+}
+
+QHash<int, QByteArray> ChartListModel::roleNames() const
+{
+    return {{KeyRole, "key"},
+            {TitleRole, "title"},
+            {UpdateLabelRole, "updateLabel"},
+            {CoverKeyRole, "coverKey"},
+            {PreviewsRole, "previews"}};
+}
+
+ChartsModel::ChartsModel(QObject* parent)
+    : LoadableModel(parent), m_charts(new ChartListModel(this))
+{
+    reload();
+}
+
+Request ChartsModel::load()
+{
+    return App::instance()->catalog()->charts(
+        handle<QList<ChartInfo>>([this](QList<ChartInfo> charts) {
+            m_charts->reset(charts);
+            return charts.isEmpty();
+        }));
+}
+
+void ChartsModel::clear() { m_charts->reset({}); }
 
 LibraryPageModel::LibraryPageModel(QObject* parent)
     : LoadableModel(parent), m_likedSongs(new SongListModel(this)),
