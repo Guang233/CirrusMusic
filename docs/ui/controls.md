@@ -123,7 +123,11 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 8c. 对话框（第二批，阶段 3）
 
-- **Dialog**（MD3 基础对话框）：基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 280–560（不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24。内容是一列，间距 16：可选图标 `glyph`（24，Secondary，居中，此时标题也居中）、标题 `title`（headlineSmall，OnSurface）、说明 `supportingText`（bodyMedium，OnSurfaceVariant）、子项（任意内容），最后是 `buttons`（文字按钮，右对齐，间距 8，与上方相隔 24）。模态，遮罩 Scrim 32 %。进入时缩放 0.9→1（`standardDefaultSpatial`）并淡入（`defaultEffects`），退出淡出（`fastEffects`）。Esc 和点击外面关闭（`closePolicy`）。Gallery 导航页有示例。
+- **Dialog**：MD3 基础对话框的外观，桌面的交互（维护者要求：MD3E 风格，但符合电脑的操作逻辑，尽量支持纯键盘操作）。基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 320–560（不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24；遮罩 Scrim 32 %。
+  - 布局（一列，间距 16）：标题行（可选图标 `glyph` 24 Secondary、标题 `title` titleLarge、右端关闭按钮"关闭（Esc）"）→ 说明 `supportingText`（bodyMedium，OnSurfaceVariant）→ 子项 → 按钮行（右对齐，间距 8，与上方相隔 24）：`buttons` 里的额外按钮、`rejectText` 文字按钮、`acceptText` 填充按钮（默认按钮，最右）。
+  - 键盘：Esc 等于取消（`rejected`）；Enter 在按钮上时点击该按钮（与 GTK、KDE 一致），否则执行默认按钮（`accepted`，`acceptEnabled` 为假时不执行）；Tab／Shift+Tab 只在对话框内循环。打开时焦点给 `initialFocusItem`，没有则给默认按钮，再没有给取消按钮；关闭后焦点回到打开前的控件。
+  - 鼠标：点击外面不关闭（桌面上误点不该丢掉对话框里的状态）。
+  - 动效：进入时缩放 0.95→1（`standardFastSpatial`）并淡入，退出淡出（`fastEffects`）。Gallery 导航页有示例。
 
 ## 9. 每个控件的检查项
 

@@ -152,14 +152,25 @@ Item {
         if (incoming) {
             incoming.enabled = true;
             incoming.visible = true;
-            incoming.forceActiveFocus();
+            if (focusIsOurs())
+                incoming.forceActiveFocus();
         }
         progress.snapTo(0);
         progress.target = 1;
         starting = false;
     }
 
-    function settleOutgoing() {
+    // The keyboard focus is in the stack or nowhere, so a new page may take it. Focus
+    // elsewhere (e.g. the title bar's search field, typing) stays where it is.
+    function focusIsOurs(): bool {
+        for (let item = root.Window.activeFocusItem; item; item = item.parent) {
+            if (item === root)
+                return true;
+        }
+        return !root.Window.activeFocusItem || root.Window.activeFocusItem === root.Window.contentItem;
+    }
+
+        function settleOutgoing() {
         if (!outgoing)
             return;
         if (destroyOutgoing)

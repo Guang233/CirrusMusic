@@ -19,6 +19,20 @@ Item {
     // Left edge of the page area, for content lined up with it (the title bar search).
     readonly property real contentX: stack.x
     readonly property bool searching: (stack.currentItem as SearchPage) !== null
+    // The search input; Main puts it in the title bar row.
+    readonly property SearchField searchField: SearchField {
+        x: Math.max(0, shell.contentX + 24 - (parent ? parent.x : 0))
+        y: parent ? (parent.height - height) / 2 : 0
+        width: parent ? Math.max(0, Math.min(400, parent.width - x - 16)) : 360
+        suggestions: searchModel.suggestions
+        trending: searchModel.hotKeywords
+        onTextEdited: {
+            if (!shell.searching && text.trim() !== "")
+                shell.openSearch();
+        }
+        onSubmitted: value => shell.search(value)
+        onDismissed: shell.focusContent()
+    }
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
@@ -69,8 +83,33 @@ Item {
     function openSearch() {
         if (!searching)
             stack.push(searchPage, {
-                shell: shell
+                shell: shell,
+                search: searchModel
             });
+    }
+
+    // Searches from anywhere: the search page shows the results.
+    function search(text: string) {
+        openSearch();
+        searchModel.submit(text);
+    }
+
+    // Keyboard focus back to the page, e.g. after Esc in the search field.
+    function focusContent() {
+        stack.currentItem?.forceActiveFocus();
+    }
+
+    // The field shows what the search page shows, and nothing elsewhere.
+    onSearchingChanged: {
+        if (!searching)
+            searchField.clear();
+        else if (searchField.text === "")
+            searchField.text = searchModel.query;
+    }
+
+    SearchModel {
+        id: searchModel
+        text: shell.searchField.text
     }
 
     function openSettings() {
@@ -246,7 +285,10 @@ Item {
     }
     Shortcut {
         sequences: ["Ctrl+K", StandardKey.Find]
-        onActivated: shell.openSearch()
+        onActivated: {
+            shell.searchField.forceActiveFocus();
+            shell.searchField.selectAll();
+        }
     }
     Shortcut {
         sequences: [StandardKey.Back]

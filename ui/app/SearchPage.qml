@@ -5,50 +5,35 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// Search: the bar with suggestions under it while typing, trending keywords before
-// the first search, then results in four tabs, each with its own state and paging.
+// Search results: trending keywords before the first search, then results in four
+// tabs, each with its own state and paging. The input and its suggestions are the
+// title bar's search field (AppShell.searchField); `search` is the shell's model.
 PageScaffold {
     id: page
 
     required property AppShell shell
+    required property SearchModel search
 
     function run(text: string): void {
-        bar.text = text;
-        search.submit(text);
-        bar.focus = false;
+        shell.searchField.text = text;
+        shell.search(text);
     }
 
     title: qsTr("搜索")
     canGoBack: shell.canGoBack
     onBackRequested: shell.back()
 
-    SearchModel {
-        id: search
-        text: bar.text
-        tab: tabs.currentIndex
-    }
-
-    SearchBar {
-        id: bar
-        x: 24
-        width: Math.min(parent.width - 48, 720)
-        focus: true
-        placeholderText: qsTr("搜索歌曲、歌手、专辑、歌单")
-        onAccepted: page.run(text)
-        Keys.onDownPressed: suggestionList.forceActiveFocus()
-    }
-
     // Before the first search.
     Column {
-        anchors.top: bar.bottom
-        anchors.topMargin: 24
+        anchors.top: parent.top
+        anchors.topMargin: 8
         x: 24
         width: parent.width - 48
         spacing: 12
-        visible: search.query === ""
+        visible: page.search.query === ""
 
         Text {
-            visible: search.hotKeywords.length > 0
+            visible: page.search.hotKeywords.length > 0
             text: qsTr("热门搜索")
             color: Theme.color.onSurface
             font: Theme.type.titleMedium.font
@@ -57,7 +42,7 @@ PageScaffold {
             width: parent.width
             spacing: 8
             Repeater {
-                model: search.hotKeywords
+                model: page.search.hotKeywords
                 delegate: Chip {
                     required property string modelData
                     required property int index
@@ -71,14 +56,15 @@ PageScaffold {
 
     // Results.
     Item {
-        anchors.top: bar.bottom
-        anchors.topMargin: 8
+        anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: parent.width
-        visible: search.query !== ""
+        visible: page.search.query !== ""
 
         TabBar {
             id: tabs
+            currentIndex: page.search.tab
+            onCurrentIndexChanged: page.search.tab = currentIndex
             x: 24
             width: Math.min(parent.width - 48, 720)
             TabButton {
@@ -105,9 +91,9 @@ PageScaffold {
             PageState {
                 id: songState
                 anchors.fill: parent
-                model: search.songs
+                model: page.search.songs
                 emptyGlyph: Symbols.search
-                emptyText: qsTr("没有找到“%1”相关的歌曲").arg(search.query)
+                emptyText: qsTr("没有找到“%1”相关的歌曲").arg(page.search.query)
                 skeleton: ListSkeleton {
                     header: false
                 }
@@ -118,13 +104,13 @@ PageScaffold {
                 topMargin: 8
                 opacity: songState.contentOpacity
                 visible: opacity > 0
-                model: search.songs.songs
-                pager: search.songs
+                model: page.search.songs.songs
+                pager: page.search.songs
                 onAlbumRequested: key => page.shell.openAlbum(key)
                 onArtistRequested: key => page.shell.openArtist(key)
                 footer: LoadMoreFooter {
                     width: songList.width
-                    model: search.songs
+                    model: page.search.songs
                 }
             }
         }
@@ -146,7 +132,7 @@ PageScaffold {
                 anchors.fill: parent
                 model: collectionTab.results
                 emptyGlyph: Symbols.search
-                emptyText: qsTr("没有找到“%1”相关的%2").arg(search.query).arg(collectionTab.noun)
+                emptyText: qsTr("没有找到“%1”相关的%2").arg(page.search.query).arg(collectionTab.noun)
                 skeleton: ListSkeleton {
                     header: false
                 }
@@ -163,66 +149,19 @@ PageScaffold {
         }
 
         CollectionTab {
-            results: search.albums
+            results: page.search.albums
             tab: SearchModel.Albums
             noun: qsTr("专辑")
         }
         CollectionTab {
-            results: search.artists
+            results: page.search.artists
             tab: SearchModel.Artists
             noun: qsTr("歌手")
         }
         CollectionTab {
-            results: search.playlists
+            results: page.search.playlists
             tab: SearchModel.Playlists
             noun: qsTr("歌单")
-        }
-    }
-
-    // Suggestions while typing, over the content below the bar.
-    Rectangle {
-        id: suggestions
-        anchors.top: bar.bottom
-        anchors.topMargin: 4
-        x: bar.x
-        z: 2
-        width: bar.width
-        height: suggestionList.contentHeight + 16
-        visible: (bar.activeFocus || suggestionList.activeFocus) && search.suggestions.length > 0
-                 && bar.text.trim() !== search.query
-        radius: Theme.shape.large
-        color: Theme.color.surfaceContainerHigh
-
-        Elevation {
-            anchors.fill: parent
-            z: -1
-            level: Theme.elevation.level2
-            radius: suggestions.radius
-        }
-
-        ListView {
-            id: suggestionList
-            y: 8
-            width: parent.width
-            height: contentHeight
-            interactive: false
-            keyNavigationEnabled: true
-            model: search.suggestions
-            Keys.onUpPressed: event => {
-                if (currentIndex <= 0)
-                    bar.forceActiveFocus();
-                else
-                    event.accepted = false;
-            }
-            delegate: ListItem {
-                required property string modelData
-                width: suggestionList.width
-                leadingGlyph: Symbols.search
-                text: modelData
-                highlighted: suggestionList.activeFocus && ListView.isCurrentItem
-                onClicked: page.run(modelData)
-                Keys.onReturnPressed: page.run(modelData)
-            }
         }
     }
 }

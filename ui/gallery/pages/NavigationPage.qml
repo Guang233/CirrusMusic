@@ -244,7 +244,7 @@ ControlPage {
         text: qsTr("对话框")
     }
     Caption {
-        text: qsTr("MD3 基础对话框：可选图标、标题、说明文字、任意内容和右下角的文字按钮；Esc 或点击外面关闭。")
+        text: qsTr("桌面对话框（MD3E 外观）：标题行带关闭按钮；Esc 取消，Enter 点击有焦点的按钮、否则确认；Tab 只在对话框内循环；点击外面不关闭；关闭后焦点回到打开它的按钮。")
     }
     RowLayout {
         spacing: 12
@@ -265,34 +265,14 @@ ControlPage {
         glyph: Symbols.delete_
         title: qsTr("删除歌单？")
         supportingText: qsTr("“深夜通勤”和其中的 9 首歌会从你的音乐库移除，歌曲本身不受影响。")
-        buttons: [
-            Button {
-                variant: Md.Text
-                text: qsTr("取消")
-                onClicked: iconDialog.close()
-            },
-            Button {
-                variant: Md.Text
-                text: qsTr("删除")
-                onClicked: iconDialog.close()
-            }
-        ]
+        rejectText: qsTr("取消")
+        acceptText: qsTr("删除")
     }
     Dialog {
         id: plainDialog
         title: qsTr("退出登录？")
         supportingText: qsTr("退出后，今日推荐、私人 FM 和你的歌单需要重新登录才能看到。")
-        buttons: [
-            Button {
-                variant: Md.Text
-                text: qsTr("取消")
-                onClicked: plainDialog.close()
-            },
-            Button {
-                variant: Md.Text
-                text: qsTr("退出登录")
-                onClicked: plainDialog.close()
-            }
-        ]
+        rejectText: qsTr("取消")
+        acceptText: qsTr("退出登录")
     }
 }

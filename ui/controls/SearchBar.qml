@@ -4,13 +4,16 @@ import QtQuick.Templates as T
 import Cirrus.Theme
 
 // MD3 search bar (the input field only; the suggestion surface belongs to the page).
-// Esc clears the text, or drops focus when already empty. `accepted` fires on Enter.
+// Esc clears the text, or drops focus when already empty (`handlesEscape: false`
+// leaves Esc to the user, e.g. to close a suggestion list first). `accepted` fires
+// on Enter.
 //   SearchBar { placeholderText: qsTr("搜索歌曲、歌手、专辑"); onAccepted: search(text) }
 T.TextField {
     id: control
 
     property string leadingGlyph: Symbols.search
     property color containerColor: Theme.color.surfaceContainerHigh
+    property bool handlesEscape: true
 
     implicitWidth: 360
     implicitHeight: 56
@@ -27,11 +30,14 @@ T.TextField {
     Accessible.role: Accessible.EditableText
 
     Keys.onEscapePressed: event => {
-        if (length > 0)
+        if (!handlesEscape)
+            event.accepted = false;
+        else if (length > 0)
             clear();
         else
             focus = false;
     }
+
 
     cursorDelegate: Rectangle {
         width: 2

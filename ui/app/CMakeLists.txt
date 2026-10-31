@@ -24,7 +24,7 @@ qt_add_qml_module(appCirrusMusic
         SidebarRow.qml
         RailPlaylists.qml
         RailAccount.qml
-        SearchLauncher.qml
+        SearchField.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

@@ -12,7 +12,7 @@ Dialog {
 
     readonly property int phase: App.session.qrLogin.phase
 
-    width: 360
+    width: 400
     title: qsTr("扫码登录")
     supportingText: qsTr("用手机上的音乐 App 扫描二维码。")
 
@@ -105,11 +105,5 @@ Dialog {
         onToggled: App.session.qrLogin.remember = checked
     }
 
-    buttons: [
-        Button {
-            variant: Md.Text
-            text: qsTr("取消")
-            onClicked: dialog.close()
-        }
-    ]
+    rejectText: qsTr("取消")
 }
