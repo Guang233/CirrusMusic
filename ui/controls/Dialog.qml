@@ -7,8 +7,9 @@ import Cirrus.Theme
 // 32 % scrim) but behaves like a desktop one:
 // - a title row with a close button; a click outside does not close it;
 // - Esc rejects; Enter clicks the focused button, otherwise accepts;
-// - Tab stays inside; the focus starts on `initialFocusItem` (else the accept button,
-//   else the reject button) and goes back where it was when the dialog closes.
+// - Tab stays inside. On open the dialog itself takes the focus, not a control (so
+//   no focus ring until the user presses Tab), unless `initialFocusItem` is set;
+//   the focus goes back where it was when the dialog closes.
 // `acceptText`/`rejectText` add the standard buttons (accept filled, on the right);
 // `buttons` puts more to their left. Children are the content.
 //   Dialog { id: dialog; title: qsTr("删除歌单？"); supportingText: qsTr("…")
@@ -57,9 +58,10 @@ T.Popup {
 
     onAboutToShow: previousFocus = parent ? parent.Window.activeFocusItem : null
     onOpened: {
-        const first = initialFocusItem ?? (acceptButton.visible ? acceptButton
-                                           : rejectButton.visible ? rejectButton : closeButton);
-        first.forceActiveFocus(Qt.TabFocusReason);
+        if (initialFocusItem)
+            initialFocusItem.forceActiveFocus(Qt.TabFocusReason);
+        else
+            contentItem.forceActiveFocus(Qt.PopupFocusReason);
     }
     onClosed: {
         if (previousFocus)

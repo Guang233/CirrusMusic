@@ -125,7 +125,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 - **Dialog**：MD3 基础对话框的外观，桌面的交互（维护者要求：MD3E 风格，但符合电脑的操作逻辑，尽量支持纯键盘操作）。基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 320–560（不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24；遮罩 Scrim 32 %。
   - 布局（一列，间距 16）：标题行（可选图标 `glyph` 24 Secondary、标题 `title` titleLarge、右端关闭按钮"关闭（Esc）"）→ 说明 `supportingText`（bodyMedium，OnSurfaceVariant）→ 子项 → 按钮行（右对齐，间距 8，与上方相隔 24）：`buttons` 里的额外按钮、`rejectText` 文字按钮、`acceptText` 填充按钮（默认按钮，最右）。
-  - 键盘：Esc 等于取消（`rejected`）；Enter 在按钮上时点击该按钮（与 GTK、KDE 一致），否则执行默认按钮（`accepted`，`acceptEnabled` 为假时不执行）；Tab／Shift+Tab 只在对话框内循环。打开时焦点给 `initialFocusItem`，没有则给默认按钮，再没有给取消按钮；关闭后焦点回到打开前的控件。
+  - 键盘：Esc 等于取消（`rejected`）；Enter 在按钮上时点击该按钮（与 GTK、KDE 一致），否则执行默认按钮（`accepted`，`acceptEnabled` 为假时不执行）；Tab／Shift+Tab 只在对话框内循环。打开时焦点给对话框本身而不是某个控件（不出现焦点环，Esc／Enter 照常可用，按 Tab 才进入控件），设了 `initialFocusItem`（如输入框）时给它；关闭后焦点回到打开前的控件。
   - 鼠标：点击外面不关闭（桌面上误点不该丢掉对话框里的状态）。
   - 动效：进入时缩放 0.95→1（`standardFastSpatial`）并淡入，退出淡出（`fastEffects`）。Gallery 导航页有示例。
 
