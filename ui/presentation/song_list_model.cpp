@@ -107,14 +107,65 @@ void SongListModel::remove(const QStringList& keys)
     updateContainsCurrent();
 }
 
-void SongListModel::move(int from, int to)
+void SongListModel::applyOrder(QList<Row> rows)
 {
-    if (from == to || from < 0 || to < 0 || from >= rowCount() || to >= rowCount())
+    emit layoutAboutToBeChanged({}, QAbstractItemModel::VerticalSortHint);
+    const QModelIndexList before = persistentIndexList();
+    QList<QString> keys;
+    for (const QModelIndex& index : before)
+        keys << m_rows.at(index.row()).song.key;
+    m_rows = std::move(rows);
+    QHash<QString, int> rowOf;
+    for (int row = 0; row < m_rows.size(); ++row)
+        rowOf.insert(m_rows.at(row).song.key, row);
+    QModelIndexList after;
+    for (const QString& key : std::as_const(keys))
+        after << index(rowOf.value(key));
+    changePersistentIndexList(before, after);
+    emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
+}
+
+void SongListModel::moveRows(QList<int> rows, int gap)
+{
+    std::sort(rows.begin(), rows.end());
+    rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+    rows.removeIf([this](int row) { return row < 0 || row >= rowCount(); });
+    if (rows.isEmpty())
         return;
-    // beginMoveRows takes the row the moved one ends up before.
-    beginMoveRows({}, from, from, {}, to > from ? to + 1 : to);
-    m_rows.move(from, to);
-    endMoveRows();
+    QList<Row> moved;
+    QList<Row> rest;
+    int insertAt = 0;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (row == gap)
+            insertAt = int(rest.size());
+        if (std::binary_search(rows.cbegin(), rows.cend(), row))
+            moved << m_rows.at(row);
+        else
+            rest << m_rows.at(row);
+    }
+    if (gap >= rowCount())
+        insertAt = int(rest.size());
+    for (int i = 0; i < moved.size(); ++i)
+        rest.insert(insertAt + i, moved.at(i));
+    applyOrder(std::move(rest));
+}
+
+void SongListModel::sortRows(const std::function<bool(const SongInfo&, const SongInfo&)>& lessThan)
+{
+    QList<Row> rows = m_rows;
+    std::stable_sort(rows.begin(), rows.end(), [&](const Row& a, const Row& b) {
+        if (a.loaded != b.loaded)
+            return a.loaded;
+        return a.loaded && lessThan(a.song, b.song);
+    });
+    applyOrder(std::move(rows));
+}
+
+void SongListModel::reverse()
+{
+    QList<Row> rows = m_rows;
+    std::reverse(rows.begin(), rows.end());
+    applyOrder(std::move(rows));
 }
 
 void SongListModel::fill(const QStringList& requested, const QList<SongInfo>& details)
@@ -153,6 +204,12 @@ int SongListModel::missingCount() const
 {
     return int(
         std::count_if(m_rows.cbegin(), m_rows.cend(), [](const Row& row) { return row.missing; }));
+}
+
+bool SongListModel::allLoaded() const
+{
+    return std::all_of(m_rows.cbegin(), m_rows.cend(),
+                       [](const Row& row) { return row.loaded || row.missing; });
 }
 
 QList<SongInfo> SongListModel::loadedSongs() const

@@ -118,3 +118,6 @@ arrow_downward
 bookmark_add
 bookmark_added
 playlist_remove
+swap_vert
+vertical_align_top
+vertical_align_bottom

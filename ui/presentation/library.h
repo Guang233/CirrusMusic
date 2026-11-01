@@ -36,6 +36,8 @@ class Library : public QObject
                                    const QStringList& songKeys);
     // Fetches the liked songs again.
     Q_INVOKABLE void reload();
+    // A playlist's songs were changed elsewhere (the order page): emits playlistChanged.
+    void notifyPlaylistChanged(const QString& playlistKey) { emit playlistChanged(playlistKey); }
 
   signals:
     void likedChanged();

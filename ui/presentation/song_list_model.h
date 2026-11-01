@@ -3,7 +3,9 @@
 #include "types.h"
 
 #include <QAbstractListModel>
+
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 
 namespace cirrus::ui
 {
@@ -49,13 +51,20 @@ class SongListModel : public QAbstractListModel
     // More loaded songs at the end (paged lists).
     void append(const QList<SongInfo>& songs);
     void remove(const QStringList& keys);
-    void move(int from, int to);
+    // Moves `rows` (in their current order) into the gap before row `gap` (rowCount()
+    // for the end).
+    void moveRows(QList<int> rows, int gap);
+    // Stable sort by `lessThan` over rows with details; the others keep their order
+    // after them.
+    void sortRows(const std::function<bool(const SongInfo&, const SongInfo&)>& lessThan);
+    void reverse();
     // Details for rows that only had a key; `requested` keys missing from `details`
     // are marked missing.
     void fill(const QStringList& requested, const QList<SongInfo>& details);
     // Keys of the rows in [first, last] still waiting for details.
     [[nodiscard]] QStringList keysToLoad(int first, int last) const;
     [[nodiscard]] int missingCount() const;
+    [[nodiscard]] bool allLoaded() const;
     // The rows with details, e.g. to put the list back after a failed change.
     [[nodiscard]] QList<SongInfo> loadedSongs() const;
 
@@ -72,6 +81,9 @@ class SongListModel : public QAbstractListModel
     void containsCurrentChanged();
 
   private:
+    struct Row;
+    // Replaces the rows' order, keeping views' selections and positions.
+    void applyOrder(QList<Row> rows);
     void setCurrentKey(const QString& key);
     void updateContainsCurrent();
 

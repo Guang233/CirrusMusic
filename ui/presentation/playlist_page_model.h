@@ -3,11 +3,10 @@
 #include "loadable_model.h"
 #include "types.h"
 
-#include <QSet>
-
 namespace cirrus::ui
 {
 
+class SongDetailLoader;
 class SongListModel;
 
 // Playlist details page. Setting `playlistKey` loads it:
@@ -56,7 +55,7 @@ class PlaylistPageModel : public LoadableModel
     [[nodiscard]] bool own() const { return m_info.own; }
     [[nodiscard]] bool subscribed() const { return m_info.subscribed; }
     void setSubscribed(bool subscribed);
-    [[nodiscard]] int missingCount() const { return m_missingCount; }
+    [[nodiscard]] int missingCount() const;
 
     // Large playlists come with details for some songs only: fetches them for the
     // rows in [first, last] of `songs` (the rows on screen and around them), in
@@ -88,10 +87,6 @@ class PlaylistPageModel : public LoadableModel
     void clear() override;
 
   private:
-    // `urgent`: ahead of the batches already waiting.
-    void queueDetails(const QStringList& keys, bool urgent);
-    void sendNextDetails();
-    void updateMissingCount();
     void restoreSongs(const QStringList& keys, const QList<SongInfo>& songs);
     [[nodiscard]] QString failureMessage(const Outcome<bool>& outcome,
                                          const QString& otherwise) const;
@@ -100,11 +95,7 @@ class PlaylistPageModel : public LoadableModel
     PlaylistInfo m_info;
     SongListModel* m_songs;
     Request m_subscribeRequest;
-    // Detail batches waiting, the one on its way, and every key in either.
-    QList<QStringList> m_detailQueue;
-    Request m_detailRequest;
-    QSet<QString> m_pendingKeys;
-    int m_missingCount = 0;
+    SongDetailLoader* m_details;
     Request m_writeRequest;
 };
 

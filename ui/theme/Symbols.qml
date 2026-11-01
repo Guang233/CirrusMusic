@@ -107,6 +107,9 @@ QtObject {
     readonly property string bookmark_add: "\ue598"
     readonly property string bookmark_added: "\ue599"
     readonly property string playlist_remove: "\ueb80"
+    readonly property string swap_vert: "\ue8d5"
+    readonly property string vertical_align_top: "\ue25a"
+    readonly property string vertical_align_bottom: "\ue258"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -212,6 +215,9 @@ QtObject {
         "arrow_downward",
         "bookmark_add",
         "bookmark_added",
-        "playlist_remove"
+        "playlist_remove",
+        "swap_vert",
+        "vertical_align_top",
+        "vertical_align_bottom"
     ]
 }

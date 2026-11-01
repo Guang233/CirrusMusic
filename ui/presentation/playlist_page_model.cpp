@@ -3,14 +3,18 @@
 #include "app.h"
 #include "formatter.h"
 #include "library.h"
+#include "song_detail_loader.h"
 #include "song_list_model.h"
 
 namespace cirrus::ui
 {
 
 PlaylistPageModel::PlaylistPageModel(QObject* parent)
-    : LoadableModel(parent), m_songs(new SongListModel(this))
+    : LoadableModel(parent), m_songs(new SongListModel(this)),
+      m_details(new SongDetailLoader(m_songs, this))
 {
+    connect(m_details, &SongDetailLoader::missingCountChanged, this,
+            &PlaylistPageModel::missingCountChanged);
     // Songs added to this playlist from elsewhere (a song's menu).
     if (const App* app = App::instance())
         connect(app->library(), &Library::playlistChanged, this, [this](const QString& key) {
@@ -38,11 +42,9 @@ Request PlaylistPageModel::load()
                                                     m_info = page.info;
                                                     emit headerChanged();
                                                     emit subscribedChanged();
-                                                    m_detailRequest.cancel();
-                                                    m_detailQueue.clear();
-                                                    m_pendingKeys.clear();
+                                                    // Requests for the old rows end.
+                                                    m_details->clear();
                                                     m_songs->reset(page.songKeys, page.songs);
-                                                    updateMissingCount();
                                                     return page.songKeys.isEmpty();
                                                 }));
 }
@@ -75,70 +77,11 @@ void PlaylistPageModel::setSubscribed(bool subscribed)
         });
 }
 
-void PlaylistPageModel::ensureLoaded(int first, int last)
-{
-    // Whole batches around the range, so scrolling on asks for few, full requests.
-    first = first / kSongDetailsBatch * kSongDetailsBatch;
-    last = (last / kSongDetailsBatch + 1) * kSongDetailsBatch - 1;
-    queueDetails(m_songs->keysToLoad(first, last), true);
-}
+void PlaylistPageModel::ensureLoaded(int first, int last) { m_details->ensureLoaded(first, last); }
 
-void PlaylistPageModel::loadAll()
-{
-    queueDetails(m_songs->keysToLoad(0, m_songs->rowCount() - 1), false);
-}
+void PlaylistPageModel::loadAll() { m_details->loadAll(); }
 
-void PlaylistPageModel::queueDetails(const QStringList& keys, bool urgent)
-{
-    QList<QStringList> batches;
-    for (const QString& key : keys) {
-        if (m_pendingKeys.contains(key))
-            continue;
-        if (batches.isEmpty() || batches.last().size() == kSongDetailsBatch)
-            batches.append(QStringList());
-        batches.last() << key;
-        m_pendingKeys.insert(key);
-    }
-    if (urgent)
-        m_detailQueue = batches + m_detailQueue;
-    else
-        m_detailQueue += batches;
-    if (!m_detailRequest.pending())
-        sendNextDetails();
-}
-
-void PlaylistPageModel::sendNextDetails()
-{
-    if (m_detailQueue.isEmpty())
-        return;
-    const QStringList keys = m_detailQueue.takeFirst();
-    m_detailRequest = App::instance()->catalog()->songDetails(
-        keys, [this, keys](Outcome<QList<SongInfo>> outcome) {
-            m_detailRequest.release();
-            for (const QString& key : keys)
-                m_pendingKeys.remove(key);
-            if (outcome.value) {
-                m_songs->fill(keys, *outcome.value);
-                updateMissingCount();
-                sendNextDetails();
-                return;
-            }
-            // Failed (offline, rate limited…): drop the queue; scrolling asks again.
-            for (const QStringList& batch : std::as_const(m_detailQueue))
-                for (const QString& key : batch)
-                    m_pendingKeys.remove(key);
-            m_detailQueue.clear();
-        });
-}
-
-void PlaylistPageModel::updateMissingCount()
-{
-    const int count = m_songs->missingCount();
-    if (count == m_missingCount)
-        return;
-    m_missingCount = count;
-    emit missingCountChanged();
-}
+int PlaylistPageModel::missingCount() const { return m_details->missingCount(); }
 
 QString PlaylistPageModel::failureMessage(const Outcome<bool>& outcome,
                                           const QString& otherwise) const
@@ -222,14 +165,11 @@ void PlaylistPageModel::clear()
 {
     m_subscribeRequest.cancel();
     m_writeRequest.cancel();
-    m_detailRequest.cancel();
-    m_detailQueue.clear();
-    m_pendingKeys.clear();
     m_info = {};
     emit headerChanged();
     emit subscribedChanged();
     m_songs->clear();
-    updateMissingCount();
+    m_details->clear();
 }
 
 } // namespace cirrus::ui

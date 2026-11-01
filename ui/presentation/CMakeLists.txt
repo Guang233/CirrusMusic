@@ -37,6 +37,8 @@ qt_add_qml_module(cirrus_presentation
         sorted_songs_model.cpp
         playlist_page_model.h
         playlist_page_model.cpp
+        playlist_order_model.h
+        playlist_order_model.cpp
         collection_list_model.h
         collection_list_model.cpp
         album_page_model.h
@@ -57,6 +59,8 @@ qt_add_qml_module(cirrus_presentation
         session.cpp
         library.h
         library.cpp
+        song_detail_loader.h
+        song_detail_loader.cpp
         qr_provider.h
         qr_provider.cpp
         fake_controls.h
