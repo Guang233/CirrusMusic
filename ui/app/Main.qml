@@ -61,8 +61,8 @@ AppWindow {
         searchField: topBar.searchField
     }
 
-    // Closing hides the window to the tray (playback goes on) or quits, as the user
-    // chose; without a tray it quits. See docs/ui/pages/shell.md §7.
+    // Closing hides the window (playback goes on, in the tray when there is one) or
+    // quits, as the user chose. See docs/ui/pages/shell.md §7.
     function hideToTray(): void {
         window.hide();
     }
@@ -79,13 +79,22 @@ AppWindow {
         if (Desktop.quitting)
             return;
         close.accepted = false;
-        const action = Desktop.checkTray() ? App.settings.closeAction : 0;
+        // A panel may have started since: show the tray icon, update the wording.
+        Desktop.checkTray();
+        const action = App.settings.closeAction;
         if (action === 1)
             hideToTray();
         else if (action === 0)
             Desktop.quit();
         else if (!closeDialog.opened)
             closeDialog.open();
+    }
+
+    // The way out when the window only hides and there is no tray menu.
+    Shortcut {
+        sequence: StandardKey.Quit
+        context: Qt.ApplicationShortcut
+        onActivated: Desktop.quit()
     }
 
     Connections {

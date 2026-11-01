@@ -20,7 +20,7 @@ class Desktop : public QObject
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    // Whether a tray icon is shown, so closing the window can keep the app running.
+    // Whether a tray icon is shown (the close dialog and settings word it).
     Q_PROPERTY(bool trayAvailable READ trayAvailable NOTIFY trayAvailableChanged)
     // Set once the app is quitting (the tray's Quit, Qt.quit(), the session ending):
     // closing the window must not be turned into hiding then.
