@@ -22,11 +22,8 @@ Flickable {
     signal signInRequested
 
     contentHeight: column.height + 8
-    // Overshoots and springs back at the ends; WheelScroller eases mouse wheels.
+    // Overshoots and springs back at the ends.
     boundsBehavior: Flickable.DragAndOvershootBounds
-    WheelScroller {
-        flickable: root
-    }
     ScrollBar.vertical: ScrollBar {}
 
     component Divider: Item {

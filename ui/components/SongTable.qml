@@ -324,7 +324,7 @@ Item {
         clip: true
         spacing: 2
         bottomMargin: 24
-        // Overshoots and springs back at the ends (touchpad, touch, and WheelScroller).
+        // Overshoots and springs back at the ends.
         boundsBehavior: Flickable.DragAndOvershootBounds
         // Wheel and touch scroll; mouse drags don't (desktop).
         acceptedButtons: Qt.NoButton
@@ -333,9 +333,6 @@ Item {
         activeFocusOnTab: true
         Accessible.role: Accessible.Table
         ScrollBar.vertical: ScrollBar {}
-        WheelScroller {
-            flickable: list
-        }
 
         // At the top until the user scrolls: a header that grows once its data arrives
         // moves originY, and the view would otherwise keep showing the old top.

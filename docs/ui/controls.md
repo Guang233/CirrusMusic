@@ -133,10 +133,6 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 - **Snackbar**：MD3 提示条，用于操作结果的简短反馈（写入失败等）。InverseSurface 底、InverseOnSurface 文字（bodyMedium），extraSmall 圆角，最低 48 高、最窄 288，放在所在区域底部居中、离底 16。`show(text)` 显示，`timeout`（默认 4 秒）后淡出；指针停在上面时不消失。没有操作按钮（以后需要"撤销"时再加）。外壳放一个在内容面板底部，页面通过 `shell.notify(text)` 使用。
 
-## 8e. 滚轮（阶段 3）
-
-- **WheelScroller**：给 Flickable 的鼠标滚轮处理。Qt 6.11 的 Flickable 一格滚轮固定滚 72 px，维护者觉得太慢；这里一格 `step`（默认 120 px），用 `standardFastSpatial` 的时长和 OutCubic 缓动过去，连续几格目标累加；越过两端时最多越过 `overshoot`（默认 48 px）再弹回（`returnToBounds()`）。触控板的像素滚动交还给 Flickable。减少动态效果时直接跳到位置、不越界。用法：在 Flickable 里声明 `WheelScroller { flickable: list }`，并把 Flickable 的 `boundsBehavior` 设为 `DragAndOvershootBounds`（触控板、触摸也能越界回弹）。所有页面的滚动视图都已使用。
-
 ## 9. 每个控件的检查项
 
 全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。

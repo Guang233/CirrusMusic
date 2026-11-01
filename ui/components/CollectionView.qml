@@ -30,11 +30,8 @@ GridView {
     cellWidth: (width - leftMargin - rightMargin) / columns
     cellHeight: cellWidth + 48
     clip: true
-    // Overshoots and springs back at the ends; WheelScroller eases mouse wheels.
+    // Overshoots and springs back at the ends.
     boundsBehavior: Flickable.DragAndOvershootBounds
-    WheelScroller {
-        flickable: view
-    }
     ScrollBar.vertical: ScrollBar {}
 
     onContentYChanged: maybeLoadMore()
