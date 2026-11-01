@@ -45,6 +45,8 @@ SearchBar {
         listWanted = activeFocus;
         picked = -1;
     }
+    // A click on the field opens the list again, also when it kept the focus.
+    onPressed: listWanted = true
     onTextEdited: {
         listWanted = true;
         picked = -1;
@@ -85,8 +87,15 @@ SearchBar {
 
     // The list unfolds from the field and follows its line count with a spring, so
     // suggestions arriving while typing don't make it jump; it fades out on close.
+    // Opened and closed from `listShown`; a press outside the field and the list
+    // closes it too (clicking the field, typing or ↓ opens it again).
+    onListShownChanged: listShown ? popup.open() : popup.close()
+
     T.Popup {
         id: popup
+
+        property bool unfolded: false
+
         y: field.height + 4
         width: field.width
         height: Math.max(0, sizeSpring.value)
@@ -95,13 +104,18 @@ SearchBar {
         bottomPadding: 8
         // Never takes the focus: typing goes on in the field.
         focus: false
-        closePolicy: T.Popup.NoAutoClose
-        visible: field.listShown
-        onAboutToShow: sizeSpring.snapTo(0)
+        closePolicy: T.Popup.CloseOnPressOutsideParent
+        onAboutToShow: unfolded = true
+        onClosed: {
+            unfolded = false;
+            sizeSpring.snapTo(0);
+            field.listWanted = false;
+        }
 
         Spring {
             id: sizeSpring
-            target: popup.implicitContentHeight + popup.topPadding + popup.bottomPadding
+            target: popup.unfolded ? popup.implicitContentHeight + popup.topPadding
+                                     + popup.bottomPadding : 0
             spec: Theme.motion.standardFastSpatial
             threshold: 0.5
         }
