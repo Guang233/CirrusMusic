@@ -129,6 +129,10 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
   - 鼠标：点击外面不关闭（桌面上误点不该丢掉对话框里的状态）。
   - 动效：进入时缩放 0.95→1（`standardFastSpatial`）并淡入，退出淡出（`fastEffects`）。Gallery 导航页有示例。
 
+## 8d. 提示条（阶段 3）
+
+- **Snackbar**：MD3 提示条，用于操作结果的简短反馈（写入失败等）。InverseSurface 底、InverseOnSurface 文字（bodyMedium），extraSmall 圆角，最低 48 高、最窄 288，放在所在区域底部居中、离底 16。`show(text)` 显示，`timeout`（默认 4 秒）后淡出；指针停在上面时不消失。没有操作按钮（以后需要"撤销"时再加）。外壳放一个在内容面板底部，页面通过 `shell.notify(text)` 使用。
+
 ## 9. 每个控件的检查项
 
 全部交互状态（静止、悬停、焦点、按下、拖动、选中、禁用）· 键盘操作（Tab、Space／Enter、方向键）· 可见焦点环 · `Accessible.name` 与角色 · 文案 `qsTr` · 亮暗两套主题 · 减少动态效果 · 软件渲染降级。
