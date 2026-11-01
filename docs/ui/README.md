@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；之后专辑页、每日推荐页沿用同一套版式（playlist.md §8），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；之后专辑页、每日推荐页沿用同一套版式（playlist.md §8），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -396,6 +396,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | **已决定**：不写，以 Gallery 人工检查（交互 + 离屏截图）为准 | 已决定 |
 | UQ-08 | m3shapes 直接依赖还是自行移植 | **已决定**：以固定提交引入、自写静态库 CMake，软件渲染下降级 | 已决定 |
 | UQ-09 | 配色规范版本 | **已决定**：采用 2025 规范，已移植到 C++ 并与 TS 逐色验证（[theme.md §3](theme.md)） | 已决定 |
+| UQ-10 | 关闭窗口与托盘、显卡选择 | **已决定（2026-11-01）**：托盘可用时第一次关闭询问并记住（可在设置里改），没有托盘时关闭即退出；Linux 混合显卡默认用独显（可在设置里关），Windows、macOS 用系统默认；隐藏到托盘时释放图形资源（[pages/shell.md §7](pages/shell.md)） | 已决定 |
 
 ## 15. 实施记录
 
@@ -591,3 +592,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 滚轮：撤掉自定义的 `WheelScroller`（维护者觉得忽快忽慢），恢复 Qt 默认；保留 `DragAndOvershootBounds`，默认滚轮滚到两端也会越界回弹（实测约 36 px）。
 - 验证：构建、qmllint 无警告；临时钩子走了把手拖动一行、多选两行后拖动、Shift 扩选后 Alt+End、菜单"按歌名"后保存（回到歌单页顺序一致、没有前进记录）、有改动时后退弹出确认并放弃；截图检查了页面和快速排序菜单。查出并修了一个问题：读出的 `list<int>` 属性是对属性本身的引用，清空属性后局部变量也空了。
 
+### 托盘、后台播放与独显（2026-11-01）
+
+- 按维护者决定（UQ-10）实现，详见 [pages/shell.md §7](pages/shell.md)：`QSystemTrayIcon` 托盘（`CIRRUS_UI_TRAY`，链接 Widgets、用 `QApplication`）、第一次关闭询问并记住、单实例激活、隐藏时释放图形资源、Linux 混合显卡默认独显。
+- 验证：构建、qmllint 无警告、clang-format；离屏下测了两次启动（第二个 0.1 秒内退出，第一个收到激活）、无托盘时关闭即退出（退出码 0）、对话框和设置页截图、隐藏再显示后页面正常重建。本机 sysfs 检测到 card0（NVIDIA，非 boot_vga）为独显。真实托盘、Wayland 激活和独显休眠需要在桌面上检查。

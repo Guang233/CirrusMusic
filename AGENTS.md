@@ -42,6 +42,7 @@ clang-format --dry-run --Werror <changed C++ files>
 
 - Live preview: `tools/ui/gallery-watch.sh [--page buttons]` rebuilds and restarts the gallery on every UI source change (VS Code task `Gallery: watch`; also `Gallery: run` / `Gallery: screenshot`). Interactive gallery runs reopen the last page, cover and mode.
 - Release: same with `linux-release-local`.
+- `appCirrusMusic` is single-instance: while one runs (including the maintainer's), a second launch only activates it and exits 0. Linux hybrid-graphics machines render on the discrete GPU unless `CIRRUS_GPU=default` (docs/ui/pages/shell.md §7).
 - Offscreen uses the software renderer; custom shaders need `QT_QUICK_BACKEND=rhi QSG_RHI_BACKEND=opengl`.
 - Full `cmake --build --preset linux-dev-local` currently fails in the backend test `tst_entity_search` (pre-existing, from commit 2c164a7); UI targets and `cirrus_backend` build fine.
 - Backend tests: `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error`.

@@ -120,3 +120,19 @@
 - `ui/controls/Dialog.qml`、`ui/app/LoginDialog.qml`（原 `LoginPage.qml` 删除）；`ui/window/TitleBar.qml` 有应用内容时高 56。
 - `ui/app/RailPlaylists.qml`（我的、歌单）、`RailAccount.qml`（底部）、`SidebarRow.qml`（行）、`SearchLauncher.qml`（顶部搜索入口）、`AppShell.qml`（`openSearch()`、`openSettings()`、`openLibrary(tab)`、`openPlaylistKey`）。
 - 侧边栏的歌单暂时用 `LibraryPageModel` 读取整个个人库；接入真实后端时改成只读歌单。
+
+## 7. 关闭、托盘与后台播放（2026-11-01）
+
+依据 [Linux 集成 §4、§7](../../10-linux-integration.md)，维护者决定（UQ-10）：
+
+- **托盘图标**：`QSystemTrayIcon`，CMake 选项 `CIRRUS_UI_TRAY`（默认开，链接 Qt Widgets、改用 `QApplication`；关掉时保留 `QGuiApplication`，关闭窗口总是退出）。Linux 上 Qt 走 StatusNotifierItem（KDE、带扩展的 GNOME、Waybar 等），没有时退到 XEmbed。菜单：当前歌曲（灰）、播放／暂停、上一首、下一首、显示主窗口、退出 Cirrus Music。单击显示窗口，中键播放／暂停。图标是占位（`ui/app/icons/cirrus-music.svg`，UQ-06 定应用身份时替换），同时作窗口图标。
+- **关闭主窗口**：托盘可用时，第一次关闭弹出"关闭主窗口"对话框（`CloseDialog`）：最小化到托盘（默认按钮）／退出，"记住我的选择"默认勾选；Esc 或关闭按钮不关窗口。设置 › 窗口 › "关闭主窗口时"：每次询问／最小化到托盘／退出。每次关闭前重新检查托盘（面板可能比应用晚启动）；托盘不可用（例如没装扩展的 GNOME）时直接退出，设置项变灰并说明原因。
+- **退出**：托盘菜单的退出、`Qt.quit()`、会话结束都先置 `Desktop.quitting`，此时关闭窗口不会被改成隐藏。
+- **单实例**：`QLockFile` + `QLocalServer`，放在 `$XDG_RUNTIME_DIR/CirrusMusic/`（0700）。再次启动只发一行 `activate [令牌]`（≤ 512 字节，令牌按字符白名单校验），已运行的实例显示并激活窗口后，新进程退出。Wayland 下转交启动器给的 `XDG_ACTIVATION_TOKEN`，显示窗口时由 Qt 使用。锁的持有进程已不在时视为过期锁；持有者不应答时照常启动，不会卡住。
+- **隐藏时释放显卡**：窗口 `persistentGraphics`、`persistentSceneGraph` 设为 false，隐藏到托盘时释放图形设备和场景图，后台长时间播放时独显可以休眠；显示时重建。
+- **独立显卡（Linux）**：混合显卡（核显接屏幕、另有 nvidia／nouveau／amdgpu／radeon 驱动的显卡且不是 `boot_vga`）时默认用独显：NVIDIA 专有驱动设 prime-run 的三个变量（`__NV_PRIME_RENDER_OFFLOAD`、`__GLX_VENDOR_LIBRARY_NAME`、`__VK_LAYER_NV_optimus`），Mesa 设 `DRI_PRIME=pci-…`。用户已设其中任一变量，或 `CIRRUS_GPU=default` 时不动。设置 › 窗口 › "使用独立显卡"（只在混合显卡机器上显示），重启后生效。Windows 用系统的按应用图形设置，macOS 由系统选择，都不处理。
+- 媒体键、MPRIS、系统媒体控件属于后端 B-031，不在 UI 实现。
+
+代码：`ui/app/desktop.*`（QML 单例 `Desktop`）、`tray.*`、`single_instance.*`、`gpu_preference.*`、`app_icon.h`、`CloseDialog.qml`；`Main.qml` 的 `onClosing`；`AppSettings` 加 `closeAction`、`preferDiscreteGpu`。
+
+未验证：真实托盘（离屏平台没有托盘）、Wayland 激活令牌、独显实际是否用上和休眠（可看 `/sys/bus/pci/devices/0000:01:00.0/power/runtime_status`，`nvidia-smi` 里应有本进程）、Windows／macOS。
