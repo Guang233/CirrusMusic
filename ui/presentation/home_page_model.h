@@ -5,6 +5,7 @@
 #include "types.h"
 
 #include <QAbstractListModel>
+#include <QDate>
 #include <QQmlParserStatus>
 
 namespace cirrus::ui
@@ -86,24 +87,53 @@ class HomePageModel : public LoadableModel, public QQmlParserStatus
 
 // Today's recommended songs; SignedOut for guests, reloads on account changes.
 // `lead` and `coverKeys` summarize them for the home page.
-class DailySongsPageModel : public LoadableModel
+class DailySongsPageModel : public LoadableModel, public QQmlParserStatus
 {
     Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
     Q_MOC_INCLUDE("song_list_model.h")
     QML_ELEMENT
+    // Empty for today; a day from historyDates ("yyyy-MM-dd") for its history.
+    Q_PROPERTY(QString date READ date WRITE setDate NOTIFY dateChanged)
     Q_PROPERTY(cirrus::ui::SongListModel* songs READ songs CONSTANT)
     // The first song (empty key when there is none) and the first few covers.
     Q_PROPERTY(cirrus::ui::SongItem lead READ lead NOTIFY summaryChanged)
     Q_PROPERTY(QStringList coverKeys READ coverKeys NOTIFY summaryChanged)
+    // Whether any song has a reason (history days have none).
+    Q_PROPERTY(bool hasReasons READ hasReasons NOTIFY summaryChanged)
+    // "15 首 · 52 分钟"; the length only when every song's is known.
+    Q_PROPERTY(QString countText READ countText NOTIFY summaryChanged)
+    // Days with history (newest first), after loadHistoryDates().
+    Q_PROPERTY(QStringList historyDates READ historyDates NOTIFY historyChanged)
+    Q_PROPERTY(bool historyLoading READ historyLoading NOTIFY historyChanged)
 
   public:
     explicit DailySongsPageModel(QObject* parent = nullptr);
+    [[nodiscard]] QString date() const { return m_date; }
+    void setDate(const QString& date);
     [[nodiscard]] SongListModel* songs() const { return m_songs; }
     [[nodiscard]] SongItem lead() const { return m_lead; }
     [[nodiscard]] QStringList coverKeys() const { return m_coverKeys; }
+    [[nodiscard]] bool hasReasons() const { return m_hasReasons; }
+    [[nodiscard]] QString countText() const { return m_countText; }
+    [[nodiscard]] QStringList historyDates() const { return m_historyDates; }
+    [[nodiscard]] bool historyLoading() const { return m_historyRequest.pending(); }
+
+    // Asks for the days with history; `historyChanged`, or `historyFailed` and a
+    // `notice`.
+    Q_INVOKABLE void loadHistoryDates();
+    // Today's songs change at 6:00: reloads when the shown ones are from before.
+    Q_INVOKABLE void reloadIfStale();
+
+    void classBegin() override {}
+    void componentComplete() override;
 
   signals:
+    void dateChanged();
     void summaryChanged();
+    void historyChanged();
+    void historyFailed();
+    void notice(const QString& message);
 
   protected:
     Request load() override;
@@ -111,10 +141,19 @@ class DailySongsPageModel : public LoadableModel
 
   private:
     void summarize(const QList<SongInfo>& songs);
+    // The day today's songs belong to: they change at 6:00.
+    [[nodiscard]] static QDate recommendationDay();
 
+    QString m_date;
+    bool m_complete = false;
     SongListModel* m_songs;
     SongItem m_lead;
     QStringList m_coverKeys;
+    bool m_hasReasons = false;
+    QString m_countText;
+    QDate m_loadedDay;
+    QStringList m_historyDates;
+    Request m_historyRequest;
 };
 
 // The account's latest played songs (`limit` of them); SignedOut for guests.

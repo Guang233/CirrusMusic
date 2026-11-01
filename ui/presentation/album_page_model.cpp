@@ -26,6 +26,13 @@ void AlbumPageModel::setAlbumKey(const QString& key)
         reload();
 }
 
+QString AlbumPageModel::type() const
+{
+    return m_page.info.type.isEmpty() ? tr("专辑") : m_page.info.type;
+}
+
+QString AlbumPageModel::aliasText() const { return m_page.info.aliases.join(tr(" / ")); }
+
 QVariantList AlbumPageModel::artists() const
 {
     QVariantList artists;
@@ -37,14 +44,23 @@ QVariantList AlbumPageModel::artists() const
 
 QString AlbumPageModel::artistText() const { return Formatter::artists(m_page.info.artists); }
 
-QString AlbumPageModel::summary() const
+QString AlbumPageModel::releaseText() const
+{
+    QStringList parts;
+    if (m_page.info.publishedAtMs > 0)
+        parts << tr("%1发行").arg(Formatter::fullDate(m_page.info.publishedAtMs));
+    else if (m_page.info.year > 0)
+        parts << tr("%1年发行").arg(m_page.info.year);
+    if (!m_page.info.company.isEmpty())
+        parts << m_page.info.company;
+    return parts.join(tr(" · "));
+}
+
+QString AlbumPageModel::countText() const
 {
     if (m_page.info.key.isEmpty())
         return {};
-    QStringList parts;
-    if (m_page.info.year > 0)
-        parts << QString::number(m_page.info.year);
-    parts << tr("%1 首").arg(Formatter::count(m_page.songKeys.size()));
+    QStringList parts{tr("%1 首").arg(Formatter::count(m_page.songKeys.size()))};
     qint64 total = 0;
     bool known = !m_page.songs.isEmpty();
     for (const SongInfo& song : m_page.songs) {
@@ -52,10 +68,31 @@ QString AlbumPageModel::summary() const
             known = false;
         total += std::max<qint64>(song.durationMs, 0);
     }
-    // Rounded up, so a few seconds don't read as "0 分钟".
     if (known)
-        parts << tr("%1 分钟").arg((total + 59'999) / 60'000);
+        parts << Formatter::totalLength(total);
     return parts.join(tr(" · "));
+}
+
+void AlbumPageModel::setSubscribed(bool subscribed)
+{
+    if (subscribed == m_page.info.subscribed || m_page.info.key.isEmpty())
+        return;
+    m_page.info.subscribed = subscribed;
+    emit subscribedChanged();
+    m_subscribeRequest = App::instance()->librarySource()->setAlbumSubscribed(
+        m_key, subscribed, [this, subscribed](Outcome<bool> outcome) {
+            m_subscribeRequest.release();
+            if (outcome.value) {
+                emit libraryChanged();
+                return;
+            }
+            m_page.info.subscribed = !subscribed;
+            emit subscribedChanged();
+            const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
+            emit notice(signedOut    ? tr("登录后才能收藏专辑")
+                        : subscribed ? tr("没能收藏专辑，请稍后再试")
+                                     : tr("没能取消收藏，请稍后再试"));
+        });
 }
 
 Request AlbumPageModel::load()
@@ -63,6 +100,7 @@ Request AlbumPageModel::load()
     return App::instance()->catalog()->album(m_key, handle<AlbumPage>([this](AlbumPage page) {
                                                  m_page = std::move(page);
                                                  emit headerChanged();
+                                                 emit subscribedChanged();
                                                  m_songs->reset(m_page.songKeys, m_page.songs);
                                                  return m_page.songKeys.isEmpty();
                                              }));
@@ -70,8 +108,10 @@ Request AlbumPageModel::load()
 
 void AlbumPageModel::clear()
 {
+    m_subscribeRequest.cancel();
     m_page = {};
     emit headerChanged();
+    emit subscribedChanged();
     m_songs->clear();
 }
 

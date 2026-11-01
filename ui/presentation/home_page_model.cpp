@@ -2,7 +2,10 @@
 
 #include "app.h"
 #include "collection_list_model.h"
+#include "formatter.h"
 #include "song_list_model.h"
+
+#include <QDateTime>
 
 #include <algorithm>
 
@@ -112,17 +115,46 @@ DailySongsPageModel::DailySongsPageModel(QObject* parent)
     : LoadableModel(parent), m_songs(new SongListModel(this))
 {
     followAccount();
+}
+
+void DailySongsPageModel::componentComplete()
+{
+    m_complete = true;
     reload();
+}
+
+void DailySongsPageModel::setDate(const QString& date)
+{
+    if (date == m_date)
+        return;
+    m_date = date;
+    emit dateChanged();
+    if (m_complete)
+        reload();
+}
+
+QDate DailySongsPageModel::recommendationDay()
+{
+    return QDateTime::currentDateTime().addSecs(-6 * 3600).date();
+}
+
+void DailySongsPageModel::reloadIfStale()
+{
+    if (m_date.isEmpty() && m_loadedDay.isValid() && m_loadedDay != recommendationDay())
+        reload();
 }
 
 Request DailySongsPageModel::load()
 {
-    return App::instance()->catalog()->dailySongs(
-        handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
-            m_songs->reset(keysOf(songs), songs);
-            summarize(songs);
-            return songs.isEmpty();
-        }));
+    auto show = handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
+        m_songs->reset(keysOf(songs), songs);
+        summarize(songs);
+        return songs.isEmpty();
+    });
+    if (!m_date.isEmpty())
+        return App::instance()->catalog()->dailyHistorySongs(m_date, std::move(show));
+    m_loadedDay = recommendationDay();
+    return App::instance()->catalog()->dailySongs(std::move(show));
 }
 
 void DailySongsPageModel::clear()
@@ -131,20 +163,54 @@ void DailySongsPageModel::clear()
     summarize({});
 }
 
+void DailySongsPageModel::loadHistoryDates()
+{
+    if (m_historyRequest.pending())
+        return;
+    m_historyRequest =
+        App::instance()->catalog()->dailyHistoryDates([this](Outcome<QStringList> outcome) {
+            m_historyRequest.release();
+            if (outcome.value) {
+                m_historyDates = *outcome.value;
+                emit historyChanged();
+                return;
+            }
+            emit historyChanged();
+            emit historyFailed();
+            const bool rejected = outcome.failure && outcome.failure->kind == failure::Rejected;
+            emit notice(rejected ? tr("历史日推暂时不可用") : tr("没能获取历史日推"));
+        });
+    emit historyChanged();
+}
+
 void DailySongsPageModel::summarize(const QList<SongInfo>& songs)
 {
     constexpr int kCovers = 4;
     SongItem lead = songs.isEmpty() ? SongItem() : SongItem(songs.first());
     QStringList covers;
+    bool reasons = false;
+    qint64 total = 0;
+    bool known = !songs.isEmpty();
     for (const SongInfo& song : songs) {
-        if (covers.size() == kCovers)
-            break;
-        covers << song.coverKey;
+        if (covers.size() < kCovers)
+            covers << song.coverKey;
+        reasons = reasons || !song.reason.isEmpty();
+        known = known && song.durationMs >= 0;
+        total += std::max<qint64>(song.durationMs, 0);
     }
-    if (lead == m_lead && covers == m_coverKeys)
+    QString countText;
+    if (!songs.isEmpty()) {
+        countText = tr("%1 首").arg(songs.size());
+        if (known)
+            countText += tr(" · ") + Formatter::totalLength(total);
+    }
+    if (lead == m_lead && covers == m_coverKeys && reasons == m_hasReasons &&
+        countText == m_countText)
         return;
     m_lead = std::move(lead);
     m_coverKeys = std::move(covers);
+    m_hasReasons = reasons;
+    m_countText = std::move(countText);
     emit summaryChanged();
 }
 

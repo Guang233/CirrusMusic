@@ -71,6 +71,32 @@ QStringList strings(const QJsonValue& array)
     return list;
 }
 
+// What the samples leave out of an album (type, release day, label, notes,
+// comments), made up from its place in the catalog so it stays the same.
+void describe(AlbumInfo& info, int index, int songCount)
+{
+    static const QStringList labels = {QStringLiteral("潮汐唱片"), QStringLiteral("Cirrus Records"),
+                                       QStringLiteral("独立发行")};
+    info.type = songCount <= 2 ? QStringLiteral("EP") : QStringLiteral("专辑");
+    if (info.year > 0)
+        info.publishedAtMs = QDate(info.year, 1 + index * 5 % 12, 1 + index * 7 % 28)
+                                 .startOfDay()
+                                 .toMSecsSinceEpoch();
+    // The last sample (the long-titled demo album) has no label and no comments.
+    if (info.key == u"al-13")
+        return;
+    info.company = labels.at(index % labels.size());
+    info.commentCount = 12 + index * 37;
+    if (info.key == u"al-08")
+        info.aliases = {QStringLiteral("Caution")};
+    if (index % 3 == 0)
+        info.description =
+            QObject::tr("「%1」是一张虚构的示例专辑，用来检查专辑页的介绍：一行放不下时出现"
+                        "「更多」，点开在对话框里读全文。录音在一间靠海的旧仓库完成，"
+                        "混音保留了房间本身的回声。")
+                .arg(info.title);
+}
+
 // The sample catalog, read once and shared by the fakes.
 struct Samples {
     QHash<QString, SongInfo> songs;
@@ -131,6 +157,8 @@ struct FakeAccount {
     QStringList created{QStringLiteral("pl-01"), QStringLiteral("pl-05")};
     QStringList saved{QStringLiteral("pl-02"), QStringLiteral("pl-03"), QStringLiteral("pl-04"),
                       QStringLiteral("pl-long")};
+    QStringList savedAlbums{QStringLiteral("al-01"), QStringLiteral("al-03"),
+                            QStringLiteral("al-06"), QStringLiteral("al-13")};
     QStringList liked{QStringLiteral("so-001"), QStringLiteral("so-005"), QStringLiteral("so-011"),
                       QStringLiteral("so-017"), QStringLiteral("so-023"), QStringLiteral("so-031"),
                       QStringLiteral("so-034"), QStringLiteral("so-008")};
@@ -251,6 +279,7 @@ std::shared_ptr<const Samples> loadSamples()
         page.songKeys = strings(album.value(QLatin1StringView("songIds")));
         for (const QString& key : std::as_const(page.songKeys))
             page.songs << samples->songs.value(key);
+        describe(page.info, int(samples->albumOrder.size()), int(page.songKeys.size()));
         samples->albums.insert(page.info.key, page);
         samples->albumOrder << page.info.key;
     }
@@ -386,6 +415,7 @@ class FakeCatalog : public QObject, public CatalogSource
                 return outcome;
             }
             AlbumPage page = *found;
+            page.info.subscribed = m_controls->signedIn() && m_account->savedAlbums.contains(key);
             if (m_controls->empty()) {
                 page.songKeys.clear();
                 page.songs.clear();
@@ -562,12 +592,7 @@ class FakeCatalog : public QObject, public CatalogSource
             }
             QList<SongInfo> songs;
             if (!m_controls->empty()) {
-                // A different but stable pick each day.
-                QStringList keys = m_samples->songOrder;
-                std::mt19937 random(QDate::currentDate().toJulianDay());
-                std::shuffle(keys.begin(), keys.end(), random);
-                for (const QString& key : keys.mid(0, kDailySongs))
-                    songs << m_samples->songs[key];
+                songs = dailyPick(QDate::currentDate());
                 // Reasons for some songs, worded like the service's.
                 for (qsizetype i = 0; i < songs.size(); i += 2) {
                     SongInfo& song = songs[i];
@@ -579,6 +604,47 @@ class FakeCatalog : public QObject, public CatalogSource
                 }
             }
             outcome.value = songs;
+            return outcome;
+        });
+    }
+
+    // The last week, skipping one day (as if it were not kept).
+    Request dailyHistoryDates(Reply<QStringList> reply) override
+    {
+        return replyLater<QStringList>(this, m_controls, std::move(reply), [this]() {
+            Outcome<QStringList> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            QStringList dates;
+            if (!m_controls->empty()) {
+                const QDate today = QDate::currentDate();
+                for (int days = 1; days <= kHistoryDays; ++days) {
+                    if (days != 4)
+                        dates << today.addDays(-days).toString(Qt::ISODate);
+                }
+            }
+            outcome.value = dates;
+            return outcome;
+        });
+    }
+
+    Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) override
+    {
+        return replyLater<QList<SongInfo>>(this, m_controls, std::move(reply), [this, date]() {
+            Outcome<QList<SongInfo>> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            const QDate day = QDate::fromString(date, Qt::ISODate);
+            const qint64 age = day.daysTo(QDate::currentDate());
+            if (!day.isValid() || age < 1 || age > kHistoryDays) {
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+                return outcome;
+            }
+            outcome.value = m_controls->empty() ? QList<SongInfo>() : dailyPick(day);
             return outcome;
         });
     }
@@ -649,6 +715,19 @@ class FakeCatalog : public QObject, public CatalogSource
     static constexpr int kChartPreviews = 3;
     static constexpr int kSuggestions = 8;
     static constexpr int kDailySongs = 15;
+    static constexpr int kHistoryDays = 7;
+
+    // A different but stable pick each day.
+    [[nodiscard]] QList<SongInfo> dailyPick(QDate day) const
+    {
+        QStringList keys = m_samples->songOrder;
+        std::mt19937 random(day.toJulianDay());
+        std::shuffle(keys.begin(), keys.end(), random);
+        QList<SongInfo> songs;
+        for (const QString& key : keys.mid(0, kDailySongs))
+            songs << m_samples->songs[key];
+        return songs;
+    }
 
     static bool matches(const QString& candidate, const QString& text)
     {
@@ -698,8 +777,8 @@ class FakeLibrary : public QObject, public LibrarySource
                 for (const QString& key : std::as_const(m_account->saved))
                     if (m_samples->playlists.contains(key))
                         page.savedPlaylists << m_samples->playlistItem(key);
-                for (const char* key : {"al-01", "al-03", "al-06", "al-13"})
-                    page.albums << m_samples->albumItem(QLatin1StringView(key));
+                for (const QString& key : std::as_const(m_account->savedAlbums))
+                    page.albums << m_samples->albumItem(key);
                 for (const char* key : {"ar-01", "ar-04", "ar-11"})
                     page.artists << m_samples->artistItem(QLatin1StringView(key));
             }
@@ -736,6 +815,22 @@ class FakeLibrary : public QObject, public LibrarySource
             m_account->saved.removeAll(key);
             if (subscribed)
                 m_account->saved.prepend(key);
+            outcome.value = subscribed;
+            return outcome;
+        });
+    }
+
+    Request setAlbumSubscribed(const QString& key, bool subscribed, Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            m_account->savedAlbums.removeAll(key);
+            if (subscribed)
+                m_account->savedAlbums.prepend(key);
             outcome.value = subscribed;
             return outcome;
         });

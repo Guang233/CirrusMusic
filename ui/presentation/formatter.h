@@ -25,6 +25,10 @@ class Formatter : public QObject
     Q_INVOKABLE static QString count(qint64 value);
     // A day: "10月28日" this year, "2024年10月28日" before; empty for 0 (unknown).
     Q_INVOKABLE static QString date(qint64 msSinceEpoch);
+    // Always with the year: "2024年5月1日"; empty for 0.
+    Q_INVOKABLE static QString fullDate(qint64 msSinceEpoch);
+    // A list's total length: "48 分钟", "1 小时 52 分钟" (minutes rounded up).
+    Q_INVOKABLE static QString totalLength(qint64 milliseconds);
     // Artist names joined for one line: "A / B".
     [[nodiscard]] static QString artists(const QList<ArtistRef>& artists);
 };

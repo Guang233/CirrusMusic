@@ -72,6 +72,14 @@ struct AlbumInfo {
     int year = 0; // 0 when unknown
     QString coverKey;
     QString description;
+    // The service's wording: 专辑, EP, 单曲…; empty when unknown.
+    QString type;
+    QStringList aliases;
+    qint64 publishedAtMs = 0; // 0 when unknown
+    QString company;          // record label, empty when unknown
+    qint64 commentCount = -1; // -1 when unknown
+    // Saved by the signed-in account.
+    bool subscribed = false;
 };
 
 struct AlbumPage {

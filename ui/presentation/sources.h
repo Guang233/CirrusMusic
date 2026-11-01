@@ -43,6 +43,11 @@ class CatalogSource
     virtual Request feed(Feed which, Reply<QList<FeedSection>> reply) = 0;
     // Today's recommended songs; signed-in only.
     virtual Request dailySongs(Reply<QList<SongInfo>> reply) = 0;
+    // Past days whose recommendations can be read ("yyyy-MM-dd", newest first), and
+    // one of those days' songs (without reasons). Signed-in only; the service may
+    // refuse either (e.g. for accounts without the membership it wants).
+    virtual Request dailyHistoryDates(Reply<QStringList> reply) = 0;
+    virtual Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) = 0;
     // A row of cards; DailyPlaylists is signed-in only.
     virtual Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) = 0;
     // The charts with previews of their top songs.
@@ -60,6 +65,8 @@ class LibrarySource
     // Saves or unsaves someone else's playlist; replies with the new state.
     virtual Request setPlaylistSubscribed(const QString& key, bool subscribed,
                                           Reply<bool> reply) = 0;
+    // Saves or unsaves an album; replies with the new state.
+    virtual Request setAlbumSubscribed(const QString& key, bool subscribed, Reply<bool> reply) = 0;
     // The songs the account likes, newest first.
     virtual Request likedSongKeys(Reply<QStringList> reply) = 0;
 

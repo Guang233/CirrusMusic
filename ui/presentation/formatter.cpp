@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QLocale>
 
+#include <algorithm>
 #include <cmath>
 
 namespace cirrus::ui
@@ -31,6 +32,24 @@ QString Formatter::date(qint64 msSinceEpoch)
     if (day.year() == QDate::currentDate().year())
         return tr("%1月%2日").arg(day.month()).arg(day.day());
     return tr("%1年%2月%3日").arg(day.year()).arg(day.month()).arg(day.day());
+}
+
+QString Formatter::fullDate(qint64 msSinceEpoch)
+{
+    if (msSinceEpoch <= 0)
+        return {};
+    const QDate day = QDateTime::fromMSecsSinceEpoch(msSinceEpoch).date();
+    return tr("%1年%2月%3日").arg(day.year()).arg(day.month()).arg(day.day());
+}
+
+QString Formatter::totalLength(qint64 milliseconds)
+{
+    // Rounded up, so a few seconds don't read as "0 分钟".
+    const qint64 minutes = (std::max<qint64>(milliseconds, 0) + 59'999) / 60'000;
+    if (minutes < 60)
+        return tr("%1 分钟").arg(minutes);
+    return minutes % 60 == 0 ? tr("%1 小时").arg(minutes / 60)
+                             : tr("%1 小时 %2 分钟").arg(minutes / 60).arg(minutes % 60);
 }
 
 QString Formatter::artists(const QList<ArtistRef>& artists)

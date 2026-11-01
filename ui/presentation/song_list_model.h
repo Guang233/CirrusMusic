@@ -36,10 +36,11 @@ class SongListModel : public QAbstractListModel
         DurationTextRole, // "--:--" when unknown
         LoadedRole,
         UnavailableRole,
-        CurrentRole, // the song App.player is on
-        ReasonRole,  // recommendation reason, may be empty
-        LikedRole,   // follows App.library
-        MissingRole, // the service has no details for it
+        CurrentRole,  // the song App.player is on
+        ReasonRole,   // recommendation reason, may be empty
+        LikedRole,    // follows App.library
+        MissingRole,  // the service has no details for it
+        PositionRole, // 1-based place in the list (an album's track number)
     };
     Q_ENUM(Role)
 
