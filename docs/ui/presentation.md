@@ -231,7 +231,7 @@ public:
     virtual Request playlist(const QString& key, Reply<PlaylistPage> reply) = 0;
     virtual Request songs(const QStringList& keys, Reply<QList<SongInfo>> reply) = 0;
     virtual Request search(SearchKind kind, const QString& text, PageRequest page, Reply<SearchPage> reply) = 0;
-    // album、artist、artistSongs、artistAlbums、suggestions、hotKeywords、home、dailySongs……
+    // album、artist、artistSongs、artistAlbums、suggestions、hotKeywords、home、dailySongs、dailyHistoryDates、dailyHistorySongs……
 };
 
 } // namespace cirrus::ui

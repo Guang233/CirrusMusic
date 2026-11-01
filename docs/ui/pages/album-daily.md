@@ -84,3 +84,14 @@
 - `SongTable` 加 `sortable`（列标题是否可点）、`showCover`、`showAlbum` 改为可由页面关掉、可选的理由列（`showReason`）；序号取原顺序（已是）。
 - 展示层：`AlbumInfo` 加 `type`、`aliases`、`publishedAtMs`、`company`、`subscribed`、`commentCount`；`AlbumPageModel` 加收藏（`LibrarySource::setAlbumSubscribed`，假实现）；每日推荐的模型改用 `SongListModel` + `SortedSongsModel`（只用查找）。
 - 首页"今日"卡片的日期写法抽成组件，两处共用。
+
+## 5. 实现进度（2026-11-01）
+
+已按本文实现，与 §4 的差别：
+
+- 三页共用的版式抽成 `ui/app/SongCollectionPage.qml`（头部、操作行、查找、紧凑条、骨架、空状态），头部各部分由页面以组件提供（`infoContent`、`extraContent`、`actionsContent`、`noticeContent`）；`PlaylistPage` 也改用它，行为不变。Ctrl+F 对三页都有效。
+- `SongTable` 加 `sortable`、`showCover`、`albumColumn`、`reasonColumn`（理由列在标题与专辑之间，随专辑列隐藏）、`numberByPosition`（`SongListModel` 新的 `position` 角色）。
+- 日期块是新组件 `DateTile`（大、中、紧凑条三种尺寸）；首页"今日"卡片有字重动画和自己的排版，没有改用它。
+- 展示层：`AlbumInfo` 加 `type`、`aliases`、`publishedAtMs`、`company`、`commentCount`、`subscribed`；`LibrarySource::setAlbumSubscribed`；`CatalogSource::dailyHistoryDates`、`dailyHistorySongs`；`DailySongsPageModel` 加 `date`、`hasReasons`、`countText`、`historyDates`、`loadHistoryDates()`、`reloadIfStale()`；`Formatter` 加 `fullDate`、`totalLength`；`PageState` 加 `signedOutText`。
+- 假数据：示例目录没有的专辑字段（类型、发行日、唱片公司、介绍、评论数）在 `fake_sources.cpp` 里按专辑在目录中的位置固定生成；历史日推为最近 7 天（跳过一天），歌曲按日期固定挑选。
+- 验证：构建、qmllint、clang-format；离屏截图检查了专辑页（宽、窄、两位歌手、查找保留曲序）、每日推荐（登录、未登录、紧凑条）、历史日推菜单与键盘选择、历史日页面（无理由列），以及重构后的歌单页（排序、提示条）。

@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；之后专辑页、每日推荐页沿用同一套版式，细化设计已写、待评审（[pages/album-daily.md](pages/album-daily.md)），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -596,3 +596,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 - 按维护者决定（UQ-10）实现，详见 [pages/shell.md §7](pages/shell.md)：`QSystemTrayIcon` 托盘（`CIRRUS_UI_TRAY`，链接 Widgets、用 `QApplication`）、第一次关闭询问并记住、单实例激活、隐藏时释放图形资源、Linux 混合显卡默认独显。
 - 验证：构建、qmllint 无警告、clang-format；离屏下测了两次启动（第二个 0.1 秒内退出，第一个收到激活）、无托盘时关闭即退出（退出码 0）、对话框和设置页截图、隐藏再显示后页面正常重建。本机 sysfs 检测到 card0（NVIDIA，非 boot_vga）为独显。真实托盘、Wayland 激活和独显休眠需要在桌面上检查。
+
+### 专辑页、每日推荐与历史日推（2026-11-01）
+
+- 按 [pages/album-daily.md](pages/album-daily.md)（A1–A3 按建议，A4 改为做历史日推；两页不能排序、保留查找）实现；三页共用的版式抽成 `SongCollectionPage`，歌单页改用它。细节和验证见该文 §5。
