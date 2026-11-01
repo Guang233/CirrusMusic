@@ -5,7 +5,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 ## Working with the maintainer
 
 - Reply in Chinese.
-- The agent owns the UI only. Do not modify backend code; report backend problems (e.g. the `tst_entity_search` failure below) to the maintainer instead.
+- The agent's focus is the UI. Backend code may be changed when a task needs it (the maintainer lifted the UI-only rule on 2026-11-01); follow the backend's own docs and conventions (`docs/HANDOFF.md`) and report unrelated backend problems (e.g. the `tst_entity_search` failure below) to the maintainer.
 - Keep verification proportional to the change; skip tests that are not needed.
 - Open design questions (UQ-xx in `docs/ui/README.md` §14) are decided by the maintainer: ask, then record the decision there.
 - Current progress and the next step are at the top of `docs/ui/README.md` §12.

@@ -126,7 +126,8 @@
 依据 [Linux 集成 §4、§7](../../10-linux-integration.md)，维护者决定（UQ-10）：
 
 - **托盘图标**：`QSystemTrayIcon`，CMake 选项 `CIRRUS_UI_TRAY`（默认开，链接 Qt Widgets、改用 `QApplication`；关掉时保留 `QGuiApplication`，关闭窗口总是退出）。Linux 上 Qt 走 StatusNotifierItem（KDE、带扩展的 GNOME、Waybar 等），没有时退到 XEmbed。菜单：当前歌曲（灰）、播放／暂停、上一首、下一首、显示主窗口、退出 Cirrus Music。单击显示窗口，中键播放／暂停。图标是占位（`ui/app/icons/cirrus-music.svg`，UQ-06 定应用身份时替换），同时作窗口图标。
-- **关闭主窗口**：托盘可用时，第一次关闭弹出"关闭主窗口"对话框（`CloseDialog`）：最小化到托盘（默认按钮）／退出，"记住我的选择"默认勾选；Esc 或关闭按钮不关窗口。设置 › 窗口 › "关闭主窗口时"：每次询问／最小化到托盘／退出。每次关闭前重新检查托盘（面板可能比应用晚启动）；托盘不可用（例如没装扩展的 GNOME）时直接退出，设置项变灰并说明原因。
+- **关闭主窗口**：第一次关闭弹出"关闭主窗口"对话框（`CloseDialog`，2026-11-01 按维护者要求改为单选项）：最小化到托盘，继续播放（默认）／退出 Cirrus Music，"不再询问"默认勾选，按钮为取消／确定；Esc、取消或关闭按钮不关窗口。设置 › 窗口 › "关闭主窗口时"：每次询问／最小化到托盘／退出。
+- **没有托盘时**（例如没装扩展的 GNOME）：维护者决定照样按用户的选择在后台播放，不改成退出。文案换成"在后台继续播放"／"后台播放"，并说明回到窗口的办法：再次打开 Cirrus Music（单实例激活）；退出用 Ctrl+Q（`StandardKey.Quit`，全应用快捷键）。每次关闭前重新检查托盘（面板可能比应用晚启动），出现后补上托盘图标。
 - **退出**：托盘菜单的退出、`Qt.quit()`、会话结束都先置 `Desktop.quitting`，此时关闭窗口不会被改成隐藏。
 - **单实例**：`QLockFile` + `QLocalServer`，放在 `$XDG_RUNTIME_DIR/CirrusMusic/`（0700）。再次启动只发一行 `activate [令牌]`（≤ 512 字节，令牌按字符白名单校验），已运行的实例显示并激活窗口后，新进程退出。Wayland 下转交启动器给的 `XDG_ACTIVATION_TOKEN`，显示窗口时由 Qt 使用。锁的持有进程已不在时视为过期锁；持有者不应答时照常启动，不会卡住。
 - **隐藏时释放显卡**：窗口 `persistentGraphics`、`persistentSceneGraph` 设为 false，隐藏到托盘时释放图形设备和场景图，后台长时间播放时独显可以休眠；显示时重建。
