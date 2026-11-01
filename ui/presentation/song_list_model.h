@@ -37,6 +37,7 @@ class SongListModel : public QAbstractListModel
         CurrentRole, // the song App.player is on
         ReasonRole,  // recommendation reason, may be empty
         LikedRole,   // follows App.library
+        MissingRole, // the service has no details for it
     };
     Q_ENUM(Role)
 
@@ -49,6 +50,12 @@ class SongListModel : public QAbstractListModel
     void append(const QList<SongInfo>& songs);
     void remove(const QStringList& keys);
     void move(int from, int to);
+    // Details for rows that only had a key; `requested` keys missing from `details`
+    // are marked missing.
+    void fill(const QStringList& requested, const QList<SongInfo>& details);
+    // Keys of the rows in [first, last] still waiting for details.
+    [[nodiscard]] QStringList keysToLoad(int first, int last) const;
+    [[nodiscard]] int missingCount() const;
     // The rows with details, e.g. to put the list back after a failed change.
     [[nodiscard]] QList<SongInfo> loadedSongs() const;
 
@@ -71,6 +78,7 @@ class SongListModel : public QAbstractListModel
     struct Row {
         SongInfo song;
         bool loaded = false;
+        bool missing = false;
     };
     QList<Row> m_rows;
     QString m_currentKey;

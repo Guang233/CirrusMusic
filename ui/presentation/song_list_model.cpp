@@ -6,6 +6,7 @@
 #include "player.h"
 
 #include <QHash>
+#include <QSet>
 #include <QVariantMap>
 
 #include <algorithm>
@@ -116,6 +117,44 @@ void SongListModel::move(int from, int to)
     endMoveRows();
 }
 
+void SongListModel::fill(const QStringList& requested, const QList<SongInfo>& details)
+{
+    QHash<QString, const SongInfo*> byKey;
+    for (const SongInfo& song : details)
+        byKey.insert(song.key, &song);
+    const QSet<QString> wanted(requested.cbegin(), requested.cend());
+    for (int row = 0; row < rowCount(); ++row) {
+        Row& entry = m_rows[row];
+        if (entry.loaded || !wanted.contains(entry.song.key))
+            continue;
+        if (const SongInfo* song = byKey.value(entry.song.key)) {
+            entry.song = *song;
+            entry.loaded = true;
+            entry.missing = false;
+        } else {
+            entry.missing = true;
+        }
+        emit dataChanged(index(row), index(row));
+    }
+}
+
+QStringList SongListModel::keysToLoad(int first, int last) const
+{
+    QStringList keys;
+    for (int row = std::max(0, first); row <= std::min(last, rowCount() - 1); ++row) {
+        const Row& entry = m_rows.at(row);
+        if (!entry.loaded && !entry.missing)
+            keys << entry.song.key;
+    }
+    return keys;
+}
+
+int SongListModel::missingCount() const
+{
+    return int(
+        std::count_if(m_rows.cbegin(), m_rows.cend(), [](const Row& row) { return row.missing; }));
+}
+
 QList<SongInfo> SongListModel::loadedSongs() const
 {
     QList<SongInfo> songs;
@@ -179,6 +218,8 @@ QVariant SongListModel::data(const QModelIndex& index, int role) const
         return !song.key.isEmpty() && song.key == m_currentKey;
     case ReasonRole:
         return song.reason;
+    case MissingRole:
+        return row.missing;
     case LikedRole: {
         const App* app = App::instance();
         return app && app->library()->isLiked(song.key);
@@ -206,6 +247,7 @@ QHash<int, QByteArray> SongListModel::roleNames() const
         {CurrentRole, "current"},
         {ReasonRole, "reason"},
         {LikedRole, "liked"},
+        {MissingRole, "missing"},
     };
 }
 

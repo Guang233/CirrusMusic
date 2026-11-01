@@ -3,6 +3,10 @@
 #include "loadable_model.h"
 #include "types.h"
 
+#include <QSet>
+
+#include <map>
+
 namespace cirrus::ui
 {
 
@@ -32,6 +36,8 @@ class PlaylistPageModel : public LoadableModel
     Q_PROPERTY(bool own READ own NOTIFY headerChanged)
     // Shows the new state at once; reverts when saving fails.
     Q_PROPERTY(bool subscribed READ subscribed WRITE setSubscribed NOTIFY subscribedChanged)
+    // Songs the service has no details for (large playlists fetch details by batch).
+    Q_PROPERTY(int missingCount READ missingCount NOTIFY missingCountChanged)
     Q_PROPERTY(cirrus::ui::SongListModel* songs READ songs CONSTANT)
 
   public:
@@ -52,6 +58,14 @@ class PlaylistPageModel : public LoadableModel
     [[nodiscard]] bool own() const { return m_info.own; }
     [[nodiscard]] bool subscribed() const { return m_info.subscribed; }
     void setSubscribed(bool subscribed);
+    [[nodiscard]] int missingCount() const { return m_missingCount; }
+
+    // Large playlists come with details for some songs only: fetches them for the
+    // rows in [first, last] of `songs` (the rows on screen and around them), in
+    // batches. A batch that fails is asked for again next time.
+    Q_INVOKABLE void ensureLoaded(int first, int last);
+    // Every song's details, for sorting and finding.
+    Q_INVOKABLE void loadAll();
 
     // The account's own playlist.
     Q_INVOKABLE void removeSongs(const QStringList& keys);
@@ -65,6 +79,7 @@ class PlaylistPageModel : public LoadableModel
     void playlistKeyChanged();
     void headerChanged();
     void subscribedChanged();
+    void missingCountChanged();
     // A change the account made here was saved: the library has to reload.
     void libraryChanged();
     // Something to tell the user (a change saved, or undone and why), translated.
@@ -77,6 +92,8 @@ class PlaylistPageModel : public LoadableModel
 
   private:
     void saveOrder();
+    void requestDetails(const QStringList& keys);
+    void updateMissingCount();
     void restoreSongs(const QStringList& keys, const QList<SongInfo>& songs);
     [[nodiscard]] QString failureMessage(const Outcome<bool>& outcome,
                                          const QString& otherwise) const;
@@ -85,6 +102,11 @@ class PlaylistPageModel : public LoadableModel
     PlaylistInfo m_info;
     SongListModel* m_songs;
     Request m_subscribeRequest;
+    // Detail batches on their way, by number, and the keys they are for.
+    std::map<int, Request> m_detailRequests;
+    QSet<QString> m_pendingKeys;
+    int m_nextDetailRequest = 0;
+    int m_missingCount = 0;
     Request m_writeRequest;
     Request m_orderRequest;
     // Song order as last saved, to put back when saving a new order fails.

@@ -24,6 +24,10 @@ class CatalogSource
   public:
     virtual ~CatalogSource() = default;
     virtual Request playlist(const QString& key, Reply<PlaylistPage> reply) = 0;
+    // Details of songs known by key (a large playlist's rows), at most
+    // kSongDetailsBatch keys a request. Songs the service has no details for are left
+    // out of the reply.
+    virtual Request songDetails(const QStringList& keys, Reply<QList<SongInfo>> reply) = 0;
     virtual Request album(const QString& key, Reply<AlbumPage> reply) = 0;
     virtual Request artist(const QString& key, Reply<ArtistPage> reply) = 0;
 

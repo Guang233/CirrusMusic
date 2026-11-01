@@ -86,6 +86,16 @@ struct Samples {
     QHash<QString, QStringList> artistSongs;
     QHash<QString, QStringList> artistAlbums;
 
+    // A sample song by key. The long sample playlist repeats the samples under keys
+    // like "so-001~123"; those resolve to the sample with the key kept.
+    [[nodiscard]] SongInfo song(const QString& key) const
+    {
+        SongInfo info =
+            songs.value(key.section(QLatin1Char('~'), 0, 0), SongInfo{.key = key, .title = key});
+        info.key = key;
+        return info;
+    }
+
     [[nodiscard]] CollectionItem playlistItem(const QString& key) const
     {
         const PlaylistPage& page = playlists[key];
@@ -119,7 +129,8 @@ struct Samples {
 // playlists; the catalog and the library share it, so a change shows up everywhere.
 struct FakeAccount {
     QStringList created{QStringLiteral("pl-01"), QStringLiteral("pl-05")};
-    QStringList saved{QStringLiteral("pl-02"), QStringLiteral("pl-03"), QStringLiteral("pl-04")};
+    QStringList saved{QStringLiteral("pl-02"), QStringLiteral("pl-03"), QStringLiteral("pl-04"),
+                      QStringLiteral("pl-long")};
     QStringList liked{QStringLiteral("so-001"), QStringLiteral("so-005"), QStringLiteral("so-011"),
                       QStringLiteral("so-017"), QStringLiteral("so-023"), QStringLiteral("so-031"),
                       QStringLiteral("so-034"), QStringLiteral("so-008")};
@@ -149,7 +160,7 @@ struct FakeAccount {
             page.songKeys = *edit->songKeys;
             page.songs.clear();
             for (const QString& key : std::as_const(page.songKeys))
-                page.songs << samples.songs.value(key);
+                page.songs << samples.song(key);
         }
     }
     [[nodiscard]] CollectionItem playlistItem(const QString& key, const Samples& samples) const
@@ -265,6 +276,25 @@ std::shared_ptr<const Samples> loadSamples()
         samples->playlists.insert(page.info.key, page);
         samples->playlistOrder << page.info.key;
     }
+
+    // A long playlist for paged loading: the samples over and over, details for the
+    // first batch only; the rest are fetched as they scroll into view.
+    {
+        PlaylistPage page;
+        page.info.key = QStringLiteral("pl-long");
+        page.info.title = QStringLiteral("很长的歌单");
+        page.info.description = QStringLiteral("600 首，用来检查长歌单的按页加载。");
+        page.info.creator = QStringLiteral("Cirrus 示例");
+        page.info.coverKey = QStringLiteral("ocean");
+        fillPlaylistDetails(page.info);
+        for (int i = 0; i < 600; ++i)
+            page.songKeys << samples->songOrder.at(i % samples->songOrder.size()) +
+                                 QLatin1Char('~') + QString::number(i);
+        for (const QString& key : page.songKeys.mid(0, kSongDetailsBatch))
+            page.songs << samples->song(key);
+        samples->playlists.insert(page.info.key, page);
+        samples->playlistOrder << page.info.key;
+    }
     return samples;
 }
 
@@ -325,6 +355,23 @@ class FakeCatalog : public QObject, public CatalogSource
                 page.songs.clear();
             }
             outcome.value = page;
+            return outcome;
+        });
+    }
+
+    Request songDetails(const QStringList& keys, Reply<QList<SongInfo>> reply) override
+    {
+        return replyLater<QList<SongInfo>>(this, m_controls, std::move(reply), [this, keys]() {
+            Outcome<QList<SongInfo>> outcome;
+            QList<SongInfo> songs;
+            for (const QString& key : keys.mid(0, kSongDetailsBatch)) {
+                // Every 97th song of the long playlist has no details (removed by the
+                // service), for the "missing" rows.
+                if (key.section(QLatin1Char('~'), 1).toInt() % 97 == 96)
+                    continue;
+                songs << m_samples->song(key);
+            }
+            outcome.value = songs;
             return outcome;
         });
     }
@@ -643,7 +690,7 @@ class FakeLibrary : public QObject, public LibrarySource
             LibraryPage page;
             if (!m_controls->empty()) {
                 for (const QString& key : std::as_const(m_account->liked))
-                    page.likedSongs << m_samples->songs[key];
+                    page.likedSongs << m_samples->song(key);
                 for (const QString& key : recentKeys())
                     page.recentSongs << m_samples->songs[key];
                 for (const QString& key : std::as_const(m_account->created))
@@ -1124,7 +1171,7 @@ class FakePlayback : public QObject, public PlaybackSource
     {
         m_end.stop();
         const QString key = m_queue.at(m_sequence.at(m_pos));
-        m_state.current = m_samples->songs.value(key, SongInfo{.key = key, .title = key});
+        m_state.current = m_samples->song(key);
         m_state.status = playback::Loading;
         m_state.failure.reset();
         m_state.positionMs = 0;

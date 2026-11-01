@@ -38,8 +38,11 @@ Request PlaylistPageModel::load()
                                                     m_info = page.info;
                                                     emit headerChanged();
                                                     emit subscribedChanged();
+                                                    m_detailRequests.clear();
+                                                    m_pendingKeys.clear();
                                                     m_songs->reset(page.songKeys, page.songs);
                                                     m_savedOrder = page.songKeys;
+                                                    updateMissingCount();
                                                     return page.songKeys.isEmpty();
                                                 }));
 }
@@ -70,6 +73,60 @@ void PlaylistPageModel::setSubscribed(bool subscribed)
                         : subscribed ? tr("没能收藏歌单，请稍后再试")
                                      : tr("没能取消收藏，请稍后再试"));
         });
+}
+
+void PlaylistPageModel::ensureLoaded(int first, int last)
+{
+    // Whole batches around the range, so scrolling on asks for few, full requests.
+    first = first / kSongDetailsBatch * kSongDetailsBatch;
+    last = (last / kSongDetailsBatch + 1) * kSongDetailsBatch - 1;
+    requestDetails(m_songs->keysToLoad(first, last));
+}
+
+void PlaylistPageModel::loadAll()
+{
+    requestDetails(m_songs->keysToLoad(0, m_songs->rowCount() - 1));
+}
+
+void PlaylistPageModel::requestDetails(const QStringList& keys)
+{
+    QStringList batch;
+    const auto send = [this, &batch]() {
+        if (batch.isEmpty())
+            return;
+        const int id = m_nextDetailRequest++;
+        for (const QString& key : std::as_const(batch))
+            m_pendingKeys.insert(key);
+        m_detailRequests[id] = App::instance()->catalog()->songDetails(
+            batch, [this, id, keys = batch](Outcome<QList<SongInfo>> outcome) {
+                m_detailRequests[id].release();
+                m_detailRequests.erase(id);
+                for (const QString& key : keys)
+                    m_pendingKeys.remove(key);
+                if (!outcome.value)
+                    return;
+                m_songs->fill(keys, *outcome.value);
+                updateMissingCount();
+            });
+        batch.clear();
+    };
+    for (const QString& key : keys) {
+        if (m_pendingKeys.contains(key))
+            continue;
+        batch << key;
+        if (batch.size() == kSongDetailsBatch)
+            send();
+    }
+    send();
+}
+
+void PlaylistPageModel::updateMissingCount()
+{
+    const int count = m_songs->missingCount();
+    if (count == m_missingCount)
+        return;
+    m_missingCount = count;
+    emit missingCountChanged();
 }
 
 QString PlaylistPageModel::failureMessage(const Outcome<bool>& outcome,
@@ -185,12 +242,15 @@ void PlaylistPageModel::clear()
 {
     m_subscribeRequest.cancel();
     m_writeRequest.cancel();
+    m_detailRequests.clear();
+    m_pendingKeys.clear();
     m_orderRequest.cancel();
     m_savedOrder.clear();
     m_info = {};
     emit headerChanged();
     emit subscribedChanged();
     m_songs->clear();
+    updateMissingCount();
 }
 
 } // namespace cirrus::ui

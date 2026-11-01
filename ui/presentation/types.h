@@ -54,6 +54,9 @@ struct PlaylistInfo {
     bool subscribed = false;
 };
 
+// Most song keys one CatalogSource::songDetails() request takes (the service's limit).
+inline constexpr int kSongDetailsBatch = 100;
+
 // A playlist's header and tracks. `songs` may hold details for only some of
 // `songKeys` (large playlists); the rest are fetched as they scroll into view.
 struct PlaylistPage {
