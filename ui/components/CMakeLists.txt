@@ -22,6 +22,7 @@ qt_add_qml_module(cirrus_ui_components
         PageState.qml
         SongList.qml
         SongTable.qml
+        SongTableSkeleton.qml
         CollectionCard.qml
         CollectionGrid.qml
         CollectionView.qml

@@ -563,3 +563,4 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 按 [pages/playlist.md](pages/playlist.md) 重写 `PlaylistPage`：头部、操作行、页内查找、紧凑栏与吸顶列标题；新组件 `SongTable`（桌面表格式歌曲列表，选择与键盘）、控件 `Snackbar`；展示层加 `SortedSongsModel`、歌单头部字段、收藏歌单写入（假实现共享一份账号数据，侧边栏随之刷新）、`Formatter.date()`；主题加 `Fonts.tabular(font)`（等宽数字）；图标加 `arrow_upward`、`arrow_downward`、`bookmark_add`、`bookmark_added`。
 - 外壳：Ctrl+F 在歌单页聚焦页内查找，其他页面仍是全局搜索（Ctrl+K 总是全局）；`shell.notify(text)`、`shell.refreshLibrary()`。
 - 验证：构建、qmllint 无警告；临时钩子走了点击／Ctrl 点击／Shift 和 Ctrl 方向键选择、菜单键、列标题排序、查找的键盘流程（输入过滤 → ↓ 进表格 → 打字回到查找 → Esc 清空 → Esc 回表格 → Enter 播放）、登录后收藏／取消收藏；离屏截图检查了宽、窄（780）、滚动后的紧凑栏。合成的按键不会触发 `Shortcut`，Ctrl+F 本身没有在离屏下验证。
+- 维护者反馈后：去掉随机播放按钮；加评论入口（数量，评论页未设计前点击给提示）；加载骨架改用新组件 `SongTableSkeleton`（按 `SongTable` 的列宽画列标题和行，页面提供头部骨架），与加载后的版式一致。离屏截图对比了加载中和加载后。

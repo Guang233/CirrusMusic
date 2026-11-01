@@ -6,7 +6,7 @@ import Cirrus.Components
 import Cirrus.Presentation
 
 // Playlist details (docs/ui/pages/playlist.md): a header that scrolls away (cover,
-// title, creator, description, tags, counts; play all, shuffle, save; the
+// title, creator, description, tags, counts; play all, save, comments; the
 // in-playlist find) over the song table. Once the header has gone, a compact bar with
 // the title, play all and the find stays on top, the column titles under it.
 // Ctrl+F (AppShell) finds in the playlist; typing on the table does too.
@@ -36,13 +36,10 @@ Item {
         field.selectAll();
     }
 
-    function playAll(shuffled: bool): void {
+    function playAll(): void {
         const keys = sorted.keys();
-        if (keys.length === 0)
-            return;
-        if (shuffled)
-            App.player.setOrder(Playback.Shuffle);
-        App.player.playSongs(keys, shuffled ? Math.floor(Math.random() * keys.length) : 0);
+        if (keys.length > 0)
+            App.player.playSongs(keys, 0);
     }
 
     function toggleSubscribed(): void {
@@ -71,6 +68,80 @@ Item {
         anchors.fill: parent
         model: pageModel
         emptyInContent: true
+        // Laid out like the header and the table below (§6).
+        skeleton: SongTableSkeleton {
+            table: songTable
+            headerSkeleton: Column {
+                topPadding: 24
+                bottomPadding: 16
+                spacing: 24
+
+                Item {
+                    x: songTable.rowX
+                    width: songTable.rowWidth
+                    height: skeletonCover.height
+
+                    Skeleton {
+                        id: skeletonCover
+                        width: page.wide ? 200 : 140
+                        height: width
+                        radius: Theme.shape.large
+                    }
+                    Column {
+                        readonly property real available: parent.width - x
+                        x: skeletonCover.width + 24
+                        y: page.wide ? 4 : (skeletonCover.height - height) / 2
+                        spacing: 12
+                        Skeleton {
+                            width: 32
+                            height: 12
+                        }
+                        Skeleton {
+                            width: Math.min(280, parent.available)
+                            height: page.wide ? 32 : 24
+                        }
+                        Skeleton {
+                            width: Math.min(200, parent.available)
+                            height: 14
+                        }
+                        Skeleton {
+                            visible: page.wide
+                            width: Math.min(360, parent.available)
+                            height: 14
+                        }
+                        Skeleton {
+                            width: Math.min(220, parent.available)
+                            height: 14
+                        }
+                    }
+                }
+                // Actions and the find field.
+                Item {
+                    x: songTable.rowX
+                    width: songTable.rowWidth
+                    height: 40
+                    Row {
+                        spacing: 8
+                        Repeater {
+                            model: [116, 88, 96]
+                            Skeleton {
+                                required property int modelData
+                                width: modelData
+                                height: 40
+                                radius: height / 2
+                            }
+                        }
+                    }
+                    Skeleton {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(240, parent.width / 3)
+                        height: 36
+                        radius: height / 2
+                    }
+                }
+            }
+        }
     }
 
     // Find field behaviour, for both fields: Esc clears, then returns to the table;
@@ -250,14 +321,7 @@ Item {
                         variant: Md.Filled
                         glyph: Symbols.play_arrow
                         text: qsTr("播放全部")
-                        onClicked: page.playAll(false)
-                    }
-                    Button {
-                        enabled: page.hasSongs
-                        variant: Md.Tonal
-                        glyph: Symbols.shuffle
-                        text: qsTr("随机播放")
-                        onClicked: page.playAll(true)
+                        onClicked: page.playAll()
                     }
                     // Someone else's playlist (P5).
                     Button {
@@ -266,6 +330,15 @@ Item {
                         glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
                         text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
                         onClicked: page.toggleSubscribed()
+                    }
+                    Button {
+                        variant: Md.Text
+                        glyph: Symbols.comment
+                        text: pageModel.commentCount > 0
+                              ? qsTr("评论 %1").arg(App.format.count(pageModel.commentCount))
+                              : qsTr("评论")
+                        // The comments page is designed later (playlist.md §2).
+                        onClicked: page.shell.notify(qsTr("评论页还在设计中"))
                     }
                 }
                 FindField {
@@ -356,7 +429,7 @@ Item {
                 glyph: Symbols.play_arrow
                 iconFill: 1
                 text: qsTr("播放全部")
-                onClicked: page.playAll(false)
+                onClicked: page.playAll()
             }
             FindField {
                 id: compactFind
