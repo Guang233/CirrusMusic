@@ -252,11 +252,7 @@ Item {
         visible: opacity > 0
         songs: sorted
         pinnedTop: compactBar.y + compactBar.height
-        // The account's own playlist; moving only in its own order, unfiltered.
         removable: pageModel.own
-        reorderable: pageModel.own && sorted.sortField === SortedSongsModel.Original
-                     && page.findText.trim() === ""
-        onMoveRequested: (from, to) => pageModel.moveSong(from, to)
         onRemoveRequested: keys => page.removeSongs(keys)
         onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)
         onSignInRequested: page.shell.openLogin()
@@ -467,7 +463,8 @@ Item {
     // Slides in, following the scroll, once the header's actions have gone.
     Rectangle {
         id: compactBar
-        width: parent.width
+        // Leaves the table's scroll bar uncovered.
+        width: parent.width - songTable.scrollBarWidth
         height: 56
         y: -height * (1 - page.compactProgress)
         visible: page.compactProgress > 0

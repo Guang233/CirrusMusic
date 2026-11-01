@@ -38,10 +38,10 @@ Request PlaylistPageModel::load()
                                                     m_info = page.info;
                                                     emit headerChanged();
                                                     emit subscribedChanged();
-                                                    m_detailRequests.clear();
+                                                    m_detailRequest.cancel();
+                                                    m_detailQueue.clear();
                                                     m_pendingKeys.clear();
                                                     m_songs->reset(page.songKeys, page.songs);
-                                                    m_savedOrder = page.songKeys;
                                                     updateMissingCount();
                                                     return page.songKeys.isEmpty();
                                                 }));
@@ -80,44 +80,55 @@ void PlaylistPageModel::ensureLoaded(int first, int last)
     // Whole batches around the range, so scrolling on asks for few, full requests.
     first = first / kSongDetailsBatch * kSongDetailsBatch;
     last = (last / kSongDetailsBatch + 1) * kSongDetailsBatch - 1;
-    requestDetails(m_songs->keysToLoad(first, last));
+    queueDetails(m_songs->keysToLoad(first, last), true);
 }
 
 void PlaylistPageModel::loadAll()
 {
-    requestDetails(m_songs->keysToLoad(0, m_songs->rowCount() - 1));
+    queueDetails(m_songs->keysToLoad(0, m_songs->rowCount() - 1), false);
 }
 
-void PlaylistPageModel::requestDetails(const QStringList& keys)
+void PlaylistPageModel::queueDetails(const QStringList& keys, bool urgent)
 {
-    QStringList batch;
-    const auto send = [this, &batch]() {
-        if (batch.isEmpty())
-            return;
-        const int id = m_nextDetailRequest++;
-        for (const QString& key : std::as_const(batch))
-            m_pendingKeys.insert(key);
-        m_detailRequests[id] = App::instance()->catalog()->songDetails(
-            batch, [this, id, keys = batch](Outcome<QList<SongInfo>> outcome) {
-                m_detailRequests[id].release();
-                m_detailRequests.erase(id);
-                for (const QString& key : keys)
-                    m_pendingKeys.remove(key);
-                if (!outcome.value)
-                    return;
-                m_songs->fill(keys, *outcome.value);
-                updateMissingCount();
-            });
-        batch.clear();
-    };
+    QList<QStringList> batches;
     for (const QString& key : keys) {
         if (m_pendingKeys.contains(key))
             continue;
-        batch << key;
-        if (batch.size() == kSongDetailsBatch)
-            send();
+        if (batches.isEmpty() || batches.last().size() == kSongDetailsBatch)
+            batches.append(QStringList());
+        batches.last() << key;
+        m_pendingKeys.insert(key);
     }
-    send();
+    if (urgent)
+        m_detailQueue = batches + m_detailQueue;
+    else
+        m_detailQueue += batches;
+    if (!m_detailRequest.pending())
+        sendNextDetails();
+}
+
+void PlaylistPageModel::sendNextDetails()
+{
+    if (m_detailQueue.isEmpty())
+        return;
+    const QStringList keys = m_detailQueue.takeFirst();
+    m_detailRequest = App::instance()->catalog()->songDetails(
+        keys, [this, keys](Outcome<QList<SongInfo>> outcome) {
+            m_detailRequest.release();
+            for (const QString& key : keys)
+                m_pendingKeys.remove(key);
+            if (outcome.value) {
+                m_songs->fill(keys, *outcome.value);
+                updateMissingCount();
+                sendNextDetails();
+                return;
+            }
+            // Failed (offline, rate limited…): drop the queue; scrolling asks again.
+            for (const QStringList& batch : std::as_const(m_detailQueue))
+                for (const QString& key : batch)
+                    m_pendingKeys.remove(key);
+            m_detailQueue.clear();
+        });
 }
 
 void PlaylistPageModel::updateMissingCount()
@@ -155,7 +166,6 @@ void PlaylistPageModel::removeSongs(const QStringList& keys)
         m_key, keys, [this, keys, before, songs](Outcome<bool> outcome) {
             m_writeRequest.release();
             if (outcome.value) {
-                m_savedOrder = m_songs->keys();
                 emit libraryChanged();
                 emit notice(keys.size() == 1 ? tr("已从歌单移除")
                                              : tr("已从歌单移除 %1 首").arg(keys.size()));
@@ -163,36 +173,6 @@ void PlaylistPageModel::removeSongs(const QStringList& keys)
             }
             restoreSongs(before, songs);
             emit notice(failureMessage(outcome, tr("没能从歌单移除，请稍后再试")));
-        });
-}
-
-void PlaylistPageModel::moveSong(int from, int to)
-{
-    if (!m_info.own || from == to)
-        return;
-    m_songs->move(from, to);
-    // Moves made while a save is on its way are saved after it.
-    if (!m_orderRequest.pending())
-        saveOrder();
-}
-
-void PlaylistPageModel::saveOrder()
-{
-    const QStringList order = m_songs->keys();
-    if (order == m_savedOrder)
-        return;
-    const QStringList previous = m_savedOrder;
-    m_savedOrder = order;
-    m_orderRequest = App::instance()->librarySource()->reorderPlaylist(
-        m_key, order, [this, previous](Outcome<bool> outcome) {
-            m_orderRequest.release();
-            if (outcome.value) {
-                saveOrder();
-                return;
-            }
-            m_savedOrder = previous;
-            restoreSongs(previous, m_songs->loadedSongs());
-            emit notice(failureMessage(outcome, tr("没能保存歌曲顺序，请稍后再试")));
         });
 }
 
@@ -242,10 +222,9 @@ void PlaylistPageModel::clear()
 {
     m_subscribeRequest.cancel();
     m_writeRequest.cancel();
-    m_detailRequests.clear();
+    m_detailRequest.cancel();
+    m_detailQueue.clear();
     m_pendingKeys.clear();
-    m_orderRequest.cancel();
-    m_savedOrder.clear();
     m_info = {};
     emit headerChanged();
     emit subscribedChanged();

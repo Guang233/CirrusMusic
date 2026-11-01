@@ -158,7 +158,11 @@ Item {
         anchors.fill: parent
         visible: !page.allFailed
         contentHeight: column.height + 48
-        boundsBehavior: Flickable.StopAtBounds
+        // Overshoots and springs back at the ends; WheelScroller eases mouse wheels.
+        boundsBehavior: Flickable.DragAndOvershootBounds
+        WheelScroller {
+            flickable: flick
+        }
         ScrollBar.vertical: ScrollBar {}
 
         Column {

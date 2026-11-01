@@ -79,10 +79,15 @@ PageScaffold {
     }
 
     Flickable {
+        id: settingsFlick
         anchors.fill: parent
         contentHeight: column.implicitHeight + 32
         clip: true
-        boundsBehavior: Flickable.StopAtBounds
+        // Overshoots and springs back at the ends; WheelScroller eases mouse wheels.
+        boundsBehavior: Flickable.DragAndOvershootBounds
+        WheelScroller {
+            flickable: settingsFlick
+        }
         ScrollBar.vertical: ScrollBar {}
 
         Column {

@@ -89,7 +89,11 @@ PageScaffold {
                 anchors.fill: parent
                 contentHeight: playlistColumn.implicitHeight + 24
                 clip: true
-                boundsBehavior: Flickable.StopAtBounds
+                // Overshoots and springs back at the ends; WheelScroller eases mouse wheels.
+                boundsBehavior: Flickable.DragAndOvershootBounds
+                WheelScroller {
+                    flickable: playlists
+                }
                 ScrollBar.vertical: ScrollBar {}
 
                 Column {

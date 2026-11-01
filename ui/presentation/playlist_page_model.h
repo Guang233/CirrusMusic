@@ -5,8 +5,6 @@
 
 #include <QSet>
 
-#include <map>
-
 namespace cirrus::ui
 {
 
@@ -62,15 +60,14 @@ class PlaylistPageModel : public LoadableModel
 
     // Large playlists come with details for some songs only: fetches them for the
     // rows in [first, last] of `songs` (the rows on screen and around them), in
-    // batches. A batch that fails is asked for again next time.
+    // batches of kSongDetailsBatch, one request at a time; rows on screen go first.
+    // A batch that fails is asked for again next time.
     Q_INVOKABLE void ensureLoaded(int first, int last);
     // Every song's details, for sorting and finding.
     Q_INVOKABLE void loadAll();
 
     // The account's own playlist.
     Q_INVOKABLE void removeSongs(const QStringList& keys);
-    // Rows of `songs` (the playlist's order).
-    Q_INVOKABLE void moveSong(int from, int to);
     Q_INVOKABLE void updateInfo(const QString& title, const QString& description);
     // Emits `deleted` once the service has deleted it.
     Q_INVOKABLE void deletePlaylist();
@@ -91,8 +88,9 @@ class PlaylistPageModel : public LoadableModel
     void clear() override;
 
   private:
-    void saveOrder();
-    void requestDetails(const QStringList& keys);
+    // `urgent`: ahead of the batches already waiting.
+    void queueDetails(const QStringList& keys, bool urgent);
+    void sendNextDetails();
     void updateMissingCount();
     void restoreSongs(const QStringList& keys, const QList<SongInfo>& songs);
     [[nodiscard]] QString failureMessage(const Outcome<bool>& outcome,
@@ -102,15 +100,12 @@ class PlaylistPageModel : public LoadableModel
     PlaylistInfo m_info;
     SongListModel* m_songs;
     Request m_subscribeRequest;
-    // Detail batches on their way, by number, and the keys they are for.
-    std::map<int, Request> m_detailRequests;
+    // Detail batches waiting, the one on its way, and every key in either.
+    QList<QStringList> m_detailQueue;
+    Request m_detailRequest;
     QSet<QString> m_pendingKeys;
-    int m_nextDetailRequest = 0;
     int m_missingCount = 0;
     Request m_writeRequest;
-    Request m_orderRequest;
-    // Song order as last saved, to put back when saving a new order fails.
-    QStringList m_savedOrder;
 };
 
 } // namespace cirrus::ui

@@ -14,8 +14,8 @@ import Cirrus.Presentation
 // the current row (Shift extends the selection, Ctrl moves without selecting),
 // Enter plays it, Ctrl+A selects all, the menu key or Shift+F10 opens its menu.
 // Typed characters go to `typed` (the page's in-page find). `removable` adds
-// removing (menu, Delete) and `reorderable` moving rows (drag, Alt+↑/↓); the page
-// does both through the signals.
+// removing (menu, Delete) through `removeRequested`. Reordering has its own page
+// (playlist.md §13), away from accidental drags.
 //   SongTable { songs: SortedSongsModel { source: pageModel.songs } }
 Item {
     id: table
@@ -26,15 +26,17 @@ Item {
     property real maxContentWidth: 1200
     property bool showAlbumAction: true
     property bool showLiked: true
-    // The page's own playlist: songs can be removed, and moved in its own order.
+    // The page's own playlist: songs can be removed.
     property bool removable: false
-    property bool reorderable: false
     readonly property ListView view: list
+    readonly property real rowPitch: 56 + list.spacing
     // The rows on screen (rows start at content y 0, under the header), for loading
     // their details.
     readonly property int firstVisibleRow: Math.max(0, Math.floor(list.contentY / rowPitch))
     readonly property int lastVisibleRow: Math.max(0, Math.floor((list.contentY + list.height)
                                                                  / rowPitch))
+    // Bars pinned over the top of the table leave the scroll bar this much room.
+    readonly property real scrollBarWidth: 12
     // How far the content has scrolled from its top.
     readonly property real scrolled: list.contentY - list.originY
 
@@ -72,42 +74,13 @@ Item {
     signal signInRequested
     signal addToPlaylistRequested(list<string> keys)
     signal removeRequested(list<string> keys)
-    // Rows of the shown order, which is the list's own order while reorderable.
-    signal moveRequested(int from, int to)
 
-    // Reordering by drag: the row being dragged (-1 when none) floats with the
-    // pointer, a line marks the gap it goes into (0 = before the first row), and it
-    // moves there on release. `dragY`: the pointer in the list.
-    property int dragRow: -1
-    property real dragY: 0
-    property int dropGap: -1
-    readonly property real rowPitch: 56 + list.spacing
 
-    function followDrag(): void {
-        const y = dragY + list.contentY;
-        dropGap = Math.max(0, Math.min(list.count, Math.round(y / rowPitch)));
-    }
-    function drop(): void {
-        const from = dragRow;
-        const gap = dropGap;
-        dragRow = -1;
-        dropGap = -1;
-        if (from >= 0 && gap >= 0)
-            move(from, gap > from ? gap - 1 : gap);
-    }
 
     // The songs an action on `row` is for: the selection when the row is in it.
     function actionKeys(row: int): list<string> {
         const key = songs.keyAt(row);
         return selectedKeys[key] ? selectedInOrder() : [key];
-    }
-    function move(from: int, to: int): void {
-        if (!reorderable || to < 0 || to >= songs.count || from === to)
-            return;
-        moveRequested(from, to);
-        if (currentRow === from)
-            currentRow = to;
-        anchorRow = -1;
     }
     function setLiked(key: string, liked: bool): void {
         if (!App.session.signedIn)
@@ -272,22 +245,6 @@ Item {
     }
 
 
-    // Scrolls while a dragged row is held near the top or bottom edge.
-    Timer {
-        interval: 16
-        repeat: true
-        running: table.dragRow >= 0
-        onTriggered: {
-            const top = table.pinnedTop + 40 + 32;
-            const bottom = list.height - 32;
-            const step = table.dragY < top ? -8 : table.dragY > bottom ? 8 : 0;
-            if (step === 0)
-                return;
-            list.contentY = Math.max(list.originY, Math.min(list.contentY + step,
-                                     list.originY + list.contentHeight - list.height));
-            table.followDrag();
-        }
-    }
 
     // The column titles, in the header and pinned while the header is scrolled away.
     component ColumnTitles: Item {
@@ -367,41 +324,17 @@ Item {
         clip: true
         spacing: 2
         bottomMargin: 24
-        boundsBehavior: Flickable.StopAtBounds
-        // Wheel and touch scroll; a mouse drag is for moving rows (reorderable).
+        // Overshoots and springs back at the ends (touchpad, touch, and WheelScroller).
+        boundsBehavior: Flickable.DragAndOvershootBounds
+        // Wheel and touch scroll; mouse drags don't (desktop).
         acceptedButtons: Qt.NoButton
         keyNavigationEnabled: false
         highlightFollowsCurrentItem: false
         activeFocusOnTab: true
         Accessible.role: Accessible.Table
         ScrollBar.vertical: ScrollBar {}
-        // Where a dragged row goes.
-        Rectangle {
-            x: table.rowX
-            y: table.dropGap * table.rowPitch - list.spacing / 2 - height / 2
-            z: 2
-            width: table.rowWidth
-            height: 3
-            radius: height / 2
-            color: Theme.color.primary
-            visible: table.dragRow >= 0 && table.dropGap >= 0 && table.dropGap !== table.dragRow
-                     && table.dropGap !== table.dragRow + 1
-        }
-
-        // Rows moved (reordering) slide to their places.
-        move: Transition {
-            NumberAnimation {
-                property: "y"
-                duration: Theme.motion.standardFastSpatial.duration
-                easing: Theme.motion.standardFastSpatial.easing
-            }
-        }
-        moveDisplaced: Transition {
-            NumberAnimation {
-                property: "y"
-                duration: Theme.motion.standardFastSpatial.duration
-                easing: Theme.motion.standardFastSpatial.easing
-            }
+        WheelScroller {
+            flickable: list
         }
 
         // At the top until the user scrolls: a header that grows once its data arrives
@@ -446,16 +379,10 @@ Item {
             const ctrl = event.modifiers & Qt.ControlModifier;
             switch (event.key) {
             case Qt.Key_Up:
-                if (event.modifiers & Qt.AltModifier)
-                    table.move(table.currentRow, table.currentRow - 1);
-                else
-                    table.moveTo(table.currentRow - 1, event.modifiers);
+                table.moveTo(table.currentRow - 1, event.modifiers);
                 break;
             case Qt.Key_Down:
-                if (event.modifiers & Qt.AltModifier)
-                    table.move(table.currentRow, table.currentRow + 1);
-                else
-                    table.moveTo(table.currentRow + 1, event.modifiers);
+                table.moveTo(table.currentRow + 1, event.modifiers);
                 break;
             case Qt.Key_Delete:
                 if (table.removable && table.currentRow >= 0)
@@ -557,7 +484,6 @@ Item {
                                                           selection.value)
 
             // ListView puts delegates at x 0: the row's body is inset inside.
-            z: index === table.dragRow ? 1 : 0
             width: list.width
             height: 56
             Accessible.role: Accessible.Row
@@ -570,10 +496,6 @@ Item {
                 x: table.rowX
                 width: table.rowWidth
                 height: parent.height
-                // Floats with the pointer while dragged.
-                transform: Translate {
-                    y: drag.active ? table.dragY + list.contentY - drag.startY : 0
-                }
 
                 Spring {
                     id: selection
@@ -597,8 +519,7 @@ Item {
                     readonly property real bottomRadius: row.last ? Math.max(Theme.shape.large, inner)
                                                                   : inner
                     anchors.fill: parent
-                    color: row.index === table.dragRow ? Theme.color.surfaceContainerHighest
-                         : Theme.mix(Theme.color.surfaceContainer, Theme.color.secondaryContainer,
+                    color: Theme.mix(Theme.color.surfaceContainer, Theme.color.secondaryContainer,
                                      selection.value)
                     topLeftRadius: topRadius
                     topRightRadius: topRadius
@@ -643,33 +564,6 @@ Item {
                             table.selectOnly(row.index);
                     }
                     onDoubleTapped: table.play(row.index)
-                }
-                // Reordering: the row follows the pointer through the list, the others
-                // make way; near the top or bottom edge the list scrolls (dragTimer).
-                DragHandler {
-                    id: drag
-                    enabled: table.reorderable && row.loaded
-                    target: null
-                    xAxis.enabled: false
-                    cursorShape: active ? Qt.ClosedHandCursor : Qt.ArrowCursor
-                    // Where the drag started, in the content.
-                    property real startY
-                    onActiveChanged: {
-                        if (active) {
-                            table.dragY = list.mapFromItem(rowBody, centroid.pressPosition).y;
-                            startY = table.dragY + list.contentY;
-                            table.dragRow = row.index;
-                            table.followDrag();
-                        } else {
-                            table.drop();
-                        }
-                    }
-                    onActiveTranslationChanged: {
-                        if (!active)
-                            return;
-                        table.dragY = startY - list.contentY + activeTranslation.y;
-                        table.followDrag();
-                    }
                 }
                 TapHandler {
                     acceptedButtons: Qt.RightButton
@@ -880,11 +774,11 @@ Item {
         visible: list.headerItem !== null
                  && list.headerItem.y + list.headerItem.height - 40 - list.contentY < table.pinnedTop
 
-        // Covers the rows scrolling under it, for the pointer too.
+        // Covers the rows scrolling under it, for the pointer too; not the scroll bar.
         Rectangle {
             z: -1
             x: -table.rowX
-            width: table.width
+            width: table.width - table.scrollBarWidth
             height: parent.height
             color: Theme.color.surface
             MouseArea {
