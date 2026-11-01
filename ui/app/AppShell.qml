@@ -177,9 +177,11 @@ Item {
         });
     }
 
-    function openDaily() {
+    // Today's recommended songs, or a past day's ("yyyy-MM-dd", album-daily.md §2.1).
+    function openDaily(date: string) {
         shell.go(dailySongsPage, {
-            shell: shell
+            shell: shell,
+            date: date ?? ""
         });
     }
 
@@ -400,9 +402,9 @@ Item {
     Shortcut {
         sequences: [StandardKey.Find]
         onActivated: {
-            const playlist = stack.currentItem as PlaylistPage;
-            if (playlist) {
-                playlist.find();
+            const songPage = stack.currentItem as SongCollectionPage;
+            if (songPage) {
+                songPage.find();
             } else {
                 shell.searchField.forceActiveFocus();
                 shell.searchField.selectAll();

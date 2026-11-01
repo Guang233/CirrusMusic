@@ -27,6 +27,8 @@ Item {
     property bool emptyInContent: false
     property string emptyGlyph: Symbols.queue_music
     property string emptyText: qsTr("这里还没有内容")
+    // What a guest is told; the source's message when empty.
+    property string signedOutText
 
     readonly property bool showsContent: loadState === LoadState.Ready
                                          || loadState === LoadState.Partial
@@ -148,7 +150,7 @@ Item {
             anchors.centerIn: parent
             width: Math.min(parent.width - 48, 360)
             glyph: Symbols.account_circle
-            message: root.error.message
+            message: root.signedOutText !== "" ? root.signedOutText : root.error.message
             actionText: qsTr("登录")
             actionGlyph: Symbols.login
             onActionTriggered: root.signInRequested()

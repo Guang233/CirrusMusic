@@ -1,0 +1,398 @@
+pragma ComponentBehavior: Bound
+import QtQuick
+import Cirrus.Theme
+import Cirrus.Controls
+import Cirrus.Components
+import Cirrus.Presentation
+
+// The layout playlist, album and daily songs pages share (docs/ui/pages/playlist.md,
+// album-daily.md): a header that scrolls away (cover, the page's lines, play all and
+// its actions, the in-page find) over the song table. Once the header has gone, a
+// compact bar with the title, play all and the find stays on top, the column titles
+// under it. Ctrl+F (AppShell) calls find(); typing on the table finds too.
+// The header's parts are components, since they live inside the table's header:
+//   SongCollectionPage { model: pageModel; songs: pageModel.songs; title: …
+//       infoContent: Column { … }; actionsContent: Row { … } }
+Item {
+    id: page
+
+    required property AppShell shell
+    required property LoadableModel model
+    required property SongListModel songs
+    property string title
+    property string coverKey
+    property string coverGlyph: Symbols.queue_music
+    // Drawn instead of the cover art (fills the size it gets: 200, 140 or 32).
+    property Component cover: null
+    // Right of the cover: the type label, title and the page's lines.
+    property Component infoContent: null
+    // Under the cover, full width (e.g. a description in narrow windows), while
+    // `showExtra`.
+    property Component extraContent: null
+    property bool showExtra: true
+    // After "播放全部" (a Row of buttons).
+    property Component actionsContent: null
+    // Under the actions (notices), while `showNotice`.
+    property Component noticeContent: null
+    property bool showNotice: true
+    // The widths of the action skeletons, play all first.
+    property list<int> actionSkeletons: [116]
+    property string findPlaceholder: qsTr("在歌单中查找")
+    // %1 is the text found.
+    property string noMatchText: qsTr("歌单里没有与「%1」相符的歌")
+    property string emptyGlyph: Symbols.queue_music
+    property string emptyText: qsTr("这里还没有歌")
+    // What a guest is told (pages that need signing in).
+    property string signedOutText
+
+    // Passed to the table.
+    property bool sortable: true
+    property bool removable: false
+    property bool showCover: true
+    property bool albumColumn: true
+    property bool reasonColumn: false
+    property bool numberByPosition: false
+    property bool showAlbumAction: true
+
+    readonly property alias table: songTable
+    readonly property alias sorted: sortedModel
+    readonly property alias pageState: state_
+    // Below this the header stacks (playlist.md §3.2).
+    readonly property bool wide: width >= 840
+    readonly property bool hasSongs: songs.count > 0
+    // The in-page find, shared by the header's field and the compact bar's.
+    property string findText
+    // Set by the header (it lives inside the table's header).
+    property Item headerContent: null
+    property SearchBar headerFind: null
+    // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
+    readonly property real compactProgress: headerContent
+        ? Math.max(0, Math.min(1, (songTable.scrolled - headerContent.height + 112) / 56)) : 0
+
+    signal removeRequested(list<string> keys)
+
+    function find(): void {
+        const field = compactProgress > 0.5 ? compactFind : headerFind;
+        if (!field)
+            return;
+        field.forceActiveFocus(Qt.ShortcutFocusReason);
+        field.selectAll();
+    }
+
+    function playAll(): void {
+        const keys = sortedModel.keys();
+        if (keys.length > 0)
+            App.player.playSongs(keys, 0);
+    }
+
+    clip: true
+
+    SortedSongsModel {
+        id: sortedModel
+        source: page.songs
+        filterText: page.findText
+    }
+
+    PageState {
+        id: state_
+        anchors.fill: parent
+        model: page.model
+        emptyInContent: true
+        signedOutText: page.signedOutText
+        onSignInRequested: page.shell.openLogin()
+        // Laid out like the header and the table below (playlist.md §6).
+        skeleton: SongTableSkeleton {
+            table: songTable
+            headerSkeleton: Column {
+                topPadding: 24
+                bottomPadding: 16
+                spacing: 24
+
+                Item {
+                    x: songTable.rowX
+                    width: songTable.rowWidth
+                    height: skeletonCover.height
+
+                    Skeleton {
+                        id: skeletonCover
+                        width: page.wide ? 200 : 140
+                        height: width
+                        radius: Theme.shape.large
+                    }
+                    Column {
+                        readonly property real available: parent.width - x
+                        x: skeletonCover.width + 24
+                        y: page.wide ? 4 : (skeletonCover.height - height) / 2
+                        spacing: 12
+                        Skeleton {
+                            width: 32
+                            height: 12
+                        }
+                        Skeleton {
+                            width: Math.min(280, parent.available)
+                            height: page.wide ? 32 : 24
+                        }
+                        Skeleton {
+                            width: Math.min(200, parent.available)
+                            height: 14
+                        }
+                        Skeleton {
+                            visible: page.wide
+                            width: Math.min(360, parent.available)
+                            height: 14
+                        }
+                        Skeleton {
+                            width: Math.min(220, parent.available)
+                            height: 14
+                        }
+                    }
+                }
+                // Actions and the find field.
+                Item {
+                    x: songTable.rowX
+                    width: songTable.rowWidth
+                    height: 40
+                    Row {
+                        spacing: 8
+                        Repeater {
+                            model: page.actionSkeletons
+                            Skeleton {
+                                required property int modelData
+                                width: modelData
+                                height: 40
+                                radius: height / 2
+                            }
+                        }
+                    }
+                    Skeleton {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(240, parent.width / 3)
+                        height: 36
+                        radius: height / 2
+                    }
+                }
+            }
+        }
+    }
+
+    // Find field behaviour, for both fields: Esc clears, then returns to the table;
+    // ↓ and Enter go to the table.
+    component FindField: SearchBar {
+        id: field
+        height: 36
+        leftPadding: 44
+        handlesEscape: false
+        font: Theme.type.bodyMedium.font
+        placeholderText: page.findPlaceholder
+        Accessible.name: page.findPlaceholder
+        text: page.findText
+        onTextChanged: page.findText = text
+        Keys.onEscapePressed: {
+            if (length > 0)
+                clear();
+            else
+                songTable.focusTable();
+        }
+        Keys.onDownPressed: songTable.focusTable()
+        onAccepted: songTable.focusTable()
+    }
+
+    // The cover, or what the page draws instead.
+    component Cover: Item {
+        id: coverItem
+        property real radius: Theme.shape.large
+        CoverArt {
+            anchors.fill: parent
+            visible: !page.cover
+            radius: coverItem.radius
+            glyph: page.coverGlyph
+            coverKey: page.coverKey
+        }
+        Loader {
+            anchors.fill: parent
+            active: page.cover !== null
+            sourceComponent: page.cover
+        }
+    }
+
+    SongTable {
+        id: songTable
+        anchors.fill: parent
+        opacity: state_.contentOpacity
+        visible: opacity > 0
+        songs: sortedModel
+        pinnedTop: compactBar.y + compactBar.height
+        sortable: page.sortable
+        removable: page.removable
+        showCover: page.showCover
+        albumColumn: page.albumColumn
+        reasonColumn: page.reasonColumn
+        numberByPosition: page.numberByPosition
+        showAlbumAction: page.showAlbumAction
+        onRemoveRequested: keys => page.removeRequested(keys)
+        onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)
+        onSignInRequested: page.shell.openLogin()
+        onAlbumRequested: key => page.shell.openAlbum(key)
+        onArtistRequested: key => page.shell.openArtist(key)
+        // Typing on the table goes on in the find field.
+        onTyped: text => {
+            const field = page.compactProgress > 0.5 ? compactFind : page.headerFind;
+            if (!field)
+                return;
+            field.forceActiveFocus(Qt.ShortcutFocusReason);
+            field.insert(field.length, text);
+            field.cursorPosition = field.length;
+        }
+
+        headerContent: Column {
+            id: header
+
+            topPadding: 24
+            bottomPadding: 16
+            spacing: 24
+            Component.onCompleted: page.headerContent = header
+
+            Item {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                height: Math.max(cover.height, info.height)
+
+                Cover {
+                    id: cover
+                    width: page.wide ? 200 : 140
+                    height: width
+                }
+                Loader {
+                    id: info
+                    x: cover.width + 24
+                    width: parent.width - x
+                    anchors.verticalCenter: page.wide ? undefined : cover.verticalCenter
+                    sourceComponent: page.infoContent
+                }
+            }
+
+            Loader {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                visible: page.extraContent !== null && page.showExtra
+                sourceComponent: page.extraContent
+            }
+
+            // Actions, and the find on the right.
+            Item {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                height: 40
+
+                Row {
+                    spacing: 8
+                    Button {
+                        enabled: page.hasSongs
+                        variant: Md.Filled
+                        glyph: Symbols.play_arrow
+                        text: qsTr("播放全部")
+                        onClicked: page.playAll()
+                    }
+                    Loader {
+                        sourceComponent: page.actionsContent
+                    }
+                }
+                FindField {
+                    id: headerFind
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(240, parent.width / 3)
+                    visible: page.hasSongs
+                    Component.onCompleted: page.headerFind = headerFind
+                }
+            }
+
+            Loader {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                visible: page.noticeContent !== null && page.showNotice
+                sourceComponent: page.noticeContent
+            }
+            StateMessage {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                topPadding: 24
+                // Also once the last song has been removed.
+                visible: state_.showsContent && !page.hasSongs
+                glyph: page.emptyGlyph
+                message: page.emptyText
+            }
+            StateMessage {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                topPadding: 24
+                visible: page.hasSongs && sortedModel.count === 0
+                glyph: Symbols.search
+                message: page.noMatchText.arg(page.findText.trim())
+            }
+        }
+    }
+
+    // Slides in, following the scroll, once the header's actions have gone.
+    Rectangle {
+        id: compactBar
+        // Leaves the table's scroll bar uncovered.
+        width: parent.width - songTable.scrollBarWidth
+        height: 56
+        y: -height * (1 - page.compactProgress)
+        visible: page.compactProgress > 0
+        color: Theme.color.surface
+
+        // The rows scrolling under it are not hovered or clicked through it.
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+        }
+        HoverHandler {
+            blocking: true
+        }
+
+        Item {
+            x: songTable.rowX
+            width: songTable.rowWidth
+            height: parent.height
+
+            Cover {
+                id: compactCover
+                x: 8
+                width: 32
+                height: 32
+                anchors.verticalCenter: parent.verticalCenter
+                radius: Theme.shape.small
+            }
+            Text {
+                x: compactCover.x + compactCover.width + 12
+                width: compactPlay.x - x - 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: page.title
+                elide: Text.ElideRight
+                color: Theme.color.onSurface
+                font: Theme.type.titleMedium.font
+            }
+            IconButton {
+                id: compactPlay
+                x: compactFind.x - width - 12
+                anchors.verticalCenter: parent.verticalCenter
+                enabled: page.hasSongs
+                variant: Md.Filled
+                glyph: Symbols.play_arrow
+                iconFill: 1
+                text: qsTr("播放全部")
+                onClicked: page.playAll()
+            }
+            FindField {
+                id: compactFind
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(240, parent.width / 3)
+            }
+        }
+    }
+}

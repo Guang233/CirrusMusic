@@ -140,7 +140,7 @@ PageScaffold {
                             title: qsTr("每日推荐")
                             subtitle: App.session.signedIn ? qsTr("根据你的口味，每天更新")
                                                            : qsTr("登录后查看")
-                            onClicked: App.session.signedIn ? page.shell.openDaily()
+                            onClicked: App.session.signedIn ? page.shell.openDaily("")
                                                             : page.shell.openLogin()
                         }
                         Shortcut {

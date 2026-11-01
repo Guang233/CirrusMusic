@@ -86,22 +86,23 @@ Item {
                     Skeleton {
                         x: root.table.titleX
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: root.table.showCover
                         width: 40
                         height: 40
                         radius: Theme.shape.small
                     }
                     Column {
-                        x: root.table.titleX + 52
+                        x: root.table.titleTextX
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 8
                         Skeleton {
                             width: Math.min([180, 240, 150, 210][row.variant],
-                                            root.table.titleWidth - 52)
+                                            root.table.titleTextWidth)
                             height: 14
                         }
                         Skeleton {
                             width: Math.min([120, 90, 140, 110][row.variant],
-                                            root.table.titleWidth - 52)
+                                            root.table.titleTextWidth)
                             height: 12
                         }
                     }

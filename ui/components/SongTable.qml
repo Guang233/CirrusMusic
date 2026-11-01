@@ -6,7 +6,9 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // Songs as a desktop table (docs/ui/pages/playlist.md §3–§5): number, cover with
-// title and artists, album, liked, duration. The column titles sort. `headerContent`
+// title and artists, album, liked, duration. The column titles sort (`sortable`).
+// Albums leave out the cover and album columns and number by track; daily songs add
+// a reason column (docs/ui/pages/album-daily.md). `headerContent`
 // scrolls above the column titles, which then stay pinned `pinnedTop` below the top.
 // Mouse: a click selects (Ctrl toggles, Shift extends), a double click or the play
 // button that replaces the number on hover plays the shown order from that row.
@@ -26,6 +28,16 @@ Item {
     property real maxContentWidth: 1200
     property bool showAlbumAction: true
     property bool showLiked: true
+    // Whether the column titles sort (only playlists).
+    property bool sortable: true
+    property bool showCover: true
+    // Whether there is an album column (it still hides in narrow windows).
+    property bool albumColumn: true
+    // A recommendation reason column, between title and album; hides with the album's.
+    property bool reasonColumn: false
+    // Numbers are the place in the list (an album's track numbers), not the shown row:
+    // finding keeps them.
+    property bool numberByPosition: false
     // The page's own playlist: songs can be removed.
     property bool removable: false
     readonly property ListView view: list
@@ -43,17 +55,25 @@ Item {
     // Rows: x and width inside the panel; columns: x and width inside a row.
     readonly property real rowX: Math.max(24, (width - maxContentWidth) / 2)
     readonly property real rowWidth: Math.min(width - 48, maxContentWidth)
-    readonly property bool showAlbum: rowWidth >= 640
+    readonly property bool showAlbum: albumColumn && rowWidth >= 640
+    readonly property bool showReason: reasonColumn && showAlbum
     readonly property real numberWidth: 40
     readonly property real titleX: 16 + numberWidth + 16
     readonly property real durationWidth: 56
     readonly property real moreWidth: 40
     readonly property real likedWidth: showLiked ? 40 : 0
     readonly property real flexWidth: rowWidth - titleX - 16 - durationWidth - moreWidth - 16
-                                      - (showAlbum ? 16 : 0) - (showLiked ? likedWidth + 16 : 0)
-    readonly property real albumWidth: showAlbum ? Math.round(flexWidth * 0.4) : 0
-    readonly property real titleWidth: flexWidth - albumWidth
-    readonly property real albumX: titleX + titleWidth + 16
+                                      - (showAlbum ? 16 : 0) - (showReason ? 16 : 0)
+                                      - (showLiked ? likedWidth + 16 : 0)
+    readonly property real reasonWidth: showReason ? Math.round(flexWidth * 0.28) : 0
+    readonly property real albumWidth: showAlbum ? Math.round(flexWidth * (showReason ? 0.28 : 0.4))
+                                                 : 0
+    readonly property real titleWidth: flexWidth - albumWidth - reasonWidth
+    // Title and artists: after the cover when there is one.
+    readonly property real titleTextX: titleX + (showCover ? 52 : 0)
+    readonly property real titleTextWidth: titleWidth - (showCover ? 52 : 0)
+    readonly property real reasonX: titleX + titleWidth + 16
+    readonly property real albumX: reasonX + (showReason ? reasonWidth + 16 : 0)
     readonly property real durationX: rowWidth - 16 - moreWidth - durationWidth
     readonly property real likedX: durationX - 16 - likedWidth
 
@@ -211,7 +231,8 @@ Item {
         readonly property bool active: table.songs.sortField === field
 
         height: 40
-        focusPolicy: pinned ? Qt.NoFocus : Qt.TabFocus
+        enabled: table.sortable
+        focusPolicy: pinned || !table.sortable ? Qt.NoFocus : Qt.TabFocus
         Accessible.name: text
         onClicked: table.songs.cycleSort(field)
 
@@ -270,6 +291,15 @@ Item {
             pinned: titles.pinned
             field: SortedSongsModel.Title
             text: qsTr("标题")
+        }
+        Text {
+            x: table.reasonX
+            width: table.reasonWidth
+            anchors.verticalCenter: parent.verticalCenter
+            visible: table.showReason
+            text: qsTr("推荐理由")
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.labelMedium.font
         }
         SortTitle {
             x: table.albumX
@@ -464,6 +494,8 @@ Item {
             required property bool current
             required property bool liked
             required property bool missing
+            required property int position
+            required property string reason
 
             readonly property bool selected: table.selectedKeys[key] === true
             readonly property bool hovered: hover.hovered
@@ -586,7 +618,7 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             visible: !row.hovered && !row.current
-                            text: row.index + 1
+                            text: table.numberByPosition ? row.position : row.index + 1
                             color: row.mutedColor
                             font: Fonts.tabular(Theme.type.labelLarge.font)
                         }
@@ -621,6 +653,7 @@ Item {
 
                     CoverArt {
                         x: table.titleX
+                        visible: table.showCover
                         width: 40
                         height: 40
                         anchors.verticalCenter: parent.verticalCenter
@@ -628,8 +661,8 @@ Item {
                     }
 
                     Column {
-                        x: table.titleX + 52
-                        width: table.titleWidth - 52
+                        x: table.titleTextX
+                        width: table.titleTextWidth
                         anchors.verticalCenter: parent.verticalCenter
                         visible: row.loaded
                         spacing: 2
@@ -680,8 +713,8 @@ Item {
 
                     // The service has no details for this song.
                     Text {
-                        x: table.titleX + 52
-                        width: table.titleWidth - 52
+                        x: table.titleTextX
+                        width: table.titleTextWidth
                         anchors.verticalCenter: parent.verticalCenter
                         visible: row.missing
                         text: qsTr("歌曲信息暂时无法获取")
@@ -692,18 +725,29 @@ Item {
 
                     // Details still on their way: placeholder bars.
                     Column {
-                        x: table.titleX + 52
+                        x: table.titleTextX
                         anchors.verticalCenter: parent.verticalCenter
                         visible: !row.loaded && !row.missing
                         spacing: 8
                         Skeleton {
-                            width: Math.min(200, table.titleWidth - 52)
+                            width: Math.min(200, table.titleTextWidth)
                             height: 14
                         }
                         Skeleton {
-                            width: Math.min(120, table.titleWidth - 52)
+                            width: Math.min(120, table.titleTextWidth)
                             height: 12
                         }
+                    }
+
+                    Text {
+                        x: table.reasonX
+                        width: table.reasonWidth
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: table.showReason && row.loaded
+                        text: row.reason
+                        elide: Text.ElideRight
+                        color: row.mutedColor
+                        font: Theme.type.bodyMedium.font
                     }
 
                     LinkText {

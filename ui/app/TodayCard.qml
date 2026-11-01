@@ -48,7 +48,7 @@ Rectangle {
     }
     TapHandler {
         enabled: card.signedIn && card.ready
-        onTapped: card.shell.openDaily()
+        onTapped: card.shell.openDaily("")
     }
     StateLayer {
         anchors.fill: parent
@@ -197,7 +197,7 @@ Rectangle {
                 size: Md.Medium
                 text: qsTr("全部 %n 首", "", card.songCount)
                 trailingGlyph: Symbols.chevron_right
-                onClicked: card.shell.openDaily()
+                onClicked: card.shell.openDaily("")
             }
             Button {
                 visible: card.signedIn && (card.loadState === LoadState.Error

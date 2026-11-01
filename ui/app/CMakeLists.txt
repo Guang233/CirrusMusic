@@ -14,6 +14,7 @@ qt_add_qml_module(appCirrusMusic
     QML_FILES
         Main.qml
         AppShell.qml
+        SongCollectionPage.qml
         PlaylistPage.qml
         PlaylistOrderPage.qml
         AlbumPage.qml
@@ -37,6 +38,7 @@ qt_add_qml_module(appCirrusMusic
         TopBar.qml
         PanelCorner.qml
         CloseDialog.qml
+        DateTile.qml
     SOURCES
         desktop.h
         desktop.cpp
