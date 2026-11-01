@@ -1,0 +1,125 @@
+#include "single_instance.h"
+
+#include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDir>
+#include <QFile>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QLockFile>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QTimer>
+
+namespace cirrus::ui
+{
+
+namespace
+{
+
+constexpr qint64 kMaxMessage = 512;
+constexpr int kWaitMs = 1000;
+
+const QByteArray kActivate = QByteArrayLiteral("activate");
+
+// The app's private runtime directory (0700).
+QString runtimeDir()
+{
+    QString base = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (base.isEmpty())
+        base = QDir::tempPath();
+    const QString dir = base + QLatin1Char('/') + QCoreApplication::applicationName();
+    QDir().mkpath(dir);
+    QFile::setPermissions(dir,
+                          QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    return dir;
+}
+
+QString serverName(const QString& dir)
+{
+#ifdef Q_OS_WIN
+    // A pipe name, not a path; unique per user and app.
+    return QCoreApplication::applicationName() + QLatin1Char('-') +
+           QString::fromLatin1(
+               QCryptographicHash::hash(dir.toUtf8(), QCryptographicHash::Sha1).toHex().left(16));
+#else
+    return dir + QStringLiteral("/instance.socket");
+#endif
+}
+
+bool validToken(const QByteArray& token)
+{
+    static const QRegularExpression allowed(QStringLiteral("^[A-Za-z0-9._:@/+=-]{1,256}$"));
+    return allowed.match(QString::fromLatin1(token)).hasMatch();
+}
+
+} // namespace
+
+SingleInstance::SingleInstance(QObject* parent) : QObject(parent) {}
+
+SingleInstance::~SingleInstance() = default;
+
+bool SingleInstance::claim()
+{
+    const QString dir = runtimeDir();
+    const QString name = serverName(dir);
+    m_lock = std::make_unique<QLockFile>(dir + QStringLiteral("/instance.lock"));
+    // Stale only when its process is gone, never by age.
+    m_lock->setStaleLockTime(0);
+    if (m_lock->tryLock(100)) {
+        listen(name);
+        return true;
+    }
+
+    QLocalSocket socket;
+    socket.connectToServer(name);
+    if (socket.waitForConnected(kWaitMs)) {
+        QByteArray message = kActivate;
+        const QByteArray token = qgetenv("XDG_ACTIVATION_TOKEN");
+        if (validToken(token))
+            message += ' ' + token;
+        socket.write(message + '\n');
+        socket.waitForBytesWritten(kWaitMs);
+        socket.disconnectFromServer();
+        return false;
+    }
+    qWarning("Another instance holds %s but does not answer; starting anyway",
+             qPrintable(m_lock->fileName()));
+    m_lock.reset();
+    return true;
+}
+
+void SingleInstance::listen(const QString& name)
+{
+    // A socket file left by a crashed run.
+    QLocalServer::removeServer(name);
+    m_server = new QLocalServer(this);
+    m_server->setSocketOptions(QLocalServer::UserAccessOption);
+    connect(m_server, &QLocalServer::newConnection, this, [this]() {
+        while (QLocalSocket* socket = m_server->nextPendingConnection()) {
+            connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
+            connect(socket, &QLocalSocket::readyRead, this, [this, socket]() { read(socket); });
+            // A client that never finishes its line is dropped.
+            QTimer::singleShot(kWaitMs, socket, &QLocalSocket::abort);
+        }
+    });
+    if (!m_server->listen(name))
+        qWarning("Cannot listen for other launches: %s", qPrintable(m_server->errorString()));
+}
+
+void SingleInstance::read(QLocalSocket* socket)
+{
+    if (!socket->canReadLine()) {
+        if (socket->bytesAvailable() > kMaxMessage)
+            socket->abort();
+        return;
+    }
+    const QList<QByteArray> parts = socket->readLine(kMaxMessage).trimmed().split(' ');
+    socket->abort();
+    if (parts.size() > 2 || parts.first() != kActivate)
+        return;
+    const QByteArray token = parts.value(1);
+    emit activateRequested(validToken(token) ? QString::fromLatin1(token) : QString());
+}
+
+} // namespace cirrus::ui

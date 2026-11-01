@@ -31,6 +31,13 @@ class AppSettings : public QObject
     // TitleBarMode (Cirrus.Window), or -1 until the user picks one: the default then
     // follows the desktop. Applied at startup; see docs/ui/README.md §6.1.
     Q_PROPERTY(int titleBar READ titleBar WRITE setTitleBar NOTIFY titleBarChanged)
+    // What closing the main window does when a tray icon is shown: -1 ask (default),
+    // 0 quit, 1 hide to the tray and keep playing. Without a tray it always quits.
+    Q_PROPERTY(int closeAction READ closeAction WRITE setCloseAction NOTIFY closeActionChanged)
+    // Render on the discrete GPU of a hybrid-graphics Linux machine. Applied at
+    // startup, before the window exists (ui/app/gpu_preference.h).
+    Q_PROPERTY(bool preferDiscreteGpu READ preferDiscreteGpu WRITE setPreferDiscreteGpu NOTIFY
+                   preferDiscreteGpuChanged)
     Q_PROPERTY(bool showTranslation READ showTranslation WRITE setShowTranslation NOTIFY
                    showTranslationChanged)
     Q_PROPERTY(bool showRomanization READ showRomanization WRITE setShowRomanization NOTIFY
@@ -53,6 +60,10 @@ class AppSettings : public QObject
     void setCustomFontFamily(const QString& family);
     [[nodiscard]] int titleBar() const;
     void setTitleBar(int mode);
+    [[nodiscard]] int closeAction() const;
+    void setCloseAction(int action);
+    [[nodiscard]] bool preferDiscreteGpu() const;
+    void setPreferDiscreteGpu(bool prefer);
     [[nodiscard]] bool showTranslation() const;
     void setShowTranslation(bool show);
     [[nodiscard]] bool showRomanization() const;
@@ -66,6 +77,8 @@ class AppSettings : public QObject
     void fontSourceChanged();
     void customFontFamilyChanged();
     void titleBarChanged();
+    void closeActionChanged();
+    void preferDiscreteGpuChanged();
     void showTranslationChanged();
     void showRomanizationChanged();
 

@@ -1,5 +1,12 @@
+find_package(Qt6 REQUIRED COMPONENTS Network)
+
 qt_add_executable(appCirrusMusic
     main.cpp
+    app_icon.h
+    gpu_preference.h
+    gpu_preference.cpp
+    single_instance.h
+    single_instance.cpp
 )
 
 qt_add_qml_module(appCirrusMusic
@@ -29,6 +36,12 @@ qt_add_qml_module(appCirrusMusic
         SearchField.qml
         TopBar.qml
         PanelCorner.qml
+        CloseDialog.qml
+    SOURCES
+        desktop.h
+        desktop.cpp
+    RESOURCES
+        icons/cirrus-music.svg
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -46,6 +59,7 @@ set_target_properties(appCirrusMusic PROPERTIES
 
 target_link_libraries(appCirrusMusic PRIVATE
     Qt6::Quick
+    Qt6::Network
     cirrus_ui_themeplugin
     cirrus_ui_controlsplugin
     cirrus_ui_window
@@ -57,6 +71,16 @@ target_link_libraries(appCirrusMusic PRIVATE
     cirrus_ui_samplesplugin
     m3shapesplugin
 )
+
+# The tray icon (docs/10-linux-integration.md §4). QSystemTrayIcon lives in Qt Widgets
+# and needs QApplication; without it closing the window always quits.
+option(CIRRUS_UI_TRAY "Show a system tray icon (links Qt Widgets)" ON)
+if(CIRRUS_UI_TRAY)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    target_sources(appCirrusMusic PRIVATE tray.h tray.cpp)
+    target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_TRAY)
+    target_link_libraries(appCirrusMusic PRIVATE Qt6::Widgets)
+endif()
 
 install(TARGETS appCirrusMusic
     BUNDLE DESTINATION .

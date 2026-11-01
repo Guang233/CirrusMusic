@@ -60,4 +60,43 @@ AppWindow {
         anchors.fill: parent
         searchField: topBar.searchField
     }
+
+    // Closing hides the window to the tray (playback goes on) or quits, as the user
+    // chose; without a tray it quits. See docs/ui/pages/shell.md §7.
+    function hideToTray(): void {
+        window.hide();
+    }
+    function showFromTray(): void {
+        if (window.visibility === Window.Minimized)
+            window.showNormal();
+        else
+            window.show();
+        window.raise();
+        window.requestActivate();
+    }
+
+    onClosing: close => {
+        if (Desktop.quitting)
+            return;
+        close.accepted = false;
+        const action = Desktop.checkTray() ? App.settings.closeAction : 0;
+        if (action === 1)
+            hideToTray();
+        else if (action === 0)
+            Desktop.quit();
+        else if (!closeDialog.opened)
+            closeDialog.open();
+    }
+
+    Connections {
+        target: Desktop
+        function onShowRequested() {
+            window.showFromTray();
+        }
+    }
+
+    CloseDialog {
+        id: closeDialog
+        onChosen: action => action === 1 ? window.hideToTray() : Desktop.quit()
+    }
 }

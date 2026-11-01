@@ -83,6 +83,22 @@ void AppSettings::setTitleBar(int mode)
         emit titleBarChanged();
 }
 
+int AppSettings::closeAction() const { return read("window/closeAction", -1); }
+
+void AppSettings::setCloseAction(int action)
+{
+    if (write("window/closeAction", action, -1))
+        emit closeActionChanged();
+}
+
+bool AppSettings::preferDiscreteGpu() const { return read("graphics/preferDiscreteGpu", true); }
+
+void AppSettings::setPreferDiscreteGpu(bool prefer)
+{
+    if (write("graphics/preferDiscreteGpu", prefer, true))
+        emit preferDiscreteGpuChanged();
+}
+
 bool AppSettings::showTranslation() const { return read("lyrics/showTranslation", true); }
 
 void AppSettings::setShowTranslation(bool show)
