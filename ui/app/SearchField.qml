@@ -83,11 +83,13 @@ SearchBar {
         font: Theme.type.labelMedium.font
     }
 
+    // The list unfolds from the field and follows its line count with a spring, so
+    // suggestions arriving while typing don't make it jump; it fades out on close.
     T.Popup {
         id: popup
         y: field.height + 4
         width: field.width
-        implicitHeight: implicitContentHeight + topPadding + bottomPadding
+        height: Math.max(0, sizeSpring.value)
         padding: 0
         topPadding: 8
         bottomPadding: 8
@@ -95,6 +97,33 @@ SearchBar {
         focus: false
         closePolicy: T.Popup.NoAutoClose
         visible: field.listShown
+        onAboutToShow: sizeSpring.snapTo(0)
+
+        Spring {
+            id: sizeSpring
+            target: popup.implicitContentHeight + popup.topPadding + popup.bottomPadding
+            spec: Theme.motion.standardFastSpatial
+            threshold: 0.5
+        }
+
+        enter: Transition {
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.motion.fastEffects.duration
+                easing: Theme.motion.fastEffects.easing
+            }
+        }
+        exit: Transition {
+            NumberAnimation {
+                property: "opacity"
+                from: 1
+                to: 0
+                duration: Theme.motion.fastEffects.duration
+                easing: Theme.motion.fastEffects.easing
+            }
+        }
 
         background: Item {
             Elevation {
@@ -110,6 +139,8 @@ SearchBar {
         }
 
         contentItem: Column {
+            // Rows past the springing height stay hidden.
+            clip: true
             Text {
                 x: 16
                 visible: field.text.trim() === ""

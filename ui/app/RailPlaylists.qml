@@ -88,27 +88,48 @@ Flickable {
                     color: Theme.color.onSurfaceVariant
                     font: Theme.type.titleSmall.font
                 }
+                // Turns over as the group opens.
                 Icon {
                     x: parent.width - 36 - width
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: group.open ? Symbols.expand_less : Symbols.expand_more
+                    glyph: Symbols.expand_more
+                    rotation: 180 * openness.value
                     size: 20
                     color: Theme.color.onSurfaceVariant
                 }
             }
         }
 
-        Repeater {
-            model: group.open ? group.playlists : null
-            delegate: SidebarRow {
-                required property string key
-                required property string title
-                required coverKey
-                width: group.width
-                cover: true
-                text: title
-                selected: root.selectedKey === key
-                onClicked: root.playlistRequested(key)
+        // The rows unfold and fold with a spring; folded rows are hidden, so Tab skips them.
+        Spring {
+            id: openness
+            target: group.open ? 1 : 0
+            spec: Theme.motion.standardDefaultSpatial
+            threshold: 0.002
+        }
+        Item {
+            width: group.width
+            height: Math.round(rows.implicitHeight * Math.max(0, openness.value))
+            visible: openness.value > 0.002
+            clip: true
+
+            Column {
+                id: rows
+                width: parent.width
+                opacity: Theme.motion.segment(openness.value, 0, 0.6)
+                Repeater {
+                    model: group.playlists
+                    delegate: SidebarRow {
+                        required property string key
+                        required property string title
+                        required coverKey
+                        width: group.width
+                        cover: true
+                        text: title
+                        selected: root.selectedKey === key
+                        onClicked: root.playlistRequested(key)
+                    }
+                }
             }
         }
     }
