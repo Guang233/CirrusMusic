@@ -4,6 +4,7 @@
 #include "cover_provider.h"
 #include "fake_controls.h"
 #include "formatter.h"
+#include "library.h"
 #include "network_status.h"
 #include "player.h"
 #include "qr_provider.h"
@@ -29,7 +30,8 @@ App::App(Sources sources)
     : m_sources(std::move(sources)), m_settings(new AppSettings(this)),
       m_format(new Formatter(this)), m_network(new NetworkStatus(this)),
       m_player(new Player(m_sources.playback.get(), this)),
-      m_session(new Session(m_sources.session.get(), this))
+      m_session(new Session(m_sources.session.get(), this)),
+      m_library(new Library(m_sources.library.get(), m_session, this))
 {
     if (m_sources.fakeControls)
         m_sources.fakeControls->attach(m_network);

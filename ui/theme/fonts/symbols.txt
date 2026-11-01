@@ -117,3 +117,4 @@ arrow_upward
 arrow_downward
 bookmark_add
 bookmark_added
+playlist_remove

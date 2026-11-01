@@ -56,6 +56,23 @@ class LibrarySource
     // Saves or unsaves someone else's playlist; replies with the new state.
     virtual Request setPlaylistSubscribed(const QString& key, bool subscribed,
                                           Reply<bool> reply) = 0;
+    // The songs the account likes, newest first.
+    virtual Request likedSongKeys(Reply<QStringList> reply) = 0;
+
+    // Writes; each replies true once saved. Playlist changes are only accepted for
+    // the account's own playlists.
+    virtual Request setSongLiked(const QString& key, bool liked, Reply<bool> reply) = 0;
+    // Adds at the start, skipping songs already in the playlist.
+    virtual Request addToPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                                  Reply<bool> reply) = 0;
+    virtual Request removeFromPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                                       Reply<bool> reply) = 0;
+    // `songKeys`: every song of the playlist, in the new order.
+    virtual Request reorderPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                                    Reply<bool> reply) = 0;
+    virtual Request updatePlaylist(const QString& playlistKey, const QString& title,
+                                   const QString& description, Reply<bool> reply) = 0;
+    virtual Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) = 0;
 };
 
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.

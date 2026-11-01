@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <optional>
 #include <random>
 
 namespace cirrus::ui
@@ -114,11 +115,53 @@ struct Samples {
     }
 };
 
-// What the signed-in account created and saved; the library and the playlist pages
-// share it, so saving a playlist shows up in both.
+// What the signed-in account likes, created and saved, and its edits to its own
+// playlists; the catalog and the library share it, so a change shows up everywhere.
 struct FakeAccount {
     QStringList created{QStringLiteral("pl-01"), QStringLiteral("pl-05")};
     QStringList saved{QStringLiteral("pl-02"), QStringLiteral("pl-03"), QStringLiteral("pl-04")};
+    QStringList liked{QStringLiteral("so-001"), QStringLiteral("so-005"), QStringLiteral("so-011"),
+                      QStringLiteral("so-017"), QStringLiteral("so-023"), QStringLiteral("so-031"),
+                      QStringLiteral("so-034"), QStringLiteral("so-008")};
+
+    struct Edit {
+        std::optional<QString> title;
+        std::optional<QString> description;
+        std::optional<QStringList> songKeys;
+    };
+    QHash<QString, Edit> edits;
+
+    [[nodiscard]] QStringList songKeys(const QString& key, const Samples& samples) const
+    {
+        const Edit edit = edits.value(key);
+        return edit.songKeys ? *edit.songKeys : samples.playlists.value(key).songKeys;
+    }
+    void apply(PlaylistPage& page, const Samples& samples) const
+    {
+        const auto edit = edits.constFind(page.info.key);
+        if (edit == edits.cend())
+            return;
+        if (edit->title)
+            page.info.title = *edit->title;
+        if (edit->description)
+            page.info.description = *edit->description;
+        if (edit->songKeys) {
+            page.songKeys = *edit->songKeys;
+            page.songs.clear();
+            for (const QString& key : std::as_const(page.songKeys))
+                page.songs << samples.songs.value(key);
+        }
+    }
+    [[nodiscard]] CollectionItem playlistItem(const QString& key, const Samples& samples) const
+    {
+        CollectionItem item = samples.playlistItem(key);
+        const Edit edit = edits.value(key);
+        if (edit.title)
+            item.title = *edit.title;
+        if (edit.songKeys)
+            item.count = int(edit.songKeys->size());
+        return item;
+    }
 };
 
 // Header details the sample catalog leaves out: tags, counts and dates made up from
@@ -272,6 +315,7 @@ class FakeCatalog : public QObject, public CatalogSource
                 return outcome;
             }
             PlaylistPage page = chart != m_charts.cend() ? *chart : *found;
+            m_account->apply(page, *m_samples);
             if (m_controls->signedIn()) {
                 page.info.own = m_account->created.contains(key);
                 page.info.subscribed = m_account->saved.contains(key);
@@ -598,18 +642,12 @@ class FakeLibrary : public QObject, public LibrarySource
             }
             LibraryPage page;
             if (!m_controls->empty()) {
-                const auto songs = [this](std::initializer_list<const char*> keys) {
-                    QList<SongInfo> list;
-                    for (const char* key : keys)
-                        list << m_samples->songs[QLatin1StringView(key)];
-                    return list;
-                };
-                page.likedSongs = songs({"so-001", "so-005", "so-011", "so-017", "so-023", "so-031",
-                                         "so-034", "so-008"});
+                for (const QString& key : std::as_const(m_account->liked))
+                    page.likedSongs << m_samples->songs[key];
                 for (const QString& key : recentKeys())
                     page.recentSongs << m_samples->songs[key];
                 for (const QString& key : std::as_const(m_account->created))
-                    page.createdPlaylists << m_samples->playlistItem(key);
+                    page.createdPlaylists << m_account->playlistItem(key, *m_samples);
                 for (const QString& key : std::as_const(m_account->saved))
                     if (m_samples->playlists.contains(key))
                         page.savedPlaylists << m_samples->playlistItem(key);
@@ -656,7 +694,93 @@ class FakeLibrary : public QObject, public LibrarySource
         });
     }
 
+    Request likedSongKeys(Reply<QStringList> reply) override
+    {
+        return replyLater<QStringList>(
+            this, m_controls, std::move(reply),
+            [this]() {
+                Outcome<QStringList> outcome;
+                if (!m_controls->signedIn())
+                    outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                else
+                    outcome.value = m_account->liked;
+                return outcome;
+            },
+            false);
+    }
+
+    Request setSongLiked(const QString& key, bool liked, Reply<bool> reply) override
+    {
+        return write(std::move(reply), {}, [=, this]() {
+            m_account->liked.removeAll(key);
+            if (liked)
+                m_account->liked.prepend(key);
+        });
+    }
+
+    Request addToPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                          Reply<bool> reply) override
+    {
+        return write(std::move(reply), playlistKey, [=, this]() {
+            QStringList keys = m_account->songKeys(playlistKey, *m_samples);
+            for (auto it = songKeys.crbegin(); it != songKeys.crend(); ++it)
+                if (!keys.contains(*it))
+                    keys.prepend(*it);
+            m_account->edits[playlistKey].songKeys = keys;
+        });
+    }
+
+    Request removeFromPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                               Reply<bool> reply) override
+    {
+        return write(std::move(reply), playlistKey, [=, this]() {
+            QStringList keys = m_account->songKeys(playlistKey, *m_samples);
+            keys.removeIf([&](const QString& key) { return songKeys.contains(key); });
+            m_account->edits[playlistKey].songKeys = keys;
+        });
+    }
+
+    Request reorderPlaylist(const QString& playlistKey, const QStringList& songKeys,
+                            Reply<bool> reply) override
+    {
+        return write(std::move(reply), playlistKey,
+                     [=, this]() { m_account->edits[playlistKey].songKeys = songKeys; });
+    }
+
+    Request updatePlaylist(const QString& playlistKey, const QString& title,
+                           const QString& description, Reply<bool> reply) override
+    {
+        return write(std::move(reply), playlistKey, [=, this]() {
+            FakeAccount::Edit& edit = m_account->edits[playlistKey];
+            edit.title = title;
+            edit.description = description;
+        });
+    }
+
+    Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) override
+    {
+        return write(std::move(reply), playlistKey,
+                     [=, this]() { m_account->created.removeAll(playlistKey); });
+    }
+
   private:
+    // A write for the signed-in account; with `playlistKey`, only to its own playlist.
+    Request write(Reply<bool> reply, const QString& playlistKey, std::function<void()> apply)
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+            } else if (!playlistKey.isEmpty() && !m_account->created.contains(playlistKey)) {
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+            } else {
+                apply();
+                outcome.value = true;
+            }
+            return outcome;
+        });
+    }
+
     static QStringList recentKeys()
     {
         return {"so-031", "so-001", "so-019", "so-026", "so-012", "so-007", "so-022", "so-014"};

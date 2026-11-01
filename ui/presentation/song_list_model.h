@@ -36,6 +36,7 @@ class SongListModel : public QAbstractListModel
         UnavailableRole,
         CurrentRole, // the song App.player is on
         ReasonRole,  // recommendation reason, may be empty
+        LikedRole,   // follows App.library
     };
     Q_ENUM(Role)
 
@@ -46,6 +47,10 @@ class SongListModel : public QAbstractListModel
     void clear();
     // More loaded songs at the end (paged lists).
     void append(const QList<SongInfo>& songs);
+    void remove(const QStringList& keys);
+    void move(int from, int to);
+    // The rows with details, e.g. to put the list back after a failed change.
+    [[nodiscard]] QList<SongInfo> loadedSongs() const;
 
     // Every key, e.g. for "play all".
     Q_INVOKABLE QStringList keys() const;

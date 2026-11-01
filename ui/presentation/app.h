@@ -15,6 +15,7 @@ namespace cirrus::ui
 class AppSettings;
 class FakeControls;
 class Formatter;
+class Library;
 class NetworkStatus;
 class Player;
 class Session;
@@ -30,6 +31,7 @@ class App : public QObject
     Q_MOC_INCLUDE("app_settings.h")
     Q_MOC_INCLUDE("fake_controls.h")
     Q_MOC_INCLUDE("formatter.h")
+    Q_MOC_INCLUDE("library.h")
     Q_MOC_INCLUDE("network_status.h")
     Q_MOC_INCLUDE("player.h")
     Q_MOC_INCLUDE("session.h")
@@ -37,6 +39,7 @@ class App : public QObject
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
     Q_PROPERTY(cirrus::ui::Formatter* format READ format CONSTANT)
+    Q_PROPERTY(cirrus::ui::Library* library READ library CONSTANT)
     Q_PROPERTY(cirrus::ui::NetworkStatus* network READ network CONSTANT)
     Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
     Q_PROPERTY(cirrus::ui::Session* session READ session CONSTANT)
@@ -54,6 +57,7 @@ class App : public QObject
 
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
     [[nodiscard]] Formatter* format() const { return m_format; }
+    [[nodiscard]] Library* library() const { return m_library; }
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
@@ -61,7 +65,7 @@ class App : public QObject
 
     [[nodiscard]] CatalogSource* catalog() const { return m_sources.catalog.get(); }
     [[nodiscard]] ImageSource* images() const { return m_sources.images.get(); }
-    [[nodiscard]] LibrarySource* library() const { return m_sources.library.get(); }
+    [[nodiscard]] LibrarySource* librarySource() const { return m_sources.library.get(); }
 
     // `image://cover/<key>` provider; the QML engine takes ownership.
     [[nodiscard]] QQuickAsyncImageProvider* makeCoverProvider();
@@ -77,6 +81,7 @@ class App : public QObject
     NetworkStatus* m_network;
     Player* m_player;
     Session* m_session;
+    Library* m_library;
 };
 
 } // namespace cirrus::ui

@@ -173,7 +173,7 @@ void RecentSongsModel::componentComplete()
 
 Request RecentSongsModel::load()
 {
-    return App::instance()->library()->recentSongs(
+    return App::instance()->librarySource()->recentSongs(
         m_limit, handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
             m_songs->reset(keysOf(songs), songs);
             return songs.isEmpty();
@@ -294,7 +294,7 @@ LibraryPageModel::LibraryPageModel(QObject* parent)
 
 Request LibraryPageModel::load()
 {
-    return App::instance()->library()->library(handle<LibraryPage>([this](LibraryPage page) {
+    return App::instance()->librarySource()->library(handle<LibraryPage>([this](LibraryPage page) {
         m_likedSongs->reset(keysOf(page.likedSongs), page.likedSongs);
         m_createdPlaylists->reset(page.createdPlaylists);
         m_savedPlaylists->reset(page.savedPlaylists);

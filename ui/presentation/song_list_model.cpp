@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "formatter.h"
+#include "library.h"
 #include "player.h"
 
 #include <QHash>
@@ -19,6 +20,10 @@ SongListModel::SongListModel(QObject* parent) : QAbstractListModel(parent)
         m_currentKey = player->current().key;
         connect(player, &Player::currentChanged, this,
                 [this, player]() { setCurrentKey(player->current().key); });
+        connect(app->library(), &Library::likedChanged, this, [this]() {
+            if (!m_rows.isEmpty())
+                emit dataChanged(index(0), index(rowCount() - 1), {LikedRole});
+        });
     }
 }
 
@@ -84,6 +89,42 @@ void SongListModel::append(const QList<SongInfo>& songs)
     updateContainsCurrent();
 }
 
+void SongListModel::remove(const QStringList& keys)
+{
+    bool removed = false;
+    for (int row = rowCount() - 1; row >= 0; --row) {
+        if (!keys.contains(m_rows.at(row).song.key))
+            continue;
+        beginRemoveRows({}, row, row);
+        m_rows.removeAt(row);
+        endRemoveRows();
+        removed = true;
+    }
+    if (!removed)
+        return;
+    emit countChanged();
+    updateContainsCurrent();
+}
+
+void SongListModel::move(int from, int to)
+{
+    if (from == to || from < 0 || to < 0 || from >= rowCount() || to >= rowCount())
+        return;
+    // beginMoveRows takes the row the moved one ends up before.
+    beginMoveRows({}, from, from, {}, to > from ? to + 1 : to);
+    m_rows.move(from, to);
+    endMoveRows();
+}
+
+QList<SongInfo> SongListModel::loadedSongs() const
+{
+    QList<SongInfo> songs;
+    for (const Row& row : m_rows)
+        if (row.loaded)
+            songs << row.song;
+    return songs;
+}
+
 QStringList SongListModel::keys() const
 {
     QStringList keys;
@@ -138,6 +179,10 @@ QVariant SongListModel::data(const QModelIndex& index, int role) const
         return !song.key.isEmpty() && song.key == m_currentKey;
     case ReasonRole:
         return song.reason;
+    case LikedRole: {
+        const App* app = App::instance();
+        return app && app->library()->isLiked(song.key);
+    }
     default:
         return {};
     }
@@ -160,6 +205,7 @@ QHash<int, QByteArray> SongListModel::roleNames() const
         {UnavailableRole, "unavailable"},
         {CurrentRole, "current"},
         {ReasonRole, "reason"},
+        {LikedRole, "liked"},
     };
 }
 

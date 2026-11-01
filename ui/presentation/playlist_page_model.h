@@ -10,7 +10,9 @@ class SongListModel;
 
 // Playlist details page. Setting `playlistKey` loads it:
 //   PlaylistPageModel { id: model; playlistKey: route.key }
-//   SongList { model: model.songs }
+//   SongTable { songs: SortedSongsModel { source: model.songs } }
+// Changes to the account's own playlist show at once and are undone when saving
+// fails; `notice` reports what the user should know.
 class PlaylistPageModel : public LoadableModel
 {
     Q_OBJECT
@@ -28,7 +30,7 @@ class PlaylistPageModel : public LoadableModel
     Q_PROPERTY(qint64 subscriberCount READ subscriberCount NOTIFY headerChanged)
     Q_PROPERTY(qint64 commentCount READ commentCount NOTIFY headerChanged)
     Q_PROPERTY(bool own READ own NOTIFY headerChanged)
-    // Shows the new state at once; reverts and emits writeFailed when the save fails.
+    // Shows the new state at once; reverts when saving fails.
     Q_PROPERTY(bool subscribed READ subscribed WRITE setSubscribed NOTIFY subscribedChanged)
     Q_PROPERTY(cirrus::ui::SongListModel* songs READ songs CONSTANT)
 
@@ -51,24 +53,42 @@ class PlaylistPageModel : public LoadableModel
     [[nodiscard]] bool subscribed() const { return m_info.subscribed; }
     void setSubscribed(bool subscribed);
 
+    // The account's own playlist.
+    Q_INVOKABLE void removeSongs(const QStringList& keys);
+    // Rows of `songs` (the playlist's order).
+    Q_INVOKABLE void moveSong(int from, int to);
+    Q_INVOKABLE void updateInfo(const QString& title, const QString& description);
+    // Emits `deleted` once the service has deleted it.
+    Q_INVOKABLE void deletePlaylist();
+
   signals:
     void playlistKeyChanged();
     void headerChanged();
     void subscribedChanged();
     // A change the account made here was saved: the library has to reload.
     void libraryChanged();
-    // A change could not be saved and was undone; `message` says why, translated.
-    void writeFailed(const QString& message);
+    // Something to tell the user (a change saved, or undone and why), translated.
+    void notice(const QString& message);
+    void deleted();
 
   protected:
     Request load() override;
     void clear() override;
 
   private:
+    void saveOrder();
+    void restoreSongs(const QStringList& keys, const QList<SongInfo>& songs);
+    [[nodiscard]] QString failureMessage(const Outcome<bool>& outcome,
+                                         const QString& otherwise) const;
+
     QString m_key;
     PlaylistInfo m_info;
     SongListModel* m_songs;
     Request m_subscribeRequest;
+    Request m_writeRequest;
+    Request m_orderRequest;
+    // Song order as last saved, to put back when saving a new order fails.
+    QStringList m_savedOrder;
 };
 
 } // namespace cirrus::ui

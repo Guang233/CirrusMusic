@@ -55,6 +55,8 @@ qt_add_qml_module(cirrus_presentation
         player.cpp
         session.h
         session.cpp
+        library.h
+        library.cpp
         qr_provider.h
         qr_provider.cpp
         fake_controls.h
