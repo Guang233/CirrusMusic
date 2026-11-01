@@ -145,9 +145,10 @@ engine.loadFromModule("CirrusMusic", "Main");
 
 **`App.library`：喜欢与收藏状态**
 
-- `isLiked(songKey)` 与 `likedRevision`（喜欢集合变化时递增，供绑定刷新）。
-- `setLiked(songKey, liked)`：先更新界面，再等后端结果。失败时恢复原状并提示；结果为“未知”（取消、关闭、换号时后端会这样报告）时重新拉取喜欢列表，而不是假设成功。
-- 收藏专辑、关注歌手、收藏歌单到某个歌单：同样的写法，阶段 3 先做“喜欢”。
+- `isLiked(songKey)` 与 `likedRevision`（喜欢集合变化时递增，供绑定刷新）；`SongListModel` 的 `liked` 角色跟着它变。登录后读取喜欢列表（`LibrarySource::likedSongKeys`），退出时清空，`reload()` 重新读取。
+- `setLiked(songKey, liked)`：先更新界面，再等后端结果。失败时恢复原状并发 `notice(message)`；未登录时只发提示（页面应先打开登录对话框）。以后后端报告结果"未知"（取消、关闭、换号）时重新拉取喜欢列表，而不是假设成功。
+- `addToPlaylist(playlistKey, title, songKeys)`：收藏到歌单（不是某个页面自己的写入，所以放在这里）。成功后发 `playlistChanged(key)`（正在显示该歌单的页面刷新，外壳刷新侧边栏）和 `notice`。
+- `notice` 由外壳接到提示条（`shell.notify`）。收藏专辑、关注歌手以后照同样的写法加。
 
 **`App.settings`：用户设置**（`QSettings` 持久化）
 
@@ -242,7 +243,7 @@ public:
 | --- | --- |
 | `SessionSource` | 账号状态、扫码登录、注销、账号变化通知 |
 | `CatalogSource` | 只读目录：首页、搜索、建议、热搜、歌单／专辑／歌手详情、歌曲详情、每日推荐 |
-| `LibrarySource` | 账号私有读取（喜欢、我的歌单、收藏、最近播放）和写入（喜欢、收藏） |
+| `LibrarySource` | 账号私有读取（喜欢、我的歌单、收藏、最近播放）和写入（喜欢、收藏歌单、加入／移出歌单、调整顺序、改歌单信息、删除歌单） |
 | `PlaybackSource` | 播放与队列命令、播放快照、队列快照、歌词与歌词游标、私人 FM |
 | `ImageSource` | 按 key 和尺寸异步取图，供封面图片提供器使用 |
 

@@ -32,6 +32,8 @@ Item {
     // ({component, properties, section}) until something new is opened.
     property var sections: []
     property var forwardEntries: []
+    // The account's playlists (the rail's, and the add-to-playlist dialog's).
+    readonly property LibraryPageModel library: myLibrary
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
@@ -115,6 +117,16 @@ Item {
     // A short message at the bottom of the content panel (Snackbar).
     function notify(text: string) {
         snackbar.show(text);
+    }
+
+    // "收藏到歌单" for `keys`: picks one of the account's playlists (sign-in first).
+    function addToPlaylist(keys: list<string>) {
+        if (!App.session.signedIn) {
+            loginDialog.open();
+            return;
+        }
+        addToPlaylistDialog.songKeys = keys;
+        addToPlaylistDialog.open();
     }
 
     // The account's playlists changed (saved, created, deleted): the rail reloads.
@@ -394,6 +406,22 @@ Item {
                 shell.back();
             else
                 shell.forward();
+        }
+    }
+
+    AddToPlaylistDialog {
+        id: addToPlaylistDialog
+        library: myLibrary
+    }
+
+    // What App.library has to say (liked, added to a playlist, failures).
+    Connections {
+        target: App.library
+        function onNotice(message: string) {
+            shell.notify(message);
+        }
+        function onPlaylistChanged() {
+            shell.refreshLibrary();
         }
     }
 

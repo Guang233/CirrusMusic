@@ -6,14 +6,16 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // Songs as a desktop table (docs/ui/pages/playlist.md §3–§5): number, cover with
-// title and artists, album, duration. The column titles sort. `headerContent`
+// title and artists, album, liked, duration. The column titles sort. `headerContent`
 // scrolls above the column titles, which then stay pinned `pinnedTop` below the top.
 // Mouse: a click selects (Ctrl toggles, Shift extends), a double click or the play
 // button that replaces the number on hover plays the shown order from that row.
 // Keyboard: the table is one Tab stop; arrows, PageUp/PageDown and Home/End move
 // the current row (Shift extends the selection, Ctrl moves without selecting),
 // Enter plays it, Ctrl+A selects all, the menu key or Shift+F10 opens its menu.
-// Typed characters go to `typed` (the page's in-page find).
+// Typed characters go to `typed` (the page's in-page find). `removable` adds
+// removing (menu, Delete) and `reorderable` moving rows (drag, Alt+↑/↓); the page
+// does both through the signals.
 //   SongTable { songs: SortedSongsModel { source: pageModel.songs } }
 Item {
     id: table
@@ -23,6 +25,10 @@ Item {
     property real pinnedTop: 0
     property real maxContentWidth: 1200
     property bool showAlbumAction: true
+    property bool showLiked: true
+    // The page's own playlist: songs can be removed, and moved in its own order.
+    property bool removable: false
+    property bool reorderable: false
     readonly property ListView view: list
     // How far the content has scrolled from its top.
     readonly property real scrolled: list.contentY - list.originY
@@ -35,12 +41,14 @@ Item {
     readonly property real titleX: 16 + numberWidth + 16
     readonly property real durationWidth: 56
     readonly property real moreWidth: 40
+    readonly property real likedWidth: showLiked ? 40 : 0
     readonly property real flexWidth: rowWidth - titleX - 16 - durationWidth - moreWidth - 16
-                                      - (showAlbum ? 16 : 0)
+                                      - (showAlbum ? 16 : 0) - (showLiked ? likedWidth + 16 : 0)
     readonly property real albumWidth: showAlbum ? Math.round(flexWidth * 0.4) : 0
     readonly property real titleWidth: flexWidth - albumWidth
     readonly property real albumX: titleX + titleWidth + 16
     readonly property real durationX: rowWidth - 16 - moreWidth - durationWidth
+    readonly property real likedX: durationX - 16 - likedWidth
 
     // Selected keys (key -> true), replaced as a whole so bindings see each change.
     property var selectedKeys: ({})
@@ -56,6 +64,52 @@ Item {
     signal albumRequested(string key)
     signal artistRequested(string key)
     signal typed(string text)
+    signal signInRequested
+    signal addToPlaylistRequested(list<string> keys)
+    signal removeRequested(list<string> keys)
+    // Rows of the shown order, which is the list's own order while reorderable.
+    signal moveRequested(int from, int to)
+
+    // Reordering by drag: the row being dragged (-1 when none) floats with the
+    // pointer, a line marks the gap it goes into (0 = before the first row), and it
+    // moves there on release. `dragY`: the pointer in the list.
+    property int dragRow: -1
+    property real dragY: 0
+    property int dropGap: -1
+    readonly property real rowPitch: 56 + list.spacing
+
+    function followDrag(): void {
+        const y = dragY + list.contentY;
+        dropGap = Math.max(0, Math.min(list.count, Math.round(y / rowPitch)));
+    }
+    function drop(): void {
+        const from = dragRow;
+        const gap = dropGap;
+        dragRow = -1;
+        dropGap = -1;
+        if (from >= 0 && gap >= 0)
+            move(from, gap > from ? gap - 1 : gap);
+    }
+
+    // The songs an action on `row` is for: the selection when the row is in it.
+    function actionKeys(row: int): list<string> {
+        const key = songs.keyAt(row);
+        return selectedKeys[key] ? selectedInOrder() : [key];
+    }
+    function move(from: int, to: int): void {
+        if (!reorderable || to < 0 || to >= songs.count || from === to)
+            return;
+        moveRequested(from, to);
+        if (currentRow === from)
+            currentRow = to;
+        anchorRow = -1;
+    }
+    function setLiked(key: string, liked: bool): void {
+        if (!App.session.signedIn)
+            signInRequested();
+        else
+            App.library.setLiked(key, liked);
+    }
 
     function play(row: int): void {
         if (row >= 0 && row < songs.count)
@@ -143,6 +197,17 @@ Item {
             table.selectedKeys = {};
             table.anchorRow = -1;
         }
+        // Removed songs leave the selection.
+        function onRowsRemoved() {
+            const keys = {};
+            for (const key of table.songs.keys()) {
+                if (table.selectedKeys[key])
+                    keys[key] = true;
+            }
+            table.selectedKeys = keys;
+            table.currentRow = Math.min(table.currentRow, table.songs.count - 1);
+            table.anchorRow = -1;
+        }
         function onFilterTextChanged() {
             table.selectedKeys = {};
             table.anchorRow = -1;
@@ -195,6 +260,23 @@ Item {
     }
 
 
+    // Scrolls while a dragged row is held near the top or bottom edge.
+    Timer {
+        interval: 16
+        repeat: true
+        running: table.dragRow >= 0
+        onTriggered: {
+            const top = table.pinnedTop + 40 + 32;
+            const bottom = list.height - 32;
+            const step = table.dragY < top ? -8 : table.dragY > bottom ? 8 : 0;
+            if (step === 0)
+                return;
+            list.contentY = Math.max(list.originY, Math.min(list.contentY + step,
+                                     list.originY + list.contentHeight - list.height));
+            table.followDrag();
+        }
+    }
+
     // The column titles, in the header and pinned while the header is scrolled away.
     component ColumnTitles: Item {
         id: titles
@@ -227,6 +309,16 @@ Item {
             pinned: titles.pinned
             field: SortedSongsModel.Album
             text: qsTr("专辑")
+        }
+        Text {
+            x: table.likedX
+            width: table.likedWidth
+            anchors.verticalCenter: parent.verticalCenter
+            visible: table.showLiked
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("喜欢")
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.labelMedium.font
         }
         SortTitle {
             x: table.durationX
@@ -264,11 +356,41 @@ Item {
         spacing: 2
         bottomMargin: 24
         boundsBehavior: Flickable.StopAtBounds
+        // Wheel and touch scroll; a mouse drag is for moving rows (reorderable).
+        acceptedButtons: Qt.NoButton
         keyNavigationEnabled: false
         highlightFollowsCurrentItem: false
         activeFocusOnTab: true
         Accessible.role: Accessible.Table
         ScrollBar.vertical: ScrollBar {}
+        // Where a dragged row goes.
+        Rectangle {
+            x: table.rowX
+            y: table.dropGap * table.rowPitch - list.spacing / 2 - height / 2
+            z: 2
+            width: table.rowWidth
+            height: 3
+            radius: height / 2
+            color: Theme.color.primary
+            visible: table.dragRow >= 0 && table.dropGap >= 0 && table.dropGap !== table.dragRow
+                     && table.dropGap !== table.dragRow + 1
+        }
+
+        // Rows moved (reordering) slide to their places.
+        move: Transition {
+            NumberAnimation {
+                property: "y"
+                duration: Theme.motion.standardFastSpatial.duration
+                easing: Theme.motion.standardFastSpatial.easing
+            }
+        }
+        moveDisplaced: Transition {
+            NumberAnimation {
+                property: "y"
+                duration: Theme.motion.standardFastSpatial.duration
+                easing: Theme.motion.standardFastSpatial.easing
+            }
+        }
 
         // At the top until the user scrolls: a header that grows once its data arrives
         // moves originY, and the view would otherwise keep showing the old top.
@@ -312,10 +434,22 @@ Item {
             const ctrl = event.modifiers & Qt.ControlModifier;
             switch (event.key) {
             case Qt.Key_Up:
-                table.moveTo(table.currentRow - 1, event.modifiers);
+                if (event.modifiers & Qt.AltModifier)
+                    table.move(table.currentRow, table.currentRow - 1);
+                else
+                    table.moveTo(table.currentRow - 1, event.modifiers);
                 break;
             case Qt.Key_Down:
-                table.moveTo(table.currentRow + 1, event.modifiers);
+                if (event.modifiers & Qt.AltModifier)
+                    table.move(table.currentRow, table.currentRow + 1);
+                else
+                    table.moveTo(table.currentRow + 1, event.modifiers);
+                break;
+            case Qt.Key_Delete:
+                if (table.removable && table.currentRow >= 0)
+                    table.removeRequested(table.actionKeys(table.currentRow));
+                else
+                    event.accepted = false;
                 break;
             case Qt.Key_PageUp:
                 table.moveTo(table.currentRow - rows, event.modifiers);
@@ -392,6 +526,7 @@ Item {
             required property bool loaded
             required property bool unavailable
             required property bool current
+            required property bool liked
 
             readonly property bool selected: table.selectedKeys[key] === true
             readonly property bool hovered: hover.hovered
@@ -409,6 +544,7 @@ Item {
                                                           selection.value)
 
             // ListView puts delegates at x 0: the row's body is inset inside.
+            z: index === table.dragRow ? 1 : 0
             width: list.width
             height: 56
             Accessible.role: Accessible.Row
@@ -420,6 +556,10 @@ Item {
                 x: table.rowX
                 width: table.rowWidth
                 height: parent.height
+                // Floats with the pointer while dragged.
+                transform: Translate {
+                    y: drag.active ? table.dragY + list.contentY - drag.startY : 0
+                }
 
                 Spring {
                     id: selection
@@ -443,7 +583,8 @@ Item {
                     readonly property real bottomRadius: row.last ? Math.max(Theme.shape.large, inner)
                                                                   : inner
                     anchors.fill: parent
-                    color: Theme.mix(Theme.color.surfaceContainer, Theme.color.secondaryContainer,
+                    color: row.index === table.dragRow ? Theme.color.surfaceContainerHighest
+                         : Theme.mix(Theme.color.surfaceContainer, Theme.color.secondaryContainer,
                                      selection.value)
                     topLeftRadius: topRadius
                     topRightRadius: topRadius
@@ -476,7 +617,6 @@ Item {
                 }
                 TapHandler {
                     id: tap
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
                     onTapped: (eventPoint, button) => {
                         table.keyboardUsed = false;
                         table.currentRow = row.index;
@@ -489,6 +629,33 @@ Item {
                             table.selectOnly(row.index);
                     }
                     onDoubleTapped: table.play(row.index)
+                }
+                // Reordering: the row follows the pointer through the list, the others
+                // make way; near the top or bottom edge the list scrolls (dragTimer).
+                DragHandler {
+                    id: drag
+                    enabled: table.reorderable && row.loaded
+                    target: null
+                    xAxis.enabled: false
+                    cursorShape: active ? Qt.ClosedHandCursor : Qt.ArrowCursor
+                    // Where the drag started, in the content.
+                    property real startY
+                    onActiveChanged: {
+                        if (active) {
+                            table.dragY = list.mapFromItem(rowBody, centroid.pressPosition).y;
+                            startY = table.dragY + list.contentY;
+                            table.dragRow = row.index;
+                            table.followDrag();
+                        } else {
+                            table.drop();
+                        }
+                    }
+                    onActiveTranslationChanged: {
+                        if (!active)
+                            return;
+                        table.dragY = startY - list.contentY + activeTranslation.y;
+                        table.followDrag();
+                    }
                 }
                 TapHandler {
                     acceptedButtons: Qt.RightButton
@@ -634,6 +801,23 @@ Item {
                         onActivated: table.albumRequested(row.albumKey)
                     }
 
+                    IconButton {
+                        x: table.likedX + (table.likedWidth - width) / 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: table.showLiked && row.loaded
+                        size: Md.XSmall
+                        focusPolicy: Qt.NoFocus
+                        checkable: true
+                        checked: row.liked
+                        iconFill: row.liked ? 1 : 0
+                        glyph: Symbols.favorite
+                        text: row.liked ? qsTr("取消喜欢") : qsTr("喜欢")
+                        onToggled: {
+                            table.setLiked(row.key, checked);
+                            checked = Qt.binding(() => row.liked);
+                        }
+                    }
+
                     Text {
                         x: table.durationX
                         width: table.durationWidth
@@ -693,16 +877,22 @@ Item {
 
         // The row the menu is open for; -1 when closed.
         property int row: -1
+        property string key
         property string albumKey
         property var artists: []
-        readonly property int playCount: table.selectedKeys[table.songs.keyAt(row)]
-                                         ? table.selectionCount : 1
+        property bool liked: false
+        // The songs the actions are for (the selection when the row is in it).
+        property list<string> keys
+        readonly property int songCount: keys.length
 
         function openFor(target: int, anchor: Item, x: real, y: real): void {
             row = target;
             const index = table.songs.index(target, 0);
+            key = table.songs.keyAt(target);
+            keys = table.actionKeys(target);
             albumKey = table.songs.data(index, SongListModel.AlbumKeyRole) ?? "";
             artists = table.songs.data(index, SongListModel.ArtistsRole) ?? [];
+            liked = table.songs.data(index, SongListModel.LikedRole) ?? false;
             popup(anchor, x, y);
         }
 
@@ -710,17 +900,41 @@ Item {
 
         MenuItem {
             glyph: Symbols.play_arrow
-            text: songMenu.playCount > 1 ? qsTr("播放选中的 %1 首").arg(songMenu.playCount)
+            text: songMenu.songCount > 1 ? qsTr("播放选中的 %1 首").arg(songMenu.songCount)
                                          : qsTr("播放")
             onTriggered: {
-                if (songMenu.playCount > 1)
-                    App.player.playSongs(table.selectedInOrder(), 0);
+                if (songMenu.songCount > 1)
+                    App.player.playSongs(songMenu.keys, 0);
                 else
                     table.play(songMenu.row);
             }
         }
         MenuSeparator {}
         MenuItem {
+            visible: songMenu.songCount === 1
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.favorite
+            text: songMenu.liked ? qsTr("取消喜欢") : qsTr("喜欢")
+            onTriggered: table.setLiked(songMenu.key, !songMenu.liked)
+        }
+        MenuItem {
+            glyph: Symbols.playlist_add
+            text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
+                                         : qsTr("收藏到歌单…")
+            onTriggered: table.addToPlaylistRequested(songMenu.keys)
+        }
+        MenuItem {
+            visible: table.removable
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.playlist_remove
+            text: songMenu.songCount > 1 ? qsTr("从歌单移除选中的 %1 首").arg(songMenu.songCount)
+                                         : qsTr("从歌单移除")
+            trailingText: "Delete"
+            onTriggered: table.removeRequested(songMenu.keys)
+        }
+        MenuSeparator {}
+        MenuItem {
+            id: albumItem
             visible: table.showAlbumAction
             height: visible ? implicitHeight : 0
             enabled: songMenu.albumKey !== ""
@@ -737,7 +951,15 @@ Item {
                 text: qsTr("查看歌手：%1").arg(modelData.name)
                 onTriggered: table.artistRequested(modelData.key)
             }
-            onObjectAdded: (index, object) => songMenu.insertItem(index + 3, object as MenuItem)
+            // After "查看专辑".
+            onObjectAdded: (index, object) => {
+                let base = songMenu.count;
+                for (let i = 0; i < songMenu.count; ++i) {
+                    if (songMenu.itemAt(i) === albumItem)
+                        base = i + 1;
+                }
+                songMenu.insertItem(base + index, object as MenuItem);
+            }
             onObjectRemoved: (index, object) => songMenu.removeItem(object as MenuItem)
         }
     }

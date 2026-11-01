@@ -42,6 +42,12 @@ Item {
             App.player.playSongs(keys, 0);
     }
 
+    // Asks first (menu, Delete).
+    function removeSongs(keys: list<string>): void {
+        removeDialog.songKeys = keys;
+        removeDialog.open();
+    }
+
     function toggleSubscribed(): void {
         if (!App.session.signedIn)
             page.shell.openLogin();
@@ -54,7 +60,8 @@ Item {
     PlaylistPageModel {
         id: pageModel
         onLibraryChanged: page.shell.refreshLibrary()
-        onWriteFailed: message => page.shell.notify(message)
+        onNotice: message => page.shell.notify(message)
+        onDeleted: page.shell.back()
     }
 
     SortedSongsModel {
@@ -214,6 +221,14 @@ Item {
         visible: opacity > 0
         songs: sorted
         pinnedTop: compactBar.y + compactBar.height
+        // The account's own playlist; moving only in its own order, unfiltered.
+        removable: pageModel.own
+        reorderable: pageModel.own && sorted.sortField === SortedSongsModel.Original
+                     && page.findText.trim() === ""
+        onMoveRequested: (from, to) => pageModel.moveSong(from, to)
+        onRemoveRequested: keys => page.removeSongs(keys)
+        onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)
+        onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)
         onArtistRequested: key => page.shell.openArtist(key)
         // Typing on the table goes on in the find field.
@@ -259,16 +274,33 @@ Item {
                         color: Theme.color.primary
                         font: Theme.type.labelLarge.font
                     }
-                    Text {
+                    // The title; the account's own playlist can be edited from here.
+                    Item {
                         width: parent.width
-                        text: pageModel.title
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                        color: Theme.color.onSurface
-                        font: page.wide ? Theme.type.headlineLarge.font
-                                        : Theme.type.headlineSmall.font
-                        Accessible.role: Accessible.Heading
+                        height: Math.max(titleText.height, editButton.visible ? editButton.height : 0)
+                        Text {
+                            id: titleText
+                            width: Math.min(implicitWidth, parent.width
+                                            - (editButton.visible ? editButton.width + 8 : 0))
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: pageModel.title
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                            color: Theme.color.onSurface
+                            font: page.wide ? Theme.type.headlineLarge.font
+                                            : Theme.type.headlineSmall.font
+                            Accessible.role: Accessible.Heading
+                        }
+                        IconButton {
+                            id: editButton
+                            x: titleText.width + 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: pageModel.own
+                            glyph: Symbols.edit
+                            text: qsTr("编辑歌单信息")
+                            onClicked: editDialog.open()
+                        }
                     }
                     Text {
                         width: parent.width
@@ -340,6 +372,27 @@ Item {
                         // The comments page is designed later (playlist.md §2).
                         onClicked: page.shell.notify(qsTr("评论页还在设计中"))
                     }
+                    IconButton {
+                        id: moreButton
+                        visible: pageModel.own
+                        glyph: Symbols.more_vert
+                        text: qsTr("更多")
+                        onClicked: moreMenu.popup(moreButton, 0, moreButton.height + 4)
+
+                        Menu {
+                            id: moreMenu
+                            MenuItem {
+                                glyph: Symbols.edit
+                                text: qsTr("编辑歌单信息")
+                                onTriggered: editDialog.open()
+                            }
+                            MenuItem {
+                                glyph: Symbols.delete_
+                                text: qsTr("删除歌单")
+                                onTriggered: deleteDialog.open()
+                            }
+                        }
+                    }
                 }
                 FindField {
                     id: headerFind
@@ -361,7 +414,8 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 topPadding: 24
-                visible: pageModel.state === LoadState.Empty
+                // Also once the last song has been removed.
+                visible: pageState.showsContent && !page.hasSongs
                 glyph: Symbols.queue_music
                 message: pageModel.own ? qsTr("这个歌单还没有歌。在歌曲的菜单里选择「收藏到歌单」就能加进来。")
                                        : qsTr("这个歌单还没有歌")
@@ -444,5 +498,61 @@ Item {
         id: descriptionDialog
         title: pageModel.title
         supportingText: pageModel.description
+    }
+
+    Dialog {
+        id: editDialog
+        width: 480
+        title: qsTr("编辑歌单信息")
+        acceptText: qsTr("保存")
+        rejectText: qsTr("取消")
+        acceptEnabled: titleField.text.trim() !== ""
+        initialFocusItem: titleField
+        onAboutToShow: {
+            titleField.text = pageModel.title;
+            descriptionField.text = pageModel.description;
+        }
+        onAccepted: pageModel.updateInfo(titleField.text, descriptionField.text)
+
+        Column {
+            width: parent.width
+            spacing: 16
+            TextField {
+                id: titleField
+                width: parent.width
+                variant: Md.Outlined
+                gapColor: Theme.color.surfaceContainerHigh
+                label: qsTr("标题")
+                error: text.trim() === ""
+                supportingText: error ? qsTr("标题不能为空") : ""
+            }
+            TextField {
+                id: descriptionField
+                width: parent.width
+                variant: Md.Outlined
+                gapColor: Theme.color.surfaceContainerHigh
+                label: qsTr("简介")
+            }
+        }
+    }
+
+    Dialog {
+        id: removeDialog
+        property list<string> songKeys
+        title: songKeys.length > 1 ? qsTr("从歌单移除 %1 首歌？").arg(songKeys.length)
+                                   : qsTr("从歌单移除这首歌？")
+        supportingText: qsTr("移除后可以在歌曲的菜单里重新收藏到「%1」。").arg(pageModel.title)
+        acceptText: qsTr("移除")
+        rejectText: qsTr("取消")
+        onAccepted: pageModel.removeSongs(songKeys)
+    }
+
+    Dialog {
+        id: deleteDialog
+        title: qsTr("删除歌单？")
+        supportingText: qsTr("「%1」会被删除，无法恢复。歌曲本身不受影响。").arg(pageModel.title)
+        acceptText: qsTr("删除")
+        rejectText: qsTr("取消")
+        onAccepted: pageModel.deletePlaylist()
     }
 }
