@@ -112,6 +112,16 @@ Item {
         searchModelObject.submit(text);
     }
 
+    // A short message at the bottom of the content panel (Snackbar).
+    function notify(text: string) {
+        snackbar.show(text);
+    }
+
+    // The account's playlists changed (saved, created, deleted): the rail reloads.
+    function refreshLibrary() {
+        myLibrary.refresh();
+    }
+
     // Keyboard focus back to the page, e.g. after Esc in the search field.
     function focusContent() {
         stack.currentItem?.forceActiveFocus();
@@ -272,6 +282,11 @@ Item {
                 rotation: index * 90
             }
         }
+
+        Snackbar {
+            id: snackbar
+            anchors.bottom: parent.bottom
+        }
     }
 
     MiniPlayer {
@@ -343,10 +358,23 @@ Item {
         onActivated: rail.expanded = false
     }
     Shortcut {
-        sequences: ["Ctrl+K", StandardKey.Find]
+        sequence: "Ctrl+K"
         onActivated: {
             shell.searchField.forceActiveFocus();
             shell.searchField.selectAll();
+        }
+    }
+    // Pages with an in-page find take Ctrl+F; elsewhere it is the search too.
+    Shortcut {
+        sequences: [StandardKey.Find]
+        onActivated: {
+            const playlist = stack.currentItem as PlaylistPage;
+            if (playlist) {
+                playlist.find();
+            } else {
+                shell.searchField.forceActiveFocus();
+                shell.searchField.selectAll();
+            }
         }
     }
     Shortcut {

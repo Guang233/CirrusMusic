@@ -175,7 +175,7 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | `HomePageModel` | 首页／发现 | `sections`（列表模型：每节有 `kind`、`title`、`items`），每日推荐入口、私人 FM 入口 |
 | `DailySongsPageModel` | 每日推荐 | `songs`；未登录为 `SignedOut` |
 | `SearchModel` | 搜索 | `text`；`suggestions`（输入停顿 200 ms 后请求，新输入取消旧请求）；`hotKeywords`；`submit()`；四个结果标签页 `songs`／`albums`／`artists`／`playlists`，各自分页，切到哪个标签才加载哪个，各有自己的状态 |
-| `PlaylistPageModel` | 歌单详情 | 头部（标题、简介、创建者、`coverKey`、歌曲数）、`songs` |
+| `PlaylistPageModel` | 歌单详情 | 头部（标题、简介、创建者、`coverKey`、`tags`、`updatedText`、`playCount`／`subscriberCount`／`commentCount`（未知为 -1）、`own`）、`songs`；`subscribed` 可写（先改界面，失败时撤回并发 `writeFailed(message)`，成功时发 `libraryChanged()`） |
 | `AlbumPageModel` | 专辑详情 | 头部（标题、歌手、发行时间）、`songs`；不完整时为 `Partial` |
 | `ArtistPageModel` | 歌手详情 | 头部（名字、简介、头像）、`topSongs`、`albums`（分页） |
 | `LibraryPageModel` | 音乐库 | `likedSongs`、`playlists`（创建的、收藏的）、`albums`、`artists`、`recentSongs`；未登录为 `SignedOut` |
@@ -200,6 +200,8 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | `liked` | 跟随 `App.library` |
 
 方法：`keys()`（全部 key，供“播放全部”）、`loadMore()`。
+
+**`SortedSongsModel`**：歌曲表的显示顺序（[pages/playlist.md](pages/playlist.md) §10）。`source` 是一个 `SongListModel`；`filterText` 在标题、别名、歌手、专辑里查找（不分大小写，未到详情的行不匹配）；`sortField`（`Original`／`Title`／`Album`／`Duration`）和 `descending`，`cycleSort(field)` 按"升序 → 降序 → 原顺序"切换；未到详情的行和时长未知的行总在最后，相同的保持原顺序。`keys()` 是显示顺序（"播放全部"用它），`keyAt(row)`、`rowOf(key)`。
 
 **`CollectionListModel`**：歌单、专辑、歌手的卡片列表共用。角色：`key`、`kind`（`Playlist`／`Album`／`Artist`）、`title`、`subtitle`、`coverKey`、`count`。
 

@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），下一步实现它，之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），实现分三步，第一步（页面本体）已完成，下一步是红心与写操作（playlist.md §12），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -557,3 +557,9 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 迷你播放条去掉阴影和底色，成为框架的一部分；浮动侧边栏去掉阴影（遮罩已经把它分开）。
 - 历史改为浏览器式：切换导航目的地也是一条新记录（淡入），后退回到之前访问的页面，前进重新打开后退离开的页面，新的导航清空前进记录；点当前所在的目的地不做任何事。侧边栏的选中项跟着历史走。`PageStack.push()` 加可选的过渡参数。
 - 验证：构建、qmllint 无警告；临时钩子走了一遍"首页 → 发现 → 专辑 → 后退 → 后退 → 前进 → 点发现 → 点音乐库 → 后退"，页面与侧边栏选中项都正确；离屏截图检查了浅色模式下的窗口按钮（放大）、迷你播放条和首页边距。
+
+### 歌单详情页第一步（2026-11-01）
+
+- 按 [pages/playlist.md](pages/playlist.md) 重写 `PlaylistPage`：头部、操作行、页内查找、紧凑栏与吸顶列标题；新组件 `SongTable`（桌面表格式歌曲列表，选择与键盘）、控件 `Snackbar`；展示层加 `SortedSongsModel`、歌单头部字段、收藏歌单写入（假实现共享一份账号数据，侧边栏随之刷新）、`Formatter.date()`；主题加 `Fonts.tabular(font)`（等宽数字）；图标加 `arrow_upward`、`arrow_downward`、`bookmark_add`、`bookmark_added`。
+- 外壳：Ctrl+F 在歌单页聚焦页内查找，其他页面仍是全局搜索（Ctrl+K 总是全局）；`shell.notify(text)`、`shell.refreshLibrary()`。
+- 验证：构建、qmllint 无警告；临时钩子走了点击／Ctrl 点击／Shift 和 Ctrl 方向键选择、菜单键、列标题排序、查找的键盘流程（输入过滤 → ↓ 进表格 → 打字回到查找 → Esc 清空 → Esc 回表格 → Enter 播放）、登录后收藏／取消收藏；离屏截图检查了宽、窄（780）、滚动后的紧凑栏。合成的按键不会触发 `Shortcut`，Ctrl+F 本身没有在离屏下验证。
