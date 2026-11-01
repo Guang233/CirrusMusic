@@ -86,6 +86,14 @@ Item {
         });
     }
 
+    // The song order of the account's own playlist (playlist.md §13).
+    function openPlaylistOrder(key: string) {
+        shell.go(playlistOrderPage, {
+            shell: shell,
+            playlistKey: key
+        });
+    }
+
     function openAlbum(key: string) {
         shell.go(albumPage, {
             shell: shell,
@@ -194,14 +202,22 @@ Item {
     function back() {
         if (stack.depth < 2)
             return;
+        // Unsaved changes to a song order: the page asks first, then comes back here.
+        const order = stack.currentItem as PlaylistOrderPage;
+        if (order && order.hasChanges && !order.leaving) {
+            order.leave();
+            return;
+        }
         const leaving = stack.entries[stack.entries.length - 1];
         if (!stack.pop())
             return;
-        forwardEntries = forwardEntries.concat([{
-                component: leaving.component,
-                properties: leaving.properties,
-                section: sections[sections.length - 1]
-            }]);
+        // An editing page left is done with, not something to go forward to.
+        if (leaving.component !== playlistOrderPage)
+            forwardEntries = forwardEntries.concat([{
+                    component: leaving.component,
+                    properties: leaving.properties,
+                    section: sections[sections.length - 1]
+                }]);
         sections = sections.slice(0, -1);
         rail.currentIndex = sections[sections.length - 1];
     }
@@ -253,6 +269,10 @@ Item {
     Component {
         id: playlistPage
         PlaylistPage {}
+    }
+    Component {
+        id: playlistOrderPage
+        PlaylistOrderPage {}
     }
     Component {
         id: albumPage

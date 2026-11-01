@@ -8,6 +8,7 @@ qt_add_qml_module(appCirrusMusic
         Main.qml
         AppShell.qml
         PlaylistPage.qml
+        PlaylistOrderPage.qml
         AlbumPage.qml
         ArtistPage.qml
         SearchPage.qml

@@ -414,6 +414,12 @@ Item {
                                 onTriggered: editDialog.open()
                             }
                             MenuItem {
+                                enabled: page.hasSongs
+                                glyph: Symbols.swap_vert
+                                text: qsTr("调整歌曲顺序")
+                                onTriggered: page.shell.openPlaylistOrder(page.playlistKey)
+                            }
+                            MenuItem {
                                 glyph: Symbols.delete_
                                 text: qsTr("删除歌单")
                                 onTriggered: deleteDialog.open()

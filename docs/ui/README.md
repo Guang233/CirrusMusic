@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；按维护者反馈把调整顺序挪到单独的页面，设计待评审（playlist.md §13）；之后专辑页、每日推荐页沿用同一套版式（playlist.md §8），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；之后专辑页、每日推荐页沿用同一套版式（playlist.md §8），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -584,4 +584,10 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 紧凑栏和吸顶列标题让开滚动条。
 - 撤下歌单页上的拖动排序和 Alt+↑／↓（插入线比指针慢一个拖动阈值；容易误触），调整顺序改为单独页面，设计见 playlist.md §13，待评审。
 - 验证：构建、qmllint 无警告；临时钩子量了滚轮（歌单页、首页一格都是 120 px，到两端越界后回到边界）、500 ms 延迟下查找时详情按批依次到达（199 → 298 → 397 → 595）；截图看了滚动条那一列不再被盖住。
+
+### 调整歌曲顺序页（2026-11-01）
+
+- 按维护者决定（playlist.md §13.4）实现 `PlaylistOrderPage`：把手拖动（按指针实际位置算插入线，选中的一起移动，边缘自动滚动）、Alt+↑／↓、Alt+Home／End、右键移到最前／最后、快速排序菜单（歌名、歌手、专辑、时长、倒序）、一次保存、离开前确认。展示层加 `PlaylistOrderModel`、`SongDetailLoader`（从 `PlaylistPageModel` 抽出），`SongListModel` 加 `moveRows`、`sortRows`、`reverse`、`allLoaded`，`Library` 加 `notifyPlaylistChanged`；图标加 `swap_vert`、`vertical_align_top`、`vertical_align_bottom`。
+- 滚轮：撤掉自定义的 `WheelScroller`（维护者觉得忽快忽慢），恢复 Qt 默认；保留 `DragAndOvershootBounds`，默认滚轮滚到两端也会越界回弹（实测约 36 px）。
+- 验证：构建、qmllint 无警告；临时钩子走了把手拖动一行、多选两行后拖动、Shift 扩选后 Alt+End、菜单"按歌名"后保存（回到歌单页顺序一致、没有前进记录）、有改动时后退弹出确认并放弃；截图检查了页面和快速排序菜单。查出并修了一个问题：读出的 `list<int>` 属性是对属性本身的引用，清空属性后局部变量也空了。
 
