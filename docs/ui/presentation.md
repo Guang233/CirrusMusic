@@ -195,7 +195,8 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | `artists`、`artistText` | 歌手列表（`[{key, name}]`，key 可能为空）与拼好的显示文字 |
 | `albumKey`、`albumTitle`、`coverKey` | 均可能为空 |
 | `durationMs`、`durationText` | 未知时 -1 和“--:--” |
-| `loaded` | 元数据是否已到。大歌单只有歌曲 key 时，行先占位，滚动到附近再批量取详情（每批不超过后端上限） |
+| `loaded` | 元数据是否已到。大歌单只有歌曲 key 时，行先占位，滚动到附近再批量取详情（`CatalogSource::songDetails`，每批不超过 `kSongDetailsBatch` = 100；`PlaylistPageModel::ensureLoaded(first, last)`／`loadAll()`） |
+| `missing` | 请求过详情但服务端没有给（已下架等）；`SongListModel::fill()` 标记 |
 | `unavailable` | 已知不可播放（播放失败后才知道；元数据本身不代表能否播放） |
 | `current` | 是否为正在播放的歌曲（跟随 `App.player.current`） |
 | `liked` | 跟随 `App.library` |

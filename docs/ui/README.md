@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），实现分三步，第一步（页面本体）和第二步（红心与写操作）已完成，下一步是大歌单按页补详情（playlist.md §12），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12），等待维护者看效果；之后专辑页、每日推荐页沿用同一套版式（playlist.md §8），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -570,3 +570,9 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 - 展示层：`App.library`（新类 `Library`：喜欢集合、`setLiked`、`addToPlaylist`、`notice`、`playlistChanged`）；`App` 里数据源的访问函数改名为 `librarySource()`；`LibrarySource` 加 `likedSongKeys`、`setSongLiked`、`addToPlaylist`、`removeFromPlaylist`、`reorderPlaylist`、`updatePlaylist`、`deletePlaylist`，假实现共享一份可变的账号数据（喜欢、创建、收藏、对歌单的修改），歌单页、音乐库和侧边栏都能看到修改；`SongListModel` 加 `liked` 角色、`remove()`、`move()`；`PlaylistPageModel` 加 `removeSongs`、`moveSong`、`updateInfo`、`deletePlaylist`，`writeFailed` 改为 `notice`，加 `deleted`。
 - 界面：`SongTable` 加喜欢列、行菜单（喜欢、收藏到歌单、从歌单移除）、Delete、拖动和 Alt+↑／↓ 调整顺序；新对话框 `AddToPlaylistDialog`（外壳持有，`shell.addToPlaylist(keys)`）；歌单页加编辑按钮、"更多"菜单、编辑信息／移除确认／删除确认对话框；外壳把 `App.library.notice` 接到提示条。图标加 `playlist_remove`。
 - 验证：构建、qmllint 无警告；临时钩子走了喜欢／取消喜欢、Alt+↓ 两次、拖动一行到三行之后、Shift 多选后 Delete 并确认（重新打开后仍然生效）、键盘在对话框里选歌单并加入（重新打开后歌在最前面）；截图检查了行菜单、编辑对话框、收藏到歌单对话框。拖动时的自动滚动没有在离屏下验证。
+
+### 歌单详情页第三步：大歌单按页补详情（2026-11-01）
+
+- 展示层：`CatalogSource::songDetails(keys)`（每批最多 `kSongDetailsBatch` = 100）；`SongListModel` 加 `fill()`、`keysToLoad()`、`missing` 角色；`PlaylistPageModel` 加 `ensureLoaded(first, last)`、`loadAll()`、`missingCount`。假数据加 600 首的"很长的歌单"（只带前 100 首详情，每 97 首缺一首；放在收藏的歌单里），假实现按 `so-001~123` 这种 key 复用示例歌曲。
+- 界面：`SongTable` 报告屏幕上的行，缺失详情的行变灰并说明，播放时跳过；歌单页按可见范围补详情，排序／查找时取回全部，缺失时上方提示数量。
+- 验证：构建、qmllint 无警告；临时钩子滚到第 285 行（取回 200–399 两批，100–199 没有请求）、慢速假数据下截图占位行、查找"Margin"后全部取回（595 首有详情、5 首缺失、显示 47 行），截图检查了缺失行和提示条。

@@ -30,6 +30,11 @@ Item {
     property bool removable: false
     property bool reorderable: false
     readonly property ListView view: list
+    // The rows on screen (rows start at content y 0, under the header), for loading
+    // their details.
+    readonly property int firstVisibleRow: Math.max(0, Math.floor(list.contentY / rowPitch))
+    readonly property int lastVisibleRow: Math.max(0, Math.floor((list.contentY + list.height)
+                                                                 / rowPitch))
     // How far the content has scrolled from its top.
     readonly property real scrolled: list.contentY - list.originY
 
@@ -111,9 +116,16 @@ Item {
             App.library.setLiked(key, liked);
     }
 
+    // Plays the shown order from `row`, leaving out songs the service has no details for.
     function play(row: int): void {
-        if (row >= 0 && row < songs.count)
-            App.player.playSongs(songs.keys(), row);
+        if (row < 0 || row >= songs.count || isMissing(row))
+            return;
+        const key = songs.keyAt(row);
+        const keys = songs.keys().filter((k, i) => !isMissing(i));
+        App.player.playSongs(keys, keys.indexOf(key));
+    }
+    function isMissing(row: int): bool {
+        return songs.data(songs.index(row, 0), SongListModel.MissingRole) === true;
     }
     function selectOnly(row: int): void {
         const keys = {};
@@ -527,6 +539,7 @@ Item {
             required property bool unavailable
             required property bool current
             required property bool liked
+            required property bool missing
 
             readonly property bool selected: table.selectedKeys[key] === true
             readonly property bool hovered: hover.hovered
@@ -548,7 +561,8 @@ Item {
             width: list.width
             height: 56
             Accessible.role: Accessible.Row
-            Accessible.name: loaded ? qsTr("%1，%2").arg(title).arg(artistText) : qsTr("正在加载")
+            Accessible.name: loaded ? qsTr("%1，%2").arg(title).arg(artistText)
+                           : missing ? qsTr("歌曲信息暂时无法获取") : qsTr("正在加载")
             Accessible.selected: selected
 
             Item {
@@ -669,7 +683,7 @@ Item {
 
                 Item {
                     anchors.fill: parent
-                    opacity: row.unavailable ? Theme.state.disabledContent : 1
+                    opacity: row.unavailable || row.missing ? Theme.state.disabledContent : 1
 
                     // Number; the play (or pause) button on hover; the equalizer while
                     // this song plays.
@@ -773,11 +787,23 @@ Item {
                         }
                     }
 
+                    // The service has no details for this song.
+                    Text {
+                        x: table.titleX + 52
+                        width: table.titleWidth - 52
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.missing
+                        text: qsTr("歌曲信息暂时无法获取")
+                        elide: Text.ElideRight
+                        color: Theme.color.onSurfaceVariant
+                        font: Theme.type.bodyMedium.font
+                    }
+
                     // Details still on their way: placeholder bars.
                     Column {
                         x: table.titleX + 52
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: !row.loaded
+                        visible: !row.loaded && !row.missing
                         spacing: 8
                         Skeleton {
                             width: Math.min(200, table.titleWidth - 52)

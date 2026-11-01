@@ -70,6 +70,37 @@ Item {
         filterText: page.findText
     }
 
+    // Large playlists: details for the rows on screen and around them; sorting and
+    // finding need every song's.
+    function loadDetails(): void {
+        if (sorted.sortField !== SortedSongsModel.Original || page.findText.trim() !== "")
+            pageModel.loadAll();
+        else
+            pageModel.ensureLoaded(songTable.firstVisibleRow - 20, songTable.lastVisibleRow + 20);
+    }
+    Connections {
+        target: songTable
+        function onFirstVisibleRowChanged() {
+            page.loadDetails();
+        }
+        function onLastVisibleRowChanged() {
+            page.loadDetails();
+        }
+    }
+    Connections {
+        target: sorted
+        function onSortChanged() {
+            page.loadDetails();
+        }
+    }
+    Connections {
+        target: pageModel.songs
+        function onCountChanged() {
+            Qt.callLater(page.loadDetails);
+        }
+    }
+    onFindTextChanged: loadDetails()
+
     PageState {
         id: pageState
         anchors.fill: parent
@@ -407,8 +438,10 @@ Item {
             NoticeBar {
                 x: songTable.rowX
                 width: songTable.rowWidth
-                visible: pageModel.state === LoadState.Partial
-                text: qsTr("有些歌曲的信息暂时无法获取")
+                visible: pageModel.state === LoadState.Partial || pageModel.missingCount > 0
+                text: pageModel.missingCount > 0
+                      ? qsTr("有 %1 首歌暂时无法获取信息").arg(pageModel.missingCount)
+                      : qsTr("有些歌曲的信息暂时无法获取")
             }
             StateMessage {
                 x: songTable.rowX
