@@ -53,6 +53,9 @@ class LibrarySource
     virtual Request library(Reply<LibraryPage> reply) = 0;
     // The latest songs played on any device, newest first.
     virtual Request recentSongs(int limit, Reply<QList<SongInfo>> reply) = 0;
+    // Saves or unsaves someone else's playlist; replies with the new state.
+    virtual Request setPlaylistSubscribed(const QString& key, bool subscribed,
+                                          Reply<bool> reply) = 0;
 };
 
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.

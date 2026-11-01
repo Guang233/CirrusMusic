@@ -4,6 +4,7 @@
 #include "formatter.h"
 
 #include <QDate>
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -113,6 +114,34 @@ struct Samples {
     }
 };
 
+// What the signed-in account created and saved; the library and the playlist pages
+// share it, so saving a playlist shows up in both.
+struct FakeAccount {
+    QStringList created{QStringLiteral("pl-01"), QStringLiteral("pl-05")};
+    QStringList saved{QStringLiteral("pl-02"), QStringLiteral("pl-03"), QStringLiteral("pl-04")};
+};
+
+// Header details the sample catalog leaves out: tags, counts and dates made up from
+// the key, so a playlist always shows the same ones.
+void fillPlaylistDetails(PlaylistInfo& info)
+{
+    static const QHash<QString, QStringList> tags{
+        {QStringLiteral("pl-01"),
+         {QStringLiteral("华语"), QStringLiteral("夜晚"), QStringLiteral("安静")}},
+        {QStringLiteral("pl-02"), {QStringLiteral("轻音乐"), QStringLiteral("放松")}},
+        {QStringLiteral("pl-03"), {QStringLiteral("华语"), QStringLiteral("独立")}},
+        {QStringLiteral("pl-04"), {QStringLiteral("运动"), QStringLiteral("欧美")}},
+    };
+    const qint64 seed = std::accumulate(info.key.cbegin(), info.key.cend(), qint64(7),
+                                        [](qint64 sum, QChar c) { return sum * 31 + c.unicode(); });
+    const qint64 n = qAbs(seed);
+    info.tags = tags.value(info.key);
+    info.playCount = 2'000 + n % 1'500'000;
+    info.subscriberCount = 40 + n % 9'000;
+    info.commentCount = n % 400;
+    info.updatedAtMs = QDateTime::currentDateTime().addDays(-(n % 40)).toMSecsSinceEpoch();
+}
+
 std::shared_ptr<const Samples> loadSamples()
 {
     QFile file(kSamples + QStringLiteral("catalog.json"));
@@ -186,6 +215,7 @@ std::shared_ptr<const Samples> loadSamples()
         page.info.description = playlist.value(QLatin1StringView("description")).toString();
         page.info.creator = playlist.value(QLatin1StringView("creator")).toString();
         page.info.coverKey = coverKey(playlist.value(QLatin1StringView("cover")));
+        fillPlaylistDetails(page.info);
         page.songKeys = strings(playlist.value(QLatin1StringView("songIds")));
         for (const QString& key : std::as_const(page.songKeys))
             page.songs << samples->songs.value(key);
@@ -198,8 +228,9 @@ std::shared_ptr<const Samples> loadSamples()
 class FakeCatalog : public QObject, public CatalogSource
 {
   public:
-    FakeCatalog(FakeControls* controls, std::shared_ptr<const Samples> samples)
-        : m_controls(controls), m_samples(std::move(samples))
+    FakeCatalog(FakeControls* controls, std::shared_ptr<const Samples> samples,
+                std::shared_ptr<const FakeAccount> account)
+        : m_controls(controls), m_samples(std::move(samples)), m_account(std::move(account))
     {
         // Charts are playlists of their own, made from the sample songs.
         const struct {
@@ -219,6 +250,8 @@ class FakeCatalog : public QObject, public CatalogSource
             PlaylistPage page;
             page.info = {QString::fromLatin1(chart.key), tr(chart.title), tr(chart.update),
                          tr("Cirrus 示例"), QString::fromLatin1(chart.cover)};
+            fillPlaylistDetails(page.info);
+            page.info.updatedAtMs = QDateTime::currentMSecsSinceEpoch();
             page.songKeys = keys;
             for (const QString& key : std::as_const(keys))
                 page.songs << m_samples->songs[key];
@@ -239,6 +272,10 @@ class FakeCatalog : public QObject, public CatalogSource
                 return outcome;
             }
             PlaylistPage page = chart != m_charts.cend() ? *chart : *found;
+            if (m_controls->signedIn()) {
+                page.info.own = m_account->created.contains(key);
+                page.info.subscribed = m_account->saved.contains(key);
+            }
             if (m_controls->empty()) {
                 page.songKeys.clear();
                 page.songs.clear();
@@ -537,6 +574,7 @@ class FakeCatalog : public QObject, public CatalogSource
 
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
+    std::shared_ptr<const FakeAccount> m_account;
     QList<PlaylistPage> m_charts;
 };
 
@@ -544,8 +582,9 @@ class FakeCatalog : public QObject, public CatalogSource
 class FakeLibrary : public QObject, public LibrarySource
 {
   public:
-    FakeLibrary(FakeControls* controls, std::shared_ptr<const Samples> samples)
-        : m_controls(controls), m_samples(std::move(samples))
+    FakeLibrary(FakeControls* controls, std::shared_ptr<const Samples> samples,
+                std::shared_ptr<FakeAccount> account)
+        : m_controls(controls), m_samples(std::move(samples)), m_account(std::move(account))
     {
     }
 
@@ -569,10 +608,11 @@ class FakeLibrary : public QObject, public LibrarySource
                                          "so-034", "so-008"});
                 for (const QString& key : recentKeys())
                     page.recentSongs << m_samples->songs[key];
-                for (const char* key : {"pl-01", "pl-05"})
-                    page.createdPlaylists << m_samples->playlistItem(QLatin1StringView(key));
-                for (const char* key : {"pl-02", "pl-03", "pl-04"})
-                    page.savedPlaylists << m_samples->playlistItem(QLatin1StringView(key));
+                for (const QString& key : std::as_const(m_account->created))
+                    page.createdPlaylists << m_samples->playlistItem(key);
+                for (const QString& key : std::as_const(m_account->saved))
+                    if (m_samples->playlists.contains(key))
+                        page.savedPlaylists << m_samples->playlistItem(key);
                 for (const char* key : {"al-01", "al-03", "al-06", "al-13"})
                     page.albums << m_samples->albumItem(QLatin1StringView(key));
                 for (const char* key : {"ar-01", "ar-04", "ar-11"})
@@ -600,6 +640,22 @@ class FakeLibrary : public QObject, public LibrarySource
         });
     }
 
+    Request setPlaylistSubscribed(const QString& key, bool subscribed, Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            m_account->saved.removeAll(key);
+            if (subscribed)
+                m_account->saved.prepend(key);
+            outcome.value = subscribed;
+            return outcome;
+        });
+    }
+
   private:
     static QStringList recentKeys()
     {
@@ -608,6 +664,7 @@ class FakeLibrary : public QObject, public LibrarySource
 
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
+    std::shared_ptr<FakeAccount> m_account;
 };
 
 // The account follows App.debug.account. QR sign-in plays itself out: scanned after
@@ -1084,11 +1141,12 @@ Sources makeFakeSources()
     Sources sources;
     sources.fakeControls = std::make_unique<FakeControls>();
     const std::shared_ptr<const Samples> samples = loadSamples();
-    sources.catalog = std::make_unique<FakeCatalog>(sources.fakeControls.get(), samples);
+    const auto account = std::make_shared<FakeAccount>();
+    sources.catalog = std::make_unique<FakeCatalog>(sources.fakeControls.get(), samples, account);
     sources.images = std::make_unique<FakeImages>();
     sources.playback = std::make_unique<FakePlayback>(sources.fakeControls.get(), samples);
     sources.session = std::make_unique<FakeSession>(sources.fakeControls.get());
-    sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples);
+    sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples, account);
     return sources;
 }
 

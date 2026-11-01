@@ -23,6 +23,8 @@ class Formatter : public QObject
     Q_INVOKABLE static QString duration(qint64 milliseconds);
     // Compact count in the system language: "9,876", "1.2万" / "12K".
     Q_INVOKABLE static QString count(qint64 value);
+    // A day: "10月28日" this year, "2024年10月28日" before; empty for 0 (unknown).
+    Q_INVOKABLE static QString date(qint64 msSinceEpoch);
     // Artist names joined for one line: "A / B".
     [[nodiscard]] static QString artists(const QList<ArtistRef>& artists);
 };

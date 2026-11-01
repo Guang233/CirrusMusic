@@ -33,6 +33,8 @@ qt_add_qml_module(cirrus_presentation
         loadable_model.cpp
         song_list_model.h
         song_list_model.cpp
+        sorted_songs_model.h
+        sorted_songs_model.cpp
         playlist_page_model.h
         playlist_page_model.cpp
         collection_list_model.h

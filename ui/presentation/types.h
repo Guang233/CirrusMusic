@@ -42,6 +42,16 @@ struct PlaylistInfo {
     QString description;
     QString creator;
     QString coverKey;
+    QStringList tags;
+    qint64 updatedAtMs = 0; // 0 when unknown
+    // -1 when unknown.
+    qint64 playCount = -1;
+    qint64 subscriberCount = -1;
+    qint64 commentCount = -1;
+    // Created by the signed-in account; it may edit the playlist.
+    bool own = false;
+    // Saved by the signed-in account (someone else's playlist).
+    bool subscribed = false;
 };
 
 // A playlist's header and tracks. `songs` may hold details for only some of

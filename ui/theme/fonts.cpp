@@ -143,6 +143,12 @@ QFont Fonts::font(qreal weight, qreal pixelSize) const
     return font;
 }
 
+QFont Fonts::tabular(QFont font)
+{
+    font.setFeature(QFont::Tag("tnum"), 1);
+    return font;
+}
+
 QStringList Fonts::families() const
 {
     QStringList families = QFontDatabase::families();

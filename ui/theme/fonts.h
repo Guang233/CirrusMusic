@@ -56,6 +56,9 @@ class Fonts : public QObject
     // Text font at a CSS weight (100–900, fractional allowed) and pixel size, in the
     // family in use.
     Q_INVOKABLE QFont font(qreal weight, qreal pixelSize) const;
+    // `font` with tabular (fixed-width) digits, for columns of numbers: MiSans's digits
+    // are proportional by default.
+    Q_INVOKABLE static QFont tabular(QFont font);
     // Installed families, for picking a custom font.
     Q_INVOKABLE QStringList families() const;
 

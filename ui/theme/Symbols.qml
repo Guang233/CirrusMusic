@@ -102,6 +102,10 @@ QtObject {
     readonly property string wifi_off: "\ue648"
     readonly property string sentiment_dissatisfied: "\ue811"
     readonly property string image: "\ue3f4"
+    readonly property string arrow_upward: "\ue5d8"
+    readonly property string arrow_downward: "\ue5db"
+    readonly property string bookmark_add: "\ue598"
+    readonly property string bookmark_added: "\ue599"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -202,6 +206,10 @@ QtObject {
         "schedule",
         "wifi_off",
         "sentiment_dissatisfied",
-        "image"
+        "image",
+        "arrow_upward",
+        "arrow_downward",
+        "bookmark_add",
+        "bookmark_added"
     ]
 }

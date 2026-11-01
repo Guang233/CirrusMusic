@@ -1,5 +1,6 @@
 #include "formatter.h"
 
+#include <QDateTime>
 #include <QLocale>
 
 #include <cmath>
@@ -20,6 +21,16 @@ QString Formatter::duration(qint64 milliseconds)
             .arg(seconds / 3600)
             .arg(twoDigits(seconds / 60 % 60), twoDigits(seconds % 60));
     return QStringLiteral("%1:%2").arg(seconds / 60).arg(twoDigits(seconds % 60));
+}
+
+QString Formatter::date(qint64 msSinceEpoch)
+{
+    if (msSinceEpoch <= 0)
+        return {};
+    const QDate day = QDateTime::fromMSecsSinceEpoch(msSinceEpoch).date();
+    if (day.year() == QDate::currentDate().year())
+        return tr("%1月%2日").arg(day.month()).arg(day.day());
+    return tr("%1年%2月%3日").arg(day.year()).arg(day.month()).arg(day.day());
 }
 
 QString Formatter::artists(const QList<ArtistRef>& artists)

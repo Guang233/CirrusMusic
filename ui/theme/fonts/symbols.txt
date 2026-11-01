@@ -111,3 +111,9 @@ schedule
 wifi_off
 sentiment_dissatisfied
 image
+
+# Song table and playlist header
+arrow_upward
+arrow_downward
+bookmark_add
+bookmark_added
