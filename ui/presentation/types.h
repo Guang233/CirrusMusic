@@ -55,6 +55,9 @@ struct PlaylistInfo {
     bool own = false;
     // Saved by the signed-in account (someone else's playlist).
     bool subscribed = false;
+    // The account's "我喜欢的音乐": a playlist like any other, except that its title
+    // and description can't be edited and it can't be deleted.
+    bool liked = false;
 };
 
 // Most song keys one CatalogSource::songDetails() request takes (the service's limit).
@@ -123,6 +126,8 @@ struct CollectionItem {
     int year = 0;   // albums, 0 when unknown
     int count = -1; // songs (playlists, albums) or albums (artists), -1 when unknown
     QString coverKey;
+    // A playlist of the account's library: its own (true) or saved (false), when known.
+    std::optional<bool> created;
 };
 
 // An artist's header, popular songs and albums.

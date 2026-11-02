@@ -90,6 +90,22 @@ class LibrarySource
     virtual Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) = 0;
     // The songs the account likes, newest first.
     virtual Request likedSongKeys(Reply<QStringList> reply) = 0;
+    // The account's "我喜欢的音乐" playlist (a playlist like any other).
+    virtual Request likedPlaylist(Reply<CollectionItem> reply) = 0;
+    // The library's collections, a page at a time (docs/ui/pages/library.md §2):
+    // Playlist the account's own and saved playlists (`created` tells which, when
+    // known), Album saved albums, Artist followed artists, Podcast subscribed podcasts.
+    virtual Request libraryCollections(collection::Kind kind, PageRequest page,
+                                       Reply<ResultPage<CollectionItem>> reply) = 0;
+    // Recently played playlists, albums or podcasts (the service's record), newest first.
+    virtual Request recentCollections(collection::Kind kind, int limit,
+                                      Reply<QList<CollectionItem>> reply) = 0;
+    // Recently played podcast voices.
+    virtual Request recentVoices(int limit, Reply<QList<SongInfo>> reply) = 0;
+    // The songs the account played most, the last week or all time, most first.
+    virtual Request listeningRanking(bool allTime, Reply<QList<SongInfo>> reply) = 0;
+    // Creates an empty playlist; replies with its key.
+    virtual Request createPlaylist(const QString& title, Reply<QString> reply) = 0;
 
     // Writes; each replies true once saved. Playlist changes are only accepted for
     // the account's own playlists.

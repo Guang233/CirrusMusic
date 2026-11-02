@@ -31,6 +31,8 @@ class PlaylistPageModel : public LoadableModel
     Q_PROPERTY(qint64 subscriberCount READ subscriberCount NOTIFY headerChanged)
     Q_PROPERTY(qint64 commentCount READ commentCount NOTIFY headerChanged)
     Q_PROPERTY(bool own READ own NOTIFY headerChanged)
+    // The account's "我喜欢的音乐" (own, but not renamed or deleted).
+    Q_PROPERTY(bool likedList READ likedList NOTIFY headerChanged)
     // Shows the new state at once; reverts when saving fails.
     Q_PROPERTY(bool subscribed READ subscribed WRITE setSubscribed NOTIFY subscribedChanged)
     // Songs the service has no details for (large playlists fetch details by batch).
@@ -53,6 +55,7 @@ class PlaylistPageModel : public LoadableModel
     [[nodiscard]] qint64 subscriberCount() const { return m_info.subscriberCount; }
     [[nodiscard]] qint64 commentCount() const { return m_info.commentCount; }
     [[nodiscard]] bool own() const { return m_info.own; }
+    [[nodiscard]] bool likedList() const { return m_info.liked; }
     [[nodiscard]] bool subscribed() const { return m_info.subscribed; }
     void setSubscribed(bool subscribed);
     [[nodiscard]] int missingCount() const;

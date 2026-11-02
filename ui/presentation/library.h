@@ -24,11 +24,16 @@ class Library : public QObject
     QML_UNCREATABLE("Use App.library")
     // Grows whenever the liked set changes, for bindings that call isLiked().
     Q_PROPERTY(int likedRevision READ likedRevision NOTIFY likedChanged)
+    Q_PROPERTY(int likedCount READ likedCount NOTIFY likedChanged)
+    // The account's "我喜欢的音乐" playlist; empty until known (or signed out).
+    Q_PROPERTY(QString likedPlaylistKey READ likedPlaylistKey NOTIFY likedPlaylistChanged)
 
   public:
     Library(LibrarySource* source, Session* session, QObject* parent = nullptr);
 
     [[nodiscard]] int likedRevision() const { return m_revision; }
+    [[nodiscard]] int likedCount() const { return int(m_liked.size()); }
+    [[nodiscard]] QString likedPlaylistKey() const { return m_likedPlaylistKey; }
     Q_INVOKABLE bool isLiked(const QString& songKey) const { return m_liked.contains(songKey); }
     Q_INVOKABLE void setLiked(const QString& songKey, bool liked);
     // `title` names the playlist in the notice.
@@ -41,6 +46,7 @@ class Library : public QObject
 
   signals:
     void likedChanged();
+    void likedPlaylistChanged();
     // A playlist's songs changed through here: pages showing it reload.
     void playlistChanged(const QString& playlistKey);
     // Something to tell the user, translated.
@@ -54,6 +60,8 @@ class Library : public QObject
     QSet<QString> m_liked;
     int m_revision = 0;
     Request m_load;
+    QString m_likedPlaylistKey;
+    Request m_likedPlaylistLoad;
     // One write per song key or playlist key at a time; a newer one replaces it.
     std::map<QString, Request> m_writes;
 };

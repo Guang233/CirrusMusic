@@ -11,8 +11,13 @@ Library::Library(LibrarySource* source, Session* session, QObject* parent)
 {
     connect(session, &Session::changed, this, [this]() {
         const bool signedIn = m_session->signedIn();
-        if (signedIn && m_liked.isEmpty() && !m_load.pending())
+        if (signedIn && (m_liked.isEmpty() || m_likedPlaylistKey.isEmpty()) && !m_load.pending())
             reload();
+        if (!signedIn && !m_likedPlaylistKey.isEmpty()) {
+            m_likedPlaylistLoad.cancel();
+            m_likedPlaylistKey.clear();
+            emit likedPlaylistChanged();
+        }
         if (!signedIn && !m_liked.isEmpty()) {
             m_load.cancel();
             m_writes.clear();
@@ -36,6 +41,15 @@ void Library::reload()
         m_liked = QSet<QString>(outcome.value->cbegin(), outcome.value->cend());
         ++m_revision;
         emit likedChanged();
+    });
+    if (!m_likedPlaylistKey.isEmpty())
+        return;
+    m_likedPlaylistLoad = m_source->likedPlaylist([this](Outcome<CollectionItem> outcome) {
+        m_likedPlaylistLoad.release();
+        if (!outcome.value || outcome.value->key == m_likedPlaylistKey)
+            return;
+        m_likedPlaylistKey = outcome.value->key;
+        emit likedPlaylistChanged();
     });
 }
 
