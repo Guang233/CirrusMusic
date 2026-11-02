@@ -5,11 +5,13 @@ import Cirrus.Theme
 import Cirrus.Controls
 
 // The one search input of the app, in the title bar row (docs/ui/pages/shell.md §3,
-// search.md §2). Works like a browser's address bar: the keyboard focus stays in the
-// field while the list under it shows recent searches and trending keywords (empty
-// field), or "搜索「…」" and grouped suggestions (typing). ↑/↓ pick a line, Enter
-// runs the picked line or searches the text, Delete removes a picked recent search,
-// Esc closes the list, then clears the text, then hands the focus back to the page.
+// search.md §2.1). Works like a browser's address bar: the keyboard focus stays in
+// the field while the list under it (wider than the field) shows recent searches as
+// chips and trending keywords in two columns (empty field), or "搜索「…」" and
+// suggestions grouped by type (typing). ↑/↓ move between rows; with the field empty
+// ←/→ move within a row (there is no text cursor to move then). Enter runs the
+// picked item or searches the text, Delete removes a picked recent search, Esc closes
+// the list, then clears the text, then hands the focus back to the page.
 // A suggested artist, album or playlist opens (`opened`); a song searches its title.
 SearchBar {
     id: field
@@ -24,21 +26,24 @@ SearchBar {
     property int picked: -1
     // Kept while a recent search is removed, so the pick stays in place.
     property bool keepPicked: false
+    // The field's x in the window, for how far the list may reach (set on opening).
+    property real windowX: 0
 
     readonly property bool typing: text.trim() !== ""
-    // The list's lines: {type: "history" | "hot" | "query" | "suggestion", text,
-    // glyph, group (a title above the line, or ""), rank, note, song, kind, key}.
+    // Recent searches offered (the chips that fit two rows show).
+    readonly property int historyCount: typing ? 0 : Math.min(history.length, 10)
+    // What can be picked, in order: {type: "history" | "hot" | "query" | "suggestion",
+    // text, note, rank, group (the type, on a group's first suggestion), song, kind,
+    // key}. Recent searches first, then trending; or the query, then suggestions.
     readonly property var lines: {
         const lines = [];
         if (typing) {
             lines.push({
                 type: "query",
                 text: text.trim(),
-                glyph: Symbols.search,
                 group: ""
             });
             const groups = [qsTr("歌单"), qsTr("专辑"), qsTr("歌手"), qsTr("单曲")];
-            const glyphs = [Symbols.queue_music, Symbols.album, Symbols.person];
             let last = "";
             for (const suggestion of suggestions) {
                 // Collection.Kind: Playlist 0, Album 1, Artist 2.
@@ -46,7 +51,6 @@ SearchBar {
                 lines.push({
                     type: "suggestion",
                     text: suggestion.title,
-                    glyph: suggestion.song ? Symbols.music_note : glyphs[suggestion.kind],
                     group: group === last ? "" : group,
                     song: suggestion.song,
                     kind: suggestion.kind,
@@ -56,22 +60,24 @@ SearchBar {
             }
             return lines;
         }
-        history.slice(0, 10).forEach((query, i) => lines.push({
+        history.slice(0, historyCount).forEach(query => lines.push({
                 type: "history",
-                text: query,
-                glyph: Symbols.history,
-                group: i === 0 ? qsTr("搜索历史") : ""
+                text: query
             }));
         hotKeywords.slice(0, 10).forEach((hot, i) => lines.push({
                 type: "hot",
                 text: hot.keyword,
                 note: hot.description,
-                rank: i + 1,
-                group: i === 0 ? qsTr("热门搜索") : ""
+                rank: i + 1
             }));
         return lines;
     }
     readonly property bool listShown: activeFocus && listWanted && lines.length > 0
+    // 560 wide where the window has room, never narrower than the field.
+    readonly property real listWidth: Math.max(width, Math.min(560, (Window.width || 1280)
+                                                                    - windowX - 16))
+    // Trending in two columns (1–5, 6–10) when they fit.
+    readonly property bool hotColumns: listWidth >= 480
 
     signal submitted(string text)
     // A suggested artist, album or playlist (Collection.Kind and key).
@@ -108,6 +114,82 @@ SearchBar {
         picked = Math.min(picked, lines.length - 1);
     }
 
+    // The item showing line `index`, or null.
+    function lineItem(index: int): Item {
+        if (index < 0)
+            return null;
+        if (typing)
+            return suggestionRepeater.itemAt(index);
+        return index < historyCount ? chipRepeater.itemAt(index)
+                                    : hotRepeater.itemAt(index - historyCount);
+    }
+    function lineCentre(index: int): point {
+        const item = lineItem(index);
+        return item.mapToItem(lineColumn, item.width / 2, item.height / 2);
+    }
+
+    // Moves the pick a row (dy) or within the row (dx). Rows are where the items are:
+    // a row of chips, a row of the trending columns.
+    function move(dx: int, dy: int): void {
+        if (typing) {
+            picked = Math.max(-1, Math.min(lines.length - 1, picked + dy));
+            return;
+        }
+        const items = [];
+        for (let i = 0; i < lines.length; ++i) {
+            const item = lineItem(i);
+            if (item && item.shown)
+                items.push({
+                    index: i,
+                    centre: lineCentre(i)
+                });
+        }
+        if (items.length === 0)
+            return;
+        const current = picked >= 0 ? lineItem(picked) : null;
+        if (!current || !current.shown) {
+            if (dy > 0)
+                picked = items[0].index;
+            return;
+        }
+        const here = lineCentre(picked);
+        const nearestX = row => row.reduce((best, item) => Math.abs(item.centre.x - here.x)
+                                           < Math.abs(best.centre.x - here.x) ? item : best);
+        if (dy !== 0) {
+            const others = items.filter(item => dy > 0 ? item.centre.y > here.y + 4
+                                                       : item.centre.y < here.y - 4);
+            if (others.length === 0) {
+                // Up from the first row: back to the text.
+                if (dy < 0)
+                    picked = -1;
+                return;
+            }
+            const rowY = others.reduce((best, item) => Math.abs(item.centre.y - here.y)
+                                       < Math.abs(best - here.y) ? item.centre.y : best,
+                                       others[0].centre.y);
+            picked = nearestX(others.filter(item => Math.abs(item.centre.y - rowY) < 4)).index;
+        } else {
+            const row = items.filter(item => Math.abs(item.centre.y - here.y) < 4
+                                     && (dx > 0 ? item.centre.x > here.x : item.centre.x < here.x));
+            if (row.length > 0)
+                picked = nearestX(row).index;
+        }
+    }
+
+    // Keeps the picked line in view inside the scrolling list.
+    function revealLine(index: int): void {
+        const item = lineItem(index);
+        if (!item)
+            return;
+        const y = item.mapToItem(lineColumn, 0, 0).y;
+        if (index <= 0)
+            flick.contentY = 0;
+        else if (y < flick.contentY)
+            flick.contentY = y;
+        else if (y + item.height > flick.contentY + flick.height)
+            flick.contentY = y + item.height - flick.height;
+    }
+
     height: 40
     handlesEscape: false
     placeholderText: qsTr("搜索歌曲、歌手、专辑、歌单、播客")
@@ -139,11 +221,23 @@ SearchBar {
         if (!listShown)
             listWanted = true;
         else
-            picked = Math.min(picked + 1, lines.length - 1);
+            move(0, 1);
     }
     Keys.onUpPressed: {
         if (listShown)
-            picked = Math.max(picked - 1, -1);
+            move(0, -1);
+    }
+    Keys.onLeftPressed: event => {
+        if (listShown && !typing && picked >= 0)
+            move(-1, 0);
+        else
+            event.accepted = false;
+    }
+    Keys.onRightPressed: event => {
+        if (listShown && !typing && picked >= 0)
+            move(1, 0);
+        else
+            event.accepted = false;
     }
     Keys.onDeletePressed: event => {
         if (listShown && picked >= 0 && lines[picked].type === "history")
@@ -172,7 +266,109 @@ SearchBar {
         font: Theme.type.labelMedium.font
     }
 
-    // The list unfolds from the field and follows its line count with a spring, so
+    // A group's title (recent, trending); recent searches can be cleared from it.
+    component GroupTitle: Item {
+        id: groupTitle
+
+        property string text
+        property bool clearable: false
+
+        width: parent ? parent.width : 0
+        height: 36
+        Text {
+            x: 16
+            anchors.verticalCenter: parent.verticalCenter
+            text: groupTitle.text
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.labelLarge.font
+        }
+        Button {
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            visible: groupTitle.clearable
+            variant: Md.Text
+            size: Md.XSmall
+            focusPolicy: Qt.NoFocus
+            text: qsTr("清除")
+            onClicked: field.historyCleared()
+        }
+    }
+
+    // A recent search: an input chip with its remove button (MD3 input chip).
+    component HistoryChip: T.AbstractButton {
+        id: chip
+
+        required property int index
+        required property var modelData
+        // Within the two rows the list shows.
+        readonly property bool shown: y < 2 * 40
+        readonly property bool highlighted: index === field.picked
+
+        implicitWidth: implicitContentWidth + leftPadding + rightPadding
+        implicitHeight: 32
+        leftPadding: 12
+        rightPadding: 4
+        spacing: 2
+        focusPolicy: Qt.NoFocus
+        enabled: shown
+        opacity: shown ? 1 : 0
+        text: modelData.text
+        Accessible.name: qsTr("搜索历史：%1").arg(text)
+        onClicked: field.run(modelData)
+
+        Spring {
+            id: chipSelection
+            target: chip.highlighted ? 1 : 0
+            spec: Theme.motion.defaultEffects
+        }
+
+        contentItem: Row {
+            spacing: chip.spacing
+            Text {
+                width: Math.min(implicitWidth, 160)
+                anchors.verticalCenter: parent.verticalCenter
+                text: chip.text
+                elide: Text.ElideRight
+                color: Theme.mix(Theme.color.onSurface, Theme.color.onSecondaryContainer,
+                                 chipSelection.value)
+                font: Theme.type.labelLarge.font
+            }
+            T.AbstractButton {
+                id: remove
+                width: 24
+                height: 24
+                anchors.verticalCenter: parent.verticalCenter
+                focusPolicy: Qt.NoFocus
+                Accessible.name: qsTr("删除这条搜索历史（Delete）")
+                onClicked: field.removeHistory(chip.index)
+                contentItem: Icon {
+                    glyph: Symbols.close
+                    size: 16
+                    color: Theme.color.onSurfaceVariant
+                }
+                background: StateLayer {
+                    radius: width / 2
+                    hovered: remove.hovered
+                    pressed: remove.pressed
+                }
+            }
+        }
+
+        background: Rectangle {
+            radius: Theme.shape.small
+            color: Theme.mix(Theme.color.surfaceContainerHighest, Theme.color.secondaryContainer,
+                             chipSelection.value)
+            StateLayer {
+                anchors.fill: parent
+                radius: parent.radius
+                hovered: chip.hovered && !remove.hovered
+                pressed: chip.pressed
+            }
+        }
+    }
+
+    // The list unfolds from the field and follows its height with a spring, so
     // suggestions arriving while typing don't make it jump; it fades out on close.
     // Opened and closed from `listShown`; a press outside the field and the list
     // closes it too (clicking the field, typing or ↓ opens it again).
@@ -184,7 +380,7 @@ SearchBar {
         property bool unfolded: false
 
         y: field.height + 4
-        width: field.width
+        width: field.listWidth
         height: Math.max(0, sizeSpring.value)
         padding: 0
         topPadding: 8
@@ -192,7 +388,10 @@ SearchBar {
         // Never takes the focus: typing goes on in the field.
         focus: false
         closePolicy: T.Popup.CloseOnPressOutsideParent
-        onAboutToShow: unfolded = true
+        onAboutToShow: {
+            field.windowX = field.mapToItem(null, 0, 0).x;
+            unfolded = true;
+        }
         onClosed: {
             unfolded = false;
             sizeSpring.snapTo(0);
@@ -239,13 +438,13 @@ SearchBar {
             }
         }
 
-        // Long lists (recent and trending: up to 20 lines) scroll inside the window.
+        // Scrolls inside the window when there are many suggestions.
         contentItem: Flickable {
             id: flick
             implicitHeight: Math.min(lineColumn.implicitHeight,
                                      Math.max(160, (field.Window.height || 800) - 120))
             contentHeight: lineColumn.implicitHeight
-            // Rows past the springing height stay hidden.
+            // What is past the springing height stays hidden.
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
@@ -255,109 +454,175 @@ SearchBar {
                 id: lineColumn
                 width: flick.width
 
+                // Empty field: recent searches as chips, at most two rows.
+                Column {
+                    width: parent.width
+                    visible: field.historyCount > 0
+                    bottomPadding: 8
+                    GroupTitle {
+                        text: qsTr("搜索历史")
+                        clearable: true
+                    }
+                    Item {
+                        x: 16
+                        width: parent.width - 32
+                        height: Math.min(chipFlow.implicitHeight, 2 * 32 + 8)
+                        clip: true
+                        Flow {
+                            id: chipFlow
+                            width: parent.width
+                            spacing: 8
+                            Repeater {
+                                id: chipRepeater
+                                model: field.typing ? [] : field.lines.slice(0, field.historyCount)
+                                delegate: HistoryChip {}
+                            }
+                        }
+                    }
+                }
+
+                // Empty field: trending, 1–5 then 6–10 beside them.
+                Column {
+                    width: parent.width
+                    visible: !field.typing && field.lines.length > field.historyCount
+                    GroupTitle {
+                        text: qsTr("热门搜索")
+                    }
+                    Grid {
+                        id: hotGrid
+                        width: parent.width
+                        flow: Grid.TopToBottom
+                        rows: Math.max(1, field.hotColumns ? Math.ceil(hotRepeater.count / 2)
+                                                           : hotRepeater.count)
+                        Repeater {
+                            id: hotRepeater
+                            model: field.typing ? [] : field.lines.slice(field.historyCount)
+                            delegate: ListItem {
+                                id: hot
+
+                                required property int index
+                                required property var modelData
+                                readonly property bool shown: true
+
+                                width: field.hotColumns ? hotGrid.width / 2 : hotGrid.width
+                                implicitHeight: 44
+                                topPadding: 0
+                                bottomPadding: 0
+                                focusPolicy: Qt.NoFocus
+                                highlighted: index + field.historyCount === field.picked
+                                text: modelData.text
+                                Accessible.name: text
+                                onClicked: field.run(modelData)
+                                // Rank: the first three in primary.
+                                leading: Text {
+                                    width: 24
+                                    horizontalAlignment: Text.AlignHCenter
+                                    text: hot.modelData.rank ?? ""
+                                    color: hot.modelData.rank <= 3 ? Theme.color.primary
+                                                                   : Theme.color.onSurfaceVariant
+                                    font: Fonts.tabular(Theme.type.titleSmall.font)
+                                }
+                                trailing: (modelData.note ?? "") !== "" ? hotNote : null
+                                Component {
+                                    id: hotNote
+                                    Text {
+                                        width: Math.min(implicitWidth, hot.width * 0.45)
+                                        text: hot.modelData.note
+                                        elide: Text.ElideRight
+                                        color: Theme.color.onSurfaceVariant
+                                        font: Theme.type.bodySmall.font
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Typing: "搜索「…」", then suggestions with their type in a left column.
                 Repeater {
-                    id: lineRepeater
-                    model: field.lines
-                    delegate: Column {
-                        id: entry
+                    id: suggestionRepeater
+                    model: field.typing ? field.lines : []
+                    delegate: T.AbstractButton {
+                        id: line
 
                         required property int index
                         required property var modelData
-                        readonly property bool isHistory: modelData.type === "history"
+                        readonly property bool shown: true
+                        readonly property bool highlighted: index === field.picked
 
                         width: lineColumn.width
+                        height: 44
+                        leftPadding: 16
+                        rightPadding: 16
+                        focusPolicy: Qt.NoFocus
+                        text: modelData.type === "query" ? qsTr("搜索「%1」").arg(modelData.text)
+                                                         : modelData.text
+                        Accessible.name: text
+                        onClicked: field.run(modelData)
 
-                        // The group's title; recent searches can be cleared from it.
-                        Item {
-                            width: parent.width
-                            height: 36
-                            visible: entry.modelData.group !== ""
-                            Text {
-                                x: 16
+                        Spring {
+                            id: lineSelection
+                            target: line.highlighted ? 1 : 0
+                            spec: Theme.motion.defaultEffects
+                        }
+
+                        contentItem: Item {
+                            Icon {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: entry.modelData.group
+                                visible: line.modelData.type === "query"
+                                glyph: Symbols.search
+                                size: 20
                                 color: Theme.color.onSurfaceVariant
-                                font: Theme.type.labelLarge.font
                             }
-                            Button {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 8
+                            Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                visible: entry.isHistory
-                                variant: Md.Text
-                                size: Md.XSmall
-                                focusPolicy: Qt.NoFocus
-                                text: qsTr("清除")
-                                onClicked: field.historyCleared()
+                                width: 56
+                                visible: line.modelData.type !== "query"
+                                text: line.modelData.group ?? ""
+                                color: Theme.color.onSurfaceVariant
+                                font: Theme.type.labelMedium.font
+                            }
+                            // The typed part in primary.
+                            Text {
+                                x: 56
+                                width: parent.width - x
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                                textFormat: Text.StyledText
+                                text: {
+                                    const escape = s => s.replace(/&/g, "&amp;")
+                                                         .replace(/</g, "&lt;")
+                                                         .replace(/>/g, "&gt;");
+                                    if (line.modelData.type === "query")
+                                        return escape(line.text);
+                                    const title = line.modelData.text;
+                                    const typed = field.text.trim();
+                                    const at = title.toLowerCase().indexOf(typed.toLowerCase());
+                                    if (at < 0 || typed === "")
+                                        return escape(title);
+                                    return escape(title.slice(0, at)) + "<font color=\""
+                                        + Theme.color.primary + "\">"
+                                        + escape(title.slice(at, at + typed.length)) + "</font>"
+                                        + escape(title.slice(at + typed.length));
+                                }
+                                color: Theme.mix(Theme.color.onSurface,
+                                                 Theme.color.onSecondaryContainer,
+                                                 lineSelection.value)
+                                font: Theme.type.bodyLarge.font
                             }
                         }
-                        ListItem {
-                            id: line
-                            width: parent.width
-                            implicitHeight: 44
-                            topPadding: 0
-                            bottomPadding: 0
-                            focusPolicy: Qt.NoFocus
-                            highlighted: entry.index === field.picked
-                            leadingGlyph: entry.modelData.glyph ?? ""
-                            leading: entry.modelData.type === "hot" ? rank : null
-                            trailing: entry.isHistory ? remove
-                                    : (entry.modelData.note ?? "") !== "" ? note : null
-                            text: entry.modelData.type === "query"
-                                  ? qsTr("搜索「%1」").arg(entry.modelData.text)
-                                  : entry.modelData.text
-                            Accessible.name: text
-                            onClicked: field.run(entry.modelData)
 
-                            // Trending rank: the first three in primary.
-                            Component {
-                                id: rank
-                                Text {
-                                    width: 24
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: entry.modelData.rank
-                                    color: entry.modelData.rank <= 3 ? Theme.color.primary
-                                                                     : Theme.color.onSurfaceVariant
-                                    font: Fonts.tabular(Theme.type.titleSmall.font)
-                                }
-                            }
-                            Component {
-                                id: note
-                                Text {
-                                    width: Math.min(implicitWidth, line.width * 0.4)
-                                    text: entry.modelData.note
-                                    elide: Text.ElideRight
-                                    color: Theme.color.onSurfaceVariant
-                                    font: Theme.type.bodySmall.font
-                                }
-                            }
-                            Component {
-                                id: remove
-                                IconButton {
-                                    size: Md.XSmall
-                                    focusPolicy: Qt.NoFocus
-                                    glyph: Symbols.close
-                                    text: qsTr("删除这条搜索历史（Delete）")
-                                    onClicked: field.removeHistory(entry.index)
-                                }
+                        background: Rectangle {
+                            color: Qt.alpha(Theme.color.secondaryContainer, lineSelection.value)
+                            StateLayer {
+                                anchors.fill: parent
+                                hovered: line.hovered
+                                pressed: line.pressed
                             }
                         }
                     }
                 }
             }
         }
-    }
-
-    // Keeps the picked line in view inside the scrolling list.
-    function revealLine(index: int): void {
-        const item = lineRepeater.itemAt(index);
-        if (!item)
-            return;
-        if (index === 0)
-            flick.contentY = 0;
-        else if (item.y < flick.contentY)
-            flick.contentY = item.y;
-        else if (item.y + item.height > flick.contentY + flick.height)
-            flick.contentY = item.y + item.height - flick.height;
     }
 }
