@@ -17,7 +17,9 @@ import Cirrus.Presentation
 // Enter plays it, Ctrl+A selects all, the menu key or Shift+F10 opens its menu.
 // Typed characters go to `typed` (the page's in-page find). `removable` adds
 // removing (menu, Delete) through `removeRequested`. Reordering has its own page
-// (playlist.md §13), away from accidental drags.
+// (playlist.md §13), away from accidental drags. `voices` shows podcast voices
+// (search.md §3.4): episode numbers, the podcast under the title, no liking or
+// adding to playlists; they play through App.player.playVoices.
 //   SongTable { songs: SortedSongsModel { source: pageModel.songs } }
 Item {
     id: table
@@ -45,6 +47,10 @@ Item {
     property bool numberByPosition: false
     // The page's own playlist: songs can be removed.
     property bool removable: false
+    // Podcast voices instead of songs; pages also turn off the liked and album columns.
+    property bool voices: false
+    // Voices can't play until the backend can (search.md §3.4).
+    readonly property bool playable: !voices || App.player.canPlayVoices
     readonly property ListView view: list
     readonly property real rowPitch: 56 + list.spacing
     // The rows on screen (rows start at content y 0, under the header), for loading
@@ -94,6 +100,7 @@ Item {
     property bool keyboardUsed: false
 
     signal albumRequested(string key)
+    signal podcastRequested(string key)
     signal artistRequested(string key)
     signal typed(string text)
     signal signInRequested
@@ -116,11 +123,14 @@ Item {
 
     // Plays the shown order from `row`, leaving out songs the service has no details for.
     function play(row: int): void {
-        if (row < 0 || row >= songs.count || isMissing(row))
+        if (row < 0 || row >= songs.count || isMissing(row) || !playable)
             return;
         const key = songs.keyAt(row);
         const keys = songs.keys().filter((k, i) => !isMissing(i));
-        App.player.playSongs(keys, keys.indexOf(key));
+        if (voices)
+            App.player.playVoices(keys, keys.indexOf(key));
+        else
+            App.player.playSongs(keys, keys.indexOf(key));
     }
     function isMissing(row: int): bool {
         return songs.data(songs.index(row, 0), SongListModel.MissingRole) === true;
@@ -505,6 +515,7 @@ Item {
             required property bool liked
             required property bool missing
             required property int position
+            required property int serial
             required property string reason
 
             readonly property bool selected: table.selectedKeys[key] === true
@@ -628,7 +639,8 @@ Item {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             visible: !row.hovered && !row.current
-                            text: table.numberByPosition ? row.position : row.index + 1
+                            text: table.voices && row.serial >= 0 ? row.serial
+                                : table.numberByPosition ? row.position : row.index + 1
                             color: row.mutedColor
                             font: Fonts.tabular(Theme.type.labelLarge.font)
                         }
@@ -646,6 +658,7 @@ Item {
                             anchors.rightMargin: -6
                             anchors.verticalCenter: parent.verticalCenter
                             visible: row.hovered && row.loaded
+                            enabled: table.playable
                             size: Md.XSmall
                             focusPolicy: Qt.NoFocus
                             showToolTip: false
@@ -693,9 +706,20 @@ Item {
                             color: row.strongColor
                             font: Theme.type.bodyLarge.font
                         }
+                        // A voice's podcast opens its page.
+                        LinkText {
+                            width: Math.min(implicitWidth, parent.width)
+                            visible: table.voices
+                            enabled: row.albumKey !== ""
+                            text: row.albumTitle
+                            color: row.mutedColor
+                            font: Theme.type.bodyMedium.font
+                            onActivated: table.podcastRequested(row.albumKey)
+                        }
                         // Each artist opens their page.
                         Row {
                             width: parent.width
+                            visible: !table.voices
                             clip: true
                             Repeater {
                                 model: row.artists
@@ -871,24 +895,32 @@ Item {
 
         MenuItem {
             glyph: Symbols.play_arrow
-            text: songMenu.songCount > 1 ? qsTr("播放选中的 %1 首").arg(songMenu.songCount)
-                                         : qsTr("播放")
+            enabled: table.playable
+            text: !table.playable ? qsTr("声音播放即将支持")
+                : songMenu.songCount > 1 ? qsTr("播放选中的 %1 首").arg(songMenu.songCount)
+                : qsTr("播放")
             onTriggered: {
-                if (songMenu.songCount > 1)
-                    App.player.playSongs(songMenu.keys, 0);
-                else
+                if (songMenu.songCount <= 1)
                     table.play(songMenu.row);
+                else if (table.voices)
+                    App.player.playVoices(songMenu.keys, 0);
+                else
+                    App.player.playSongs(songMenu.keys, 0);
             }
         }
-        MenuSeparator {}
+        MenuSeparator {
+            visible: !table.voices
+        }
         MenuItem {
-            visible: songMenu.songCount === 1
+            visible: songMenu.songCount === 1 && !table.voices
             height: visible ? implicitHeight : 0
             glyph: Symbols.favorite
             text: songMenu.liked ? qsTr("取消喜欢") : qsTr("喜欢")
             onTriggered: table.setLiked(songMenu.key, !songMenu.liked)
         }
         MenuItem {
+            visible: !table.voices
+            height: visible ? implicitHeight : 0
             glyph: Symbols.playlist_add
             text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
                                          : qsTr("收藏到歌单…")
@@ -912,6 +944,14 @@ Item {
             glyph: Symbols.album
             text: qsTr("查看专辑")
             onTriggered: table.albumRequested(songMenu.albumKey)
+        }
+        MenuItem {
+            visible: table.voices
+            height: visible ? implicitHeight : 0
+            enabled: songMenu.albumKey !== ""
+            glyph: Symbols.podcasts
+            text: qsTr("查看播客")
+            onTriggered: table.podcastRequested(songMenu.albumKey)
         }
         Instantiator {
             model: songMenu.artists

@@ -5,7 +5,7 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// A playlist, album or artist card: cover (round for artists), title and subtitle.
+// A playlist, album, artist or podcast card: cover (round for artists), title and subtitle.
 // `text` is the title. The state layer covers the whole card.
 T.AbstractButton {
     id: control
@@ -30,7 +30,8 @@ T.AbstractButton {
             height: width
             radius: control.artist ? width / 2 : Theme.shape.medium
             glyph: control.kind === Collection.Album ? Symbols.album
-                 : control.artist ? Symbols.person : Symbols.queue_music
+                 : control.artist ? Symbols.person
+                 : control.kind === Collection.Podcast ? Symbols.podcasts : Symbols.queue_music
             coverKey: control.coverKey
         }
         Column {

@@ -108,6 +108,13 @@ Item {
         });
     }
 
+    function openPodcast(key: string) {
+        shell.go(podcastPage, {
+            shell: shell,
+            podcastKey: key
+        });
+    }
+
     function openSearch() {
         if (!searching)
             shell.go(searchPage, {
@@ -197,6 +204,8 @@ Item {
             openAlbum(key);
         else if (kind === Collection.Artist)
             openArtist(key);
+        else if (kind === Collection.Podcast)
+            openPodcast(key);
         else
             openPlaylist(key);
     }
@@ -283,6 +292,10 @@ Item {
     Component {
         id: artistPage
         ArtistPage {}
+    }
+    Component {
+        id: podcastPage
+        PodcastPage {}
     }
     Component {
         id: dailySongsPage

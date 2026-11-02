@@ -112,56 +112,6 @@ SongCollectionPage {
         }
     }
 
-    // A tab's own loading, failure or emptiness, inside the page.
-    component TabState: Item {
-        id: tabState
-
-        required property LoadableModel model
-        property string emptyGlyph: Symbols.person
-        property string emptyText
-        readonly property int loadState: model.state
-
-        width: parent ? parent.width : 0
-        height: loadState === LoadState.Ready || loadState === LoadState.Partial
-                || loadState === LoadState.Idle ? 0 : 160
-        visible: height > 0
-
-        LoadingIndicator {
-            anchors.centerIn: parent
-            implicitWidth: 48
-            implicitHeight: 48
-            visible: tabState.loadState === LoadState.Loading
-        }
-        StateMessage {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, 360)
-            visible: tabState.loadState === LoadState.Empty
-            glyph: tabState.emptyGlyph
-            message: tabState.emptyText
-        }
-        StateMessage {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, 360)
-            visible: tabState.loadState === LoadState.Error
-                     || tabState.loadState === LoadState.Offline
-            glyph: Symbols.error
-            message: tabState.model.error.message
-            actionText: qsTr("重试")
-            actionGlyph: Symbols.refresh
-            onActionTriggered: tabState.model.retry()
-        }
-        StateMessage {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, 360)
-            visible: tabState.loadState === LoadState.SignedOut
-            glyph: Symbols.account_circle
-            message: qsTr("登录后可以看到相似的歌手")
-            actionText: qsTr("登录")
-            actionGlyph: Symbols.login
-            onActionTriggered: page.shell.openLogin()
-        }
-    }
-
     infoContent: Column {
         spacing: 8
 
@@ -366,6 +316,8 @@ SongCollectionPage {
                 model: pageModel.similar
                 emptyGlyph: Symbols.person
                 emptyText: qsTr("暂时没有相似的歌手")
+                signedOutText: qsTr("登录后可以看到相似的歌手")
+                onSignInRequested: page.shell.openLogin()
             }
             CollectionGrid {
                 width: parent.width

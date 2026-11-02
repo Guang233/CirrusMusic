@@ -19,6 +19,8 @@ qt_add_qml_module(appCirrusMusic
         PlaylistOrderPage.qml
         AlbumPage.qml
         ArtistPage.qml
+        PodcastPage.qml
+        TabState.qml
         SearchPage.qml
         FeedPage.qml
         DailySongsPage.qml

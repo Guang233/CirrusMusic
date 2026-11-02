@@ -12,6 +12,7 @@ import Cirrus.Presentation
 // under it. Ctrl+F (AppShell) calls find(); typing on the table finds too.
 // Pages with tabs (artist.md) add a tab row under the actions, pinned under the
 // compact bar once scrolled there, and show other content than songs in `bodyContent`.
+// Podcasts (search.md §3.4) list their voices in the same table (`voices`).
 // The header's parts are components, since they live inside the table's header:
 //   SongCollectionPage { model: pageModel; songs: pageModel.songs; title: …
 //       infoContent: Column { … }; actionsContent: Row { … } }
@@ -73,6 +74,9 @@ Item {
     property bool reasonColumn: false
     property bool numberByPosition: false
     property bool showAlbumAction: true
+    property bool showLiked: true
+    // Podcast voices instead of songs (search.md §3.4): they play with playVoices.
+    property bool voices: false
 
     readonly property alias table: songTable
     readonly property alias sorted: sortedModel
@@ -87,7 +91,8 @@ Item {
     property Item headerActions: null
     property Item headerTabs: null
     property SearchBar headerFind: null
-    readonly property bool canPlay: playSource ? playSource.count > 0 : hasSongs
+    readonly property bool canPlay: (playSource ? playSource.count > 0 : hasSongs)
+                                    && (!voices || App.player.canPlayVoices)
     // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
     readonly property real compactProgress: headerActions
         ? Math.max(0, Math.min(1, (songTable.scrolled - headerActions.y - headerActions.height
@@ -109,7 +114,11 @@ Item {
 
     function playAll(): void {
         const keys = playSource ? playSource.keys() : sortedModel.keys();
-        if (keys.length > 0)
+        if (keys.length === 0)
+            return;
+        if (voices)
+            App.player.playVoices(keys, 0);
+        else
             App.player.playSongs(keys, 0);
     }
 
@@ -260,6 +269,9 @@ Item {
         reasonColumn: page.reasonColumn
         numberByPosition: page.numberByPosition
         showAlbumAction: page.showAlbumAction
+        showLiked: page.showLiked
+        voices: page.voices
+        onPodcastRequested: key => page.shell.openPodcast(key)
         onRemoveRequested: keys => page.removeRequested(keys)
         onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)
         onSignInRequested: page.shell.openLogin()

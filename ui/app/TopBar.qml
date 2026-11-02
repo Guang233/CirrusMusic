@@ -69,13 +69,17 @@ Item {
         x: history.x + history.width + 12
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(0, Math.min(400, actionRow.x - 16 - x))
+        history: bar.shell.searchModel.history
+        hotKeywords: bar.shell.searchModel.hotKeywords
         suggestions: bar.shell.searchModel.suggestions
-        trending: bar.shell.searchModel.hotKeywords
         onTextEdited: {
             if (!bar.shell.searching && text.trim() !== "")
                 bar.shell.openSearch();
         }
         onSubmitted: value => bar.shell.search(value)
+        onOpened: (kind, key) => bar.shell.openCollection(kind, key)
+        onHistoryRemoved: value => bar.shell.searchModel.removeHistory(value)
+        onHistoryCleared: bar.shell.searchModel.clearHistory()
         onDismissed: bar.shell.focusContent()
     }
 
