@@ -22,7 +22,7 @@ qt_add_qml_module(appCirrusMusic
         PodcastPage.qml
         TabState.qml
         SearchPage.qml
-        FeedPage.qml
+        DiscoverPage.qml
         DailySongsPage.qml
         LibraryPage.qml
         NewPlaylistDialog.qml

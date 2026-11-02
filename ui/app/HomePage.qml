@@ -225,7 +225,7 @@ Item {
                 showsAll: true
                 model: recommended
                 skeleton: CardsPlaceholder {}
-                onAllRequested: page.shell.select(1)
+                onAllRequested: page.shell.openDiscover(0)
 
                 Cards {
                     model: recommended.items
@@ -238,7 +238,7 @@ Item {
                 showsAll: true
                 model: charts
                 skeleton: CardsPlaceholder {}
-                onAllRequested: page.shell.select(1)
+                onAllRequested: page.shell.openDiscover(1)
 
                 Flow {
                     id: chartFlow
@@ -268,7 +268,7 @@ Item {
                 showsAll: true
                 model: newAlbums
                 skeleton: CardsPlaceholder {}
-                onAllRequested: page.shell.select(1)
+                onAllRequested: page.shell.openDiscover(3)
 
                 Cards {
                     model: newAlbums.items
@@ -281,7 +281,7 @@ Item {
                 showsAll: true
                 model: artists
                 skeleton: CardsPlaceholder {}
-                onAllRequested: page.shell.select(1)
+                onAllRequested: page.shell.openDiscover(2)
 
                 Cards {
                     minimumCardWidth: 144

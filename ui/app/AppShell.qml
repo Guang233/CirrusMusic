@@ -34,6 +34,8 @@ Item {
     property var forwardEntries: []
     // The library page's collection tab (library.md §2), kept while the app runs.
     property int libraryTab: 0
+    // The discover page's tab (discover.md §2), likewise.
+    property int discoverTab: 0
     // The account's playlists (the rail's, and the add-to-playlist dialog's).
     readonly property LibraryPageModel library: myLibrary
     // The playlist the current page shows, for the rail's playlist rows.
@@ -186,6 +188,13 @@ Item {
             select(2);
     }
 
+    // A discover tab (0 playlists, 1 charts, 2 artists, 3 new albums): the home page's
+    // "查看全部".
+    function openDiscover(tab: int) {
+        discoverTab = tab;
+        select(1);
+    }
+
     function openRecent() {
         shell.go(recentPage, {
             shell: shell
@@ -274,10 +283,7 @@ Item {
     }
     Component {
         id: discoverPage
-        FeedPage {
-            title: qsTr("发现")
-            feed: Feed.Discover
-        }
+        DiscoverPage {}
     }
     Component {
         id: searchPage

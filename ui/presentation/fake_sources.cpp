@@ -279,7 +279,8 @@ void fillPlaylistDetails(PlaylistInfo& info)
     };
     const qint64 seed = std::accumulate(info.key.cbegin(), info.key.cend(), qint64(7),
                                         [](qint64 sum, QChar c) { return sum * 31 + c.unicode(); });
-    const qint64 n = qAbs(seed);
+    // Mixed, so keys that differ in one letter get far apart numbers.
+    const qint64 n = qint64((quint64(seed) * 0x9E37'79B9'7F4A'7C15ull) >> 24);
     info.tags = tags.value(info.key);
     info.playCount = 2'000 + n % 1'500'000;
     info.subscriberCount = 40 + n % 9'000;

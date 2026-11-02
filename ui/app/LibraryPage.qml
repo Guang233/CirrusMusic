@@ -328,26 +328,15 @@ Item {
                 width: parent.width
                 height: 40
                 visible: page.tab === 0
-                Row {
+                ChipGroup {
+                    width: newPlaylistButton.x - 16
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-                    T.ButtonGroup {
-                        id: filterGroup
-                    }
-                    Repeater {
-                        model: [qsTr("全部"), qsTr("创建的"), qsTr("收藏的")]
-                        delegate: Chip {
-                            required property int index
-                            required property string modelData
-                            checkable: true
-                            checked: overview.playlists.filter === index
-                            T.ButtonGroup.group: filterGroup
-                            text: modelData
-                            onClicked: overview.playlists.filter = index
-                        }
-                    }
+                    model: [qsTr("全部"), qsTr("创建的"), qsTr("收藏的")]
+                    currentIndex: overview.playlists.filter
+                    onActivated: index => overview.playlists.filter = index
                 }
                 Button {
+                    id: newPlaylistButton
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     variant: Md.Tonal

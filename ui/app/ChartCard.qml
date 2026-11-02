@@ -5,8 +5,10 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
 
-// A chart on the home page: cover, name and update schedule, then its top songs with
-// their ranks. The whole card opens the chart (a playlist).
+// A chart: cover, name and update schedule, then its top songs with their ranks. The
+// whole card opens the chart (a playlist). On the home page the songs are under the
+// cover; `wide` (discover's official charts) puts them beside a larger cover and adds
+// a play button at the top right (`playRequested`).
 T.AbstractButton {
     id: control
 
@@ -14,8 +16,11 @@ T.AbstractButton {
     property string updateLabel
     // [{title, subtitle}], the first few songs.
     property var previews: []
+    property bool wide: false
 
-    implicitHeight: 216
+    signal playRequested
+
+    implicitHeight: wide ? 184 : 216
     focusPolicy: Qt.TabFocus
     Accessible.role: Accessible.Button
     Accessible.name: text
@@ -48,17 +53,18 @@ T.AbstractButton {
             id: cover
             x: 16
             y: 16
-            width: 72
-            height: 72
+            width: control.wide ? 152 : 72
+            height: width
             coverKey: control.coverKey
             radius: Theme.shape.medium
         }
         Column {
+            id: heading
             anchors.left: cover.right
             anchors.leftMargin: 16
-            anchors.right: parent.right
-            anchors.rightMargin: 16
-            anchors.verticalCenter: cover.verticalCenter
+            anchors.right: play.visible ? play.left : parent.right
+            anchors.rightMargin: play.visible ? 8 : 16
+            y: control.wide ? cover.y : cover.y + (cover.height - height) / 2
             spacing: 4
             Text {
                 width: parent.width
@@ -77,11 +83,23 @@ T.AbstractButton {
             }
         }
 
+        IconButton {
+            id: play
+            x: parent.width - width - 12
+            y: 12
+            visible: control.wide
+            variant: Md.Tonal
+            glyph: Symbols.play_arrow
+            iconFill: 1
+            text: qsTr("播放%1").arg(control.text)
+            onClicked: control.playRequested()
+        }
+
         // Ranked top songs.
         Column {
-            x: 16
-            y: cover.y + cover.height + 12
-            width: parent.width - 32
+            x: control.wide ? heading.x : 16
+            y: control.wide ? cover.y + cover.height - height : cover.y + cover.height + 12
+            width: parent.width - x - 16
             Repeater {
                 model: control.previews
                 Item {
@@ -89,7 +107,7 @@ T.AbstractButton {
                     required property int index
                     required property var modelData
                     width: parent.width
-                    height: 36
+                    height: control.wide ? 32 : 36
                     Text {
                         id: rank
                         width: 20
