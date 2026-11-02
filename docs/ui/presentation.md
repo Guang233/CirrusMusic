@@ -175,7 +175,7 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | --- | --- | --- |
 | `HomePageModel` | 首页／发现 | `sections`（列表模型：每节有 `kind`、`title`、`items`），每日推荐入口、私人 FM 入口 |
 | `DailySongsPageModel` | 每日推荐 | `songs`；未登录为 `SignedOut` |
-| `SearchModel` | 搜索 | `text`；`suggestions`（输入停顿 200 ms 后请求，新输入取消旧请求）；`hotKeywords`；`submit()`；四个结果标签页 `songs`／`albums`／`artists`／`playlists`，各自分页，切到哪个标签才加载哪个，各有自己的状态 |
+| `SearchModel` | 搜索 | `text`；`suggestions`（分组，输入停顿 200 ms 后请求，新输入取消旧请求）；`hotKeywords`（带说明）；`history`、`removeHistory()`、`clearHistory()`；`submit()`；七个标签 `overview`（综合，4 个并发小请求和最佳匹配）／`songs`／`artists`／`albums`／`playlists`／`podcasts`／`voices`，单类标签各自分页、带总数，切到哪个标签才加载哪个，各有自己的状态（[pages/search.md](pages/search.md)） |
 | `PlaylistPageModel` | 歌单详情 | 头部（标题、简介、创建者、`coverKey`、`tags`、`updatedText`、`playCount`／`subscriberCount`／`commentCount`（未知为 -1）、`own`）、`songs`；`subscribed` 可写（先改界面，失败时撤回并发 `writeFailed(message)`，成功时发 `libraryChanged()`） |
 | `AlbumPageModel` | 专辑详情 | 头部（标题、歌手、发行时间）、`songs`；不完整时为 `Partial` |
 | `ArtistPageModel` | 歌手详情 | 头部（名字、简介、头像）、`topSongs`、`albums`（分页） |
@@ -231,7 +231,7 @@ public:
     virtual Request playlist(const QString& key, Reply<PlaylistPage> reply) = 0;
     virtual Request songs(const QStringList& keys, Reply<QList<SongInfo>> reply) = 0;
     virtual Request search(SearchKind kind, const QString& text, PageRequest page, Reply<SearchPage> reply) = 0;
-    // album、artist、artistSongs、artistAlbums、suggestions、hotKeywords、home、dailySongs、dailyHistoryDates、dailyHistorySongs……
+    // album、artist、artistSongs、artistAlbums、suggestions、hotKeywords、searchVoices、podcast、podcastVoices、home、dailySongs、dailyHistoryDates、dailyHistorySongs……
 };
 
 } // namespace cirrus::ui

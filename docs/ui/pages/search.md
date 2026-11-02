@@ -1,4 +1,6 @@
-# 搜索页设计（待评审，2026-11-02）
+# 搜索页设计（已评审，2026-11-02）
+
+**维护者已定**：S1–S3 按建议；S4 维护者提议一起做（播客≈歌单，声音≈歌曲），按 §3.4 实现。
 
 顶栏搜索框的行为（下拉列表、键盘、Esc、进入搜索页）已在 [shell.md §3](shell.md) 定下，本文是下拉列表的内容和搜索页本身。参考了维护者给的网易云搜索页截图（§6）。
 
@@ -61,7 +63,7 @@ Xaleid◆scopiX                                         ← 搜索词，headline
 
 - 卡片网格（`CollectionGrid`），歌手为圆形；滚到底分页加载（每页 30）。点卡片打开对应页面。
 
-### 3.4 播客、声音（S4，待确认）
+### 3.4 播客、声音（S4）
 
 维护者提议一起做（播客≈歌单，声音≈歌曲）。后端现状（[spoken-playback-contract.md](../../api/spoken-playback-contract.md)）：
 
@@ -105,10 +107,23 @@ Xaleid◆scopiX                                         ← 搜索词，headline
 | S1 | 要不要"综合"标签？ | **已定：**要，并作为第一次搜索的默认标签。代价是每次搜索同时发 4 个小请求（各取少量结果）；切到单类标签时才请求完整的第一页 |
 | S2 | 输入时的建议改为分组、可直接打开歌手／专辑／歌单？ | **已定：**改。后端的建议本来就分组带 ID；现在只显示文字，选了还要再搜一次 |
 | S3 | 加本地搜索历史（下拉列表空着时显示，可删除、可清空）？ | **已定：**加。只存本机，不同步，最多 50 条 |
-| S4 | 播客、声音搜索现在做吗？ | 维护者提议一起做。建议按 §3.4：搜索标签和播客页现在做，声音播放的界面也做，真实播放等后端的声音播放门禁 |
+| S4 | 播客、声音搜索现在做吗？ | **已定：**一起做（维护者提议）。按 §3.4：搜索标签和播客页现在做，声音播放的界面也做，真实播放等后端的声音播放门禁 |
 
 ## 8. 实现时的改动（评审后）
 
 - 展示层：`SearchModel` 加 `history`（读写 `App.settings`）、`removeHistory()`、`clearHistory()`；`suggestions` 改为分组的列表模型（类型、标题、key）；热门搜索改用详情版（说明文字）；新的 `SearchOverview`（4 个小请求、最佳匹配判断）；各结果模型加总数 `total`。
 - 外壳：`SearchField` 的下拉列表换成历史＋热门／分组建议两种内容；选中歌手、专辑、歌单时打开页面。
 - 页面：搜索页改成"标题＋固定标签＋内容"的版式，复用歌手页的标签固定机制（可能把 `SongCollectionPage` 的标签部分抽出来）。
+
+## 9. 实现进度（2026-11-02）
+
+已按本文实现，与 §8 的差别：
+
+- 搜索页没有用 `SongCollectionPage`（它的头部是封面＋操作行），而是直接用 `SongTable`：标题、标签、最佳匹配卡片、分组标题、状态和卡片网格放在表格的头部，综合页的歌手／专辑／歌单分组和分页底部放在表格底部；标签栏滚走后固定在顶部，机制与歌手页相同。歌手页的标签状态抽成 `ui/app/TabState.qml`，三页共用。
+- 标签上的总数：标签自己加载过就用它的总数，否则用综合页四个请求带回的总数（`SearchOverview.totals`）；播客、声音在打开前不显示数字。
+- 最佳匹配卡片的播放按钮：歌手播放热门歌曲、专辑播放整张，点击时才用 `ArtistPageModel`／`AlbumPageModel` 请求。
+- 下拉列表：历史和热门最多 20 行，超过窗口高度时在列表里滚动，↑／↓ 选中的行保持可见。删除一条历史后选中位置不变。
+- 展示层：`SearchModel` 的标签改为 7 个（综合、单曲、歌手、专辑、歌单、播客、声音），`suggestions` 是分组的 `[{song, kind, key, title}]`，`hotKeywords` 是 `[{keyword, description}]`，`history`／`removeHistory()`／`clearHistory()` 读写 `App.settings.searchHistory`；`PagedModel` 加 `total`；`Collection.Podcast`；`SongInfo.serial`（声音的期数，`SongListModel` 的 `serial` 角色）；`CatalogSource` 加 `searchVoices`、`podcast`、`podcastVoices`，`LibrarySource` 加 `setPodcastSubscribed`，`PlaybackSource` 加 `playVoices`／`canPlayVoices`（`Player` 同名）；新的 `PodcastPageModel`（头部、收藏）和 `PodcastVoicesModel`（分页，每页 50，`oldestFirst`）。
+- 组件：`SongTable` 加 `voices`（期数、标题下一行是可点的播客名、没有喜欢和收藏到歌单，菜单只有播放和"查看播客"；`canPlayVoices` 为假时播放入口不可用，菜单写"声音播放即将支持"）；`SongCollectionPage` 加 `voices`、`showLiked`；`CollectionCard` 播客用 `podcasts` 占位图标。新页面 `PodcastPage`（最新／最早切换在操作行里）。
+- 假数据：5 个虚构播客（第一个 120 期，用来检查分页），声音时长 18–58 分钟；分页结果带总数；热门搜索有几条带说明文字。
+- 验证：构建、qmllint、clang-format；离屏截图检查了综合页（有／无最佳匹配、分组、播放最佳匹配的专辑）、无结果、播客标签、声音标签（滚到底加载完 120 期、标签和列标题固定、双击播放）、Ctrl+PageUp／PageDown、播客页（宽、窄、已收藏）、下拉列表（历史＋热门、输入时的分组建议、选中歌手打开歌手页、Delete 删除历史），以及歌手页相似歌手标签（共用 `TabState` 后）。
