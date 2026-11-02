@@ -220,6 +220,10 @@ struct FakeAccount {
             page.info.liked ? kNickname + QStringLiteral("喜欢的音乐") : made.value(key);
         page.info.creator = kNickname;
         page.info.updatedAtMs = QDateTime::currentMSecsSinceEpoch();
+        // The service counts plays and saves for every playlist, the account's own too.
+        page.info.playCount = page.info.liked ? 1'286 : 0;
+        page.info.subscriberCount = 0;
+        page.info.commentCount = 0;
         page.songKeys = songKeys(key, samples);
         for (const QString& song : std::as_const(page.songKeys))
             page.songs << samples.song(song);
