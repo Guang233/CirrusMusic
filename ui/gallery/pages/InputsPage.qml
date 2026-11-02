@@ -220,7 +220,7 @@ ControlPage {
         text: qsTr("纸片")
     }
     Caption {
-        text: qsTr("建议／辅助纸片为描边样式；可选（checkable）为筛选纸片，选中时填充 SecondaryContainer 并显示对勾。最后一个为禁用。")
+        text: qsTr("建议／辅助纸片为描边样式；可选（checkable）为筛选纸片，选中时填充 SecondaryContainer 并显示对勾；可删除（removable）为输入纸片，标签后有删除按钮，长标签省略。最后一个为禁用。")
     }
     Flow {
         Layout.fillWidth: true
@@ -240,6 +240,15 @@ ControlPage {
         Chip {
             checkable: true
             text: qsTr("华语")
+        }
+        Chip {
+            removable: true
+            text: qsTr("雾港乐队")
+        }
+        Chip {
+            removable: true
+            maximumLabelWidth: 96
+            text: qsTr("一个很长很长的搜索词")
         }
         Chip {
             enabled: false
