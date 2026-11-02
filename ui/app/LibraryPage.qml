@@ -1,154 +1,409 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Templates as T
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// The account's library in tabs: liked songs, playlists (created and saved), albums,
-// artists, recently played. Guests get the sign-in prompt.
-PageScaffold {
+// The library (docs/ui/pages/library.md §2): song lists on top as cards (the liked
+// playlist, recently played, the listening ranking), each opening its page; then the
+// collections in tabs (playlists, albums, artists, podcasts) that pin to the top once
+// scrolled there, each loading when first shown and paging at the end. Playlists
+// filter to the account's own or saved ones and can be created here. Guests get the
+// sign-in prompt. Ctrl+PageUp/PageDown switch tabs; the shell remembers the tab.
+Item {
     id: page
 
     required property AppShell shell
-    // The tab to open on (0 liked songs … 4 recently played).
-    property int initialTab: 0
 
-    title: qsTr("音乐库")
+    readonly property int tab: shell.libraryTab
+    readonly property int tabCount: 4
+    readonly property real tabsHeight: 48
+    readonly property bool wide: width >= 840
+    readonly property real contentX: Math.max(24, (width - 1200) / 2)
+    readonly property real contentWidth: Math.min(width - 48, 1200)
+    readonly property LibraryCollectionsModel tabModel: modelOf(tab)
+    // The header's tabs have scrolled under the top: the pinned copy shows.
+    readonly property bool tabsPinned: headerTabs.y - flick.contentY < 0
 
-    LibraryPageModel {
-        id: pageModel
+    // By index: in onTabChanged the tabModel binding may not have followed yet.
+    function modelOf(index: int): LibraryCollectionsModel {
+        return [overview.playlists, overview.albums, overview.artists, overview.podcasts][index];
+    }
+
+    function showTab(): void {
+        modelOf(tab).ensureLoaded();
+        // With the tabs pinned, a new tab starts at its top, under them.
+        if (tabsPinned)
+            Qt.callLater(() => flick.contentY = headerTabs.y);
+    }
+    onTabChanged: showTab()
+
+    function loadMoreIfNear(): void {
+        const model = tabModel;
+        if (model.canLoadMore && !model.loadingMore && model.loadMoreError.kind < 0
+                && flick.contentY + flick.height > flick.contentHeight - 600)
+            model.loadMore();
+    }
+
+    // Plays the liked playlist: its songs load when asked.
+    PlaylistPageModel {
+        id: likedPlaylist
+        property bool playWhenReady: false
+        onStateChanged: {
+            if (playWhenReady && (state === LoadState.Ready || state === LoadState.Partial)) {
+                playWhenReady = false;
+                if (songs.count > 0)
+                    App.player.playSongs(songs.keys(), 0);
+            }
+        }
+    }
+    function playLiked(): void {
+        likedPlaylist.playWhenReady = true;
+        if (likedPlaylist.playlistKey === App.library.likedPlaylistKey)
+            likedPlaylist.refresh();
+        likedPlaylist.playlistKey = App.library.likedPlaylistKey;
+    }
+
+    LibraryOverviewModel {
+        id: overview
+        onStateChanged: {
+            if (overview.state === LoadState.Ready)
+                page.showTab();
+        }
+        onNotice: message => page.shell.notify(message)
+        onLibraryChanged: page.shell.refreshLibrary()
+        onPlaylistCreated: key => page.shell.openPlaylist(key)
+    }
+
+    Shortcut {
+        sequences: [StandardKey.PreviousChild, "Ctrl+PgUp"]
+        enabled: page.visible && overview.state === LoadState.Ready
+        onActivated: page.shell.libraryTab = (page.tab + page.tabCount - 1) % page.tabCount
+    }
+    Shortcut {
+        sequences: [StandardKey.NextChild, "Ctrl+PgDown"]
+        enabled: page.visible && overview.state === LoadState.Ready
+        onActivated: page.shell.libraryTab = (page.tab + 1) % page.tabCount
     }
 
     PageState {
         id: pageState
         anchors.fill: parent
-        model: pageModel
-        emptyGlyph: Symbols.library_music
-        emptyText: qsTr("音乐库还是空的。喜欢的歌曲、收藏的歌单都会出现在这里")
-        skeleton: ListSkeleton {
-            header: false
-        }
+        model: overview
+        signedOutText: qsTr("登录后，喜欢的歌、收藏的歌单都在这里")
         onSignInRequested: page.shell.openLogin()
-    }
-
-    component Tab: Item {
-        required property int index
-        anchors.top: tabs.bottom
-        anchors.topMargin: 8
-        anchors.bottom: parent.bottom
-        width: parent.width
-        visible: tabs.currentIndex === index
-    }
-    component Heading: Text {
-        color: Theme.color.onSurface
-        font: Theme.type.titleMedium.font
-    }
-
-    Item {
-        anchors.fill: parent
-        opacity: pageState.contentOpacity
-        visible: opacity > 0
-
-        TabBar {
-            id: tabs
-            Component.onCompleted: currentIndex = page.initialTab
-            x: 24
-            width: Math.min(parent.width - 48, 720)
-            TabButton {
-                text: qsTr("喜欢")
+        skeleton: Column {
+            x: page.contentX
+            y: 24
+            width: page.contentWidth
+            spacing: 24
+            Skeleton {
+                width: 120
+                height: 32
             }
-            TabButton {
-                text: qsTr("歌单")
-            }
-            TabButton {
-                text: qsTr("专辑")
-            }
-            TabButton {
-                text: qsTr("歌手")
-            }
-            TabButton {
-                text: qsTr("最近播放")
-            }
-        }
-
-        Tab {
-            index: 0
-            SongList {
-                anchors.fill: parent
-                topMargin: 8
-                model: pageModel.likedSongs
-                onAlbumRequested: key => page.shell.openAlbum(key)
-                onArtistRequested: key => page.shell.openArtist(key)
-            }
-        }
-        Tab {
-            index: 1
-            Flickable {
-                id: playlists
-                anchors.fill: parent
-                contentHeight: playlistColumn.implicitHeight + 24
-                clip: true
-                // Overshoots and springs back at the ends.
-                boundsBehavior: Flickable.DragAndOvershootBounds
-                ScrollBar.vertical: ScrollBar {}
-
-                Column {
-                    id: playlistColumn
-                    x: 24
-                    y: 8
-                    width: playlists.width - 48
-                    spacing: 12
-                    Heading {
-                        visible: pageModel.createdPlaylists.count > 0
-                        text: qsTr("创建的歌单")
-                    }
-                    CollectionGrid {
-                        x: -8
-                        width: parent.width + 16
-                        model: pageModel.createdPlaylists
-                        onActivated: (kind, key) => page.shell.openCollection(kind, key)
-                    }
-                    Heading {
-                        visible: pageModel.savedPlaylists.count > 0
-                        text: qsTr("收藏的歌单")
-                    }
-                    CollectionGrid {
-                        x: -8
-                        width: parent.width + 16
-                        model: pageModel.savedPlaylists
-                        onActivated: (kind, key) => page.shell.openCollection(kind, key)
+            Row {
+                spacing: 16
+                Repeater {
+                    model: 3
+                    Skeleton {
+                        required property int index
+                        width: index === 0 ? 360 : 240
+                        height: 160
+                        radius: Theme.shape.extraLarge
                     }
                 }
             }
         }
-        Tab {
-            index: 2
-            CollectionView {
+    }
+
+    // A song list as a card: the liked playlist (primary container, plays), recently
+    // played and the ranking (surface container). `strip`: the 72 px row of narrow
+    // windows, like the home page's FM strip.
+    component ListCard: T.AbstractButton {
+        id: card
+
+        property string glyph
+        property string subtitle
+        property bool hero: false
+        property bool strip: !page.wide
+        property Component trailing: null
+        readonly property color contentColor: hero ? Theme.color.onPrimaryContainer
+                                                   : Theme.color.onSurface
+
+        height: strip ? 72 : 160
+        focusPolicy: Qt.TabFocus
+        Accessible.name: subtitle !== "" ? text + "，" + subtitle : text
+
+        contentItem: Item {
+            Icon {
+                id: cardIcon
+                x: card.strip ? 16 : 24
+                y: card.strip ? (parent.height - height) / 2 : 24
+                glyph: card.glyph
+                size: card.strip ? 28 : 40
+                fill: 1
+                color: card.hero ? Theme.color.onPrimaryContainer : Theme.color.primary
+            }
+            Column {
+                x: card.strip ? cardIcon.x + cardIcon.width + 16 : 24
+                y: card.strip ? (parent.height - height) / 2 : parent.height - height - 24
+                width: (trailingLoader.active ? trailingLoader.x - 16 : parent.width - 24) - x
+                spacing: 2
+                Text {
+                    width: parent.width
+                    text: card.text
+                    elide: Text.ElideRight
+                    color: card.contentColor
+                    font: card.strip ? Theme.type.titleMedium.font : Theme.type.titleLarge.font
+                }
+                Text {
+                    width: parent.width
+                    visible: text !== ""
+                    text: card.subtitle
+                    elide: Text.ElideRight
+                    color: card.hero ? Theme.color.onPrimaryContainer : Theme.color.onSurfaceVariant
+                    font: Theme.type.bodyMedium.font
+                }
+            }
+            Loader {
+                id: trailingLoader
+                x: parent.width - width - (card.strip ? 16 : 24)
+                y: card.strip ? (parent.height - height) / 2 : parent.height - height - 24
+                active: card.trailing !== null
+                sourceComponent: card.trailing
+            }
+        }
+
+        background: Rectangle {
+            radius: card.strip ? Theme.shape.large : Theme.shape.extraLarge
+            color: card.hero ? Theme.color.primaryContainer : Theme.color.surfaceContainerHigh
+            StateLayer {
                 anchors.fill: parent
-                topMargin: 8
-                model: pageModel.albums
+                radius: parent.radius
+                color: card.contentColor
+                hovered: card.hovered
+                pressed: card.pressed
+                pressX: card.pressed ? card.pressX : width / 2
+                pressY: card.pressed ? card.pressY : height / 2
+            }
+            FocusRing {
+                shown: card.visualFocus
+                containerRadius: parent.radius
+            }
+        }
+    }
+
+    // The collection tabs, with their counts once known; in the content and pinned.
+    component Tabs: TabBar {
+        id: tabBar
+        width: Math.min(parent ? parent.width : 0, 480)
+        Component.onCompleted: currentIndex = page.tab
+        onCurrentIndexChanged: page.shell.libraryTab = currentIndex
+        Connections {
+            target: page
+            function onTabChanged() {
+                tabBar.currentIndex = page.tab;
+            }
+        }
+        CountedTab {
+            name: qsTr("歌单")
+            model: overview.playlists
+        }
+        CountedTab {
+            name: qsTr("专辑")
+            model: overview.albums
+        }
+        CountedTab {
+            name: qsTr("歌手")
+            model: overview.artists
+        }
+        CountedTab {
+            name: qsTr("播客")
+            model: overview.podcasts
+        }
+    }
+    component CountedTab: TabButton {
+        property string name
+        property PagedModel model
+        // No number for none, like the search tabs.
+        text: model.total > 0 ? qsTr("%1 %2").arg(name).arg(App.format.count(model.total)) : name
+    }
+
+    Flickable {
+        id: flick
+        anchors.fill: parent
+        opacity: pageState.contentOpacity
+        visible: opacity > 0
+        contentHeight: content.implicitHeight + 24
+        boundsBehavior: Flickable.DragAndOvershootBounds
+        ScrollBar.vertical: ScrollBar {}
+        onContentYChanged: page.loadMoreIfNear()
+        onContentHeightChanged: Qt.callLater(page.loadMoreIfNear)
+
+        Column {
+            id: content
+            x: page.contentX
+            y: 24
+            width: page.contentWidth
+            spacing: 16
+
+            Text {
+                text: qsTr("音乐库")
+                color: Theme.color.onSurface
+                font: Theme.type.headlineMedium.font
+                Accessible.role: Accessible.Heading
+            }
+
+            // Song lists: a row of cards when wide, strips under each other otherwise.
+            Flow {
+                width: parent.width
+                spacing: page.wide ? 16 : 8
+
+                ListCard {
+                    id: likedCard
+                    width: page.wide ? (parent.width - 32) * 0.4 : parent.width
+                    hero: true
+                    enabled: App.library.likedPlaylistKey !== ""
+                    glyph: Symbols.favorite
+                    text: qsTr("我喜欢的音乐")
+                    subtitle: qsTr("%1 首").arg(App.library.likedCount)
+                    onClicked: page.shell.openPlaylist(App.library.likedPlaylistKey)
+                    trailing: IconButton {
+                        variant: Md.Filled
+                        size: likedCard.strip ? Md.Small : Md.Medium
+                        enabled: App.library.likedCount > 0
+                        glyph: Symbols.play_arrow
+                        iconFill: 1
+                        text: qsTr("播放我喜欢的音乐")
+                        onClicked: page.playLiked()
+                    }
+                }
+                ListCard {
+                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    glyph: Symbols.history
+                    text: qsTr("最近播放")
+                    subtitle: overview.lastPlayedTitle !== ""
+                              ? qsTr("上次听：%1").arg(overview.lastPlayedTitle) : ""
+                    onClicked: page.shell.openRecent()
+                }
+                ListCard {
+                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    glyph: Symbols.leaderboard
+                    text: qsTr("听歌排行")
+                    subtitle: overview.weekTopTitle !== ""
+                              ? qsTr("本周：%1").arg(overview.weekTopTitle)
+                              : qsTr("看看这周常听什么")
+                    onClicked: page.shell.openRanking()
+                }
+            }
+
+            Item {
+                id: headerTabs
+                width: parent.width
+                height: page.tabsHeight
+                Tabs {
+                    // Hidden while the pinned copy shows, so they don't both show.
+                    opacity: page.tabsPinned ? 0 : 1
+                }
+            }
+
+            // Playlists: the account's own or saved ones (single-select filter chips),
+            // and creating one.
+            Item {
+                width: parent.width
+                height: 40
+                visible: page.tab === 0
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    T.ButtonGroup {
+                        id: filterGroup
+                    }
+                    Repeater {
+                        model: [qsTr("全部"), qsTr("创建的"), qsTr("收藏的")]
+                        delegate: Chip {
+                            required property int index
+                            required property string modelData
+                            checkable: true
+                            checked: overview.playlists.filter === index
+                            T.ButtonGroup.group: filterGroup
+                            text: modelData
+                            onClicked: overview.playlists.filter = index
+                        }
+                    }
+                }
+                Button {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    variant: Md.Tonal
+                    glyph: Symbols.add
+                    text: qsTr("新建歌单")
+                    onClicked: newPlaylistDialog.open()
+                }
+            }
+
+            TabState {
+                model: page.tabModel
+                emptyGlyph: [Symbols.queue_music, Symbols.album, Symbols.person,
+                             Symbols.podcasts][page.tab]
+                emptyText: [qsTr("还没有歌单。新建一个，或者在歌单页点「收藏」"),
+                            qsTr("还没有收藏的专辑。在专辑页点「收藏」就会出现在这里"),
+                            qsTr("还没有关注的歌手。在歌手页点「关注」就会出现在这里"),
+                            qsTr("还没有收藏的播客。在播客页点「收藏播客」就会出现在这里")][page.tab]
+            }
+            StateMessage {
+                width: parent.width
+                topPadding: 24
+                visible: page.tab === 0 && overview.playlists.state === LoadState.Ready
+                         && overview.playlists.filter !== LibraryCollectionsModel.All
+                         && overview.playlists.items.count === 0
+                         && !overview.playlists.canLoadMore
+                glyph: Symbols.queue_music
+                message: overview.playlists.filter === LibraryCollectionsModel.Created
+                         ? qsTr("还没有创建的歌单") : qsTr("还没有收藏的歌单")
+            }
+            CollectionGrid {
+                x: -8
+                width: parent.width + 16
+                visible: page.tabModel.state === LoadState.Ready
+                         || page.tabModel.state === LoadState.Partial
+                model: page.tabModel.items
                 onActivated: (kind, key) => page.shell.openCollection(kind, key)
             }
-        }
-        Tab {
-            index: 3
-            CollectionView {
-                anchors.fill: parent
-                topMargin: 8
-                model: pageModel.artists
-                onActivated: (kind, key) => page.shell.openCollection(kind, key)
+            LoadMoreFooter {
+                width: parent.width
+                model: page.tabModel
             }
         }
-        Tab {
-            index: 4
-            SongList {
-                anchors.fill: parent
-                topMargin: 8
-                model: pageModel.recentSongs
-                onAlbumRequested: key => page.shell.openAlbum(key)
-                onArtistRequested: key => page.shell.openArtist(key)
-            }
+    }
+
+    // The tabs, pinned at the top once the content's have scrolled there.
+    Rectangle {
+        width: parent.width - 12
+        height: page.tabsHeight
+        visible: page.tabsPinned && flick.visible
+        color: Theme.color.surface
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
         }
+        HoverHandler {
+            blocking: true
+        }
+        Item {
+            x: page.contentX
+            width: page.contentWidth
+            height: parent.height
+            Tabs {}
+        }
+    }
+
+    NewPlaylistDialog {
+        id: newPlaylistDialog
+        onCreateRequested: title => overview.createPlaylist(title)
     }
 }

@@ -32,6 +32,8 @@ Item {
     // ({component, properties, section}) until something new is opened.
     property var sections: []
     property var forwardEntries: []
+    // The library page's collection tab (library.md §2), kept while the app runs.
+    property int libraryTab: 0
     // The account's playlists (the rail's, and the add-to-playlist dialog's).
     readonly property LibraryPageModel library: myLibrary
     // The playlist the current page shows, for the rail's playlist rows.
@@ -176,11 +178,23 @@ Item {
             });
     }
 
-    // The library page on one of its tabs (0 liked songs … 4 recently played).
-    function openLibrary(tab: int) {
-        shell.go(libraryPage, {
-            shell: shell,
-            initialTab: tab
+    // The account's "我喜欢的音乐" playlist (the library page until it is known).
+    function openLikedPlaylist() {
+        if (App.library.likedPlaylistKey !== "")
+            openPlaylist(App.library.likedPlaylistKey);
+        else
+            select(2);
+    }
+
+    function openRecent() {
+        shell.go(recentPage, {
+            shell: shell
+        });
+    }
+
+    function openRanking() {
+        shell.go(rankingPage, {
+            shell: shell
         });
     }
 
@@ -298,6 +312,14 @@ Item {
         PodcastPage {}
     }
     Component {
+        id: recentPage
+        RecentPage {}
+    }
+    Component {
+        id: rankingPage
+        RankingPage {}
+    }
+    Component {
         id: dailySongsPage
         DailySongsPage {}
     }
@@ -376,7 +398,8 @@ Item {
                 library: myLibrary
                 selectedKey: shell.openPlaylistKey
                 onPlaylistRequested: key => shell.openPlaylist(key)
-                onLibraryRequested: tab => shell.openLibrary(tab)
+                onLikedRequested: shell.openLikedPlaylist()
+                onRecentRequested: shell.openRecent()
                 onSignInRequested: shell.openLogin()
             }
         }

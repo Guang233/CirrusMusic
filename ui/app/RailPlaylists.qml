@@ -17,8 +17,9 @@ Flickable {
     property string selectedKey
 
     signal playlistRequested(string key)
-    // The library page on a tab (0 liked songs … 4 recently played).
-    signal libraryRequested(int tab)
+    // My music: the liked playlist, recently played (library.md §4).
+    signal likedRequested
+    signal recentRequested
     signal signInRequested
 
     contentHeight: column.height + 8
@@ -147,13 +148,13 @@ Flickable {
             width: column.width
             glyph: Symbols.favorite
             text: qsTr("我喜欢的音乐")
-            onClicked: root.libraryRequested(0)
+            onClicked: root.likedRequested()
         }
         SidebarRow {
             width: column.width
             glyph: Symbols.history
             text: qsTr("最近播放")
-            onClicked: root.libraryRequested(4)
+            onClicked: root.recentRequested()
         }
         Divider {}
 

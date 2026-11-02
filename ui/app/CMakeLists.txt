@@ -25,6 +25,10 @@ qt_add_qml_module(appCirrusMusic
         FeedPage.qml
         DailySongsPage.qml
         LibraryPage.qml
+        NewPlaylistDialog.qml
+        GlyphTile.qml
+        RecentPage.qml
+        RankingPage.qml
         LoginDialog.qml
         AddToPlaylistDialog.qml
         ChartCard.qml

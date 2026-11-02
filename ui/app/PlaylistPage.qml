@@ -144,7 +144,8 @@ SongCollectionPage {
                 id: editButton
                 x: titleText.width + 8
                 anchors.verticalCenter: parent.verticalCenter
-                visible: pageModel.own
+                // "我喜欢的音乐" keeps its title.
+                visible: pageModel.own && !pageModel.likedList
                 glyph: Symbols.edit
                 text: qsTr("编辑歌单信息")
                 onClicked: editDialog.open()
@@ -212,6 +213,8 @@ SongCollectionPage {
             Menu {
                 id: moreMenu
                 MenuItem {
+                    visible: !pageModel.likedList
+                    height: visible ? implicitHeight : 0
                     glyph: Symbols.edit
                     text: qsTr("编辑歌单信息")
                     onTriggered: editDialog.open()
@@ -223,6 +226,8 @@ SongCollectionPage {
                     onTriggered: page.shell.openPlaylistOrder(page.playlistKey)
                 }
                 MenuItem {
+                    visible: !pageModel.likedList
+                    height: visible ? implicitHeight : 0
                     glyph: Symbols.delete_
                     text: qsTr("删除歌单")
                     onTriggered: deleteDialog.open()

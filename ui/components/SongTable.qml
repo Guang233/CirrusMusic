@@ -49,6 +49,8 @@ Item {
     property bool removable: false
     // Podcast voices instead of songs; pages also turn off the liked and album columns.
     property bool voices: false
+    // Numbers are ranks: the first three in primary (the listening ranking).
+    property bool ranked: false
     // Voices can't play until the backend can (search.md §3.4).
     readonly property bool playable: !voices || App.player.canPlayVoices
     readonly property ListView view: list
@@ -641,7 +643,8 @@ Item {
                             visible: !row.hovered && !row.current
                             text: table.voices && row.serial >= 0 ? row.serial
                                 : table.numberByPosition ? row.position : row.index + 1
-                            color: row.mutedColor
+                            color: table.ranked && row.index < 3 ? Theme.color.primary
+                                                                 : row.mutedColor
                             font: Fonts.tabular(Theme.type.labelLarge.font)
                         }
                         Icon {

@@ -77,6 +77,11 @@ Item {
     property bool showLiked: true
     // Podcast voices instead of songs (search.md §3.4): they play with playVoices.
     property bool voices: false
+    // What the play button plays is voices (off when it plays a list of songs while
+    // the table shows voices, as on the recent page).
+    property bool playsVoices: voices
+    // Ranks (the listening ranking): the first three numbers in primary.
+    property bool ranked: false
 
     readonly property alias table: songTable
     readonly property alias sorted: sortedModel
@@ -92,7 +97,7 @@ Item {
     property Item headerTabs: null
     property SearchBar headerFind: null
     readonly property bool canPlay: (playSource ? playSource.count > 0 : hasSongs)
-                                    && (!voices || App.player.canPlayVoices)
+                                    && (!playsVoices || App.player.canPlayVoices)
     // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
     readonly property real compactProgress: headerActions
         ? Math.max(0, Math.min(1, (songTable.scrolled - headerActions.y - headerActions.height
@@ -116,7 +121,7 @@ Item {
         const keys = playSource ? playSource.keys() : sortedModel.keys();
         if (keys.length === 0)
             return;
-        if (voices)
+        if (playsVoices)
             App.player.playVoices(keys, 0);
         else
             App.player.playSongs(keys, 0);
@@ -260,7 +265,8 @@ Item {
         visible: opacity > 0
         songs: sortedModel
         pinnedTop: compactBar.y + compactBar.height + (page.tabsContent ? page.tabsHeight : 0)
-        showColumnTitles: page.showSongs
+        // No titles over an empty list.
+        showColumnTitles: page.showSongs && page.hasSongs
         footerContent: page.footerContent
         sortable: page.sortable
         removable: page.removable
@@ -271,6 +277,7 @@ Item {
         showAlbumAction: page.showAlbumAction
         showLiked: page.showLiked
         voices: page.voices
+        ranked: page.ranked
         onPodcastRequested: key => page.shell.openPodcast(key)
         onRemoveRequested: keys => page.removeRequested(keys)
         onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)

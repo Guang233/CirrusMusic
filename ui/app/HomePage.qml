@@ -200,7 +200,7 @@ Item {
                 showsAll: true
                 model: recent
                 skeleton: Placeholder {}
-                onAllRequested: page.shell.openLibrary(4)
+                onAllRequested: page.shell.openRecent()
 
                 SongColumns {
                     songs: recent.songs
