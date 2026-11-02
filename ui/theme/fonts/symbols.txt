@@ -65,6 +65,7 @@ share
 link
 sort
 filter_list
+grid_view
 drag_indicator
 check
 check_circle
@@ -83,6 +84,7 @@ arrow_forward
 chevron_left
 chevron_right
 expand_more
+arrow_drop_down
 expand_less
 keyboard_arrow_down
 open_in_full

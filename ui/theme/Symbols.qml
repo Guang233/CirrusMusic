@@ -62,6 +62,7 @@ QtObject {
     readonly property string link: "\ue250"
     readonly property string sort: "\ue164"
     readonly property string filter_list: "\ue152"
+    readonly property string grid_view: "\ue9b0"
     readonly property string drag_indicator: "\ue945"
     readonly property string check: "\ue668"
     readonly property string check_circle: "\uf0be"
@@ -78,6 +79,7 @@ QtObject {
     readonly property string chevron_left: "\ue5cb"
     readonly property string chevron_right: "\ue5cc"
     readonly property string expand_more: "\ue5cf"
+    readonly property string arrow_drop_down: "\ue5c5"
     readonly property string expand_less: "\ue5ce"
     readonly property string keyboard_arrow_down: "\ue313"
     readonly property string open_in_full: "\uf1ce"
@@ -173,6 +175,7 @@ QtObject {
         "link",
         "sort",
         "filter_list",
+        "grid_view",
         "drag_indicator",
         "check",
         "check_circle",
@@ -189,6 +192,7 @@ QtObject {
         "chevron_left",
         "chevron_right",
         "expand_more",
+        "arrow_drop_down",
         "expand_less",
         "keyboard_arrow_down",
         "open_in_full",
