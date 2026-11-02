@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页设计已写、待评审（[pages/artist.md](pages/artist.md)），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-10-31）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页已按评审过的设计实现（[pages/artist.md](pages/artist.md)；MV 搁置到音乐功能上线后），之后逐个设计其余页面**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -600,3 +600,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 ### 专辑页、每日推荐与历史日推（2026-11-01）
 
 - 按 [pages/album-daily.md](pages/album-daily.md)（A1–A3 按建议，A4 改为做历史日推；两页不能排序、保留查找）实现；三页共用的版式抽成 `SongCollectionPage`，歌单页改用它。细节和验证见该文 §5。
+
+### 歌手页（2026-11-02）
+
+- 按 [pages/artist.md](pages/artist.md)（AR1–AR4 按建议；MV 搁置）实现：圆形头像头部、播放热门歌曲、关注；歌曲（分页、最热／最新）、专辑（分页）、详情、相似歌手四个标签，标签栏滚动后固定。细节和验证见该文 §9。

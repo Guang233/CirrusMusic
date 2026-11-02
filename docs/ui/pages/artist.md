@@ -1,4 +1,6 @@
-# 歌手页设计（待评审，2026-11-02）
+# 歌手页设计（已评审，2026-11-02）
+
+**维护者已定**：AR1–AR4 按建议；MV 先搁置，音乐功能上线后再说。
 
 和歌单、专辑页同一个家族（[playlist.md](playlist.md)、[album-daily.md](album-daily.md)）：头部随内容滚走、操作行、桌面表格、滚走后顶部出现紧凑条。不同在于歌手有几类内容，用标签页分开。参考了维护者给的网易云歌手页截图（§6）。
 
@@ -90,13 +92,23 @@
 
 | 编号 | 问题 | 建议 |
 | --- | --- | --- |
-| AR1 | 歌曲标签：只放热门 50 并另有"全部歌曲"入口（网易云），还是一个分页的全部歌曲列表加"最热／最新"切换？ | 一个列表加切换。按热度排的前 50 首和热门 50 基本相同，不必两套 |
-| AR2 | "播放热门歌曲"按钮和表格里的播放，放什么？ | 按钮固定播放热门 50（不用等分页）；表格里的播放按当前已加载的歌、从点的那首开始，之后加载的不追加到队列 |
-| AR3 | 歌曲标签要不要页面内查找？ | 不要（§5）；Ctrl+F 在这一页聚焦顶部的全局搜索 |
-| AR4 | 标签栏固定在紧凑条下面（滚动后仍可切换），还是随头部一起滚走（网易云）？ | 固定。歌手的歌和专辑都很长，滚到下面再切标签不用回到顶部 |
+| AR1 | 歌曲标签：只放热门 50 并另有"全部歌曲"入口（网易云），还是一个分页的全部歌曲列表加"最热／最新"切换？ | **已定：**一个列表加切换。按热度排的前 50 首和热门 50 基本相同，不必两套 |
+| AR2 | "播放热门歌曲"按钮和表格里的播放，放什么？ | **已定：**按钮固定播放热门 50（不用等分页）；表格里的播放按当前已加载的歌、从点的那首开始，之后加载的不追加到队列 |
+| AR3 | 歌曲标签要不要页面内查找？ | **已定：**不要（§5）；Ctrl+F 在这一页聚焦顶部的全局搜索 |
+| AR4 | 标签栏固定在紧凑条下面（滚动后仍可切换），还是随头部一起滚走（网易云）？ | **已定：**固定。歌手的歌和专辑都很长，滚到下面再切标签不用回到顶部 |
 
 ## 8. 实现时的改动（评审后）
 
 - 展示层：`ArtistInfo` 加 `aliases`、`followed`；`CatalogSource` 加 `artistTopSongs`、`artistSongs(order, page)`、`artistAlbums(page)`、`artistIntroduction`、`similarArtists`；`LibrarySource` 加 `setArtistFollowed`；`ArtistPageModel` 改为头部＋各标签的子模型（歌曲分页、专辑分页、介绍、相似歌手各自加载、各有状态）；假数据补别名、介绍段落和相似歌手。
 - 组件：`SongCollectionPage` 加可选的标签栏（固定在紧凑条下）和按标签切换的内容；歌曲表格支持分页底部（`LoadMoreFooter`）；`CoverArt` 圆形头像已支持。
 - 图标：`person_add`、`how_to_reg` 加入 `symbols.txt` 后用 `prepare_fonts.py` 重新生成。
+
+## 9. 实现进度（2026-11-02）
+
+已按本文实现，与 §8 的差别：
+
+- 四个标签共用一个滚动列表：`SongCollectionPage` 加了 `tabsContent`（标签行，头部一份、固定在紧凑条下一份）、`bodyContent`／`showBody`（非歌曲内容放在列表头部里）、`showSongs`、`footerContent`、`findable`、`playText`／`playSource`、`roundCover`；紧凑条改为按操作行的位置出现（头部里有长内容时也对）。`SongTable` 加 `showColumnTitles`、`footerContent`。
+- 展示层：`ArtistPageModel`（头部、热门歌曲、关注）带四个子模型：`ArtistSongsModel`（分页，每页 100，`byTime`）、`ArtistAlbumsModel`（分页，每页 30）、`ArtistIntroductionModel`、`SimilarArtistsModel`，各自在标签第一次显示时加载、各有状态。`CatalogSource` 加 `artistSongs`、`artistAlbums`、`artistIntroduction`、`similarArtists`（`artist()` 返回头部和热门 50），`LibrarySource` 加 `setArtistFollowed`。
+- 假数据：第一个示例歌手有 230 首歌（重复的示例歌，检查分页）；简介和两段介绍为生成文字，最后一个示例歌手没有介绍；相似歌手要登录。
+- 切换标签时如果标签栏已固定，新标签从内容顶部开始；内容不够长（如相似歌手）时列表会回到能滚到的位置，头部重新露出。
+- 验证：构建、qmllint、clang-format；离屏截图检查了歌曲标签（宽、窄、滚到底分三页加载完 230 首、固定的标签栏和列标题）、专辑、详情、相似歌手（登录与未登录）、Ctrl+PageUp／PageDown 切换。
