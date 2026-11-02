@@ -31,6 +31,10 @@ struct LibraryPlaylist {
     std::optional<qint64> trackCount;
     std::optional<bool>
         subscribed; // unknown is not false; never identify liked playlist by position
+    // The account's own liked-songs playlist ("我喜欢的音乐"): candidate specialType 5 on a
+    // playlist whose creator is the queried account. Unknown (no specialType, or 5 with an
+    // unknown creator) is not false; another account's liked playlist is false.
+    std::optional<bool> accountLikedSongs;
 };
 struct MyPlaylistsPage {
     MyPlaylistsQuery query;

@@ -11,6 +11,8 @@ namespace
 {
 using namespace mapping;
 bool absent(const QJsonValue& value) { return value.isNull() || value.isUndefined(); }
+// The provider's playlist kind for liked songs (candidate, from the reference's usage).
+constexpr qint64 LibraryLikedSongsSpecialType = 5;
 bool number(const QJsonValue& value, std::optional<qint64>& out)
 {
     if (absent(value))
@@ -112,6 +114,15 @@ MusicResult mapLibraryResponse(const MusicQuery& query, const QJsonObject& objec
                     p.creatorId = id;
                 }
             }
+            // Candidate: specialType 5 marks a liked-songs playlist; only the account's own
+            // one is its library's "我喜欢的音乐". Any other kind is a plain playlist here.
+            std::optional<qint64> specialType;
+            if (!number(row.value(QStringLiteral("specialType")), specialType))
+                return invalid;
+            if (specialType && *specialType != LibraryLikedSongsSpecialType)
+                p.accountLikedSongs = false;
+            else if (specialType && p.creatorId)
+                p.accountLikedSongs = *p.creatorId == *account;
             p.title = row.value(QStringLiteral("name")).toString();
             p.cover = imageFrom(row.value(QStringLiteral("coverImgUrl")));
             page.playlists.append(p);

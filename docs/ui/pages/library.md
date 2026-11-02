@@ -106,5 +106,5 @@
 - 页面：`LibraryPage` 重写（卡片、固定标签、筛选纸片、`NewPlaylistDialog`），新页面 `RecentPage`、`RankingPage`；封面位置的图标块是新组件 `GlyphTile`（最近播放 secondaryContainer、排行 tertiaryContainer）。`SongCollectionPage` 加 `playsVoices`（最近播放页的按钮在声音标签下也播放歌曲）、`ranked`（排行的前三名用 primary）；歌曲列表为空时不再显示列标题（所有歌曲页）。外壳记住音乐库的标签（`AppShell.libraryTab`），侧边栏"我喜欢的音乐""最近播放"和首页"查看全部"改为打开对应页面。
 - 切换排行周期时列表原地替换（`refresh`），不回到骨架。
 - 假数据："我喜欢的音乐"是账号自己的歌单 `pl-liked`（歌曲就是喜欢的歌，从歌单移除等于取消喜欢），在"创建的"第一个；新建的歌单排在它后面；最近播放歌曲 38 首，另有歌单、专辑、播客、声音；排行一周 12 首、全部 40 首。
-- 后端待办（报告维护者）：真实后端需要在"我的歌单"摘要里带上识别"我喜欢的音乐"的字段（网易云的 specialType），`likedPlaylist` 才能实现；排行若有播放次数，以后可加一列。
+- 后端："我的歌单"摘要已加 `accountLikedSongs`（候选字段 specialType 5 且作者是本账号，见 [personal-library.md §3](../../api/personal-library.md)），接真实后端时 `likedPlaylist` 在"我的歌单"里找它；排行若有播放次数，以后可加一列。
 - 验证：构建、qmllint、clang-format；离屏截图检查了音乐库（宽、窄、未登录、切到歌手标签、"收藏的"筛选、新建歌单对话框和建好后打开新歌单）、最近播放（歌曲、Ctrl+PageUp 到声音）、听歌排行、"我喜欢的音乐"歌单页（没有编辑和删除）。

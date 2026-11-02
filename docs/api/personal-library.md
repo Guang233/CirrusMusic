@@ -30,7 +30,8 @@
 
 `src/domain/music/library_types.h`仅依赖Core值类型；JSON、路径和Cookie均留在基础设施。
 
-- **MyPlaylistsPage**：读取playlist数组，返回歌单ID、标题、封面、可缺失creatorId／trackCount／subscribed；保留more及可缺失total。不假定首条就是“我喜欢”，不将缺失subscribed当false，也不靠缺失作者推断创建／收藏分类。摘要不是PlaylistDetails，不带完整trackIds或自动补歌曲。
+- **MyPlaylistsPage**：读取playlist数组，返回歌单ID、标题、封面、可缺失creatorId／trackCount／subscribed；保留more及可缺失total。不假定首条就是“我喜欢”，不将缺失subscribed当false，也不靠缺失作者推断创建／收藏分类。
+  - **accountLikedSongs**（2026-11-02，UI 音乐库需要，[library.md §3.1](../ui/pages/library.md)）：候选字段 `specialType`（非负整数；缺失／null为未知，其他类型整页InvalidResponse）。值为5且creatorId等于原查询账号时为true（该账号的“我喜欢的音乐”）；5但作者是别的账号、或任何非5值为false；没有specialType、或5但作者未知时为未知。仍不按位置推断。5的含义来自参考实现的常见用法，**没有实网响应证明**，与本节其余字段一样只是合成候选。只改映射与值类型，未新增测试（维护者约定），复跑library／account_library 两套件通过。摘要不是PlaylistDetails，不带完整trackIds或自动补歌曲。
 - **LikedSongIds**：读取ids数组，仅保留这次返回的ID及原账号。保留提供方顺序但不赋予播放、收藏时间或历史含义；重复规范ID视为无效响应，不静默修复。没有分页／全局缓存完整性承诺，也没有喜欢／取消喜欢操作。
 - **SavedAlbumsPage**：读取data、count和hasMore；复用目录Album的严格映射（艺人署名、封面、可缺失数量／发行日期），不再建立另一套专辑schema。发行日期允许负的历史毫秒时间。
 - **SavedArtistsPage**：读取data、count和hasMore；仅音乐相关艺人ID、名称、头像和可缺失albumCount，不扩展MV字段或视频业务。
