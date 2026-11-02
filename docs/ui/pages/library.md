@@ -97,3 +97,14 @@
 - 展示层：`LibrarySource` 按后端拆成 `myPlaylists(page)`、`likedSongKeys()`（已有）、`likedPlaylist()`（"我喜欢的音乐"歌单）、`savedAlbums(page)`、`followedArtists(page)`、`subscribedPodcasts(page)`、`recentSongs/Playlists/Albums/Podcasts/Voices`、`listeningRanking(period)`、`createPlaylist(title)`；音乐库页的每个标签一个分页模型；喜欢页、最近播放页、排行页各一个页面模型。侧边栏的歌单改为只读 `myPlaylists`（shell.md §6 的待办）。
 - 组件：`SongCollectionPage` 的封面位置支持图标块（`DateTile` 那样的组件）。
 - 假数据：已有的喜欢、歌单、专辑、歌手；加订阅的播客、云端最近播放各类、两种排行。
+
+## 8. 实现进度（2026-11-02）
+
+已按本文实现，与 §7 的差别：
+
+- 展示层：`LibrarySource` 加 `likedPlaylist`、`libraryCollections(kind, page)`（四类集合共用一个入口）、`recentCollections(kind, limit)`、`recentVoices`、`listeningRanking(allTime)`、`createPlaylist`；`CollectionItem.created`（歌单是自己的还是收藏的，未知为空）；`PlaylistInfo.liked`（"我喜欢的音乐"：不能改名、不能删除，`PlaylistPageModel.likedList`）。`App.library` 加 `likedPlaylistKey`、`likedCount`。新模型在 `library_models.*`：`LibraryOverviewModel`（卡片上的"上次听""本周第一"、四个标签、新建歌单）、`LibraryCollectionsModel`（分页，歌单可按 `filter` 筛选）、`RecentPageModel`（歌曲＋`RecentCollectionsModel`×3＋`RecentVoicesModel`）、`RankingPageModel`。侧边栏的歌单仍读 `LibraryPageModel`（shell.md §6 的待办没有动）。
+- 页面：`LibraryPage` 重写（卡片、固定标签、筛选纸片、`NewPlaylistDialog`），新页面 `RecentPage`、`RankingPage`；封面位置的图标块是新组件 `GlyphTile`（最近播放 secondaryContainer、排行 tertiaryContainer）。`SongCollectionPage` 加 `playsVoices`（最近播放页的按钮在声音标签下也播放歌曲）、`ranked`（排行的前三名用 primary）；歌曲列表为空时不再显示列标题（所有歌曲页）。外壳记住音乐库的标签（`AppShell.libraryTab`），侧边栏"我喜欢的音乐""最近播放"和首页"查看全部"改为打开对应页面。
+- 切换排行周期时列表原地替换（`refresh`），不回到骨架。
+- 假数据："我喜欢的音乐"是账号自己的歌单 `pl-liked`（歌曲就是喜欢的歌，从歌单移除等于取消喜欢），在"创建的"第一个；新建的歌单排在它后面；最近播放歌曲 38 首，另有歌单、专辑、播客、声音；排行一周 12 首、全部 40 首。
+- 后端待办（报告维护者）：真实后端需要在"我的歌单"摘要里带上识别"我喜欢的音乐"的字段（网易云的 specialType），`likedPlaylist` 才能实现；排行若有播放次数，以后可加一列。
+- 验证：构建、qmllint、clang-format；离屏截图检查了音乐库（宽、窄、未登录、切到歌手标签、"收藏的"筛选、新建歌单对话框和建好后打开新歌单）、最近播放（歌曲、Ctrl+PageUp 到声音）、听歌排行、"我喜欢的音乐"歌单页（没有编辑和删除）。

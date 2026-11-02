@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-11-02）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页已按评审过的设计实现（[pages/artist.md](pages/artist.md)；MV 搁置到音乐功能上线后）；搜索页（综合、单曲、歌手、专辑、歌单、播客、声音，下拉列表的历史与分组建议）和播客页已按评审过的设计实现（[pages/search.md](pages/search.md)；声音的真实播放等后端），音乐库设计已写、待评审（[pages/library.md](pages/library.md)），之后逐个设计其余页面（发现、评论、设置）**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-11-02）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页已按评审过的设计实现（[pages/artist.md](pages/artist.md)；MV 搁置到音乐功能上线后）；搜索页（综合、单曲、歌手、专辑、歌单、播客、声音，下拉列表的历史与分组建议）和播客页已按评审过的设计实现（[pages/search.md](pages/search.md)；声音的真实播放等后端），音乐库（歌曲清单卡片、集合标签、新建歌单）、最近播放和听歌排行已按评审过的设计实现（[pages/library.md](pages/library.md)；"我喜欢的音乐"就是一个歌单），之后逐个设计其余页面（发现、评论、设置）**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -608,3 +608,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 ### 搜索页与播客页（2026-11-02）
 
 - 按 [pages/search.md](pages/search.md)（S1–S3 按建议，S4 一起做）实现：综合页（4 个并发小请求、名字完全相同时的最佳匹配）、6 个单类标签（分页、带总数）、下拉列表的本机搜索历史和分组建议（可直接打开歌手／专辑／歌单）、热门搜索说明文字；播客页与声音表格，声音经 `Player.playVoices` 播放（假数据源能播，真实后端等声音播放门禁）。细节和验证见该文 §9。
+
+### 音乐库、最近播放与听歌排行（2026-11-02）
+
+- 按 [pages/library.md](pages/library.md)（L1、L3、L5 按建议；L2 改为"我喜欢的音乐"就是一个歌单）实现：歌曲清单卡片（我喜欢的音乐、最近播放、听歌排行）、四个集合标签（歌单可筛选、可新建）、最近播放页（五个标签）、听歌排行页（一周／全部）。细节、后端待办和验证见该文 §8。同一轮按 MD3E 校正了搜索下拉列表，`Chip` 加了输入纸片。
