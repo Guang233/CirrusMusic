@@ -403,7 +403,7 @@ Item {
         sequences: [StandardKey.Find]
         onActivated: {
             const songPage = stack.currentItem as SongCollectionPage;
-            if (songPage) {
+            if (songPage && songPage.findable) {
                 songPage.find();
             } else {
                 shell.searchField.forceActiveFocus();

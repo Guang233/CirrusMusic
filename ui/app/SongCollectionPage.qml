@@ -10,6 +10,8 @@ import Cirrus.Presentation
 // its actions, the in-page find) over the song table. Once the header has gone, a
 // compact bar with the title, play all and the find stays on top, the column titles
 // under it. Ctrl+F (AppShell) calls find(); typing on the table finds too.
+// Pages with tabs (artist.md) add a tab row under the actions, pinned under the
+// compact bar once scrolled there, and show other content than songs in `bodyContent`.
 // The header's parts are components, since they live inside the table's header:
 //   SongCollectionPage { model: pageModel; songs: pageModel.songs; title: …
 //       infoContent: Column { … }; actionsContent: Row { … } }
@@ -24,6 +26,8 @@ Item {
     property string coverGlyph: Symbols.queue_music
     // Drawn instead of the cover art (fills the size it gets: 200, 140 or 32).
     property Component cover: null
+    // A round cover (artists): the skeleton matches.
+    property bool roundCover: false
     // Right of the cover: the type label, title and the page's lines.
     property Component infoContent: null
     // Under the cover, full width (e.g. a description in narrow windows), while
@@ -35,6 +39,22 @@ Item {
     // Under the actions (notices), while `showNotice`.
     property Component noticeContent: null
     property bool showNotice: true
+    // Tabs under the actions, `tabsHeight` tall; instantiated twice (in the header and
+    // pinned under the compact bar), so bind them to a page property.
+    property Component tabsContent: null
+    readonly property real tabsHeight: 48
+    // Under the tabs, while `showBody`: a tab's content that is not the song table.
+    property Component bodyContent: null
+    property bool showBody: false
+    // Whether the song table (column titles and rows) shows.
+    property bool showSongs: true
+    // Under the rows (e.g. the next page loading).
+    property Component footerContent: null
+    // Whether there is an in-page find (AppShell's Ctrl+F falls back to the search).
+    property bool findable: true
+    // The play button: its text and what it plays (the shown order when null).
+    property string playText: qsTr("播放全部")
+    property SongListModel playSource: null
     // The widths of the action skeletons, play all first.
     property list<int> actionSkeletons: [116]
     property string findPlaceholder: qsTr("在歌单中查找")
@@ -64,10 +84,18 @@ Item {
     property string findText
     // Set by the header (it lives inside the table's header).
     property Item headerContent: null
+    property Item headerActions: null
+    property Item headerTabs: null
     property SearchBar headerFind: null
+    readonly property bool canPlay: playSource ? playSource.count > 0 : hasSongs
     // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
-    readonly property real compactProgress: headerContent
-        ? Math.max(0, Math.min(1, (songTable.scrolled - headerContent.height + 112) / 56)) : 0
+    readonly property real compactProgress: headerActions
+        ? Math.max(0, Math.min(1, (songTable.scrolled - headerActions.y - headerActions.height
+                                   + 96) / 56)) : 0
+    // The header's tabs have scrolled under the compact bar: the pinned copy shows.
+    readonly property bool tabsPinned: tabsContent !== null && headerTabs !== null
+                                       && headerTabs.y - songTable.scrolled
+                                          < compactBar.y + compactBar.height
 
     signal removeRequested(list<string> keys)
 
@@ -80,7 +108,7 @@ Item {
     }
 
     function playAll(): void {
-        const keys = sortedModel.keys();
+        const keys = playSource ? playSource.keys() : sortedModel.keys();
         if (keys.length > 0)
             App.player.playSongs(keys, 0);
     }
@@ -89,7 +117,7 @@ Item {
 
     SortedSongsModel {
         id: sortedModel
-        source: page.songs
+        source: page.showSongs ? page.songs : null
         filterText: page.findText
     }
 
@@ -117,7 +145,7 @@ Item {
                         id: skeletonCover
                         width: page.wide ? 200 : 140
                         height: width
-                        radius: Theme.shape.large
+                        radius: page.roundCover ? width / 2 : Theme.shape.large
                     }
                     Column {
                         readonly property real available: parent.width - x
@@ -222,7 +250,9 @@ Item {
         opacity: state_.contentOpacity
         visible: opacity > 0
         songs: sortedModel
-        pinnedTop: compactBar.y + compactBar.height
+        pinnedTop: compactBar.y + compactBar.height + (page.tabsContent ? page.tabsHeight : 0)
+        showColumnTitles: page.showSongs
+        footerContent: page.footerContent
         sortable: page.sortable
         removable: page.removable
         showCover: page.showCover
@@ -281,17 +311,19 @@ Item {
 
             // Actions, and the find on the right.
             Item {
+                id: actions
                 x: songTable.rowX
                 width: songTable.rowWidth
                 height: 40
+                Component.onCompleted: page.headerActions = actions
 
                 Row {
                     spacing: 8
                     Button {
-                        enabled: page.hasSongs
+                        enabled: page.canPlay
                         variant: Md.Filled
                         glyph: Symbols.play_arrow
-                        text: qsTr("播放全部")
+                        text: page.playText
                         onClicked: page.playAll()
                     }
                     Loader {
@@ -303,11 +335,22 @@ Item {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.min(240, parent.width / 3)
-                    visible: page.hasSongs
+                    visible: page.findable && page.hasSongs
                     Component.onCompleted: page.headerFind = headerFind
                 }
             }
 
+            Loader {
+                id: tabs
+                x: songTable.rowX
+                width: songTable.rowWidth
+                height: page.tabsHeight
+                visible: page.tabsContent !== null
+                // Hidden while the pinned copy shows, so they don't both show.
+                opacity: page.tabsPinned ? 0 : 1
+                sourceComponent: page.tabsContent
+                Component.onCompleted: page.headerTabs = tabs
+            }
             Loader {
                 x: songTable.rowX
                 width: songTable.rowWidth
@@ -319,7 +362,7 @@ Item {
                 width: songTable.rowWidth
                 topPadding: 24
                 // Also once the last song has been removed.
-                visible: state_.showsContent && !page.hasSongs
+                visible: page.showSongs && state_.showsContent && !page.hasSongs
                 glyph: page.emptyGlyph
                 message: page.emptyText
             }
@@ -327,9 +370,16 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 topPadding: 24
-                visible: page.hasSongs && sortedModel.count === 0
+                visible: page.showSongs && page.hasSongs && sortedModel.count === 0
                 glyph: Symbols.search
                 message: page.noMatchText.arg(page.findText.trim())
+            }
+            Loader {
+                x: songTable.rowX
+                width: songTable.rowWidth
+                visible: page.bodyContent !== null && page.showBody
+                active: visible
+                sourceComponent: page.bodyContent
             }
         }
     }
@@ -378,13 +428,13 @@ Item {
             }
             IconButton {
                 id: compactPlay
-                x: compactFind.x - width - 12
+                x: (compactFind.visible ? compactFind.x : parent.width) - width - 12
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: page.hasSongs
+                enabled: page.canPlay
                 variant: Md.Filled
                 glyph: Symbols.play_arrow
                 iconFill: 1
-                text: qsTr("播放全部")
+                text: page.playText
                 onClicked: page.playAll()
             }
             FindField {
@@ -392,7 +442,33 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.min(240, parent.width / 3)
+                visible: page.findable
             }
+        }
+    }
+
+    // The tabs, pinned under the compact bar once the header's have scrolled there.
+    Rectangle {
+        y: compactBar.y + compactBar.height
+        width: parent.width - songTable.scrollBarWidth
+        height: page.tabsHeight
+        visible: page.tabsPinned
+        color: Theme.color.surface
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+        }
+        HoverHandler {
+            blocking: true
+        }
+        Loader {
+            x: songTable.rowX
+            width: songTable.rowWidth
+            height: parent.height
+            active: page.tabsContent !== null
+            sourceComponent: page.tabsContent
         }
     }
 }

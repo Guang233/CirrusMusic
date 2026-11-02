@@ -24,6 +24,11 @@ Item {
 
     required property SortedSongsModel songs
     property Component headerContent
+    // Under the rows (e.g. the next page loading).
+    property Component footerContent
+    // Off when the page shows something else than songs (artist.md §2): no column
+    // titles, here or pinned.
+    property bool showColumnTitles: true
     property real pinnedTop: 0
     property real maxContentWidth: 1200
     property bool showAlbumAction: true
@@ -392,7 +397,12 @@ Item {
             }
             ColumnTitles {
                 x: table.rowX
+                visible: table.showColumnTitles
             }
+        }
+        footer: Loader {
+            width: list.width
+            sourceComponent: table.footerContent
         }
 
         Keys.onPressed: event => {
@@ -812,7 +822,7 @@ Item {
         y: table.pinnedTop
         pinned: true
         // Once the header's own titles scroll under the pinned top.
-        visible: list.headerItem !== null
+        visible: table.showColumnTitles && list.headerItem !== null
                  && list.headerItem.y + list.headerItem.height - 40 - list.contentY < table.pinnedTop
 
         // Covers the rows scrolling under it, for the pointer too; not the scroll bar.
