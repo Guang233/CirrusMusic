@@ -145,6 +145,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 
 **`App.library`：喜欢与收藏状态**
 
+- `likedPlaylistKey`（账号的"我喜欢的音乐"歌单）、`likedCount`。
 - `isLiked(songKey)` 与 `likedRevision`（喜欢集合变化时递增，供绑定刷新）；`SongListModel` 的 `liked` 角色跟着它变。登录后读取喜欢列表（`LibrarySource::likedSongKeys`），退出时清空，`reload()` 重新读取。
 - `setLiked(songKey, liked)`：先更新界面，再等后端结果。失败时恢复原状并发 `notice(message)`；未登录时只发提示（页面应先打开登录对话框）。以后后端报告结果"未知"（取消、关闭、换号）时重新拉取喜欢列表，而不是假设成功。
 - `addToPlaylist(playlistKey, title, songKeys)`：收藏到歌单（不是某个页面自己的写入，所以放在这里）。成功后发 `playlistChanged(key)`（正在显示该歌单的页面刷新，外壳刷新侧边栏）和 `notice`。
@@ -179,7 +180,8 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | `PlaylistPageModel` | 歌单详情 | 头部（标题、简介、创建者、`coverKey`、`tags`、`updatedText`、`playCount`／`subscriberCount`／`commentCount`（未知为 -1）、`own`）、`songs`；`subscribed` 可写（先改界面，失败时撤回并发 `writeFailed(message)`，成功时发 `libraryChanged()`） |
 | `AlbumPageModel` | 专辑详情 | 头部（标题、歌手、发行时间）、`songs`；不完整时为 `Partial` |
 | `ArtistPageModel` | 歌手详情 | 头部（名字、简介、头像）、`topSongs`、`albums`（分页） |
-| `LibraryPageModel` | 音乐库 | `likedSongs`、`playlists`（创建的、收藏的）、`albums`、`artists`、`recentSongs`；未登录为 `SignedOut` |
+| `LibraryPageModel` | 侧边栏的歌单（原音乐库原型） | `likedSongs`、`playlists`（创建的、收藏的）、`albums`、`artists`、`recentSongs`；未登录为 `SignedOut` |
+| `LibraryOverviewModel` 等 | 音乐库、最近播放、听歌排行 | 见 [pages/library.md §8](pages/library.md)：集合标签分页（歌单可按创建／收藏筛选）、新建歌单；`RecentPageModel`、`RankingPageModel` |
 | `SettingsPage` | 设置 | 直接绑定 `App.settings`，不需要单独的 ViewModel |
 | `CommentsPageModel` | 评论 | 第一轮页面之后再做 |
 
@@ -244,7 +246,7 @@ public:
 | --- | --- |
 | `SessionSource` | 账号状态、扫码登录、注销、账号变化通知 |
 | `CatalogSource` | 只读目录：首页、搜索、建议、热搜、歌单／专辑／歌手详情、歌曲详情、每日推荐 |
-| `LibrarySource` | 账号私有读取（喜欢、我的歌单、收藏、最近播放）和写入（喜欢、收藏歌单、加入／移出歌单、调整顺序、改歌单信息、删除歌单） |
+| `LibrarySource` | 账号私有读取（喜欢、"我喜欢的音乐"歌单、我的歌单与收藏的专辑／歌手／播客、最近播放的各类、听歌排行）和写入（喜欢、收藏歌单、新建歌单、加入／移出歌单、调整顺序、改歌单信息、删除歌单） |
 | `PlaybackSource` | 播放与队列命令、播放快照、队列快照、歌词与歌词游标、私人 FM |
 | `ImageSource` | 按 key 和尺寸异步取图，供封面图片提供器使用 |
 
