@@ -128,6 +128,8 @@ struct CollectionItem {
     QString coverKey;
     // A playlist of the account's library: its own (true) or saved (false), when known.
     std::optional<bool> created;
+    // Playlists: how often played, as the service counts it; -1 when unknown.
+    qint64 playCount = -1;
 };
 
 // An artist's header, popular songs and albums.
@@ -198,6 +200,20 @@ template <class T> struct ResultPage {
     std::optional<bool> hasMore;
     // All results, when the source tells.
     std::optional<qint64> total;
+    // Cursor-paged lists (premium playlists): where the next page starts; none at the end.
+    std::optional<qint64> next;
+};
+
+// Playlist categories for discover (docs/ui/pages/discover.md §3.1): the trending ones,
+// all of them by group (语种, 风格…), and those that have premium playlists.
+struct PlaylistCategories {
+    struct Group {
+        QString name;
+        QStringList categories;
+    };
+    QStringList hot;
+    QList<Group> groups;
+    QStringList premium;
 };
 
 // What the search field suggests while typing: a song (searched by its title) or an

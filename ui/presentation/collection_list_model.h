@@ -23,7 +23,8 @@ class CollectionListModel : public QAbstractListModel
         TitleRole,
         SubtitleRole, // "Artist · 2024", "12 首 · creator", "3 张专辑"
         CoverKeyRole,
-        CountRole, // -1 when unknown
+        CountRole,     // -1 when unknown
+        PlayCountRole, // playlists, -1 when unknown
     };
     Q_ENUM(Role)
 

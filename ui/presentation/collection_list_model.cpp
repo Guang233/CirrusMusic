@@ -75,6 +75,8 @@ QVariant CollectionListModel::data(const QModelIndex& index, int role) const
         return item.coverKey;
     case CountRole:
         return item.count;
+    case PlayCountRole:
+        return item.playCount;
     default:
         return {};
     }
@@ -83,8 +85,13 @@ QVariant CollectionListModel::data(const QModelIndex& index, int role) const
 QHash<int, QByteArray> CollectionListModel::roleNames() const
 {
     return {
-        {KeyRole, "key"},           {KindRole, "kind"},         {TitleRole, "title"},
-        {SubtitleRole, "subtitle"}, {CoverKeyRole, "coverKey"}, {CountRole, "count"},
+        {KeyRole, "key"},
+        {KindRole, "kind"},
+        {TitleRole, "title"},
+        {SubtitleRole, "subtitle"},
+        {CoverKeyRole, "coverKey"},
+        {CountRole, "count"},
+        {PlayCountRole, "playCount"},
     };
 }
 

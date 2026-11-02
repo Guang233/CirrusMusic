@@ -254,16 +254,20 @@ class ChartListModel : public QAbstractListModel
     QList<ChartInfo> m_charts;
 };
 
-// The charts for the home page.
+// The charts: those the service previews (the official ones, on the home page and
+// first on discover), and the others as cards.
 class ChartsModel : public LoadableModel
 {
     Q_OBJECT
+    Q_MOC_INCLUDE("collection_list_model.h")
     QML_ELEMENT
     Q_PROPERTY(cirrus::ui::ChartListModel* charts READ charts CONSTANT)
+    Q_PROPERTY(cirrus::ui::CollectionListModel* others READ others CONSTANT)
 
   public:
     explicit ChartsModel(QObject* parent = nullptr);
     [[nodiscard]] ChartListModel* charts() const { return m_charts; }
+    [[nodiscard]] CollectionListModel* others() const { return m_others; }
 
   protected:
     Request load() override;
@@ -271,6 +275,7 @@ class ChartsModel : public LoadableModel
 
   private:
     ChartListModel* m_charts;
+    CollectionListModel* m_others;
 };
 
 // The account's library (docs/ui/presentation.md §5.2); SignedOut for guests.

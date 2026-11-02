@@ -66,8 +66,27 @@ class CatalogSource
     virtual Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) = 0;
     // A row of cards; DailyPlaylists is signed-in only.
     virtual Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) = 0;
-    // The charts with previews of their top songs.
+    // The charts; some with previews of their top songs.
     virtual Request charts(Reply<QList<ChartInfo>> reply) = 0;
+
+    // Discover (docs/ui/pages/discover.md §3). Categories are names; "" is all.
+    virtual Request playlistCategories(Reply<PlaylistCategories> reply) = 0;
+    // A category's playlists, most played or newest first.
+    virtual Request categoryPlaylists(const QString& category, bool newest, PageRequest page,
+                                      Reply<ResultPage<CollectionItem>> reply) = 0;
+    // Premium playlists a page at a time: `before` is the previous page's `next` (0 for
+    // the first page).
+    virtual Request premiumPlaylists(const QString& category, qint64 before, int limit,
+                                     Reply<ResultPage<CollectionItem>> reply) = 0;
+    // Artists by kind (0 all, 1 male, 2 female, 3 groups), area (0 all, 1 Chinese,
+    // 2 Western, 3 Japanese, 4 Korean, 5 other) and initial ("" popular, "A"–"Z", "#").
+    virtual Request browseArtists(int kind, int area, const QString& initial, PageRequest page,
+                                  Reply<ResultPage<CollectionItem>> reply) = 0;
+    // New albums by area (0 all, 1 Chinese, 2 Western, 3 Korean, 4 Japanese), newest
+    // first; and the area's new album chart this week or this month.
+    virtual Request newAlbums(int area, PageRequest page,
+                              Reply<ResultPage<CollectionItem>> reply) = 0;
+    virtual Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) = 0;
 };
 
 // The signed-in account's library; every request fails with SignedOut for guests.

@@ -332,7 +332,8 @@ QHash<int, QByteArray> ChartListModel::roleNames() const
 }
 
 ChartsModel::ChartsModel(QObject* parent)
-    : LoadableModel(parent), m_charts(new ChartListModel(this))
+    : LoadableModel(parent), m_charts(new ChartListModel(this)),
+      m_others(new CollectionListModel(this))
 {
     reload();
 }
@@ -341,12 +342,28 @@ Request ChartsModel::load()
 {
     return App::instance()->catalog()->charts(
         handle<QList<ChartInfo>>([this](QList<ChartInfo> charts) {
-            m_charts->reset(charts);
+            QList<ChartInfo> previewed;
+            QList<CollectionItem> others;
+            for (const ChartInfo& chart : std::as_const(charts)) {
+                if (!chart.previews.isEmpty())
+                    previewed << chart;
+                else
+                    // A chart is a playlist; its card says how often it changes.
+                    others << CollectionItem{
+                        chart.key, collection::Playlist, chart.title, chart.updateLabel, 0,
+                        -1,        chart.coverKey};
+            }
+            m_charts->reset(previewed);
+            m_others->reset(others);
             return charts.isEmpty();
         }));
 }
 
-void ChartsModel::clear() { m_charts->reset({}); }
+void ChartsModel::clear()
+{
+    m_charts->reset({});
+    m_others->clear();
+}
 
 LibraryPageModel::LibraryPageModel(QObject* parent)
     : LoadableModel(parent), m_likedSongs(new SongListModel(this)),

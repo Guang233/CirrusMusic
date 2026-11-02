@@ -462,7 +462,16 @@ class FakeCatalog : public QObject, public CatalogSource
         } charts[] = {{"ch-soar", QT_TR_NOOP("飙升榜"), QT_TR_NOOP("每天更新"), "crimson"},
                       {"ch-new", QT_TR_NOOP("新歌榜"), QT_TR_NOOP("每天更新"), "ocean"},
                       {"ch-original", QT_TR_NOOP("原创榜"), QT_TR_NOOP("每周四更新"), "forest"},
-                      {"ch-hot", QT_TR_NOOP("热歌榜"), QT_TR_NOOP("每周四更新"), "sunset"}};
+                      {"ch-hot", QT_TR_NOOP("热歌榜"), QT_TR_NOOP("每周四更新"), "sunset"},
+                      // Without previews, as the service gives the rest.
+                      {"ch-rap", QT_TR_NOOP("说唱榜"), QT_TR_NOOP("每周五更新"), "mono"},
+                      {"ch-electronic", QT_TR_NOOP("电音榜"), QT_TR_NOOP("每周五更新"), "neon"},
+                      {"ch-classical", QT_TR_NOOP("古典榜"), QT_TR_NOOP("每周一更新"), "minimal"},
+                      {"ch-acg", QT_TR_NOOP("ACG 榜"), QT_TR_NOOP("每周三更新"), "pastel"},
+                      {"ch-western", QT_TR_NOOP("欧美热歌榜"), QT_TR_NOOP("每周日更新"), "galaxy"},
+                      {"ch-japanese", QT_TR_NOOP("日语榜"), QT_TR_NOOP("每周二更新"), "stripes"},
+                      {"ch-korean", QT_TR_NOOP("韩语榜"), QT_TR_NOOP("每周二更新"), "hazard"},
+                      {"ch-folk", QT_TR_NOOP("国风榜"), "", "earth"}};
         std::mt19937 random(7);
         for (const auto& chart : charts) {
             QStringList keys = m_samples->songOrder;
@@ -959,9 +968,10 @@ class FakeCatalog : public QObject, public CatalogSource
                                     page.info.description,
                                     page.info.coverKey,
                                     {}};
-                    for (const SongInfo& song : page.songs.mid(0, kChartPreviews))
-                        chart.previews
-                            << ChartPreview{song.title, Formatter::artists(song.artists)};
+                    if (charts.size() < kOfficialCharts)
+                        for (const SongInfo& song : page.songs.mid(0, kChartPreviews))
+                            chart.previews
+                                << ChartPreview{song.title, Formatter::artists(song.artists)};
                     charts << chart;
                 }
             }
@@ -969,16 +979,205 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
+    Request playlistCategories(Reply<PlaylistCategories> reply) override
+    {
+        return replyLater<PlaylistCategories>(this, m_controls, std::move(reply), []() {
+            const auto list = [](std::initializer_list<const char*> names) {
+                QStringList list;
+                for (const char* name : names)
+                    list << QString::fromUtf8(name);
+                return list;
+            };
+            PlaylistCategories categories;
+            categories.groups = {
+                {tr("语种"), list({"华语", "欧美", "日语", "韩语", "粤语"})},
+                {tr("风格"),
+                 list({"流行", "摇滚",     "民谣", "电子",    "舞曲", "说唱", "轻音乐",    "爵士",
+                       "乡村", "R&B/Soul", "古典", "民族",    "英伦", "金属", "朋克",      "蓝调",
+                       "雷鬼", "世界音乐", "拉丁", "New Age", "古风", "后摇", "Bossa Nova"})},
+                {tr("场景"), list({"清晨", "夜晚", "学习", "工作", "午休", "下午茶", "地铁", "驾车",
+                                   "运动", "旅行", "散步", "酒吧"})},
+                {tr("情感"), list({"怀旧", "清新", "浪漫", "伤感", "治愈", "放松", "孤独", "感动",
+                                   "兴奋", "快乐", "安静", "思念"})},
+                {tr("主题"),
+                 list({"综艺", "影视原声", "ACG", "儿童", "校园", "游戏", "70后", "80后", "90后",
+                       "00后", "网络歌曲", "KTV", "经典", "翻唱", "吉他", "钢琴", "器乐"})},
+            };
+            categories.hot = list(
+                {"华语", "流行", "摇滚", "民谣", "电子", "轻音乐", "夜晚", "治愈", "欧美", "学习"});
+            // Not every category has premium playlists ("夜晚" has none).
+            categories.premium = list({"华语", "欧美", "流行", "摇滚", "电子", "轻音乐", "古典",
+                                       "爵士", "民谣", "影视原声", "ACG"});
+            return Outcome<PlaylistCategories>{categories};
+        });
+    }
+
+    Request categoryPlaylists(const QString& category, bool newest, PageRequest page,
+                              Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, category, newest, page]() {
+                QList<CollectionItem> items = categoryItems(category);
+                // The samples have no creation dates: newest first is the list reversed.
+                if (newest)
+                    std::reverse(items.begin(), items.end());
+                return Outcome<ResultPage<CollectionItem>>{slice(items, page)};
+            });
+    }
+
+    // Cursor paged like the service's: `before` is where the last page ended (0 for
+    // the first); the cursor counts down, one per playlist.
+    Request premiumPlaylists(const QString& category, qint64 before, int limit,
+                             Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, category, before, limit]() {
+                QList<CollectionItem> items = categoryItems(category);
+                items = items.mid(0, int(items.size() * 2 / 3));
+                const int offset = before == 0 ? 0 : int(kPremiumCursor - before);
+                ResultPage<CollectionItem> result;
+                result.items = items.mid(offset, limit);
+                if (offset + limit < items.size())
+                    result.next = kPremiumCursor - (offset + limit);
+                return Outcome<ResultPage<CollectionItem>>{result};
+            });
+    }
+
+    Request browseArtists(int kind, int area, const QString& initial, PageRequest page,
+                          Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, kind, area, initial, page]() {
+                QList<CollectionItem> items;
+                if (!m_controls->empty()) {
+                    for (const QString& key : m_samples->artistOrder) {
+                        const ArtistTraits traits = traitsOf(key);
+                        if ((kind == 0 || traits.kind == kind) &&
+                            (area == 0 || traits.area == area) &&
+                            (initial.isEmpty() || initial == QLatin1Char(traits.initial)))
+                            items << m_samples->artistItem(key);
+                    }
+                }
+                // No total: the service doesn't tell.
+                ResultPage<CollectionItem> result = slice(items, page);
+                result.total.reset();
+                return Outcome<ResultPage<CollectionItem>>{result};
+            });
+    }
+
+    Request newAlbums(int area, PageRequest page, Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, area, page]() {
+                QList<CollectionItem> items = albumsIn(area);
+                std::stable_sort(items.begin(), items.end(),
+                                 [](const CollectionItem& a, const CollectionItem& b) {
+                                     return a.year > b.year;
+                                 });
+                return Outcome<ResultPage<CollectionItem>>{slice(items, page)};
+            });
+    }
+
+    Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) override
+    {
+        return replyLater<QList<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, area, monthly]() {
+                QList<CollectionItem> items = albumsIn(area);
+                // A different but stable order for the week and the month.
+                std::mt19937 random(monthly ? 31 : 7);
+                std::shuffle(items.begin(), items.end(), random);
+                return Outcome<QList<CollectionItem>>{items};
+            });
+    }
+
   private:
     static constexpr int kTopSongs = 50;
     static constexpr int kChartSongs = 20;
     static constexpr int kChartPreviews = 3;
+    // The first charts have previews (the official ones).
+    static constexpr int kOfficialCharts = 4;
+    // The "全部" playlists, for paging; a category has fewer.
+    static constexpr int kCategoryPlaylists = 95;
     static constexpr int kSuggestions = 8;
     static constexpr int kDailySongs = 15;
     static constexpr int kHistoryDays = 7;
     static constexpr int kSimilarArtists = 6;
     // The first sample artist's song list is this long, for paging.
     static constexpr int kLongArtistSongs = 230;
+
+    // Where the premium cursor starts counting down.
+    static constexpr qint64 kPremiumCursor = 1'000'000;
+
+    // A category's playlists: the samples tagged with it, or (for a category the
+    // samples don't use) all of them in an order of its own, repeated for paging.
+    // "儿童" has none, for the empty state.
+    [[nodiscard]] QList<CollectionItem> categoryItems(const QString& category) const
+    {
+        if (m_controls->empty() || category == u"儿童")
+            return {};
+        QStringList keys;
+        for (const QString& key : m_samples->playlistOrder)
+            if (!m_samples->playlists[key].songKeys.isEmpty() && key != u"pl-long")
+                keys << key;
+        QStringList tagged;
+        for (const QString& key : std::as_const(keys))
+            if (m_samples->playlists[key].info.tags.contains(category))
+                tagged << key;
+        int count = kCategoryPlaylists;
+        if (!tagged.isEmpty()) {
+            keys = tagged;
+            count = int(tagged.size()) * 6;
+        } else if (!category.isEmpty()) {
+            std::mt19937 random(qHash(category));
+            std::shuffle(keys.begin(), keys.end(), random);
+            count = 24 + int(qHash(category) % 50);
+        }
+        QList<CollectionItem> items;
+        for (int i = 0; i < count; ++i) {
+            const QString& key = keys.at(i % keys.size());
+            CollectionItem item = m_samples->playlistItem(key);
+            item.playCount = m_samples->playlists[key].info.playCount;
+            items << item;
+        }
+        return items;
+    }
+
+    // What browsing artists filters on, made up for the samples.
+    struct ArtistTraits {
+        int kind; // 1 male, 2 female, 3 group
+        int area; // 1 Chinese, 2 Western, 3 Japanese, 4 Korean, 5 other
+        char initial;
+    };
+    [[nodiscard]] static ArtistTraits traitsOf(const QString& key)
+    {
+        static const QHash<QString, ArtistTraits> traits{
+            {QStringLiteral("ar-01"), {3, 1, 'W'}}, {QStringLiteral("ar-02"), {3, 2, 'L'}},
+            {QStringLiteral("ar-03"), {3, 1, 'L'}}, {QStringLiteral("ar-04"), {3, 2, 'N'}},
+            {QStringLiteral("ar-05"), {1, 1, 'S'}}, {QStringLiteral("ar-06"), {3, 5, 'P'}},
+            {QStringLiteral("ar-07"), {3, 1, 'C'}}, {QStringLiteral("ar-08"), {2, 3, 'K'}},
+            {QStringLiteral("ar-09"), {3, 1, 'T'}}, {QStringLiteral("ar-10"), {2, 2, 'Q'}},
+            {QStringLiteral("ar-11"), {3, 1, 'X'}}, {QStringLiteral("ar-12"), {1, 4, 'P'}},
+        };
+        return traits.value(key, {3, 5, '#'});
+    }
+
+    // The sample albums of an area, as newAlbums() numbers them (0 all, 1 Chinese,
+    // 2 Western, 3 Korean, 4 Japanese), by their first artist.
+    [[nodiscard]] QList<CollectionItem> albumsIn(int area) const
+    {
+        static const int artistArea[] = {0, 1, 2, 4, 3};
+        QList<CollectionItem> items;
+        if (m_controls->empty())
+            return items;
+        for (const QString& key : m_samples->albumOrder) {
+            const AlbumPage& album = m_samples->albums[key];
+            const int own =
+                album.info.artists.isEmpty() ? 5 : traitsOf(album.info.artists.first().key).area;
+            if (area <= 0 || area > 4 || own == artistArea[area])
+                items << m_samples->albumItem(key);
+        }
+        return items;
+    }
 
     // All of an artist's songs. The first sample artist's songs repeat under keys like
     // "so-001~2", so the list pages.
