@@ -176,7 +176,7 @@ Xaleid◆scopiX                                         ← 搜索词，headline
 已按本文实现，与 §8 的差别：
 
 - 搜索页没有用 `SongCollectionPage`（它的头部是封面＋操作行），而是直接用 `SongTable`：标题、标签、最佳匹配卡片、分组标题、状态和卡片网格放在表格的头部，综合页的歌手／专辑／歌单分组和分页底部放在表格底部；标签栏滚走后固定在顶部，机制与歌手页相同。歌手页的标签状态抽成 `ui/app/TabState.qml`，三页共用。
-- 标签上的总数：标签自己加载过就用它的总数，否则用综合页四个请求带回的总数（`SearchOverview.totals`）；播客、声音在打开前不显示数字。
+- 标签上的总数：标签自己加载过就用它的总数，否则用综合页四个请求带回的总数（`SearchOverview.totals`）；播客、声音在打开前不显示数字；总数为 0 时不写数字（维护者同意，与网易云一致）。
 - 最佳匹配卡片的播放按钮：歌手播放热门歌曲、专辑播放整张，点击时才用 `ArtistPageModel`／`AlbumPageModel` 请求。
 - 下拉列表：历史和热门最多 20 行，超过窗口高度时在列表里滚动，↑／↓ 选中的行保持可见。删除一条历史后选中位置不变。
 - 展示层：`SearchModel` 的标签改为 7 个（综合、单曲、歌手、专辑、歌单、播客、声音），`suggestions` 是分组的 `[{song, kind, key, title}]`，`hotKeywords` 是 `[{keyword, description}]`，`history`／`removeHistory()`／`clearHistory()` 读写 `App.settings.searchHistory`；`PagedModel` 加 `total`；`Collection.Podcast`；`SongInfo.serial`（声音的期数，`SongListModel` 的 `serial` 角色）；`CatalogSource` 加 `searchVoices`、`podcast`、`podcastVoices`，`LibrarySource` 加 `setPodcastSubscribed`，`PlaybackSource` 加 `playVoices`／`canPlayVoices`（`Player` 同名）；新的 `PodcastPageModel`（头部、收藏）和 `PodcastVoicesModel`（分页，每页 50，`oldestFirst`）。

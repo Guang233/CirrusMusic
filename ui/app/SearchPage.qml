@@ -154,7 +154,8 @@ Item {
         readonly property real total: model.total >= 0 ? model.total
                                     : overviewIndex >= 0
                                       ? page.search.overview.totals[overviewIndex] : -1
-        text: total >= 0 ? qsTr("%1 %2").arg(name).arg(App.format.count(total)) : name
+        // No number for none (search.md §9).
+        text: total > 0 ? qsTr("%1 %2").arg(name).arg(App.format.count(total)) : name
     }
 
     // The tabs, with totals once known; in the header and pinned at the top.
