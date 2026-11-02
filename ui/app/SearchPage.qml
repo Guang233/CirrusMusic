@@ -386,12 +386,17 @@ Item {
 
         readonly property SearchOverview overview: page.search.overview
         readonly property bool artist: overview.bestKind === Collection.Artist
+        readonly property string typeText: artist ? qsTr("歌手")
+                                          : overview.bestKind === Collection.Album ? qsTr("专辑")
+                                          : overview.bestKind === Collection.Podcast ? qsTr("播客")
+                                          : qsTr("歌单")
 
         width: Math.min(parent ? parent.width : 0, 560)
         height: 128
         padding: 16
         focusPolicy: Qt.TabFocus
-        Accessible.name: qsTr("最佳匹配：%1，%2").arg(overview.bestTitle).arg(overview.bestSubtitle)
+        Accessible.name: [typeText, overview.bestTitle, overview.bestSubtitle]
+            .filter(part => part !== "").join(qsTr("，"))
         onClicked: page.shell.openCollection(overview.bestKind, overview.bestKey)
 
         contentItem: Item {
@@ -411,8 +416,9 @@ Item {
                 width: bestPlay.x - x - 16
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
+                // The type in the label's place: the card says what it is.
                 Text {
-                    text: qsTr("最佳匹配")
+                    text: card.typeText
                     color: Theme.color.primary
                     font: Theme.type.labelLarge.font
                 }

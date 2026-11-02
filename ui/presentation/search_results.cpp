@@ -137,25 +137,26 @@ QString SearchOverview::bestSubtitle() const
 {
     if (!m_best)
         return {};
+    // The type is the card's label; this is what follows the name.
     QStringList parts;
     switch (m_best->kind) {
     case collection::Artist:
-        parts << tr("歌手");
         if (m_best->count >= 0)
             parts << tr("%1 张专辑").arg(Formatter::count(m_best->count));
         break;
     case collection::Album:
-        parts << tr("专辑") << m_best->byline;
+        parts << m_best->byline;
         if (m_best->year > 0)
             parts << QString::number(m_best->year);
         break;
     case collection::Playlist:
-        parts << tr("歌单") << m_best->byline;
+        parts << m_best->byline;
         if (m_best->count >= 0)
             parts << tr("%1 首").arg(Formatter::count(m_best->count));
         break;
     case collection::Podcast:
-        parts << tr("播客");
+        if (m_best->count >= 0)
+            parts << tr("%1 期").arg(Formatter::count(m_best->count));
         break;
     }
     parts.removeAll(QString());
