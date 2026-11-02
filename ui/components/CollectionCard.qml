@@ -6,13 +6,15 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // A playlist, album, artist or podcast card: cover (round for artists), title and subtitle.
-// `text` is the title. The state layer covers the whole card.
+// `text` is the title. The state layer covers the whole card. A playlist's play count,
+// when known (`plays` >= 0), sits on the cover's lower left (discover.md D4).
 T.AbstractButton {
     id: control
 
     property int kind: Collection.Playlist
     property string coverKey
     property string subtitle
+    property real plays: -1
 
     readonly property bool artist: kind === Collection.Artist
 
@@ -20,7 +22,9 @@ T.AbstractButton {
     implicitHeight: implicitContentHeight + topPadding + bottomPadding
     padding: 8
     focusPolicy: Qt.TabFocus
-    Accessible.name: subtitle !== "" ? text + "，" + subtitle : text
+    Accessible.name: [text, subtitle,
+                      plays >= 0 ? qsTr("播放 %1 次").arg(App.format.count(plays)) : ""]
+        .filter(part => part !== "").join("，")
 
     contentItem: Column {
         spacing: 8
@@ -33,6 +37,36 @@ T.AbstractButton {
                  : control.artist ? Symbols.person
                  : control.kind === Collection.Podcast ? Symbols.podcasts : Symbols.queue_music
             coverKey: control.coverKey
+
+            // Text on an image: a small translucent plate keeps it legible on any cover.
+            Rectangle {
+                x: 6
+                y: parent.height - height - 6
+                visible: control.plays >= 0 && !control.artist
+                width: plays.implicitWidth + 12
+                height: 20
+                radius: Theme.shape.extraSmall
+                color: Qt.alpha(Theme.color.inverseSurface, 0.72)
+
+                Row {
+                    id: plays
+                    anchors.centerIn: parent
+                    spacing: 2
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        glyph: Symbols.play_arrow
+                        fill: 1
+                        size: 14
+                        color: Theme.color.inverseOnSurface
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: App.format.count(control.plays)
+                        color: Theme.color.inverseOnSurface
+                        font: Theme.type.labelSmall.font
+                    }
+                }
+            }
         }
         Column {
             width: parent.width
