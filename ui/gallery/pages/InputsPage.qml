@@ -220,7 +220,7 @@ ControlPage {
         text: qsTr("纸片")
     }
     Caption {
-        text: qsTr("建议／辅助纸片为描边样式；可选（checkable）为筛选纸片，选中时填充 SecondaryContainer 并显示对勾；可删除（removable）为输入纸片，标签后有删除按钮，长标签省略。最后一个为禁用。")
+        text: qsTr("建议／辅助纸片为描边样式；可选（checkable）为筛选纸片，选中时填充 SecondaryContainer 并显示对勾；可删除（removable）为输入纸片，标签后有删除按钮，长标签省略；下拉（dropdown）为带菜单的筛选纸片，尾部是下拉箭头。最后一个为禁用。下面一行是 ChipGroup：单选，一个 Tab 停留点，←／→ 移动，放不下的纸片隐藏。")
     }
     Flow {
         Layout.fillWidth: true
@@ -251,8 +251,25 @@ ControlPage {
             text: qsTr("一个很长很长的搜索词")
         }
         Chip {
+            dropdown: true
+            text: qsTr("热门")
+        }
+        Chip {
+            dropdown: true
+            checked: true
+            text: "K"
+        }
+        Chip {
             enabled: false
             text: qsTr("不可用")
         }
+    }
+    // Single-select row: one Tab stop, ←/→ move, chips past the width hidden.
+    ChipGroup {
+        id: chipGroup
+        Layout.fillWidth: true
+        model: [qsTr("全部"), qsTr("华语"), qsTr("欧美"), qsTr("日本"), qsTr("韩国"), qsTr("其他")]
+        currentIndex: 1
+        onActivated: index => currentIndex = index
     }
 }

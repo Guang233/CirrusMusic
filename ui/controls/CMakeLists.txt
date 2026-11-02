@@ -45,6 +45,7 @@ qt_add_qml_module(cirrus_ui_controls
         TabBar.qml
         TabButton.qml
         Chip.qml
+        ChipGroup.qml
 )
 
 # Embedded at :/qt/qml/Cirrus/Controls/shaders/*.qsb, next to the QML files.

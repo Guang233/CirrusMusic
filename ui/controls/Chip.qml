@@ -8,23 +8,31 @@ import Cirrus.Theme
 // shows a check when selected; `removable` makes an input chip with a trailing remove
 // button (`removeClicked`). `highlighted` shows the focus state layer for a chip a
 // list picks while the keyboard focus stays elsewhere (the search field's list).
+// `filter` is a filter chip whose `checked` the owner sets instead of a click toggling it
+// (single-select rows, ChipGroup); `dropdown` is such a chip with a menu (trailing
+// arrow; the page opens the menu on click).
 //   Chip { text: qsTr("落日航线"); onClicked: search(text) }
 //   Chip { text: qsTr("只看可播放"); checkable: true }
 //   Chip { text: query; removable: true; onRemoveClicked: forget(query) }
+//   Chip { text: initial; dropdown: true; checked: initial !== ""; onClicked: menu.open() }
 T.Button {
     id: control
 
     property string glyph
     // Input chip: a remove button after the label.
     property bool removable: false
+    // Filter chip selected while `checked`, which the owner sets.
+    property bool filter: dropdown
+    // Filter chip with a menu: a trailing arrow.
+    property bool dropdown: false
     // Longer labels elide (0: no limit).
     property real maximumLabelWidth: 0
 
-    readonly property bool selected: checkable && checked
+    readonly property bool selected: (checkable || filter) && checked
     readonly property string leadingGlyph: selected ? Symbols.check : glyph
     readonly property color labelColor: !enabled
         ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(checkable || removable ? Theme.color.onSurfaceVariant
+        : Theme.mix(checkable || removable || filter ? Theme.color.onSurfaceVariant
                                            : Theme.color.onSurface,
                     Theme.color.onSecondaryContainer, selection.value)
     signal removeClicked
@@ -37,7 +45,7 @@ T.Button {
                             implicitContentWidth + leftPadding + rightPadding)
     implicitHeight: 32
     leftPadding: leadingGlyph !== "" ? 8 : removable ? 12 : 16
-    rightPadding: removable ? 4 : 16
+    rightPadding: removable ? 4 : dropdown ? 8 : 16
     spacing: removable ? 4 : 8
     font: Theme.type.labelLarge.font
 
@@ -64,6 +72,13 @@ T.Button {
             text: control.text
             elide: Text.ElideRight
             font: control.font
+            color: control.labelColor
+        }
+        Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: control.dropdown
+            glyph: Symbols.arrow_drop_down
+            size: 18
             color: control.labelColor
         }
         // 18 px icon with 8 px to the edge; the target is a little larger.
