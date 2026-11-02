@@ -62,6 +62,11 @@ QVariant CollectionListModel::data(const QModelIndex& index, int role) const
             if (item.count >= 0)
                 parts << tr("%1 张专辑").arg(Formatter::count(item.count));
             break;
+        case collection::Podcast:
+            if (item.count >= 0)
+                parts << tr("%1 期").arg(Formatter::count(item.count));
+            parts << item.byline;
+            break;
         }
         parts.removeAll(QString());
         return parts.join(tr(" · "));

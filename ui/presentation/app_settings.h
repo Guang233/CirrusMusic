@@ -38,6 +38,9 @@ class AppSettings : public QObject
     // startup, before the window exists (ui/app/gpu_preference.h).
     Q_PROPERTY(bool preferDiscreteGpu READ preferDiscreteGpu WRITE setPreferDiscreteGpu NOTIFY
                    preferDiscreteGpuChanged)
+    // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
+    Q_PROPERTY(QStringList searchHistory READ searchHistory WRITE setSearchHistory NOTIFY
+                   searchHistoryChanged)
     Q_PROPERTY(bool showTranslation READ showTranslation WRITE setShowTranslation NOTIFY
                    showTranslationChanged)
     Q_PROPERTY(bool showRomanization READ showRomanization WRITE setShowRomanization NOTIFY
@@ -64,6 +67,8 @@ class AppSettings : public QObject
     void setCloseAction(int action);
     [[nodiscard]] bool preferDiscreteGpu() const;
     void setPreferDiscreteGpu(bool prefer);
+    [[nodiscard]] QStringList searchHistory() const;
+    void setSearchHistory(const QStringList& history);
     [[nodiscard]] bool showTranslation() const;
     void setShowTranslation(bool show);
     [[nodiscard]] bool showRomanization() const;
@@ -79,6 +84,7 @@ class AppSettings : public QObject
     void titleBarChanged();
     void closeActionChanged();
     void preferDiscreteGpuChanged();
+    void searchHistoryChanged();
     void showTranslationChanged();
     void showRomanizationChanged();
 

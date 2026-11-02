@@ -51,6 +51,14 @@ void Player::playSongs(const QStringList& keys, int index)
         m_source->playSongs(keys, index);
 }
 
+void Player::playVoices(const QStringList& keys, int index)
+{
+    if (canPlayVoices() && index >= 0 && index < keys.size())
+        m_source->playVoices(keys, index);
+}
+
+bool Player::canPlayVoices() const { return m_source && m_source->canPlayVoices(); }
+
 void Player::playPause()
 {
     if (m_source)

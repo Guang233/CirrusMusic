@@ -103,11 +103,16 @@ struct Samples {
     QHash<QString, PlaylistPage> playlists;
     QHash<QString, AlbumPage> albums;
     QHash<QString, ArtistInfo> artists;
+    QHash<QString, PodcastInfo> podcasts;
+    // A podcast's voices, newest first; and every voice by key.
+    QHash<QString, QStringList> podcastVoices;
+    QHash<QString, SongInfo> voices;
     // In catalog order.
     QStringList songOrder;
     QStringList playlistOrder;
     QStringList albumOrder;
     QStringList artistOrder;
+    QStringList podcastOrder;
     // By artist key, in catalog order.
     QHash<QString, QStringList> artistSongs;
     QHash<QString, QStringList> artistAlbums;
@@ -116,6 +121,8 @@ struct Samples {
     // like "so-001~123"; those resolve to the sample with the key kept.
     [[nodiscard]] SongInfo song(const QString& key) const
     {
+        if (voices.contains(key))
+            return voices[key];
         SongInfo info =
             songs.value(key.section(QLatin1Char('~'), 0, 0), SongInfo{.key = key, .title = key});
         info.key = key;
@@ -149,6 +156,11 @@ struct Samples {
         const ArtistInfo& info = artists[key];
         return {info.key, collection::Artist, info.name, {}, 0, info.albumCount, info.avatarKey};
     }
+    [[nodiscard]] CollectionItem podcastItem(const QString& key) const
+    {
+        const PodcastInfo& info = podcasts[key];
+        return {info.key, collection::Podcast, info.title, {}, 0, info.voiceCount, info.coverKey};
+    }
 };
 
 // What the signed-in account likes, created and saved, and its edits to its own
@@ -159,6 +171,7 @@ struct FakeAccount {
                       QStringLiteral("pl-long")};
     QStringList savedAlbums{QStringLiteral("al-01"), QStringLiteral("al-03"),
                             QStringLiteral("al-06"), QStringLiteral("al-13")};
+    QStringList savedPodcasts{QStringLiteral("pc-02")};
     QStringList followedArtists{QStringLiteral("ar-01"), QStringLiteral("ar-04"),
                                 QStringLiteral("ar-11")};
     QStringList liked{QStringLiteral("so-001"), QStringLiteral("so-005"), QStringLiteral("so-011"),
@@ -325,6 +338,52 @@ std::shared_ptr<const Samples> loadSamples()
             page.songs << samples->song(key);
         samples->playlists.insert(page.info.key, page);
         samples->playlistOrder << page.info.key;
+    }
+
+    // Podcasts are not in the sample catalog: a few made up here, the first one long
+    // enough for paged loading. Voices are numbered, newest first, 18 to 58 minutes.
+    {
+        const struct {
+            const char* title;
+            const char* cover;
+            int voices;
+            const char* topic;
+        } made[] = {
+            {"夜航电台", "galaxy", 120, "深夜的歌和故事"},
+            {"雾港来信", "ocean", 18, "听众来信与回信"},
+            {"慢慢说唱片", "crimson", 12, "一张唱片的前前后后"},
+            {"森林录音笔记", "forest", 9, "野外录音和声音设计"},
+            {"城市漫步", "neon", 6, "边走边聊城市里的声音"},
+        };
+        for (int p = 0; p < int(std::size(made)); ++p) {
+            PodcastInfo info;
+            info.key = QStringLiteral("pc-%1").arg(p + 1, 2, 10, QLatin1Char('0'));
+            info.title = QString::fromUtf8(made[p].title);
+            info.coverKey = QString::fromLatin1(made[p].cover);
+            info.voiceCount = made[p].voices;
+            info.description = QObject::tr("一档虚构的示例播客：%1。每周更新，用来检查播客页和"
+                                           "声音的列表。")
+                                   .arg(QString::fromUtf8(made[p].topic));
+            QStringList keys;
+            for (int n = made[p].voices; n >= 1; --n) {
+                SongInfo voice;
+                voice.key = QStringLiteral("vo-%1-%2")
+                                .arg(p + 1, 2, 10, QLatin1Char('0'))
+                                .arg(n, 3, 10, QLatin1Char('0'));
+                voice.title =
+                    QObject::tr("第 %1 期：%2").arg(n).arg(QString::fromUtf8(made[p].topic));
+                voice.albumKey = info.key;
+                voice.albumTitle = info.title;
+                voice.coverKey = info.coverKey;
+                voice.serial = n;
+                voice.durationMs = qint64(18 + (n * 7 + p * 5) % 41) * 60'000;
+                samples->voices.insert(voice.key, voice);
+                keys << voice.key;
+            }
+            samples->podcasts.insert(info.key, info);
+            samples->podcastVoices.insert(info.key, keys);
+            samples->podcastOrder << info.key;
+        }
     }
     return samples;
 }
@@ -513,40 +572,67 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
-    Request suggestions(const QString& text, Reply<QStringList> reply) override
+    Request suggestions(const QString& text, Reply<QList<SearchSuggestion>> reply) override
     {
-        return replyLater<QStringList>(
+        return replyLater<QList<SearchSuggestion>>(
             this, m_controls, std::move(reply),
             [this, text]() {
-                QStringList found;
-                const auto offer = [&](const QString& candidate) {
-                    if (found.size() < kSuggestions && matches(candidate, text) &&
-                        !found.contains(candidate))
-                        found << candidate;
+                // Grouped like the service's: songs, artists, albums, playlists.
+                QList<SearchSuggestion> found;
+                const auto offer = [&](const QStringList& keys, auto title, bool song,
+                                       collection::Kind kind) {
+                    int taken = 0;
+                    for (const QString& key : keys) {
+                        const QString name = title(key);
+                        if (taken < kSuggestions && matches(name, text)) {
+                            found << SearchSuggestion{song, kind, key, name};
+                            ++taken;
+                        }
+                    }
                 };
-                for (const QString& key : m_samples->songOrder)
-                    offer(m_samples->songs[key].title);
-                for (const QString& key : m_samples->artistOrder)
-                    offer(m_samples->artists[key].name);
-                for (const QString& key : m_samples->albumOrder)
-                    offer(m_samples->albums[key].info.title);
-                return Outcome<QStringList>{found};
+                offer(
+                    m_samples->songOrder,
+                    [this](const QString& key) { return m_samples->songs[key].title; }, true,
+                    collection::Playlist);
+                offer(
+                    m_samples->artistOrder,
+                    [this](const QString& key) { return m_samples->artists[key].name; }, false,
+                    collection::Artist);
+                offer(
+                    m_samples->albumOrder,
+                    [this](const QString& key) { return m_samples->albums[key].info.title; }, false,
+                    collection::Album);
+                offer(
+                    m_samples->playlistOrder,
+                    [this](const QString& key) { return m_samples->playlists[key].info.title; },
+                    false, collection::Playlist);
+                return Outcome<QList<SearchSuggestion>>{found};
             },
             false);
     }
 
-    Request hotKeywords(Reply<QStringList> reply) override
+    Request hotKeywords(Reply<QList<HotKeyword>> reply) override
     {
-        return replyLater<QStringList>(
+        return replyLater<QList<HotKeyword>>(
             this, m_controls, std::move(reply),
             [this]() {
-                // A fixed mix of songs and artists from the samples.
-                QStringList keywords;
+                // A fixed mix of songs and artists from the samples; some with a note.
+                static const char* const notes[] = {"最近很多人在听",  "", "新歌上线", "", "",
+                                                    "被收进了热门歌单"};
+                QList<HotKeyword> keywords;
+                int i = 0;
                 for (const char* key : {"so-001", "so-003", "so-031", "so-014", "so-017", "so-019"})
-                    keywords << m_samples->songs[QLatin1StringView(key)].title;
+                    keywords << HotKeyword{m_samples->songs[QLatin1StringView(key)].title,
+                                           QString::fromUtf8(notes[i++])};
                 for (const char* key : {"ar-01", "ar-04"})
-                    keywords << m_samples->artists[QLatin1StringView(key)].name;
-                return Outcome<QStringList>{keywords};
+                    keywords << HotKeyword{m_samples->artists[QLatin1StringView(key)].name,
+                                           QObject::tr("歌手")};
+                for (const char* key : {"al-02", "al-03"})
+                    keywords << HotKeyword{m_samples->albums[QLatin1StringView(key)].info.title,
+                                           {}};
+                keywords << HotKeyword{m_samples->podcasts[QStringLiteral("pc-01")].title,
+                                       QObject::tr("播客")};
+                return Outcome<QList<HotKeyword>>{keywords};
             },
             false);
     }
@@ -598,10 +684,62 @@ class FakeCatalog : public QObject, public CatalogSource
                                 found << m_samples->playlistItem(key);
                         }
                         break;
+                    case collection::Podcast:
+                        for (const QString& key : m_samples->podcastOrder) {
+                            const PodcastInfo& info = m_samples->podcasts[key];
+                            if (matches(info.title, text) || matches(info.description, text))
+                                found << m_samples->podcastItem(key);
+                        }
+                        break;
                     }
                 }
                 return Outcome<ResultPage<CollectionItem>>{slice(found, page)};
             });
+    }
+
+    Request searchVoices(const QString& text, PageRequest page,
+                         Reply<ResultPage<SongInfo>> reply) override
+    {
+        return replyLater<ResultPage<SongInfo>>(this, m_controls, std::move(reply), [=, this]() {
+            QList<SongInfo> found;
+            if (!m_controls->empty())
+                for (const QString& podcast : m_samples->podcastOrder)
+                    for (const QString& key : m_samples->podcastVoices[podcast]) {
+                        const SongInfo& voice = m_samples->voices[key];
+                        if (matches(voice.title, text) || matches(voice.albumTitle, text))
+                            found << voice;
+                    }
+            return Outcome<ResultPage<SongInfo>>{slice(found, page)};
+        });
+    }
+
+    Request podcast(const QString& key, Reply<PodcastInfo> reply) override
+    {
+        return replyLater<PodcastInfo>(this, m_controls, std::move(reply), [this, key]() {
+            Outcome<PodcastInfo> outcome;
+            if (!m_samples->podcasts.contains(key)) {
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+                return outcome;
+            }
+            PodcastInfo info = m_samples->podcasts[key];
+            info.subscribed = m_controls->signedIn() && m_account->savedPodcasts.contains(key);
+            outcome.value = info;
+            return outcome;
+        });
+    }
+
+    Request podcastVoices(const QString& key, bool oldestFirst, PageRequest page,
+                          Reply<ResultPage<SongInfo>> reply) override
+    {
+        return replyLater<ResultPage<SongInfo>>(this, m_controls, std::move(reply), [=, this]() {
+            QStringList keys = m_samples->podcastVoices.value(key);
+            if (oldestFirst)
+                std::reverse(keys.begin(), keys.end());
+            QList<SongInfo> voices;
+            for (const QString& voice : std::as_const(keys))
+                voices << m_samples->voices[voice];
+            return Outcome<ResultPage<SongInfo>>{slice(voices, page)};
+        });
     }
 
     Request feed(Feed which, Reply<QList<FeedSection>> reply) override
@@ -850,6 +988,7 @@ class FakeCatalog : public QObject, public CatalogSource
         ResultPage<T> result;
         result.items = all.mid(page.offset, page.limit);
         result.hasMore = page.offset + page.limit < all.size();
+        result.total = all.size();
         return result;
     }
 
@@ -942,6 +1081,22 @@ class FakeLibrary : public QObject, public LibrarySource
             m_account->savedAlbums.removeAll(key);
             if (subscribed)
                 m_account->savedAlbums.prepend(key);
+            outcome.value = subscribed;
+            return outcome;
+        });
+    }
+
+    Request setPodcastSubscribed(const QString& key, bool subscribed, Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            m_account->savedPodcasts.removeAll(key);
+            if (subscribed)
+                m_account->savedPodcasts.prepend(key);
             outcome.value = subscribed;
             return outcome;
         });
@@ -1266,6 +1421,10 @@ class FakePlayback : public QObject, public PlaybackSource
         arrange(index);
         start();
     }
+
+    // Voices play like songs here; the real source waits for the backend (search.md §3.4).
+    void playVoices(const QStringList& keys, int index) override { playSongs(keys, index); }
+    [[nodiscard]] bool canPlayVoices() const override { return true; }
 
     void startFm() override
     {

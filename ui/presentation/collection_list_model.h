@@ -32,6 +32,7 @@ class CollectionListModel : public QAbstractListModel
     void reset(const QList<CollectionItem>& items);
     void clear();
     void append(const QList<CollectionItem>& items);
+    [[nodiscard]] CollectionItem itemAt(int row) const { return m_items.value(row); }
 
     int rowCount(const QModelIndex& parent = {}) const override;
     QVariant data(const QModelIndex& index, int role) const override;

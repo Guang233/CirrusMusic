@@ -9,6 +9,6 @@ namespace cirrus::ui::collection
 Q_NAMESPACE
 QML_NAMED_ELEMENT(Collection)
 
-enum Kind { Playlist, Album, Artist };
+enum Kind { Playlist, Album, Artist, Podcast };
 Q_ENUM_NS(Kind)
 } // namespace cirrus::ui::collection

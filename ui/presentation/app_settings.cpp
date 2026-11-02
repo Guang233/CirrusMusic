@@ -99,6 +99,14 @@ void AppSettings::setPreferDiscreteGpu(bool prefer)
         emit preferDiscreteGpuChanged();
 }
 
+QStringList AppSettings::searchHistory() const { return read("search/history", QStringList()); }
+
+void AppSettings::setSearchHistory(const QStringList& history)
+{
+    if (write("search/history", history, QStringList()))
+        emit searchHistoryChanged();
+}
+
 bool AppSettings::showTranslation() const { return read("lyrics/showTranslation", true); }
 
 void AppSettings::setShowTranslation(bool show)

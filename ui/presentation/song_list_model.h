@@ -41,6 +41,7 @@ class SongListModel : public QAbstractListModel
         LikedRole,    // follows App.library
         MissingRole,  // the service has no details for it
         PositionRole, // 1-based place in the list (an album's track number)
+        SerialRole,   // a podcast voice's episode number, -1 when unknown or a song
     };
     Q_ENUM(Role)
 

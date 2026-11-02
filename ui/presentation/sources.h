@@ -40,12 +40,20 @@ class CatalogSource
     virtual Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
 
     // Search: completions for what is typed, trending keywords, and paged results.
-    virtual Request suggestions(const QString& text, Reply<QStringList> reply) = 0;
-    virtual Request hotKeywords(Reply<QStringList> reply) = 0;
+    virtual Request suggestions(const QString& text, Reply<QList<SearchSuggestion>> reply) = 0;
+    virtual Request hotKeywords(Reply<QList<HotKeyword>> reply) = 0;
     virtual Request searchSongs(const QString& text, PageRequest page,
                                 Reply<ResultPage<SongInfo>> reply) = 0;
     virtual Request searchCollections(collection::Kind kind, const QString& text, PageRequest page,
                                       Reply<ResultPage<CollectionItem>> reply) = 0;
+    // Podcast voices (episodes), as SongInfo with the podcast in albumKey/albumTitle.
+    virtual Request searchVoices(const QString& text, PageRequest page,
+                                 Reply<ResultPage<SongInfo>> reply) = 0;
+
+    // A podcast and its voices, newest (or oldest) first.
+    virtual Request podcast(const QString& key, Reply<PodcastInfo> reply) = 0;
+    virtual Request podcastVoices(const QString& key, bool oldestFirst, PageRequest page,
+                                  Reply<ResultPage<SongInfo>> reply) = 0;
 
     // Home or discover sections.
     virtual Request feed(Feed which, Reply<QList<FeedSection>> reply) = 0;
@@ -75,6 +83,9 @@ class LibrarySource
                                           Reply<bool> reply) = 0;
     // Saves or unsaves an album; replies with the new state.
     virtual Request setAlbumSubscribed(const QString& key, bool subscribed, Reply<bool> reply) = 0;
+    // Saves or unsaves a podcast; replies with the new state.
+    virtual Request setPodcastSubscribed(const QString& key, bool subscribed,
+                                         Reply<bool> reply) = 0;
     // Follows or unfollows an artist; replies with the new state.
     virtual Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) = 0;
     // The songs the account likes, newest first.
@@ -135,6 +146,9 @@ class PlaybackSource
 
     // Replaces the queue with `keys` and plays the one at `index`.
     virtual void playSongs(const QStringList& keys, int index) = 0;
+    // The same for podcast voices, when canPlayVoices().
+    virtual void playVoices(const QStringList& keys, int index) = 0;
+    [[nodiscard]] virtual bool canPlayVoices() const = 0;
     virtual void playPause() = 0;
     virtual void next() = 0;
     // Back to the start of the song when past its first seconds, else the previous one.

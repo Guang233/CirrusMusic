@@ -34,6 +34,9 @@ struct SongInfo {
     bool unavailable = false;
     // Why it was recommended (daily songs), as the service words it; may be empty.
     QString reason;
+    // A podcast's voice (episode) instead of a song: albumKey and albumTitle are the
+    // podcast's, `serial` its episode number (-1 when unknown).
+    int serial = -1;
 };
 
 struct PlaylistInfo {
@@ -188,6 +191,33 @@ template <class T> struct ResultPage {
     QList<T> items;
     // Unknown when the source can't tell: treated as "maybe", until an empty page.
     std::optional<bool> hasMore;
+    // All results, when the source tells.
+    std::optional<qint64> total;
+};
+
+// What the search field suggests while typing: a song (searched by its title) or an
+// artist, album or playlist (opened).
+struct SearchSuggestion {
+    bool song = false;
+    collection::Kind kind = collection::Playlist; // when not a song
+    QString key;
+    QString title;
+};
+
+// A trending search, with the service's note (may be empty).
+struct HotKeyword {
+    QString keyword;
+    QString description;
+};
+
+struct PodcastInfo {
+    QString key;
+    QString title;
+    QString description;
+    QString coverKey;
+    int voiceCount = -1; // -1 when unknown
+    // Saved by the signed-in account.
+    bool subscribed = false;
 };
 
 } // namespace cirrus::ui

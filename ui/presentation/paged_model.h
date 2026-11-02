@@ -18,6 +18,8 @@ class PagedModel : public LoadableModel
     Q_PROPERTY(bool loadingMore READ loadingMore NOTIFY pagingChanged)
     Q_PROPERTY(cirrus::ui::LoadError loadMoreError READ loadMoreError NOTIFY pagingChanged)
     Q_PROPERTY(int pageSize READ pageSize WRITE setPageSize NOTIFY pageSizeChanged)
+    // All results, as the first page told; -1 when unknown.
+    Q_PROPERTY(qint64 total READ total NOTIFY pagingChanged)
 
   public:
     explicit PagedModel(QObject* parent = nullptr);
@@ -26,6 +28,7 @@ class PagedModel : public LoadableModel
     [[nodiscard]] bool loadingMore() const { return m_more.pending(); }
     [[nodiscard]] LoadError loadMoreError() const { return m_moreError; }
     [[nodiscard]] int pageSize() const { return m_pageSize; }
+    [[nodiscard]] qint64 total() const { return m_total; }
     void setPageSize(int size);
 
     // Requests the next page; also retries after a failed one.
@@ -46,6 +49,8 @@ class PagedModel : public LoadableModel
     void pageArrived(int count, std::optional<bool> hasMore);
     // Forgets paging state, with clear().
     void resetPaging();
+    // The total the first page reported.
+    void setTotal(std::optional<qint64> total);
 
     // Reply adapter for later pages: `append(items)` adds them.
     template <class T, class Append> Reply<ResultPage<T>> handleMore(Append append)
@@ -69,6 +74,7 @@ class PagedModel : public LoadableModel
     bool m_hasMore = false;
     LoadError m_moreError;
     int m_pageSize = 30;
+    qint64 m_total = -1;
 };
 
 } // namespace cirrus::ui

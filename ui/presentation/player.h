@@ -36,6 +36,8 @@ class Player : public QObject
     Q_PROPERTY(bool canPrevious READ canPrevious NOTIFY changed)
     Q_PROPERTY(int mode READ mode NOTIFY changed) // Playback.Mode
     Q_PROPERTY(bool fmWaiting READ fmWaiting NOTIFY changed)
+    // Whether podcast voices can be played (playVoices()); not yet with the backend.
+    Q_PROPERTY(bool canPlayVoices READ canPlayVoices CONSTANT)
 
   public:
     // Without a source (no playback in this build) the player stays Empty.
@@ -61,6 +63,8 @@ class Player : public QObject
     Q_INVOKABLE static double now() { return double(playback::now()); }
 
     Q_INVOKABLE void playSongs(const QStringList& keys, int index);
+    Q_INVOKABLE void playVoices(const QStringList& keys, int index);
+    [[nodiscard]] bool canPlayVoices() const;
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();

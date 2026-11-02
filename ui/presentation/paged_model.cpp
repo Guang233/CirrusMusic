@@ -44,10 +44,17 @@ void PagedModel::pageArrived(int count, std::optional<bool> hasMore)
     m_hasMore = hasMore.value_or(count > 0);
 }
 
+void PagedModel::setTotal(std::optional<qint64> total)
+{
+    m_total = total.value_or(-1);
+    emit pagingChanged();
+}
+
 void PagedModel::resetPaging()
 {
     m_more.cancel();
     m_hasMore = false;
+    m_total = -1;
     m_moreError = {};
     emit pagingChanged();
 }
