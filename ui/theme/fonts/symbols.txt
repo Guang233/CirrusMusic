@@ -121,3 +121,5 @@ playlist_remove
 swap_vert
 vertical_align_top
 vertical_align_bottom
+person_add
+how_to_reg

@@ -110,6 +110,8 @@ QtObject {
     readonly property string swap_vert: "\ue8d5"
     readonly property string vertical_align_top: "\ue25a"
     readonly property string vertical_align_bottom: "\ue258"
+    readonly property string person_add: "\uea4d"
+    readonly property string how_to_reg: "\ue174"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -218,6 +220,8 @@ QtObject {
         "playlist_remove",
         "swap_vert",
         "vertical_align_top",
-        "vertical_align_bottom"
+        "vertical_align_bottom",
+        "person_add",
+        "how_to_reg"
     ]
 }
