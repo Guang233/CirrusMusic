@@ -134,7 +134,6 @@ SongCollectionPage {
             anchors.verticalCenter: parent.verticalCenter
             exclusive: true
             Button {
-                size: Md.XSmall
                 variant: Md.Tonal
                 checkable: true
                 checked: !pageModel.voices.oldestFirst
@@ -142,7 +141,6 @@ SongCollectionPage {
                 onClicked: pageModel.voices.oldestFirst = false
             }
             Button {
-                size: Md.XSmall
                 variant: Md.Tonal
                 checkable: true
                 checked: pageModel.voices.oldestFirst

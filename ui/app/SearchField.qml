@@ -276,7 +276,7 @@ SearchBar {
         width: parent ? parent.width : 0
         height: 36
         Text {
-            x: 16
+            x: 20
             anchors.verticalCenter: parent.verticalCenter
             text: groupTitle.text
             color: Theme.color.onSurfaceVariant
@@ -284,7 +284,7 @@ SearchBar {
         }
         Button {
             anchors.right: parent.right
-            anchors.rightMargin: 8
+            anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             visible: groupTitle.clearable
             variant: Md.Text
@@ -295,83 +295,45 @@ SearchBar {
         }
     }
 
-    // A recent search: an input chip with its remove button (MD3 input chip).
-    component HistoryChip: T.AbstractButton {
-        id: chip
+    // A line of the list, inset from its sides: a state layer whose corners round up
+    // while it is hovered or picked (MD3E list and menu items); picking shows the
+    // hover layer, as a menu's keyboard highlight does.
+    component Line: T.AbstractButton {
+        id: line
 
-        required property int index
-        required property var modelData
-        // Within the two rows the list shows.
-        readonly property bool shown: y < 2 * 40
-        readonly property bool highlighted: index === field.picked
+        property bool picked: false
+        readonly property bool shown: true
 
-        implicitWidth: implicitContentWidth + leftPadding + rightPadding
-        implicitHeight: 32
-        leftPadding: 12
-        rightPadding: 4
-        spacing: 2
+        implicitHeight: 44
+        leftInset: 8
+        rightInset: 8
+        leftPadding: 20
+        rightPadding: 20
         focusPolicy: Qt.NoFocus
-        enabled: shown
-        opacity: shown ? 1 : 0
-        text: modelData.text
-        Accessible.name: qsTr("搜索历史：%1").arg(text)
-        onClicked: field.run(modelData)
+        Accessible.name: text
 
         Spring {
-            id: chipSelection
-            target: chip.highlighted ? 1 : 0
-            spec: Theme.motion.defaultEffects
+            id: lineCorner
+            target: line.picked || line.hovered || line.pressed ? Theme.shape.medium
+                                                                : Theme.shape.extraSmall
+            spec: Theme.motion.fastSpatial
+            threshold: 0.1
         }
 
-        contentItem: Row {
-            spacing: chip.spacing
-            Text {
-                width: Math.min(implicitWidth, 160)
-                anchors.verticalCenter: parent.verticalCenter
-                text: chip.text
-                elide: Text.ElideRight
-                color: Theme.mix(Theme.color.onSurface, Theme.color.onSecondaryContainer,
-                                 chipSelection.value)
-                font: Theme.type.labelLarge.font
-            }
-            T.AbstractButton {
-                id: remove
-                width: 24
-                height: 24
-                anchors.verticalCenter: parent.verticalCenter
-                focusPolicy: Qt.NoFocus
-                Accessible.name: qsTr("删除这条搜索历史（Delete）")
-                onClicked: field.removeHistory(chip.index)
-                contentItem: Icon {
-                    glyph: Symbols.close
-                    size: 16
-                    color: Theme.color.onSurfaceVariant
-                }
-                background: StateLayer {
-                    radius: width / 2
-                    hovered: remove.hovered
-                    pressed: remove.pressed
-                }
-            }
-        }
-
-        background: Rectangle {
-            radius: Theme.shape.small
-            color: Theme.mix(Theme.color.surfaceContainerHighest, Theme.color.secondaryContainer,
-                             chipSelection.value)
-            StateLayer {
-                anchors.fill: parent
-                radius: parent.radius
-                hovered: chip.hovered && !remove.hovered
-                pressed: chip.pressed
-            }
+        background: StateLayer {
+            radius: Math.max(0, lineCorner.value)
+            hovered: line.hovered || line.picked
+            pressed: line.pressed
+            pressX: line.pressed ? line.pressX - line.leftInset : width / 2
+            pressY: line.pressed ? line.pressY : height / 2
         }
     }
 
     // The list unfolds from the field and follows its height with a spring, so
     // suggestions arriving while typing don't make it jump; it fades out on close.
     // Opened and closed from `listShown`; a press outside the field and the list
-    // closes it too (clicking the field, typing or ↓ opens it again).
+    // closes it too (clicking the field, typing or ↓ opens it again). A docked MD3
+    // search view: SurfaceContainerHigh, extra-large corners.
     onListShownChanged: listShown ? popup.open() : popup.close()
 
     T.Popup {
@@ -429,11 +391,11 @@ SearchBar {
             Elevation {
                 anchors.fill: parent
                 level: Theme.elevation.level2
-                radius: Theme.shape.large
+                radius: Theme.shape.extraLarge
             }
             Rectangle {
                 anchors.fill: parent
-                radius: Theme.shape.large
+                radius: Theme.shape.extraLarge
                 color: Theme.color.surfaceContainerHigh
             }
         }
@@ -454,7 +416,7 @@ SearchBar {
                 id: lineColumn
                 width: flick.width
 
-                // Empty field: recent searches as chips, at most two rows.
+                // Empty field: recent searches as input chips, at most two rows.
                 Column {
                     width: parent.width
                     visible: field.historyCount > 0
@@ -464,8 +426,8 @@ SearchBar {
                         clearable: true
                     }
                     Item {
-                        x: 16
-                        width: parent.width - 32
+                        x: 20
+                        width: parent.width - 40
                         height: Math.min(chipFlow.implicitHeight, 2 * 32 + 8)
                         clip: true
                         Flow {
@@ -475,7 +437,25 @@ SearchBar {
                             Repeater {
                                 id: chipRepeater
                                 model: field.typing ? [] : field.lines.slice(0, field.historyCount)
-                                delegate: HistoryChip {}
+                                delegate: Chip {
+                                    id: chip
+
+                                    required property int index
+                                    required property var modelData
+                                    // Within the two rows the list shows.
+                                    readonly property bool shown: y < 2 * 40
+
+                                    removable: true
+                                    maximumLabelWidth: 160
+                                    focusPolicy: Qt.NoFocus
+                                    highlighted: index === field.picked
+                                    enabled: shown
+                                    opacity: shown ? 1 : 0
+                                    text: modelData.text
+                                    Accessible.name: qsTr("搜索历史：%1").arg(text)
+                                    onClicked: field.run(modelData)
+                                    onRemoveClicked: field.removeHistory(chip.index)
+                                }
                             }
                         }
                     }
@@ -497,37 +477,45 @@ SearchBar {
                         Repeater {
                             id: hotRepeater
                             model: field.typing ? [] : field.lines.slice(field.historyCount)
-                            delegate: ListItem {
+                            delegate: Line {
                                 id: hot
 
                                 required property int index
                                 required property var modelData
-                                readonly property bool shown: true
 
                                 width: field.hotColumns ? hotGrid.width / 2 : hotGrid.width
-                                implicitHeight: 44
-                                topPadding: 0
-                                bottomPadding: 0
-                                focusPolicy: Qt.NoFocus
-                                highlighted: index + field.historyCount === field.picked
+                                picked: index + field.historyCount === field.picked
                                 text: modelData.text
-                                Accessible.name: text
                                 onClicked: field.run(modelData)
-                                // Rank: the first three in primary.
-                                leading: Text {
-                                    width: 24
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: hot.modelData.rank ?? ""
-                                    color: hot.modelData.rank <= 3 ? Theme.color.primary
-                                                                   : Theme.color.onSurfaceVariant
-                                    font: Fonts.tabular(Theme.type.titleSmall.font)
-                                }
-                                trailing: (modelData.note ?? "") !== "" ? hotNote : null
-                                Component {
-                                    id: hotNote
+
+                                contentItem: Item {
+                                    // Rank: the first three in primary.
                                     Text {
-                                        width: Math.min(implicitWidth, hot.width * 0.45)
-                                        text: hot.modelData.note
+                                        id: rank
+                                        width: 24
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: hot.modelData.rank ?? ""
+                                        color: hot.modelData.rank <= 3 ? Theme.color.primary
+                                                                       : Theme.color.onSurfaceVariant
+                                        font: Fonts.tabular(Theme.type.titleSmall.font)
+                                    }
+                                    Text {
+                                        x: rank.width + 12
+                                        width: Math.min(implicitWidth, note.x - x - 12)
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: hot.text
+                                        elide: Text.ElideRight
+                                        color: Theme.color.onSurface
+                                        font: Theme.type.bodyLarge.font
+                                    }
+                                    // The service's note; it gives way to the keyword.
+                                    Text {
+                                        id: note
+                                        x: parent.width - width
+                                        width: Math.min(implicitWidth, parent.width * 0.45)
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: hot.modelData.note ?? ""
                                         elide: Text.ElideRight
                                         color: Theme.color.onSurfaceVariant
                                         font: Theme.type.bodySmall.font
@@ -542,29 +530,17 @@ SearchBar {
                 Repeater {
                     id: suggestionRepeater
                     model: field.typing ? field.lines : []
-                    delegate: T.AbstractButton {
+                    delegate: Line {
                         id: line
 
                         required property int index
                         required property var modelData
-                        readonly property bool shown: true
-                        readonly property bool highlighted: index === field.picked
 
                         width: lineColumn.width
-                        height: 44
-                        leftPadding: 16
-                        rightPadding: 16
-                        focusPolicy: Qt.NoFocus
+                        picked: index === field.picked
                         text: modelData.type === "query" ? qsTr("搜索「%1」").arg(modelData.text)
                                                          : modelData.text
-                        Accessible.name: text
                         onClicked: field.run(modelData)
-
-                        Spring {
-                            id: lineSelection
-                            target: line.highlighted ? 1 : 0
-                            spec: Theme.motion.defaultEffects
-                        }
 
                         contentItem: Item {
                             Icon {
@@ -576,7 +552,7 @@ SearchBar {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: 56
+                                width: 48
                                 visible: line.modelData.type !== "query"
                                 text: line.modelData.group ?? ""
                                 color: Theme.color.onSurfaceVariant
@@ -584,7 +560,7 @@ SearchBar {
                             }
                             // The typed part in primary.
                             Text {
-                                x: 56
+                                x: 48
                                 width: parent.width - x
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
@@ -605,19 +581,8 @@ SearchBar {
                                         + escape(title.slice(at, at + typed.length)) + "</font>"
                                         + escape(title.slice(at + typed.length));
                                 }
-                                color: Theme.mix(Theme.color.onSurface,
-                                                 Theme.color.onSecondaryContainer,
-                                                 lineSelection.value)
+                                color: Theme.color.onSurface
                                 font: Theme.type.bodyLarge.font
-                            }
-                        }
-
-                        background: Rectangle {
-                            color: Qt.alpha(Theme.color.secondaryContainer, lineSelection.value)
-                            StateLayer {
-                                anchors.fill: parent
-                                hovered: line.hovered
-                                pressed: line.pressed
                             }
                         }
                     }
