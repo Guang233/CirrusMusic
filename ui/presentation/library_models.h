@@ -47,6 +47,8 @@ class LibraryCollectionsModel : public PagedModel
     [[nodiscard]] int loadedCount() const override { return int(m_all.size()); }
 
   private:
+    [[nodiscard]] bool passes(const CollectionItem& item) const;
+    [[nodiscard]] static CollectionItem shown(CollectionItem item);
     void show();
 
     collection::Kind m_kind;

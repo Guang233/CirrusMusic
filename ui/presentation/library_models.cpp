@@ -42,19 +42,27 @@ void LibraryCollectionsModel::setFilter(int filter)
     show();
 }
 
-// The loaded items that pass the filter. The account's own playlists don't name
-// their creator (it is the account).
+bool LibraryCollectionsModel::passes(const CollectionItem& item) const
+{
+    return m_filter == All || item.created == (m_filter == Created);
+}
+
+// The account's own playlists don't name their creator (it is the account).
+CollectionItem LibraryCollectionsModel::shown(CollectionItem item)
+{
+    if (item.created.value_or(false))
+        item.byline.clear();
+    return item;
+}
+
+// The loaded items that pass the filter, from scratch (a new filter or first page).
 void LibraryCollectionsModel::show()
 {
-    QList<CollectionItem> shown;
-    for (CollectionItem item : std::as_const(m_all)) {
-        if (m_filter != All && item.created != (m_filter == Created))
-            continue;
-        if (item.created.value_or(false))
-            item.byline.clear();
-        shown << item;
-    }
-    m_items->reset(shown);
+    QList<CollectionItem> items;
+    for (const CollectionItem& item : std::as_const(m_all))
+        if (passes(item))
+            items << shown(item);
+    m_items->reset(items);
 }
 
 void LibraryCollectionsModel::clear()
@@ -79,8 +87,13 @@ Request LibraryCollectionsModel::loadPage(PageRequest page)
             }));
     return source->libraryCollections(
         m_kind, page, handleMore<CollectionItem>([this](QList<CollectionItem> items) {
+            // Appended, so the cards already shown stay.
             m_all << items;
-            show();
+            QList<CollectionItem> more;
+            for (const CollectionItem& item : std::as_const(items))
+                if (passes(item))
+                    more << shown(item);
+            m_items->append(more);
         }));
 }
 

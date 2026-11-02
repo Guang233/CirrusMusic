@@ -77,8 +77,12 @@ void Library::setLiked(const QString& songKey, bool liked)
     m_writes[songKey] =
         m_source->setSongLiked(songKey, liked, [this, songKey, liked](Outcome<bool> outcome) {
             m_writes[songKey].release();
-            if (outcome.value)
+            if (outcome.value) {
+                // "我喜欢的音乐" is a playlist: a page showing it follows.
+                if (!m_likedPlaylistKey.isEmpty())
+                    emit playlistChanged(m_likedPlaylistKey);
                 return;
+            }
             setLikedLocally(songKey, !liked);
             emit notice(liked ? tr("没能喜欢这首歌，请稍后再试") : tr("没能取消喜欢，请稍后再试"));
         });

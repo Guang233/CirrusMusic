@@ -40,6 +40,19 @@ Item {
     }
     onTabChanged: showTab()
 
+    // Back on the page (after saving an album, creating a playlist elsewhere…): what
+    // has loaded is fetched again, keeping it on screen meanwhile.
+    onVisibleChanged: {
+        if (!visible || overview.state !== LoadState.Ready)
+            return;
+        overview.refresh();
+        for (let i = 0; i < tabCount; ++i) {
+            const model = modelOf(i);
+            if (model.state === LoadState.Ready || model.state === LoadState.Partial)
+                model.refresh();
+        }
+    }
+
     function loadMoreIfNear(): void {
         const model = tabModel;
         if (model.canLoadMore && !model.loadingMore && model.loadMoreError.kind < 0
