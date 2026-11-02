@@ -159,6 +159,8 @@ struct FakeAccount {
                       QStringLiteral("pl-long")};
     QStringList savedAlbums{QStringLiteral("al-01"), QStringLiteral("al-03"),
                             QStringLiteral("al-06"), QStringLiteral("al-13")};
+    QStringList followedArtists{QStringLiteral("ar-01"), QStringLiteral("ar-04"),
+                                QStringLiteral("ar-11")};
     QStringList liked{QStringLiteral("so-001"), QStringLiteral("so-005"), QStringLiteral("so-011"),
                       QStringLiteral("so-017"), QStringLiteral("so-023"), QStringLiteral("so-031"),
                       QStringLiteral("so-034"), QStringLiteral("so-008")};
@@ -436,18 +438,77 @@ class FakeCatalog : public QObject, public CatalogSource
             }
             ArtistPage page;
             page.info = *found;
+            page.info.description = introductionOf(key).brief;
+            page.info.aliases = aliasesOf(key);
+            page.info.followed = m_controls->signedIn() && m_account->followedArtists.contains(key);
             if (!m_controls->empty()) {
-                for (const QString& song : m_samples->artistSongs.value(key).mid(0, kTopSongs))
-                    page.topSongs << m_samples->songs.value(song);
-                for (const QString& album : m_samples->artistAlbums.value(key))
-                    page.albums << m_samples->albumItem(album);
-                // Newest first.
-                std::stable_sort(page.albums.begin(), page.albums.end(),
-                                 [](const CollectionItem& a, const CollectionItem& b) {
-                                     return a.year > b.year;
-                                 });
+                const QList<SongInfo> songs = songsOf(key);
+                page.info.songCount = int(songs.size());
+                page.topSongs = songs.mid(0, kTopSongs);
             }
             outcome.value = page;
+            return outcome;
+        });
+    }
+
+    Request artistSongs(const QString& key, bool byTime, PageRequest page,
+                        Reply<ResultPage<SongInfo>> reply) override
+    {
+        return replyLater<ResultPage<SongInfo>>(
+            this, m_controls, std::move(reply), [this, key, byTime, page]() {
+                QList<SongInfo> songs = m_controls->empty() ? QList<SongInfo>() : songsOf(key);
+                // The samples have no release dates: newest first is the list reversed.
+                if (byTime)
+                    std::reverse(songs.begin(), songs.end());
+                return Outcome<ResultPage<SongInfo>>{slice(songs, page)};
+            });
+    }
+
+    Request artistAlbums(const QString& key, PageRequest page,
+                         Reply<ResultPage<CollectionItem>> reply) override
+    {
+        return replyLater<ResultPage<CollectionItem>>(
+            this, m_controls, std::move(reply), [this, key, page]() {
+                QList<CollectionItem> albums;
+                if (!m_controls->empty()) {
+                    for (const QString& album : m_samples->artistAlbums.value(key))
+                        albums << m_samples->albumItem(album);
+                    // Newest first.
+                    std::stable_sort(albums.begin(), albums.end(),
+                                     [](const CollectionItem& a, const CollectionItem& b) {
+                                         return a.year > b.year;
+                                     });
+                }
+                return Outcome<ResultPage<CollectionItem>>{slice(albums, page)};
+            });
+    }
+
+    Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) override
+    {
+        return replyLater<ArtistIntroduction>(this, m_controls, std::move(reply), [this, key]() {
+            return Outcome<ArtistIntroduction>{introductionOf(key)};
+        });
+    }
+
+    Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) override
+    {
+        return replyLater<QList<CollectionItem>>(this, m_controls, std::move(reply), [this, key]() {
+            Outcome<QList<CollectionItem>> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            QList<CollectionItem> artists;
+            if (!m_controls->empty()) {
+                const QStringList& all = m_samples->artistOrder;
+                const qsizetype start = all.indexOf(key) + 1;
+                for (qsizetype i = 0; i < all.size() && artists.size() < kSimilarArtists; ++i) {
+                    const QString& other = all.at((start + i) % all.size());
+                    if (other != key)
+                        artists << m_samples->artistItem(other);
+                }
+            }
+            outcome.value = artists;
             return outcome;
         });
     }
@@ -710,12 +771,62 @@ class FakeCatalog : public QObject, public CatalogSource
     }
 
   private:
-    static constexpr int kTopSongs = 10;
+    static constexpr int kTopSongs = 50;
     static constexpr int kChartSongs = 20;
     static constexpr int kChartPreviews = 3;
     static constexpr int kSuggestions = 8;
     static constexpr int kDailySongs = 15;
     static constexpr int kHistoryDays = 7;
+    static constexpr int kSimilarArtists = 6;
+    // The first sample artist's song list is this long, for paging.
+    static constexpr int kLongArtistSongs = 230;
+
+    // All of an artist's songs. The first sample artist's songs repeat under keys like
+    // "so-001~2", so the list pages.
+    [[nodiscard]] QList<SongInfo> songsOf(const QString& key) const
+    {
+        const QStringList own = m_samples->artistSongs.value(key);
+        QList<SongInfo> songs;
+        for (const QString& song : own)
+            songs << m_samples->songs.value(song);
+        if (key == u"ar-01" && !own.isEmpty()) {
+            for (int i = 0; songs.size() < kLongArtistSongs; ++i)
+                songs << m_samples->song(own.at(i % own.size()) + QLatin1Char('~') +
+                                         QString::number(i / own.size() + 1));
+        }
+        return songs;
+    }
+
+    [[nodiscard]] static QStringList aliasesOf(const QString& key)
+    {
+        static const QHash<QString, QStringList> aliases = {
+            {QStringLiteral("ar-01"), {QStringLiteral("Fog Harbor")}},
+            {QStringLiteral("ar-08"), {QStringLiteral("きいろ"), QStringLiteral("Kiiro")}},
+            {QStringLiteral("ar-11"), {QStringLiteral("Stardust Choir")}},
+        };
+        return aliases.value(key);
+    }
+
+    // Made up for every sample artist but the last, which has none.
+    [[nodiscard]] ArtistIntroduction introductionOf(const QString& key) const
+    {
+        ArtistIntroduction intro;
+        if (key == m_samples->artistOrder.last())
+            return intro;
+        const QString name = m_samples->artists.value(key).name;
+        intro.brief = tr("%1是虚构的示例歌手，用来检查歌手页的简介：一行放不下时出现「更多」，"
+                         "点开切到「详情」标签读全文。")
+                          .arg(name);
+        intro.sections = {
+            {tr("早年经历"),
+             tr("%1在一座海边小城开始写歌，最早的录音是在旧仓库里用一支麦克风完成的。"
+                "那几年的作品大多没有发行，只在朋友之间流传。")
+                 .arg(name)},
+            {tr("音乐风格"), tr("作品以安静的编曲和清晰的人声为主，常用环境录音作为过渡。"
+                                "现场演出时会把每首歌重新编排，很少照原样演奏。")},
+        };
+        return intro;
+    }
 
     // A different but stable pick each day.
     [[nodiscard]] QList<SongInfo> dailyPick(QDate day) const
@@ -779,8 +890,8 @@ class FakeLibrary : public QObject, public LibrarySource
                         page.savedPlaylists << m_samples->playlistItem(key);
                 for (const QString& key : std::as_const(m_account->savedAlbums))
                     page.albums << m_samples->albumItem(key);
-                for (const char* key : {"ar-01", "ar-04", "ar-11"})
-                    page.artists << m_samples->artistItem(QLatin1StringView(key));
+                for (const QString& key : std::as_const(m_account->followedArtists))
+                    page.artists << m_samples->artistItem(key);
             }
             outcome.value = page;
             return outcome;
@@ -832,6 +943,22 @@ class FakeLibrary : public QObject, public LibrarySource
             if (subscribed)
                 m_account->savedAlbums.prepend(key);
             outcome.value = subscribed;
+            return outcome;
+        });
+    }
+
+    Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            m_account->followedArtists.removeAll(key);
+            if (followed)
+                m_account->followedArtists.prepend(key);
+            outcome.value = followed;
             return outcome;
         });
     }

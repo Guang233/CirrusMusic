@@ -95,6 +95,20 @@ struct ArtistInfo {
     QString avatarKey;   // a cover key, may be empty
     int songCount = -1;  // -1 when unknown
     int albumCount = -1; // -1 when unknown
+    // Other names and translations.
+    QStringList aliases;
+    // Followed by the signed-in account.
+    bool followed = false;
+};
+
+// An artist's introduction: a brief, then titled sections of plain text.
+struct ArtistIntroduction {
+    QString brief;
+    struct Section {
+        QString title; // may be empty
+        QString text;
+    };
+    QList<Section> sections;
 };
 
 // A playlist, album or artist as a card. Raw fields; the list model words the subtitle.
@@ -109,10 +123,10 @@ struct CollectionItem {
 };
 
 // An artist's header, popular songs and albums.
+// The artist's header and popular songs (at most 50); songs and albums come in pages.
 struct ArtistPage {
     ArtistInfo info;
     QList<SongInfo> topSongs;
-    QList<CollectionItem> albums;
 };
 
 // The signed-in account's collections.

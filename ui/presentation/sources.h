@@ -30,6 +30,14 @@ class CatalogSource
     virtual Request songDetails(const QStringList& keys, Reply<QList<SongInfo>> reply) = 0;
     virtual Request album(const QString& key, Reply<AlbumPage> reply) = 0;
     virtual Request artist(const QString& key, Reply<ArtistPage> reply) = 0;
+    // An artist's songs, most popular (`byTime` false) or newest first.
+    virtual Request artistSongs(const QString& key, bool byTime, PageRequest page,
+                                Reply<ResultPage<SongInfo>> reply) = 0;
+    virtual Request artistAlbums(const QString& key, PageRequest page,
+                                 Reply<ResultPage<CollectionItem>> reply) = 0;
+    virtual Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) = 0;
+    // The service may want a signed-in account.
+    virtual Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
 
     // Search: completions for what is typed, trending keywords, and paged results.
     virtual Request suggestions(const QString& text, Reply<QStringList> reply) = 0;
@@ -67,6 +75,8 @@ class LibrarySource
                                           Reply<bool> reply) = 0;
     // Saves or unsaves an album; replies with the new state.
     virtual Request setAlbumSubscribed(const QString& key, bool subscribed, Reply<bool> reply) = 0;
+    // Follows or unfollows an artist; replies with the new state.
+    virtual Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) = 0;
     // The songs the account likes, newest first.
     virtual Request likedSongKeys(Reply<QStringList> reply) = 0;
 
