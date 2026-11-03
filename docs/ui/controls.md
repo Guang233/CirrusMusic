@@ -20,6 +20,7 @@
 | --- | --- |
 | `StateLayer` | 悬停 8%／焦点 10% 的前景色叠加（`fastEffects` 弹簧过渡），外加按下涟漪。涟漪是着色器：圆角矩形 SDF（四角半径独立）裁剪的扩散圆，225 ms 扩散、松开后 150 ms 淡出。软件渲染下没有涟漪，改为按下 10% 叠加。 |
 | `FocusRing` | 键盘焦点指示：3 px、Secondary 色、外扩 2 px，四角半径随容器变化。只在 `visualFocus`（键盘导致的焦点）时显示。 |
+| `InputMode` | C++ 单例，`keyboard`：最近一次输入是键盘（修饰键除外）还是指针（按下、触摸）。类似浏览器的 `:focus-visible`。用于 `visualFocus` 判断不了的焦点：列表行这类普通 Item 没有焦点原因，鼠标操作后（关闭输入框、菜单关闭）焦点也会回到行上，这时只在 `InputMode.keyboard` 为真时画焦点环。单例在第一次使用时创建，只记录此后的输入，所以绑定里要先读它，如 `InputMode.keyboard && row.activeFocus`。 |
 | `Elevation` | 阴影，`RectangularShadow`（Qt 6.9+）。只用于 Elevated 按钮、菜单、浮层。软件渲染下不画阴影，靠色调层级区分。 |
 | `MorphShape` | 包装 m3shapes 的 `MaterialShape`：35 种预设形状、`morphProgress` 由 `Spring` 驱动；软件渲染退回圆角矩形。 |
 | `Theme.mix(a, b, t)` | 预乘 RGBA 线性混合。控件的状态颜色过渡用“弹簧驱动的 0–1 进度 + mix”，而不是 `Behavior on color`：后者在主题配色逐帧混合时会反复重启，颜色跟不上主题。 |
@@ -59,7 +60,10 @@
 - **形状变形**：圆形按钮按下时圆角收到“按下圆角”，用 `defaultEffects`（不回弹）；可切换按钮按下用 `fastSpatial`（带回弹），选中后圆形变方形、方形变圆形。
 - `checkable` 即 MD3E 的“切换按钮”，不另设类型。
 
-**IconButton**（`variant`：Standard／Filled／Tonal／Outlined；`size`；`widthMode`：Narrow／Default／Wide；`shape`；`glyph`；`checkable`）
+**IconButton**（`variant`：Standard／Filled／Tonal／Outlined；`size`；`widthMode`：Narrow／Default／Wide；`shape`；`glyph`；`checkable`；`iconFill`；`inverse`）
+
+- 不可切换的按钮改 `iconFill` 时，图标的 FILL 轴用 `defaultEffects` 弹簧过渡（如点赞变实心）。
+- `inverse`：放在 InverseSurface 上的 Standard 按钮（提示条的关闭按钮），内容和状态层改用 InverseOnSurface。
 
 | 尺寸 | 高 | 图标 | 左右内距 窄／默认／宽 | 方形圆角 | 按下圆角 | 选中后圆角（圆→方） |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -86,7 +90,7 @@
 
 ## 5. 输入
 
-- **TextArea**（`placeholderText`、`maximumLines`、`supportingText`、`counterText`、`error`；信号 `submitted`）：MD3 描边文本框的多行版本，无浮动标签。最小高 56，随内容变高到 `maximumLines` 行后在框内滚动（光标跟随）；描边、圆角、颜色同 Outlined TextField；框下左侧辅助文字、右侧计数（bodySmall）。Enter 换行，Ctrl+Enter 发 `submitted`。用 `Flickable` 包 `T.TextArea`，不用 `TextArea.flickable`（那样内距会算两次、高度不随内容）。
+- **TextArea**（`placeholderText`、`maximumLines`、`supportingText`、`counterText`、`error`；信号 `submitted`）：MD3 描边文本框的多行版本，无浮动标签。最小高 56，随内容变高到 `maximumLines` 行后在框内滚动（光标跟随）；描边、颜色同 Outlined TextField，圆角默认 large（16，`radius` 可改；2026-11-03 维护者要求比 MD3 的 4 圆一些，因为它是写字的框，不是表单里的一行）。聚焦和悬停时描边颜色、粗细（1 → 2 px）用 `fastEffects` 弹簧过渡；框下左侧辅助文字、右侧计数（bodySmall）。Enter 换行，Ctrl+Enter 发 `submitted`。用 `Flickable` 包 `T.TextArea`，不用 `TextArea.flickable`（那样内距会算两次、高度不随内容）。
 - **TextField**（`variant`：Filled／Outlined；`label`、`placeholderText`、`leadingGlyph`、`trailingGlyph`、`supportingText`、`error`）：高 56；Filled 容器 SurfaceContainerHighest、上圆角 4、底部指示线 1 px（聚焦 2 px Primary）；Outlined 描边 1 px Outline（聚焦 2 px Primary）、圆角 4。标签在有内容或聚焦时上浮缩小（bodyLarge → bodySmall，`fastSpatial`）。
 - **SearchBar**：高 56、全圆角、SurfaceContainerHigh，左侧搜索图标、右侧清除按钮（有内容时出现，Esc 同样清空）。建议列表属于页面，由阶段 3 实现。
 
@@ -133,7 +137,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 8d. 提示条（阶段 3）
 
-- **Snackbar**：MD3 提示条，用于操作结果的简短反馈（写入失败等）。InverseSurface 底、InverseOnSurface 文字（bodyMedium），extraSmall 圆角，最低 48 高、最窄 288，放在所在区域底部居中、离底 16。`show(text)` 显示，`timeout`（默认 4 秒）后淡出；指针停在上面时不消失。没有操作按钮（以后需要"撤销"时再加）。外壳放一个在内容面板底部，页面通过 `shell.notify(text)` 使用。
+- **Snackbar**：MD3 提示条，用于操作结果的简短反馈（写入失败等）。InverseSurface 底、InverseOnSurface 文字（bodyMedium），large 圆角（16，2026-11-03 维护者要求加大，原为 extraSmall），最低 48 高、最窄 288，放在所在区域底部居中、离底 16。`show(text)` 显示：从底边升起，同时从 0.9 放大到 1（`defaultSpatial` 弹簧，略有回弹），透明度用 `fastEffects`。显示中再次 `show` 时换成新文字并轻弹一下。`timeout`（默认 4 秒）后沉下淡出；指针停在上面时不消失。右侧有关闭按钮（XSmall `close`，`inverse`），可以提前关闭（`dismiss()`），这是 MD3 提示条可选的关闭入口；桌面上消息较长或挡住内容时需要它。没有操作按钮（以后需要"撤销"时再加）。外壳放一个在内容面板底部，页面通过 `shell.notify(text)` 使用。
 
 ## 9. 每个控件的检查项
 
