@@ -179,4 +179,5 @@ FM 变成卡片下方一条 72 px 高的横条（图标、"私人 FM"、播放�
 - `ShelfModel`：`shelf`（`Feed.DailyPlaylists`／`RecommendedPlaylists`／`NewAlbums`／`PopularArtists`）、`items`；数据源 `CatalogSource::shelf()`，`DailyPlaylists` 未登录为 `SignedOut`。
 - `ChartsModel`：`charts`（`ChartListModel`，角色 `key`、`title`、`updateLabel`、`coverKey`、`previews`）；数据源 `CatalogSource::charts()`。假数据的四个榜单是用示例歌曲拼的歌单，可以打开。
 - `SongInfo`／`SongItem` 增加 `reason`，`SongListModel` 增加 `reason` 角色和 `containsCurrent`（当前歌曲在不在这个列表里）。
-- 首页不再使用 `HomePageModel`；它和 `FeedPage` 暂时只给发现页用，发现页设计时再改。
+- 首页不再使用 `HomePageModel`。（发现页实现后 `FeedPage` 已删除，`HomePageModel` 没有页面用了，见 [discover.md §8](discover.md)。）
+- `ChartsModel` 后来加了 `others`（没有预览的榜单），首页只用 `charts`；"查看全部"改为打开发现页的对应标签（`shell.openDiscover(tab)`）。

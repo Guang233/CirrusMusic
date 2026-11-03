@@ -174,7 +174,7 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 
 | ViewModel | 页面 | 内容 |
 | --- | --- | --- |
-| `HomePageModel` | 首页／发现 | `sections`（列表模型：每节有 `kind`、`title`、`items`），每日推荐入口、私人 FM 入口 |
+| `HomePageModel` | （原首页／发现原型，现在没有页面用） | `sections`（列表模型：每节有 `kind`、`title`、`items`），每日推荐入口、私人 FM 入口 |
 | `DailySongsPageModel` | 每日推荐 | `songs`；未登录为 `SignedOut` |
 | `SearchModel` | 搜索 | `text`；`suggestions`（分组，输入停顿 200 ms 后请求，新输入取消旧请求）；`hotKeywords`（带说明）；`history`、`removeHistory()`、`clearHistory()`；`submit()`；七个标签 `overview`（综合，4 个并发小请求和最佳匹配）／`songs`／`artists`／`albums`／`playlists`／`podcasts`／`voices`，单类标签各自分页、带总数，切到哪个标签才加载哪个，各有自己的状态（[pages/search.md](pages/search.md)） |
 | `PlaylistPageModel` | 歌单详情 | 头部（标题、简介、创建者、`coverKey`、`tags`、`updatedText`、`playCount`／`subscriberCount`／`commentCount`（未知为 -1）、`own`）、`songs`；`subscribed` 可写（先改界面，失败时撤回并发 `writeFailed(message)`，成功时发 `libraryChanged()`） |
@@ -182,6 +182,7 @@ SongList { model: model.songs; onActivated: (index) => App.player.playSongs(mode
 | `ArtistPageModel` | 歌手详情 | 头部（名字、简介、头像）、`topSongs`、`albums`（分页） |
 | `LibraryPageModel` | 侧边栏的歌单（原音乐库原型） | `likedSongs`、`playlists`（创建的、收藏的）、`albums`、`artists`、`recentSongs`；未登录为 `SignedOut` |
 | `LibraryOverviewModel` 等 | 音乐库、最近播放、听歌排行 | 见 [pages/library.md §8](pages/library.md)：集合标签分页（歌单可按创建／收藏筛选）、新建歌单；`RecentPageModel`、`RankingPageModel` |
+| `PlaylistCategoriesModel`、`DiscoverPlaylistsModel` 等 | 发现 | 见 [pages/discover.md §8](pages/discover.md)：分类目录，歌单（分类、最热／最新／精品）、歌手（类型、地区、首字母）、新碟（地区、最新／周榜／月榜）三个标签模型，筛选变了原地重载；榜单用 `ChartsModel`（`charts`、`others`） |
 | `SettingsPage` | 设置 | 直接绑定 `App.settings`，不需要单独的 ViewModel |
 | `CommentsPageModel` | 评论 | 第一轮页面之后再做 |
 
@@ -245,7 +246,7 @@ public:
 | 接口 | 职责 |
 | --- | --- |
 | `SessionSource` | 账号状态、扫码登录、注销、账号变化通知 |
-| `CatalogSource` | 只读目录：首页、搜索、建议、热搜、歌单／专辑／歌手详情、歌曲详情、每日推荐 |
+| `CatalogSource` | 只读目录：首页、发现（分类、分类歌单、精品歌单、榜单、歌手筛选、新碟与新碟榜）、搜索、建议、热搜、歌单／专辑／歌手详情、歌曲详情、每日推荐 |
 | `LibrarySource` | 账号私有读取（喜欢、"我喜欢的音乐"歌单、我的歌单与收藏的专辑／歌手／播客、最近播放的各类、听歌排行）和写入（喜欢、收藏歌单、新建歌单、加入／移出歌单、调整顺序、改歌单信息、删除歌单） |
 | `PlaybackSource` | 播放与队列命令、播放快照、队列快照、歌词与歌词游标、私人 FM |
 | `ImageSource` | 按 key 和尺寸异步取图，供封面图片提供器使用 |

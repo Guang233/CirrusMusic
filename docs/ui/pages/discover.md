@@ -114,3 +114,15 @@
 - 控件：`Chip` 加下拉样式（尾部 `arrow_drop_down`，点开菜单；MD3 筛选纸片的变体），`CollectionCard` 加可选的播放量牌子。纸片行做成一个组件（单选、一个 Tab 停留点、←／→ 移动）。
 - 首页：各"查看全部"打开发现页的对应标签。
 - 图标：`arrow_drop_down`、`grid_view`（全部分类）加入 `symbols.txt` 后重新生成。
+
+## 8. 实现进度（2026-11-03）
+
+已按本文实现，与 §7 的差别：
+
+- 展示层：`CatalogSource` 加 `playlistCategories()`、`categoryPlaylists(category, newest, page)`、`premiumPlaylists(category, before, limit)`（`ResultPage.next` 是下一页的游标，没有就是到头）、`browseArtists(kind, area, initial, page)`、`newAlbums(area, page)`、`albumChart(area, monthly)`；榜单仍用原来的 `charts()`，`ChartsModel` 把带预览的放 `charts`、其余放 `others`（卡片，副标题是更新频率）。`CollectionItem.playCount`（未知为 -1），`CollectionListModel` 加 `playCount` 角色。新模型在 `discover_models.*`：`PlaylistCategoriesModel`（`hot`、`groups`、`premium`）和三个标签模型 `DiscoverPlaylistsModel`（`category`、`order` 最热／最新／精品）、`DiscoverArtistsModel`（`kind`、`area`、`initial`）、`DiscoverAlbumsModel`（`area`、`mode` 最新／本周／本月），共同基类 `DiscoverCardsModel`（`items`、`ensureLoaded()`；筛选变了用 `refresh()` 原地重载）。没有单独的页面模型：页面直接持有这几个模型。
+- 精品的分页：游标没有前进（与上一页相同）或缺失时停止，网格下显示"没有更多了"。新碟的周榜／月榜一次返回，不分页。
+- 控件：`Chip` 加 `filter`（选中由使用者设置、点击不切换的筛选纸片）和 `dropdown`（尾部下拉箭头）；新控件 `ChipGroup`（单选纸片行，放不下的隐藏，一个 Tab 停留点，←／→ 移动，Space／Enter 选中），音乐库的歌单筛选也改用它。`CollectionCard` 加 `plays`（封面左下角的播放量牌子，inverseSurface 72 % 底、inverseOnSurface 字），`CollectionGrid` 加 `showPlayCount`，卡片宽度取整（小数宽度会让最后一张卡换行）。`ChartCard` 加 `wide`（大封面在左、前三名在右、右上角播放按钮）。`TabState` 加 `skeleton`（加载时显示卡片骨架而不是转圈）。
+- 页面：`DiscoverPage` 替换原型 `FeedPage`（已删除；`HomePageModel`／`feed()` 现在没有页面用，留给阶段 5 决定去留）。外壳记住发现页的标签（`AppShell.discoverTab`），`shell.openDiscover(tab)`；首页各"查看全部"打开对应标签。窄窗口（内容宽度 < 720）时最热／最新／精品等按钮组换到纸片行下面一行；官方榜宽时两列。
+- 榜单标签不是"第一次显示时才请求"：`ChartsModel` 创建时就加载（请求小，与首页共用模型）。
+- 假数据：分类目录五组、热门 10 个、精品 11 个（"夜晚"没有精品，"儿童"没有歌单）；歌单是示例歌单循环出来的（"全部" 95 个，带标签的分类只有对应的示例），卡片上的播放量与歌单页一致；精品是同一份列表的前三分之二，按游标分页；歌手的类型、地区、首字母是给 12 个示例歌手编的；另加 8 个没有预览的榜单。示例歌单的播放量改为按 key 打散（之前几个歌单都是"110万"左右）。
+- 验证：构建、qmllint、clang-format；离屏截图检查了四个标签、全部分类对话框（滚动、选"粤语"后临时纸片出现、选"儿童"的空状态）、精品不可用的提示和从精品切到无精品分类时回到最热、精品翻到底的"没有更多了"、首字母菜单、播放榜单、窄窗口、纸片行的键盘操作（Tab 进入在选中的纸片上，←／→、Space）、Gallery 输入页的新纸片。

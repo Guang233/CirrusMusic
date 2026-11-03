@@ -119,7 +119,8 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 ## 8b. 标签页与纸片（第二批，阶段 3）
 
 - **TabBar／TabButton**（MD3 主标签页）：项高 48，带图标 64（图标在标签上方）；标签 titleSmall，未选中 OnSurfaceVariant、选中 Primary（`defaultEffects` 过渡，图标同时填充）；状态层颜色选中为 Primary、否则 OnSurface。底部 1 px 分隔线 SurfaceContainerHighest；指示条 3 px、上方圆角 3、与标签同宽（至少 24），换标签时位置和宽度用 `fastSpatial` 滑动，首次布局不做动画。标签平分宽度，放不下时横向滚动。
-- **Chip**：高 32、圆角 8（small），左右内距 16（有前置图标时左 8），图标 18、间距 8，标签 labelLarge。默认是建议／辅助纸片：OutlineVariant 1 px 描边，标签 OnSurface，图标 Primary。`checkable` 为筛选纸片：未选中标签 OnSurfaceVariant；选中填充 SecondaryContainer、去掉描边、前置对勾，内容 OnSecondaryContainer（`defaultEffects`）。`removable` 为输入纸片：标签 OnSurfaceVariant，左内距 12，标签后 18 px 删除图标（OnSurfaceVariant，到右边 8，自己的圆形状态层），点它发 `removeClicked`；`maximumLabelWidth` 让长标签省略。`highlighted` 显示焦点状态层，给键盘焦点留在别处、由列表代选的纸片用（搜索框的下拉列表）。
+- **Chip**：高 32、圆角 8（small），左右内距 16（有前置图标时左 8），图标 18、间距 8，标签 labelLarge。默认是建议／辅助纸片：OutlineVariant 1 px 描边，标签 OnSurface，图标 Primary。`checkable` 为筛选纸片：未选中标签 OnSurfaceVariant；选中填充 SecondaryContainer、去掉描边、前置对勾，内容 OnSecondaryContainer（`defaultEffects`）。`removable` 为输入纸片：标签 OnSurfaceVariant，左内距 12，标签后 18 px 删除图标（OnSurfaceVariant，到右边 8，自己的圆形状态层），点它发 `removeClicked`；`maximumLabelWidth` 让长标签省略。`highlighted` 显示焦点状态层，给键盘焦点留在别处、由列表代选的纸片用（搜索框的下拉列表）。`filter` 为选中状态由使用者设置的筛选纸片（点击不切换，单选行用）；`dropdown` 为带菜单的筛选纸片：尾部 18 px `arrow_drop_down`（颜色同标签），右内距 8，菜单由页面在点击时打开。
+- **ChipGroup**：单选筛选纸片行（MD3 纸片组），间距 8，按顺序放下宽度装得下的纸片，其余隐藏（`shown`、`shownWidth`）。整行一个 Tab 停留点：进入时在选中的纸片上，←／→ 移动焦点，Space／Enter 选中；`activated(index)` 报告点选，`currentIndex` 由使用者设置（也可以从别处改）。
 
 ## 8c. 对话框（第二批，阶段 3）
 
@@ -145,6 +146,6 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 - `ToolTip` 只有纯文本样式；富提示（rich tooltip）未做。
 - TextField 未做字符计数和前后缀；Outlined 标签缺口用 `gapColor` 填色，放在非 surface 背景上时要手动指定。
 - 列表项与菜单项的读屏名称只取标题文字；需要额外描述时由页面设置 `Accessible.description`。
-- 第二批已做 NavigationRail（§8a）、Tabs 与 Chips（§8b）、Dialog（§8c）；其余（Snackbar、Card、Divider、Badge、下拉选择）按页面需要再做。次级标签页、带阴影的纸片未做；输入纸片已随搜索历史加入 `Chip`（`removable`）。
+- 第二批已做 NavigationRail（§8a）、Tabs 与 Chips（§8b）、Dialog（§8c）；其余（Snackbar、Card、Divider、Badge、下拉选择）按页面需要再做。次级标签页、带阴影的纸片未做；输入纸片已随搜索历史加入 `Chip`（`removable`）；下拉筛选纸片和单选纸片行（`ChipGroup`）随发现页加入。
 - NavigationRail 未做：方向键在项之间移动、徽标（Badge）、项过多时滚动。
 
