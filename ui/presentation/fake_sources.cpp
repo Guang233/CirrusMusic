@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRandomGenerator>
+#include <QSet>
 #include <QTimer>
 
 #include <algorithm>
@@ -2070,6 +2071,325 @@ class FakePlayback : public QObject, public PlaybackSource
 };
 } // namespace
 
+// Comments made up for each song, playlist and album, the same every run; what the
+// account likes, publishes and deletes is kept while the app runs (comments.md).
+class FakeComments : public QObject, public CommentSource
+{
+  public:
+    FakeComments(FakeControls* controls, std::shared_ptr<const Samples> samples,
+                 std::shared_ptr<const FakeAccount> account)
+        : m_controls(controls), m_samples(std::move(samples)), m_account(std::move(account))
+    {
+    }
+
+    Request comments(const CommentTarget& target, comment::Sort sort, const QString& cursor,
+                     int limit, Reply<CommentPage> reply) override
+    {
+        return replyLater<CommentPage>(
+            this, m_controls, std::move(reply), [this, target, sort, cursor, limit]() {
+                QList<CommentInfo> all =
+                    m_controls->empty() ? QList<CommentInfo>() : shown(generated(target));
+                if (sort == comment::Hot) {
+                    std::stable_sort(all.begin(), all.end(),
+                                     [](const CommentInfo& a, const CommentInfo& b) {
+                                         return a.likedCount > b.likedCount;
+                                     });
+                } else if (sort == comment::Recommended && all.size() > kRecommendedHot) {
+                    // A few popular ones first, then the newest.
+                    QList<CommentInfo> hot = all;
+                    std::stable_sort(hot.begin(), hot.end(),
+                                     [](const CommentInfo& a, const CommentInfo& b) {
+                                         return a.likedCount > b.likedCount;
+                                     });
+                    hot = hot.mid(0, kRecommendedHot);
+                    QList<CommentInfo> ordered = hot;
+                    for (const CommentInfo& info : std::as_const(all))
+                        if (std::none_of(hot.cbegin(), hot.cend(),
+                                         [&](const CommentInfo& h) { return h.key == info.key; }))
+                            ordered << info;
+                    all = ordered;
+                }
+                // Newly published ones come first, by any order, as the newest.
+                all = m_published.value(id(target)) + all;
+                return Outcome<CommentPage>{page(all, cursor, limit)};
+            });
+    }
+
+    Request replies(const CommentTarget& target, const QString& commentKey, const QString& cursor,
+                    int limit, Reply<CommentPage> reply) override
+    {
+        return replyLater<CommentPage>(
+            this, m_controls, std::move(reply), [this, target, commentKey, cursor, limit]() {
+                Outcome<CommentPage> outcome;
+                const QList<CommentInfo> all = generated(target);
+                const auto parent =
+                    std::find_if(all.cbegin(), all.cend(),
+                                 [&](const CommentInfo& c) { return c.key == commentKey; });
+                const bool published = m_published.value(id(target)).size() > 0 &&
+                                       commentKey.startsWith(QStringLiteral("cm-mine-"));
+                if (parent == all.cend() && !published) {
+                    outcome.failure = Failure{failure::Rejected, std::nullopt};
+                    return outcome;
+                }
+                QList<CommentInfo> replies;
+                if (parent != all.cend())
+                    replies = repliesOf(*parent);
+                // The account's replies are the newest, at the end.
+                replies = shown(replies + m_publishedReplies.value(commentKey));
+                CommentPage result = page(replies, cursor, limit);
+                outcome.value = result;
+                return outcome;
+            });
+    }
+
+    Request setCommentLiked(const CommentTarget& target, const QString& commentKey, bool liked,
+                            Reply<bool> reply) override
+    {
+        Q_UNUSED(target);
+        return write(std::move(reply), [this, commentKey, liked]() {
+            m_liked.insert(commentKey, liked);
+            return true;
+        });
+    }
+
+    Request publishComment(const CommentTarget& target, const QString& text,
+                           Reply<bool> reply) override
+    {
+        return write(std::move(reply), [this, target, text]() {
+            m_published[id(target)].prepend(mine(text));
+            return true;
+        });
+    }
+
+    Request replyToComment(const CommentTarget& target, const QString& commentKey,
+                           const QString& text, Reply<bool> reply) override
+    {
+        Q_UNUSED(target);
+        return write(std::move(reply), [this, commentKey, text]() {
+            // A reply to a reply goes into the same floor.
+            const QString floor = commentKey.section(QStringLiteral("-r"), 0, 0);
+            m_publishedReplies[floor] << mine(text);
+            return true;
+        });
+    }
+
+    Request deleteComment(const CommentTarget& target, const QString& commentKey,
+                          Reply<bool> reply) override
+    {
+        return write(std::move(reply), [this, target, commentKey]() {
+            // Only the account's own; the service refuses the rest.
+            const QList<CommentInfo> all = generated(target) + m_published.value(id(target));
+            const auto found = std::find_if(all.cbegin(), all.cend(), [&](const CommentInfo& c) {
+                return c.key == commentKey;
+            });
+            bool own = found != all.cend() && found->authorKey == kAccountKey;
+            for (const QList<CommentInfo>& replies : std::as_const(m_publishedReplies))
+                for (const CommentInfo& c : replies)
+                    own = own || c.key == commentKey;
+            if (!own)
+                return false;
+            m_deleted.insert(commentKey);
+            return true;
+        });
+    }
+
+  private:
+    static constexpr int kRecommendedHot = 5;
+    static inline const QString kAccountKey = QStringLiteral("fake-account");
+
+    [[nodiscard]] static QString id(const CommentTarget& target)
+    {
+        return QString::number(int(target.kind)) + QLatin1Char(':') + target.key;
+    }
+
+    [[nodiscard]] static quint64 seedOf(const QString& text)
+    {
+        quint64 seed = 7;
+        for (QChar c : text)
+            seed = seed * 31 + c.unicode();
+        return seed * 0x9E37'79B9'7F4A'7C15ull;
+    }
+
+    // As many as the playlist or album page says; songs get a number of their own,
+    // and songs whose key ends in 7 have none (the empty state).
+    [[nodiscard]] int countOf(const CommentTarget& target) const
+    {
+        if (target.kind == comment::Album)
+            return int(qMax<qint64>(0, m_samples->albums.value(target.key).info.commentCount));
+        if (target.kind == comment::Playlist) {
+            if (m_account->accountOnly(target.key))
+                return 0;
+            const auto found = m_samples->playlists.constFind(target.key);
+            if (found != m_samples->playlists.cend())
+                return int(qMax<qint64>(0, found->info.commentCount));
+            PlaylistInfo info; // a chart: made up the same way as its page
+            info.key = target.key;
+            fillPlaylistDetails(info);
+            return int(qMax<qint64>(0, info.commentCount));
+        }
+        if (target.key.endsWith(QLatin1Char('7')))
+            return 0;
+        return int(seedOf(target.key) >> 40) % 260 + 3;
+    }
+
+    // Every comment of a target, newest first, before the account's changes.
+    [[nodiscard]] QList<CommentInfo> generated(const CommentTarget& target) const
+    {
+        static const char* const names[] = {
+            "海边的旧仓库", "不睡觉的猫",   "Mori",       "通勤三号线", "晚风收藏家",
+            "阿柚",         "Echo_42",      "听歌的土豆", "雨天备忘录", "北纬三十度",
+            "一颗小行星",   "Lumen 的歌迷", "夜班列车长", "Kai",        "半杯冰美式"};
+        static const char* const lines[] = {"这首歌陪我走过了很多个下班的夜晚。",
+                                            "前奏一出来就想起那年夏天。",
+                                            "第二段副歌的和声太好听了，循环了一整天。",
+                                            "有没有人和我一样，是从歌单里偶然听到的？",
+                                            "耳机里放着这首，地铁好像也没那么挤了。",
+                                            "编曲很克制，越听越有味道。",
+                                            "歌词写得像日记一样。",
+                                            "推荐给了室友，现在宿舍天天放。",
+                                            "希望有一天能去现场听。",
+                                            "凌晨三点，还在单曲循环。",
+                                            "这个声音太治愈了。",
+                                            "桥段那里的鼓点处理得真妙。"};
+        const int count = countOf(target);
+        const QString prefix = QStringLiteral("cm-%1-").arg(seedOf(id(target)) >> 44, 0, 16);
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        std::mt19937 random(quint32(seedOf(id(target)) >> 32));
+        QList<CommentInfo> all;
+        qint64 time = now - 5 * 60'000;
+        for (int i = 0; i < count; ++i) {
+            CommentInfo c;
+            c.key = prefix + QString::number(i);
+            // A few are the account's own, for deleting.
+            if (i % 37 == 5) {
+                c.authorKey = kAccountKey;
+                c.authorName = FakeAccount::kNickname;
+                c.avatarKey = QStringLiteral("pastel");
+            } else {
+                const int author = int(random() % std::size(names));
+                c.authorKey = QStringLiteral("u-%1").arg(author);
+                c.authorName = QString::fromUtf8(names[author]);
+                static const char* const avatars[] = {"sunset", "ocean", "forest", "neon", ""};
+                c.avatarKey = QString::fromLatin1(avatars[author % std::size(avatars)]);
+            }
+            if (i % 23 != 11) {
+                QString text;
+                const int sentences = i % 17 == 3 ? 12 : 1 + int(random() % 3);
+                for (int n = 0; n < sentences; ++n)
+                    text += QString::fromUtf8(lines[random() % std::size(lines)]);
+                if (i % 17 == 3)
+                    text = tr("很长的一段：") + text;
+                c.text = text;
+            }
+            c.timeMs = time;
+            time -= qint64(random() % (i < 20 ? 90 : 2000)) * 60'000 + 60'000;
+            c.likedCount = qint64(random() % (i % 9 == 0 ? 30'000 : 400));
+            c.liked = i % 29 == 7;
+            if (i % 7 == 2 && i + 3 < count) {
+                c.replyTo =
+                    CommentExcerpt{QString::fromUtf8(names[(i + 3) % std::size(names)]),
+                                   i % 31 == 2 ? QString() : QString::fromUtf8(lines[i % 12])};
+            }
+            c.replyCount = i % 5 == 0 ? qint64(random() % 45 + 1) : 0;
+            all << c;
+        }
+        return all;
+    }
+
+    // A comment's replies, oldest first; some reply to an earlier one.
+    [[nodiscard]] static QList<CommentInfo> repliesOf(const CommentInfo& parent)
+    {
+        static const char* const names[] = {"晚风收藏家", "Mori", "阿柚", "Kai", "半杯冰美式"};
+        static const char* const lines[] = {"同感！",       "我也是从这个歌单来的。",
+                                            "哈哈哈真的",   "说得太好了",
+                                            "加一，循环中", "第一次听就喜欢上了"};
+        QList<CommentInfo> replies;
+        std::mt19937 random(quint32(seedOf(parent.key) >> 32));
+        for (qint64 j = 0; j < qMax<qint64>(0, parent.replyCount); ++j) {
+            CommentInfo r;
+            r.key = parent.key + QStringLiteral("-r") + QString::number(j);
+            const int author = int(random() % std::size(names));
+            r.authorKey = QStringLiteral("r-%1").arg(author);
+            r.authorName = QString::fromUtf8(names[author]);
+            r.text = QString::fromUtf8(lines[random() % std::size(lines)]);
+            r.timeMs = parent.timeMs + (j + 1) * 7 * 60'000;
+            r.likedCount = qint64(random() % 60);
+            if (j % 4 == 3)
+                r.replyTo = CommentExcerpt{replies.last().authorName, *replies.last().text};
+            r.replyCount = 0;
+            replies << r;
+        }
+        return replies;
+    }
+
+    // The account's changes applied: likes and deletions.
+    [[nodiscard]] QList<CommentInfo> shown(QList<CommentInfo> all) const
+    {
+        all.removeIf([this](const CommentInfo& c) { return m_deleted.contains(c.key); });
+        for (CommentInfo& c : all) {
+            const auto liked = m_liked.constFind(c.key);
+            if (liked != m_liked.cend() && *liked != c.liked) {
+                c.likedCount += *liked ? 1 : -1;
+                c.liked = *liked;
+            }
+            c.replyCount += m_publishedReplies.value(c.key).size();
+        }
+        return all;
+    }
+
+    [[nodiscard]] CommentInfo mine(const QString& text)
+    {
+        CommentInfo c;
+        c.key = QStringLiteral("cm-mine-%1").arg(++m_serial);
+        c.authorKey = kAccountKey;
+        c.authorName = FakeAccount::kNickname;
+        c.avatarKey = QStringLiteral("pastel");
+        c.text = text;
+        c.timeMs = QDateTime::currentMSecsSinceEpoch();
+        c.likedCount = 0;
+        c.replyCount = 0;
+        return c;
+    }
+
+    // Offset pages; the cursor is the offset as text.
+    [[nodiscard]] static CommentPage page(const QList<CommentInfo>& all, const QString& cursor,
+                                          int limit)
+    {
+        const int offset = cursor.toInt();
+        CommentPage result;
+        result.items = all.mid(offset, limit);
+        result.total = all.size();
+        result.hasMore = offset + limit < all.size();
+        if (*result.hasMore)
+            result.next = QString::number(offset + limit);
+        return result;
+    }
+
+    Request write(Reply<bool> reply, std::function<bool()> apply)
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [this, apply]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn())
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+            else if (!apply())
+                outcome.failure = Failure{failure::Rejected, std::nullopt};
+            else
+                outcome.value = true;
+            return outcome;
+        });
+    }
+
+    FakeControls* m_controls;
+    std::shared_ptr<const Samples> m_samples;
+    std::shared_ptr<const FakeAccount> m_account;
+    QHash<QString, bool> m_liked;
+    QSet<QString> m_deleted;
+    // By target id, newest first; replies by comment key, oldest first.
+    QHash<QString, QList<CommentInfo>> m_published;
+    QHash<QString, QList<CommentInfo>> m_publishedReplies;
+    int m_serial = 0;
+};
+
 Sources makeFakeSources()
 {
     Sources sources;
@@ -2081,6 +2401,7 @@ Sources makeFakeSources()
     sources.playback = std::make_unique<FakePlayback>(sources.fakeControls.get(), samples);
     sources.session = std::make_unique<FakeSession>(sources.fakeControls.get());
     sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples, account);
+    sources.comments = std::make_unique<FakeComments>(sources.fakeControls.get(), samples, account);
     return sources;
 }
 

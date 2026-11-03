@@ -241,4 +241,46 @@ struct PodcastInfo {
     bool subscribed = false;
 };
 
+// Comments (docs/ui/pages/comments.md): of a song, playlist or album.
+namespace comment
+{
+enum Target { Song, Playlist, Album };
+// Recommended mixes popular and recent ones, as the service orders them.
+enum Sort { Recommended, Hot, Newest };
+} // namespace comment
+
+struct CommentTarget {
+    comment::Target kind = comment::Song;
+    QString key;
+};
+
+// The comment one replies to, as the service quotes it; empty text when it was deleted.
+struct CommentExcerpt {
+    QString authorName;
+    QString text;
+};
+
+// One comment or reply. The text is untrusted plain text: shown as is, no links.
+struct CommentInfo {
+    QString key;
+    QString authorKey; // the author's account; compares with the session's accountKey
+    QString authorName;
+    QString avatarKey;           // may be empty
+    std::optional<QString> text; // none: deleted or under review
+    qint64 timeMs = 0;           // 0 when unknown
+    qint64 likedCount = -1;      // -1 when unknown
+    bool liked = false;          // by the signed-in account
+    std::optional<CommentExcerpt> replyTo;
+    qint64 replyCount = -1; // the replies under it (its floor); -1 when unknown
+};
+
+// A page of comments or replies. `next` goes back to the source for the next page
+// (empty at the end); what it holds is the source's business.
+struct CommentPage {
+    QList<CommentInfo> items;
+    std::optional<bool> hasMore;
+    std::optional<qint64> total;
+    QString next;
+};
+
 } // namespace cirrus::ui

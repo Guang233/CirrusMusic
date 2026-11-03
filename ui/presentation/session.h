@@ -64,6 +64,8 @@ class Session : public QObject
     [[nodiscard]] bool signedIn() const { return m_status == account::SignedIn; }
     [[nodiscard]] QString nickname() const { return m_nickname; }
     [[nodiscard]] QString avatarKey() const { return m_avatarKey; }
+    // The signed-in account's key (its user id); empty for guests.
+    [[nodiscard]] QString accountKey() const { return m_accountKey; }
     [[nodiscard]] QrLogin* qrLogin() const { return m_qrLogin; }
     [[nodiscard]] const SessionSource* source() const { return m_source; }
 

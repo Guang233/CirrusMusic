@@ -51,6 +51,8 @@ qt_add_qml_module(cirrus_presentation
         library_models.cpp
         discover_models.h
         discover_models.cpp
+        comments_model.h
+        comments_model.cpp
         paged_model.h
         paged_model.cpp
         search_results.h

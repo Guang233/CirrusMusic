@@ -55,6 +55,9 @@ class App : public QObject
     // QML singleton factory: the installed instance, owned by C++.
     static App* create(QQmlEngine* qml, QJSEngine* js);
 
+    // Puts plain text on the system clipboard (copying a comment).
+    Q_INVOKABLE static void copyText(const QString& text);
+
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
     [[nodiscard]] Formatter* format() const { return m_format; }
     [[nodiscard]] Library* library() const { return m_library; }
@@ -66,6 +69,7 @@ class App : public QObject
     [[nodiscard]] CatalogSource* catalog() const { return m_sources.catalog.get(); }
     [[nodiscard]] ImageSource* images() const { return m_sources.images.get(); }
     [[nodiscard]] LibrarySource* librarySource() const { return m_sources.library.get(); }
+    [[nodiscard]] CommentSource* commentSource() const { return m_sources.comments.get(); }
 
     // `image://cover/<key>` provider; the QML engine takes ownership.
     [[nodiscard]] QQuickAsyncImageProvider* makeCoverProvider();

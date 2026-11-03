@@ -34,6 +34,26 @@ QString Formatter::date(qint64 msSinceEpoch)
     return tr("%1年%2月%3日").arg(day.year()).arg(day.month()).arg(day.day());
 }
 
+QString Formatter::relativeTime(qint64 msSinceEpoch)
+{
+    if (msSinceEpoch <= 0)
+        return {};
+    const QDateTime when = QDateTime::fromMSecsSinceEpoch(msSinceEpoch);
+    const QDateTime now = QDateTime::currentDateTime();
+    const qint64 seconds = when.secsTo(now);
+    if (seconds < 60)
+        return tr("刚刚");
+    if (seconds < 3600)
+        return tr("%1 分钟前").arg(seconds / 60);
+    const QString clock = when.time().toString(QStringLiteral("HH:mm"));
+    const qint64 days = when.date().daysTo(now.date());
+    if (days == 0)
+        return clock;
+    if (days == 1)
+        return tr("昨天 %1").arg(clock);
+    return date(msSinceEpoch);
+}
+
 QString Formatter::fullDate(qint64 msSinceEpoch)
 {
     if (msSinceEpoch <= 0)

@@ -10,7 +10,9 @@
 #include "qr_provider.h"
 #include "session.h"
 
+#include <QClipboard>
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QJSEngine>
 
 namespace cirrus::ui
@@ -58,6 +60,12 @@ App* App::create(QQmlEngine*, QJSEngine*)
     Q_ASSERT_X(g_instance, "App::create", "call App::install() before loading QML");
     QJSEngine::setObjectOwnership(g_instance, QJSEngine::CppOwnership);
     return g_instance;
+}
+
+void App::copyText(const QString& text)
+{
+    if (QClipboard* clipboard = QGuiApplication::clipboard())
+        clipboard->setText(text);
 }
 
 QQuickAsyncImageProvider* App::makeCoverProvider() { return new CoverProvider(images()); }

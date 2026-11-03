@@ -142,6 +142,31 @@ class LibrarySource
     virtual Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) = 0;
 };
 
+// Comments (docs/ui/pages/comments.md). Reading works for guests; writes need a
+// signed-in account and reply true once the service accepted them.
+class CommentSource
+{
+  public:
+    virtual ~CommentSource() = default;
+    // A page of comments; `cursor` is the previous page's `next` ("" for the first).
+    virtual Request comments(const CommentTarget& target, comment::Sort sort, const QString& cursor,
+                             int limit, Reply<CommentPage> reply) = 0;
+    // The replies under a comment, oldest first, a page at a time like comments().
+    virtual Request replies(const CommentTarget& target, const QString& commentKey,
+                            const QString& cursor, int limit, Reply<CommentPage> reply) = 0;
+    virtual Request setCommentLiked(const CommentTarget& target, const QString& commentKey,
+                                    bool liked, Reply<bool> reply) = 0;
+    // The service gives no key for a new comment or reply, nor shows it right away
+    // (it may be reviewed first).
+    virtual Request publishComment(const CommentTarget& target, const QString& text,
+                                   Reply<bool> reply) = 0;
+    virtual Request replyToComment(const CommentTarget& target, const QString& commentKey,
+                                   const QString& text, Reply<bool> reply) = 0;
+    // The service decides whether the account may delete it.
+    virtual Request deleteComment(const CommentTarget& target, const QString& commentKey,
+                                  Reply<bool> reply) = 0;
+};
+
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.
 class SessionSource
 {
@@ -211,6 +236,7 @@ struct Sources {
     std::unique_ptr<PlaybackSource> playback;
     std::unique_ptr<SessionSource> session;
     std::unique_ptr<LibrarySource> library;
+    std::unique_ptr<CommentSource> comments;
 };
 
 } // namespace cirrus::ui
