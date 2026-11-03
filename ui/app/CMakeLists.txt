@@ -20,6 +20,7 @@ qt_add_qml_module(appCirrusMusic
         AlbumPage.qml
         ArtistPage.qml
         PodcastPage.qml
+        CommentsPage.qml
         TabState.qml
         SearchPage.qml
         DiscoverPage.qml

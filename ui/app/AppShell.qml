@@ -112,6 +112,26 @@ Item {
         });
     }
 
+    // The comments of a song, playlist or album (CommentsPageModel.Target); the
+    // header shows `title`, `subtitle` and the cover the opening page knows.
+    function openComments(target: int, key: string, title: string, subtitle: string,
+                          coverKey: string) {
+        shell.go(commentsPage, {
+            shell: shell,
+            target: target,
+            targetKey: key,
+            title: title,
+            subtitle: subtitle,
+            coverKey: coverKey
+        });
+    }
+
+    // The song's comments, from a song list or the mini player.
+    function openSongComments(key: string, title: string, artistText: string,
+                              coverKey: string) {
+        openComments(CommentsPageModel.Song, key, title, artistText, coverKey);
+    }
+
     function openPodcast(key: string) {
         shell.go(podcastPage, {
             shell: shell,
@@ -318,6 +338,10 @@ Item {
         PodcastPage {}
     }
     Component {
+        id: commentsPage
+        CommentsPage {}
+    }
+    Component {
         id: recentPage
         RecentPage {}
     }
@@ -366,6 +390,10 @@ Item {
 
     MiniPlayer {
         id: miniPlayer
+        onCommentsRequested: {
+            const song = App.player.current;
+            shell.openSongComments(song.key, song.title, song.artistText, song.coverKey);
+        }
         x: panel.x
         width: panel.width
         y: shell.height - implicitHeight - bottomMargin

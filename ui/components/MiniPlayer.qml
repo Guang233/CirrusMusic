@@ -20,6 +20,8 @@ Item {
 
     // Opens the player page (UI phase 4).
     signal openRequested
+    // The current song's comments (not for voices).
+    signal commentsRequested
 
     implicitHeight: 72
     visible: reveal.value > 0
@@ -62,8 +64,8 @@ Item {
         Column {
             anchors.left: cover.right
             anchors.leftMargin: 12
-            anchors.right: controls.left
-            anchors.rightMargin: 12
+            anchors.right: commentsButton.visible ? commentsButton.left : controls.left
+            anchors.rightMargin: commentsButton.visible ? 4 : 12
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -82,6 +84,17 @@ Item {
                 color: failed ? Theme.color.error : Theme.color.onSurfaceVariant
                 font: Theme.type.bodyMedium.font
             }
+        }
+
+        IconButton {
+            id: commentsButton
+            anchors.right: controls.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            visible: App.player.current.key !== "" && !App.player.current.voice
+            glyph: Symbols.comment
+            text: qsTr("评论")
+            onClicked: root.commentsRequested()
         }
 
         // Pressing a button widens it and squeezes its neighbours (MD3E button group).

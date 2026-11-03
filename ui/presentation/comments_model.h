@@ -78,6 +78,8 @@ class CommentListModel : public QAbstractListModel
     [[nodiscard]] bool isValid(int row) const { return row >= 0 && row < m_rows.size(); }
     // The comment row with `key`, or -1.
     [[nodiscard]] int indexOfComment(const QString& key) const;
+    // The comment or reply row with `key`, or -1.
+    Q_INVOKABLE int indexOf(const QString& key) const;
     // Rows after comment `row` that belong to it (its replies and their end).
     [[nodiscard]] int floorSize(int row) const;
     [[nodiscard]] int commentCount() const;

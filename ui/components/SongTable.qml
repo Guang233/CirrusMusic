@@ -104,6 +104,8 @@ Item {
     signal albumRequested(string key)
     signal podcastRequested(string key)
     signal artistRequested(string key)
+    // "查看评论" for one song (not voices).
+    signal commentsRequested(string key, string title, string artistText, string coverKey)
     signal typed(string text)
     signal signInRequested
     signal addToPlaylistRequested(list<string> keys)
@@ -928,6 +930,19 @@ Item {
             text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
                                          : qsTr("收藏到歌单…")
             onTriggered: table.addToPlaylistRequested(songMenu.keys)
+        }
+        MenuItem {
+            visible: songMenu.songCount === 1 && !table.voices
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.comment
+            text: qsTr("查看评论")
+            onTriggered: {
+                const index = table.songs.index(songMenu.row, 0);
+                table.commentsRequested(songMenu.key,
+                                        table.songs.data(index, SongListModel.TitleRole) ?? "",
+                                        table.songs.data(index, SongListModel.ArtistTextRole) ?? "",
+                                        table.songs.data(index, SongListModel.CoverKeyRole) ?? "");
+            }
         }
         MenuItem {
             visible: table.removable

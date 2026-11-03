@@ -171,8 +171,9 @@ SongCollectionPage {
             text: pageModel.commentCount > 0
                   ? qsTr("评论 %1").arg(App.format.count(pageModel.commentCount))
                   : qsTr("评论")
-            // The comments page is designed later (playlist.md §2).
-            onClicked: page.shell.notify(qsTr("评论页还在设计中"))
+            onClicked: page.shell.openComments(CommentsPageModel.Album, pageModel.albumKey,
+                                               pageModel.title, pageModel.artistText,
+                                               pageModel.coverKey)
         }
     }
 

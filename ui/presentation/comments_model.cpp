@@ -55,6 +55,14 @@ int CommentListModel::indexOfComment(const QString& key) const
     return -1;
 }
 
+int CommentListModel::indexOf(const QString& key) const
+{
+    for (qsizetype i = 0; i < m_rows.size(); ++i)
+        if (m_rows.at(i).type != CommentRow::RepliesEnd && m_rows.at(i).info.key == key)
+            return int(i);
+    return -1;
+}
+
 int CommentListModel::floorSize(int row) const
 {
     int size = 0;

@@ -284,6 +284,8 @@ Item {
         onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)
         onArtistRequested: key => page.shell.openArtist(key)
+        onCommentsRequested: (key, title, artistText, coverKey) =>
+                             page.shell.openSongComments(key, title, artistText, coverKey)
         // Typing on the table goes on in the find field.
         onTyped: text => {
             const field = page.compactProgress > 0.5 ? compactFind : page.headerFind;

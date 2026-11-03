@@ -425,6 +425,7 @@ std::shared_ptr<const Samples> loadSamples()
                 voice.albumKey = info.key;
                 voice.albumTitle = info.title;
                 voice.coverKey = info.coverKey;
+                voice.voice = true;
                 voice.serial = n;
                 voice.durationMs = qint64(18 + (n * 7 + p * 5) % 41) * 60'000;
                 samples->voices.insert(voice.key, voice);
@@ -2274,7 +2275,7 @@ class FakeComments : public QObject, public CommentSource
             }
             if (i % 23 != 11) {
                 QString text;
-                const int sentences = i % 17 == 3 ? 12 : 1 + int(random() % 3);
+                const int sentences = i % 17 == 3 ? 36 : 1 + int(random() % 3);
                 for (int n = 0; n < sentences; ++n)
                     text += QString::fromUtf8(lines[random() % std::size(lines)]);
                 if (i % 17 == 3)
@@ -2327,6 +2328,11 @@ class FakeComments : public QObject, public CommentSource
     {
         all.removeIf([this](const CommentInfo& c) { return m_deleted.contains(c.key); });
         for (CommentInfo& c : all) {
+            // Likes are the account's: none for guests.
+            if (!m_controls->signedIn() && c.liked) {
+                c.liked = false;
+                --c.likedCount;
+            }
             const auto liked = m_liked.constFind(c.key);
             if (liked != m_liked.cend() && *liked != c.liked) {
                 c.likedCount += *liked ? 1 : -1;
