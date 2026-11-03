@@ -29,6 +29,7 @@ qt_add_qml_module(cirrus_ui_controls
         ToolTip.qml
         ScrollBar.qml
         TextField.qml
+        TextArea.qml
         SearchBar.qml
         Dialog.qml
         Snackbar.qml

@@ -158,6 +158,25 @@ ControlPage {
             }
         }
     }
+    Caption {
+        text: qsTr("多行文本框（TextArea，描边样式）：随内容变高，最多 maximumLines 行后滚动；Ctrl+Enter 发出 submitted。第二个带计数和错误。")
+    }
+    Flow {
+        Layout.fillWidth: true
+        spacing: 16
+        TextArea {
+            width: 300
+            placeholderText: qsTr("写下你的评论…")
+        }
+        TextArea {
+            width: 300
+            maximumLines: 3
+            text: qsTr("第一行\n第二行\n第三行\n第四行，超过三行开始滚动")
+            error: true
+            supportingText: qsTr("太长了")
+            counterText: "4100 / 4096"
+        }
+    }
 
     SectionTitle {
         text: qsTr("搜索栏")
