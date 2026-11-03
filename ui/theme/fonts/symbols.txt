@@ -125,3 +125,5 @@ vertical_align_top
 vertical_align_bottom
 person_add
 how_to_reg
+thumb_up
+content_copy

@@ -114,6 +114,8 @@ QtObject {
     readonly property string vertical_align_bottom: "\ue258"
     readonly property string person_add: "\uea4d"
     readonly property string how_to_reg: "\ue174"
+    readonly property string thumb_up: "\uf577"
+    readonly property string content_copy: "\ue14d"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -226,6 +228,8 @@ QtObject {
         "vertical_align_top",
         "vertical_align_bottom",
         "person_add",
-        "how_to_reg"
+        "how_to_reg",
+        "thumb_up",
+        "content_copy"
     ]
 }
