@@ -16,6 +16,8 @@ T.Button {
     // Icon FILL axis when not checkable; checkable buttons go from 0 to 1 when checked.
     property real iconFill: 0
     property bool showToolTip: true
+    // Standard icon buttons on InverseSurface (a snackbar's close): InverseOnSurface.
+    property bool inverse: false
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
@@ -73,7 +75,9 @@ T.Button {
             return Theme.mix(Theme.color.onSurfaceVariant, Theme.color.inverseOnSurface,
                              selection.value);
         default:
-            return Theme.mix(Theme.color.onSurfaceVariant, Theme.color.primary, selection.value);
+            return inverse ? Theme.color.inverseOnSurface
+                           : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.primary,
+                                       selection.value);
         }
     }
 
@@ -85,6 +89,12 @@ T.Button {
     Spring {
         id: selection
         target: control.toggled ? 1 : 0
+        spec: Theme.motion.defaultEffects
+    }
+    // A non-checkable icon fills and empties smoothly too (a like turning on).
+    Spring {
+        id: fillSpring
+        target: control.iconFill
         spec: Theme.motion.defaultEffects
     }
     Spring {
@@ -111,7 +121,7 @@ T.Button {
             anchors.centerIn: parent
             glyph: control.glyph
             size: control.iconSize
-            fill: control.checkable ? selection.value : control.iconFill
+            fill: control.checkable ? selection.value : fillSpring.value
             color: control.contentColor
         }
     }
