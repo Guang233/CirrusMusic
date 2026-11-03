@@ -11,6 +11,8 @@ T.TabButton {
 
     property string glyph
 
+    readonly property T.TabBar bar: T.TabBar.tabBar
+
     readonly property color contentColor: !enabled
         ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
         : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.primary, selection.value)
@@ -23,6 +25,16 @@ T.TabButton {
     leftPadding: 16
     rightPadding: 16
     font: Theme.type.titleSmall.font
+    // The bar is one Tab stop: the current tab; ←/→, Home, End switch tabs (TabBar).
+    focusPolicy: !bar || T.TabBar.index === bar.currentIndex ? Qt.StrongFocus : Qt.ClickFocus
+    Keys.onLeftPressed: (bar as TabBar)?.select(T.TabBar.index - 1)
+    Keys.onRightPressed: (bar as TabBar)?.select(T.TabBar.index + 1)
+    Keys.onPressed: event => {
+        if (!bar || (event.key !== Qt.Key_Home && event.key !== Qt.Key_End))
+            return;
+        (bar as TabBar).select(event.key === Qt.Key_Home ? 0 : bar.count - 1);
+        event.accepted = true;
+    }
 
     Spring {
         id: selection

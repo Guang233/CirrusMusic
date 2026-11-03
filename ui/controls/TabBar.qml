@@ -5,7 +5,8 @@ import Cirrus.Theme
 
 // MD3 primary tabs: TabButtons share the width, a divider runs along the bottom and
 // a 3 px indicator under the current label slides to the new tab (fastSpatial).
-// Tabs scroll horizontally when they don't fit.
+// Tabs scroll horizontally when they don't fit. Keyboard: the bar is one Tab stop (the
+// current tab); ←/→ switch to the neighbouring tab, Home/End to the first/last.
 T.TabBar {
     id: control
 
@@ -15,6 +16,14 @@ T.TabBar {
     readonly property real indicatorX: currentTab
         ? currentTab.x + (currentTab.width - indicatorWidth) / 2 - (contentItem as ListView).contentX
         : 0
+
+    // Makes tab `index` (clamped) current, with the focus moving along.
+    function select(index: int): void {
+        const next = Math.max(0, Math.min(count - 1, index));
+        // The focus moves first: the old tab stops being a Tab stop once not current.
+        (itemAt(next) as Item)?.forceActiveFocus(Qt.TabFocusReason);
+        currentIndex = next;
+    }
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             contentWidth + leftPadding + rightPadding)
