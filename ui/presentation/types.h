@@ -36,6 +36,7 @@ struct SongInfo {
     QString reason;
     // A podcast's voice (episode) instead of a song: albumKey and albumTitle are the
     // podcast's, `serial` its episode number (-1 when unknown).
+    bool voice = false;
     int serial = -1;
 };
 
