@@ -97,7 +97,12 @@ Item {
                 page.composer.text = "";
                 page.focusList();
             } else {
+                // Closed and laid out before the reply's rows come in (the model sends
+                // this first): rows moving in would otherwise keep the box's room.
+                const replying = list.itemAtIndex(pageModel.rows.indexOf(page.replyKey));
                 page.replyKey = "";
+                (replying as CommentRowItem)?.relayout();
+                list.forceLayout();
             }
         }
     }
@@ -143,7 +148,7 @@ Item {
         signal send(string text)
         signal cancel
 
-        spacing: 8
+        spacing: 8 * reveal.value
 
         TextArea {
             id: field
@@ -162,20 +167,35 @@ Item {
                 }
             }
         }
-        Row {
-            anchors.right: parent.right
-            visible: composerBox.open
-            spacing: 8
-            Button {
-                variant: Md.Text
-                text: qsTr("取消")
-                onClicked: composerBox.cancel()
+        // Cancel and send unfold under the field once it is in use.
+        Item {
+            width: parent.width
+            height: buttons.implicitHeight * reveal.value
+            visible: reveal.value > 0.01
+            opacity: Math.min(1, reveal.value)
+            clip: reveal.value < 1
+            Spring {
+                id: reveal
+                target: composerBox.open ? 1 : 0
+                spec: Theme.motion.standardFastSpatial
+                threshold: 0.005
             }
-            Button {
-                variant: Md.Filled
-                enabled: field.text.trim() !== "" && !field.tooLong && !pageModel.publishing
-                text: composerBox.sendText
-                onClicked: composerBox.trySend()
+            Row {
+                id: buttons
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                spacing: 8
+                Button {
+                    variant: Md.Text
+                    text: qsTr("取消")
+                    onClicked: composerBox.cancel()
+                }
+                Button {
+                    variant: Md.Filled
+                    enabled: field.text.trim() !== "" && !field.tooLong && !pageModel.publishing
+                    text: composerBox.sendText
+                    onClicked: composerBox.trySend()
+                }
             }
         }
 
@@ -213,8 +233,34 @@ Item {
         Accessible.role: Accessible.List
         Accessible.name: qsTr("评论")
 
-        // A deleted comment fades out; the rows below close the gap, and make room
-        // for opened replies, smoothly.
+        // New rows (a page, opened replies, what was just published) fade and rise in;
+        // a deleted comment fades out; the rows below close the gap, and make room for
+        // opened replies, smoothly.
+        populate: Transition {
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.motion.defaultEffects.duration
+                easing: Theme.motion.defaultEffects.easing
+            }
+        }
+        add: Transition {
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.motion.defaultEffects.duration
+                easing: Theme.motion.defaultEffects.easing
+            }
+            NumberAnimation {
+                property: "scale"
+                from: 0.96
+                to: 1
+                duration: Theme.motion.defaultSpatial.duration
+                easing: Theme.motion.defaultSpatial.easing
+            }
+        }
         remove: Transition {
             NumberAnimation {
                 property: "opacity"
@@ -476,11 +522,21 @@ Item {
         // The row itself, not its reply box.
         readonly property bool focused: activeFocus
                                         && !((replyLoader.item as Composer)?.field.activeFocus ?? false)
+        // The ring only for the keyboard: a click also hands the row the focus back
+        // (a box closing, a menu returning it).
+        readonly property bool showsFocus: InputMode.keyboard && focused
         property bool unfolded: false
 
         function toggleFold(): void {
-            if (body.folds)
-                unfolded = !unfolded;
+            if (!body.folds)
+                return;
+            fold.snapTo(body.height);
+            unfolded = !unfolded;
+            fold.target = body.restHeight;
+        }
+        // Takes its new height now rather than at the next frame.
+        function relayout(): void {
+            content.forceLayout();
         }
         function openMenu(): void {
             commentMenu.openFor(row.index, row.key, row.text, row.mine, actions,
@@ -508,16 +564,16 @@ Item {
             height: parent.height
             radius: Theme.shape.large
             color: Theme.color.onSurface
-            visible: !row.isEnd || row.focused
+            visible: !row.isEnd || row.showsFocus
             hovered: hover.hovered
-            focused: row.focused
+            focused: row.showsFocus
 
             HoverHandler {
                 id: hover
                 enabled: !row.isEnd
             }
             FocusRing {
-                shown: row.focused
+                shown: row.showsFocus
                 containerRadius: Theme.shape.large
             }
         }
@@ -616,9 +672,17 @@ Item {
                     ? textEdit.contentHeight / textEdit.lineCount : 0
                 readonly property bool folds: textEdit.lineCount > 8
                 width: parent.width
-                height: folds && !row.unfolded ? lineHeight * 8 : textEdit.contentHeight
+                readonly property real restHeight: folds && !row.unfolded ? lineHeight * 8
+                                                                         : textEdit.contentHeight
+                // Unfolding and folding slide (see toggleFold()).
+                height: fold.running ? fold.value : restHeight
                 visible: !row.deleted
                 clip: true
+                Spring {
+                    id: fold
+                    spec: Theme.motion.standardDefaultSpatial
+                    threshold: 0.5
+                }
                 TextEdit {
                     id: textEdit
                     width: parent.width
@@ -683,6 +747,23 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     focusPolicy: Qt.NoFocus
                     size: Md.XSmall
+                    // A like pops: shrinks, then springs back past its size.
+                    scale: pop.value
+                    Spring {
+                        id: pop
+                        target: 1
+                        spec: Theme.motion.fastSpatial
+                        threshold: 0.002
+                    }
+                    Connections {
+                        target: row
+                        function onLikedChanged() {
+                            if (row.liked) {
+                                pop.snapTo(0.6);
+                                pop.target = 1;
+                            }
+                        }
+                    }
                     glyph: Symbols.thumb_up
                     iconFill: row.liked ? 1 : 0
                     checkable: false
@@ -727,24 +808,42 @@ Item {
                 onClicked: pageModel.expandReplies(row.index)
             }
 
-            // Replying to this one.
-            Loader {
-                id: replyLoader
+            // Replying to this one: the box unfolds (and closes at once, so rows moved
+            // under it land in place).
+            Item {
                 width: parent.width
-                active: page.replyKey !== "" && page.replyKey === row.key
-                visible: active
-                sourceComponent: Composer {
-                    id: replyBox
-                    width: parent ? parent.width : 0
-                    open: true
-                    sendText: qsTr("回复")
-                    field.placeholderText: qsTr("回复 @%1").arg(row.authorName)
-                    Component.onCompleted: field.forceActiveFocus()
-                    onSend: text => pageModel.reply(pageModel.rows.indexOf(row.key), text)
-                    onCancel: {
-                        page.replyKey = "";
-                        list.currentIndex = row.index;
-                        page.focusList();
+                height: ((replyLoader.item as Composer)?.height ?? 0) * replyOpen.value
+                visible: replyLoader.active
+                opacity: Math.min(1, replyOpen.value)
+                clip: replyOpen.value < 1
+                Spring {
+                    id: replyOpen
+                    spec: Theme.motion.standardFastSpatial
+                    threshold: 0.005
+                }
+                Loader {
+                    id: replyLoader
+                    width: parent.width
+                    active: page.replyKey !== "" && page.replyKey === row.key
+                    onActiveChanged: {
+                        replyOpen.snapTo(0);
+                        replyOpen.target = active ? 1 : 0;
+                    }
+                    // Open already when the row is created (scrolled back into view).
+                    Component.onCompleted: replyOpen.snapTo(active ? 1 : 0)
+                    sourceComponent: Composer {
+                        id: replyBox
+                        width: parent ? parent.width : 0
+                        open: true
+                        sendText: qsTr("回复")
+                        field.placeholderText: qsTr("回复 @%1").arg(row.authorName)
+                        Component.onCompleted: field.forceActiveFocus()
+                        onSend: text => pageModel.reply(pageModel.rows.indexOf(row.key), text)
+                        onCancel: {
+                            page.replyKey = "";
+                            list.currentIndex = row.index;
+                            page.focusList();
+                        }
                     }
                 }
             }

@@ -464,6 +464,9 @@ void CommentsPageModel::reply(int row, const QString& text)
                 emit published(replyTo, false);
                 return;
             }
+            // The reply box closes first: rows the list moves while a row above
+            // changes height would stop at their old places.
+            emit published(replyTo, true);
             const int comment = m_rows->indexOfComment(floorKey);
             if (comment >= 0) {
                 CommentRow parent = m_rows->at(comment);
@@ -484,7 +487,6 @@ void CommentsPageModel::reply(int row, const QString& text)
                 }
             }
             emit notice(tr("已回复"));
-            emit published(replyTo, true);
         });
     emit publishingChanged();
 }
