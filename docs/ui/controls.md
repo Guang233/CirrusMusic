@@ -123,7 +123,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 8b. 标签页与纸片（第二批，阶段 3）
 
-- **TabBar／TabButton**（MD3 主标签页）：项高 48，带图标 64（图标在标签上方）；标签 titleSmall，未选中 OnSurfaceVariant、选中 Primary（`defaultEffects` 过渡，图标同时填充）；状态层颜色选中为 Primary、否则 OnSurface。底部 1 px 分隔线 SurfaceContainerHighest；指示条 3 px、上方圆角 3、与标签同宽（至少 24），换标签时位置和宽度用 `fastSpatial` 滑动，首次布局不做动画。标签平分宽度，放不下时横向滚动。
+- **TabBar／TabButton**（MD3 主标签页）：项高 48，带图标 64（图标在标签上方）；标签 titleSmall，未选中 OnSurfaceVariant、选中 Primary（`defaultEffects` 过渡，图标同时填充）；状态层颜色选中为 Primary、否则 OnSurface。底部 1 px 分隔线 SurfaceContainerHighest；指示条 3 px、上方圆角 3、与标签同宽（至少 24），换标签时位置和宽度用 `fastSpatial` 滑动，首次布局不做动画。标签平分宽度，放不下时横向滚动。键盘（2026-11-03 维护者同意按建议做）：整个标签栏是一个 Tab 停留点（当前标签），←／→ 切到相邻标签，Home／End 切到第一个／最后一个，焦点随选中一起移动（标签内容出得快，不需要先移动焦点再按 Enter）。由 `TabBar.select(index)` 实现，各页面不用另写。
 - **Chip**：高 32、圆角 8（small），左右内距 16（有前置图标时左 8），图标 18、间距 8，标签 labelLarge。默认是建议／辅助纸片：OutlineVariant 1 px 描边，标签 OnSurface，图标 Primary。`checkable` 为筛选纸片：未选中标签 OnSurfaceVariant；选中填充 SecondaryContainer、去掉描边、前置对勾，内容 OnSecondaryContainer（`defaultEffects`）。`removable` 为输入纸片：标签 OnSurfaceVariant，左内距 12，标签后 18 px 删除图标（OnSurfaceVariant，到右边 8，自己的圆形状态层），点它发 `removeClicked`；`maximumLabelWidth` 让长标签省略。`highlighted` 显示焦点状态层，给键盘焦点留在别处、由列表代选的纸片用（搜索框的下拉列表）。`filter` 为选中状态由使用者设置的筛选纸片（点击不切换，单选行用）；`dropdown` 为带菜单的筛选纸片：尾部 18 px `arrow_drop_down`（颜色同标签），右内距 8，菜单由页面在点击时打开。
 - **ChipGroup**：单选筛选纸片行（MD3 纸片组），间距 8，按顺序放下宽度装得下的纸片，其余隐藏（`shown`、`shownWidth`）。整行一个 Tab 停留点：进入时在选中的纸片上，←／→ 移动焦点，Space／Enter 选中；`activated(index)` 报告点选，`currentIndex` 由使用者设置（也可以从别处改）。
 
