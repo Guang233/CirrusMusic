@@ -86,6 +86,7 @@
 
 ## 5. 输入
 
+- **TextArea**（`placeholderText`、`maximumLines`、`supportingText`、`counterText`、`error`；信号 `submitted`）：MD3 描边文本框的多行版本，无浮动标签。最小高 56，随内容变高到 `maximumLines` 行后在框内滚动（光标跟随）；描边、圆角、颜色同 Outlined TextField；框下左侧辅助文字、右侧计数（bodySmall）。Enter 换行，Ctrl+Enter 发 `submitted`。用 `Flickable` 包 `T.TextArea`，不用 `TextArea.flickable`（那样内距会算两次、高度不随内容）。
 - **TextField**（`variant`：Filled／Outlined；`label`、`placeholderText`、`leadingGlyph`、`trailingGlyph`、`supportingText`、`error`）：高 56；Filled 容器 SurfaceContainerHighest、上圆角 4、底部指示线 1 px（聚焦 2 px Primary）；Outlined 描边 1 px Outline（聚焦 2 px Primary）、圆角 4。标签在有内容或聚焦时上浮缩小（bodyLarge → bodySmall，`fastSpatial`）。
 - **SearchBar**：高 56、全圆角、SurfaceContainerHigh，左侧搜索图标、右侧清除按钮（有内容时出现，Esc 同样清空）。建议列表属于页面，由阶段 3 实现。
 

@@ -119,3 +119,17 @@
 - 控件：评论项是页面里的组件（`CommentItem`），不进 `Cirrus.Controls`；赞按钮用 `IconButton`＋数量文字。时间文字放 `App.format.relativeTime()`。
 - 外壳：`shell.openComments(kind, key)`；歌单页、专辑页的评论按钮接上；`SongTable` 行菜单加"查看评论"（信号 `commentsRequested(key)`）；迷你播放条加评论按钮。
 - 图标：`thumb_up`、`expand_more`／`expand_less`（若还没有）加入 `symbols.txt` 后重新生成。
+
+## 9. 实现进度（2026-11-03）
+
+已按本文实现，与 §8 的差别：
+
+- 展示层：`CommentSource`（`sources.h`）读 `comments(target, sort, cursor, limit)`、`replies(target, comment, cursor, limit)`，写 `setCommentLiked`、`publishComment`、`replyToComment`、`deleteComment`；游标是不透明文本（`CommentPage.next`），由数据源决定内容（推荐／最热的偏移、最新的时间）。类型 `CommentTarget`、`CommentInfo`、`CommentExcerpt`、`CommentPage` 在 `types.h`。模型在 `comments_model.*`：`CommentsPageModel`（`target`、`targetKey`、`sort`、`rows`、`publishing`；`setLiked`、`expandReplies`、`moreReplies`、`collapseReplies`、`publish`、`reply`、`remove`；`published(replyTo, ok)`、`notice`）和 `CommentListModel`——评论、展开的回复和楼层末尾（更多／收起／加载中／失败）在一张平铺的表里，列表和 ↑／↓ 一起走。"作者是我"比较 `Session.accountKey()`（新加的 C++ 访问函数）。`SongInfo`／`SongItem` 加 `voice`（播放条判断当前是不是声音）。`App.copyText()` 放剪贴板。`Formatter.relativeTime()`：刚刚、N 分钟前、今天 HH:mm、昨天 HH:mm，再早同 `date()`。
+- 资源头部不另外请求：打开评论页的地方把标题、副标题、封面传进来（`shell.openComments(target, key, title, subtitle, coverKey)`，歌曲用 `shell.openSongComments`）。标题不可点（后退就回到资源页；歌曲没有自己的页面）。
+- 回复预览没有用：楼层展开时先显示加载中再出回复（`CommentInfo` 没有带预览，假数据回得很快）。回复的回复放进同一楼层，带"回复 @某人"的摘录。本页发表的回复在楼层加载后不会重复出现（按作者是我＋正文相同去掉服务器的那条）。
+- 控件：新控件 `TextArea`（描边多行输入框：随内容变高，`maximumLines` 后滚动；`supportingText`、`counterText`、`error`；Ctrl+Enter 发 `submitted`），见 controls.md。评论项、发表框、排序按钮组是页面里的组件。
+- 键盘：列表的停留点是当前行（行自己拿焦点，不是 ListView：ListView 是焦点作用域，里面还有头部的输入框，会把焦点还给它）。Space 展开／收起长正文。行内按钮不是 Tab 停留点。删除时这条淡出、下面的行平移补上；展开楼层时同样平移。
+- 字数：接近 4096 时显示计数，超过时不能发表。
+- 入口：歌单页、专辑页的"评论"按钮；`SongTable` 行菜单的"查看评论"（只选中一首时，声音没有）；迷你播放条歌曲信息右边的评论按钮（播放声音时不显示）。播放页的入口等阶段 4。
+- 假数据：评论数与歌单／专辑页的数字一致（榜单按同样的算法，账号自己的歌单 0 条），歌曲按 key 生成（key 以 7 结尾的歌曲没有评论）；每 37 条里有一条是账号自己的（可删除），每 23 条有一条已删除，部分有被回复摘录（含"原评论已删除"）、楼层、长正文（折叠）。点赞、发表、回复、删除在运行期间保留，刷新后由"服务器"的数据代替本地插入的那条。游客看到的评论都没有被赞过。
+- 验证：构建、qmllint、clang-format；离屏截图检查了游客（点发表框打开登录）、登录后发表（列表顶部插入、总数 +1）、回复（楼层展开、本地回复在最前）、点赞、最新排序、紧凑栏、长正文折叠、自己评论的菜单和删除、键盘（Esc 回到列表、↓、L、Enter 展开、R 回复并滚动到回复框）、空状态、歌曲表格行菜单和迷你播放条进入、歌单页按钮进入、Gallery 输入页的 TextArea。
