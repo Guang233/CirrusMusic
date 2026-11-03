@@ -19,6 +19,8 @@ FocusScope {
     property bool error: false
     property string supportingText
     property string counterText
+    // Rounder than MD3's 4 px outlined field: a box to write in, not a form row.
+    property real radius: Theme.shape.large
 
     signal submitted
 
@@ -43,17 +45,30 @@ FocusScope {
         font: Theme.type.bodyLarge.font
     }
 
+    // Focus and hover blend the outline in (width 1 → 2 px with the focus).
+    Spring {
+        id: focusSpring
+        target: area.activeFocus ? 1 : 0
+        spec: Theme.motion.fastEffects
+    }
+    Spring {
+        id: hoverSpring
+        target: area.hovered ? 1 : 0
+        spec: Theme.motion.fastEffects
+    }
+
     Rectangle {
         id: frame
         width: control.width
         height: control.fieldHeight
-        radius: Theme.shape.extraSmall
+        radius: control.radius
         color: "transparent"
-        border.width: area.activeFocus ? 2 : 1
+        border.width: 1 + focusSpring.value
         border.color: !control.enabled ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
                     : control.error ? Theme.color.error
-                    : area.activeFocus ? Theme.color.primary
-                    : area.hovered ? Theme.color.onSurface : Theme.color.outline
+                    : Theme.mix(Theme.mix(Theme.color.outline, Theme.color.onSurface,
+                                          hoverSpring.value),
+                                Theme.color.primary, focusSpring.value)
     }
 
     Flickable {
