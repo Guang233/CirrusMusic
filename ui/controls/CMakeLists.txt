@@ -11,6 +11,7 @@ qt_add_qml_module(cirrus_ui_controls
         M3Shapes
     SOURCES
         md.h
+        input_mode.h input_mode.cpp
     QML_FILES
         Icon.qml
         StateLayer.qml
