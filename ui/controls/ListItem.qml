@@ -9,6 +9,7 @@ import Cirrus.Theme
 // `first` / `last` round the outer corners of a list's ends by `outerRadius`, for
 // segmented lists and for plain lists in a rounded container, so the state layer
 // and ripple follow the container's corners.
+// `supportingMaximumLines` above 2 lets long supporting text wrap and the item grow.
 //   ListItem { text: song.title; supportingText: song.artist; leadingGlyph: Symbols.music_note }
 T.ItemDelegate {
     id: control
@@ -49,7 +50,9 @@ T.ItemDelegate {
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
-    implicitHeight: [56, 72, 88][lineCount - 1]
+    // Taller when the supporting text wraps past what the line count allows for.
+    implicitHeight: Math.max([56, 72, 88][lineCount - 1],
+                             implicitContentHeight + topPadding + bottomPadding)
     leftPadding: 16
     rightPadding: 16
     topPadding: 10

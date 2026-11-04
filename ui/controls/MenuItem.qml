@@ -10,6 +10,9 @@ T.MenuItem {
 
     property string glyph
     property string trailingText
+    // A second line under the label (bodySmall), e.g. what a choice means; the item
+    // grows to 60 px.
+    property string supportingText
 
     readonly property bool first: menu ? menu.count > 0 && menu.itemAt(0) === control : false
     readonly property bool last: menu ? menu.count > 0 && menu.itemAt(menu.count - 1) === control
@@ -28,7 +31,7 @@ T.MenuItem {
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
-    implicitHeight: 44
+    implicitHeight: supportingText !== "" ? 60 : 44
     leftPadding: 12
     rightPadding: 12
     spacing: 12
@@ -42,7 +45,7 @@ T.MenuItem {
 
     contentItem: Item {
         implicitWidth: (control.leadingGlyph !== "" ? 20 + control.spacing : 0)
-                       + Math.ceil(label.implicitWidth)
+                       + Math.ceil(Math.max(label.implicitWidth, support.implicitWidth))
                        + (control.shortcutText !== "" ? 24 + Math.ceil(shortcut.implicitWidth) : 0)
                        + (control.subMenu ? control.spacing + 20 : 0)
 
@@ -54,16 +57,28 @@ T.MenuItem {
             size: 20
             color: control.mutedColor
         }
-        Text {
-            id: label
+        Column {
             x: leadingIcon.visible ? 20 + control.spacing : 0
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - x - (control.shortcutText !== "" ? shortcut.implicitWidth + 24 : 0)
                    - (control.subMenu ? control.spacing + 20 : 0)
-            text: control.text
-            font: control.font
-            color: control.contentColor
-            elide: Text.ElideRight
+            Text {
+                id: label
+                width: parent.width
+                text: control.text
+                font: control.font
+                color: control.contentColor
+                elide: Text.ElideRight
+            }
+            Text {
+                id: support
+                width: parent.width
+                visible: control.supportingText !== ""
+                text: control.supportingText
+                font: Theme.type.bodySmall.font
+                color: control.mutedColor
+                elide: Text.ElideRight
+            }
         }
         Text {
             id: shortcut
@@ -88,7 +103,7 @@ T.MenuItem {
         readonly property real outer: Theme.shape.medium
         readonly property real inner: control.selected ? Theme.shape.medium
                                                        : Theme.shape.extraSmall
-        implicitHeight: 44
+        implicitHeight: control.implicitHeight
         color: Theme.mix(Qt.alpha(Theme.color.tertiaryContainer, 0),
                          Theme.color.tertiaryContainer, selection.value)
         topLeftRadius: control.first ? outer : inner
