@@ -6,6 +6,7 @@
 #include <QGuiApplication>
 #include <QJSEngine>
 #include <QLoggingCategory>
+#include <QUrl>
 
 #include <algorithm>
 #include <array>
@@ -147,6 +148,32 @@ QFont Fonts::tabular(QFont font)
 {
     font.setFeature(QFont::Tag("tnum"), 1);
     return font;
+}
+
+void Fonts::setFontFiles(const QStringList& files)
+{
+    if (m_fontFiles == files)
+        return;
+    m_fontFiles = files;
+    for (const QString& file : files)
+        loadFontFile(file);
+    emit fontFilesChanged();
+    // A custom family from one of them may exist now.
+    update();
+}
+
+QString Fonts::loadFontFile(const QString& file)
+{
+    const QString path = file.startsWith(QStringLiteral("file:")) ? QUrl(file).toLocalFile() : file;
+    if (const auto loaded = m_loaded.constFind(path); loaded != m_loaded.cend())
+        return *loaded;
+    const int id = QFontDatabase::addApplicationFont(path);
+    const QStringList families =
+        id < 0 ? QStringList() : QFontDatabase::applicationFontFamilies(id);
+    const QString family = families.value(0);
+    if (!family.isEmpty())
+        m_loaded.insert(path, family);
+    return family;
 }
 
 QStringList Fonts::families() const

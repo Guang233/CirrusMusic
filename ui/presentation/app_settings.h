@@ -55,6 +55,10 @@ class AppSettings : public QObject
     // Family for fontSource Custom.
     CIRRUS_SETTING(QString, customFontFamily, setCustomFontFamily, "appearance/customFontFamily",
                    QString())
+    // Font files picked for the custom font (not installed in the system), loaded at
+    // startup.
+    CIRRUS_SETTING(QStringList, customFontFiles, setCustomFontFiles, "appearance/customFontFiles",
+                   QStringList())
 
     // Window and system.
     // TitleBarMode (Cirrus.Window), or -1 until the user picks one: the default then

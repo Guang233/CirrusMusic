@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QFont>
+#include <QHash>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 class QJSEngine;
@@ -34,6 +36,9 @@ class Fonts : public QObject
     // False when the build has no bundled text font (prepare_fonts.py not run).
     Q_PROPERTY(bool bundledAvailable READ bundledAvailable CONSTANT)
     Q_PROPERTY(QString systemFamily READ systemFamily CONSTANT)
+    // Font files the user picked (fonts not installed in the system), loaded for this
+    // run: their families join families() and can be the custom family.
+    Q_PROPERTY(QStringList fontFiles READ fontFiles WRITE setFontFiles NOTIFY fontFilesChanged)
 
   public:
     enum TextSource { Bundled, System, Custom };
@@ -52,6 +57,8 @@ class Fonts : public QObject
     [[nodiscard]] QString symbols() const { return m_symbols; }
     [[nodiscard]] bool bundledAvailable() const { return !m_bundled.isEmpty(); }
     [[nodiscard]] QString systemFamily() const { return m_system; }
+    [[nodiscard]] QStringList fontFiles() const { return m_fontFiles; }
+    void setFontFiles(const QStringList& files);
 
     // Text font at a CSS weight (100–900, fractional allowed) and pixel size, in the
     // family in use.
@@ -61,9 +68,13 @@ class Fonts : public QObject
     Q_INVOKABLE static QFont tabular(QFont font);
     // Installed families, for picking a custom font.
     Q_INVOKABLE QStringList families() const;
+    // Loads a font file (a local path or file: URL) for this run; returns its first
+    // family, or "" when it is not a font. Add it to fontFiles to keep it.
+    Q_INVOKABLE QString loadFontFile(const QString& file);
 
   signals:
     void sansChanged();
+    void fontFilesChanged();
 
   private:
     explicit Fonts(QObject* parent = nullptr);
@@ -75,6 +86,9 @@ class Fonts : public QObject
     QString m_symbols;
     QString m_bundled;
     QString m_system;
+    QStringList m_fontFiles;
+    // Path → family of the files loaded so far.
+    QHash<QString, QString> m_loaded;
 };
 
 } // namespace cirrus::ui

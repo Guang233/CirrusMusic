@@ -47,6 +47,11 @@ AppWindow {
     }
     Binding {
         target: Fonts
+        property: "fontFiles"
+        value: App.settings.customFontFiles
+    }
+    Binding {
+        target: Fonts
         property: "customFamily"
         value: App.settings.customFontFamily
     }
