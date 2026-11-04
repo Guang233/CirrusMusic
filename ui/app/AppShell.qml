@@ -482,6 +482,62 @@ Item {
         }
     }
     Shortcut {
+        sequences: [StandardKey.Preferences, "Ctrl+,"]
+        onActivated: shell.openSettings()
+    }
+
+    // Playback, from anywhere (docs/ui/pages/settings.md §4). Text fields and lists
+    // keep the keys they use themselves (Ctrl+←/→ in a field, Ctrl+↑/↓ in a list).
+    Shortcut {
+        sequence: "Ctrl+P"
+        enabled: App.player.current.key !== ""
+        onActivated: App.player.playPause()
+    }
+    Shortcut {
+        sequence: "Ctrl+Left"
+        enabled: App.player.canPrevious
+        onActivated: App.player.previous()
+    }
+    Shortcut {
+        sequence: "Ctrl+Right"
+        enabled: App.player.canNext
+        onActivated: App.player.next()
+    }
+    Shortcut {
+        sequence: "Ctrl+Up"
+        onActivated: shell.stepVolume(0.1)
+    }
+    Shortcut {
+        sequence: "Ctrl+Down"
+        onActivated: shell.stepVolume(-0.1)
+    }
+    // The player reports a new volume a moment later: quick presses step from the
+    // last one asked for, not from the volume shown.
+    property real pendingVolume: -1
+    function stepVolume(delta: real): void {
+        const from = pendingVolume >= 0 ? pendingVolume : App.player.volume;
+        pendingVolume = Math.max(0, Math.min(1, Math.round((from + delta) * 10) / 10));
+        App.player.setVolume(pendingVolume);
+        volumeSettled.restart();
+    }
+    Timer {
+        id: volumeSettled
+        interval: 1000
+        onTriggered: shell.pendingVolume = -1
+    }
+    Shortcut {
+        sequence: "Ctrl+L"
+        enabled: App.player.current.key !== "" && !App.player.current.voice
+        onActivated: {
+            if (!App.session.signedIn) {
+                shell.openLogin();
+                return;
+            }
+            const key = App.player.current.key;
+            App.library.setLiked(key, !App.library.isLiked(key));
+        }
+    }
+    Shortcut {
         sequences: [StandardKey.Back]
         enabled: shell.canGoBack
         onActivated: shell.back()

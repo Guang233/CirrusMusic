@@ -419,6 +419,10 @@ Item {
             sourceComponent: table.footerContent
         }
 
+        // Ctrl+↑/↓ move without selecting here, before the window's volume shortcuts.
+        Keys.onShortcutOverride: event => event.accepted = list.Window.activeFocusItem === list
+            && (event.modifiers & Qt.ControlModifier)
+            && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)
         Keys.onPressed: event => {
             // Keys from the header's controls (find field, sort titles) bubble up here.
             if (list.Window.activeFocusItem !== list) {

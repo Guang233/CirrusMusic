@@ -286,6 +286,10 @@ Item {
                     page.currentRow = 0;
             }
 
+            // Ctrl+↑/↓ move without selecting here, before the window's volume shortcuts.
+            Keys.onShortcutOverride: event => event.accepted =
+                (event.modifiers & Qt.ControlModifier)
+                && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)
             Keys.onPressed: event => {
                 page.keyboardUsed = true;
                 const alt = event.modifiers & Qt.AltModifier;
