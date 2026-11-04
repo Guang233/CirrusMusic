@@ -167,6 +167,16 @@ class CommentSource
                                   Reply<bool> reply) = 0;
 };
 
+// The resource cache: covers, song details and lyrics kept on disk. Clearing it never
+// touches the session, the library or the listening history.
+class CacheSource
+{
+  public:
+    virtual ~CacheSource() = default;
+    virtual Request usage(Reply<CacheUsage> reply) = 0;
+    virtual Request clear(Reply<bool> reply) = 0;
+};
+
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.
 class SessionSource
 {
@@ -237,6 +247,7 @@ struct Sources {
     std::unique_ptr<SessionSource> session;
     std::unique_ptr<LibrarySource> library;
     std::unique_ptr<CommentSource> comments;
+    std::unique_ptr<CacheSource> cache;
 };
 
 } // namespace cirrus::ui

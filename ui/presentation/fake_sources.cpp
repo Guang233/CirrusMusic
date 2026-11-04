@@ -2396,6 +2396,33 @@ class FakeComments : public QObject, public CommentSource
     int m_serial = 0;
 };
 
+// The resource cache: a fixed amount until cleared; the backend's budgets (128 MiB of
+// details and lyrics, 512 MiB of covers) as the limit.
+class FakeCache : public QObject, public CacheSource
+{
+  public:
+    explicit FakeCache(FakeControls* controls) : m_controls(controls) {}
+
+    Request usage(Reply<CacheUsage> reply) override
+    {
+        return replyLater<CacheUsage>(
+            this, m_controls, std::move(reply),
+            [this]() { return Outcome<CacheUsage>{CacheUsage{m_bytes, 640ll << 20}}; }, false);
+    }
+
+    Request clear(Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [this]() {
+            m_bytes = 0;
+            return Outcome<bool>{true};
+        });
+    }
+
+  private:
+    FakeControls* m_controls;
+    qint64 m_bytes = 193'462'272; // 184.5 MiB
+};
+
 Sources makeFakeSources()
 {
     Sources sources;
@@ -2408,6 +2435,7 @@ Sources makeFakeSources()
     sources.session = std::make_unique<FakeSession>(sources.fakeControls.get());
     sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples, account);
     sources.comments = std::make_unique<FakeComments>(sources.fakeControls.get(), samples, account);
+    sources.cache = std::make_unique<FakeCache>(sources.fakeControls.get());
     return sources;
 }
 

@@ -284,4 +284,10 @@ struct CommentPage {
     QString next;
 };
 
+// The resource cache (covers, song details, lyrics): what it holds and may hold.
+struct CacheUsage {
+    qint64 bytes = 0;
+    qint64 limitBytes = 0;
+};
+
 } // namespace cirrus::ui

@@ -30,6 +30,8 @@ class Formatter : public QObject
     Q_INVOKABLE static QString relativeTime(qint64 msSinceEpoch);
     // Always with the year: "2024年5月1日"; empty for 0.
     Q_INVOKABLE static QString fullDate(qint64 msSinceEpoch);
+    // A size on disk: "0 B", "820 KB", "184 MB", "1.2 GB" (base 1024).
+    Q_INVOKABLE static QString bytes(qint64 bytes);
     // A list's total length: "48 分钟", "1 小时 52 分钟" (minutes rounded up).
     Q_INVOKABLE static QString totalLength(qint64 milliseconds);
     // Artist names joined for one line: "A / B".

@@ -81,6 +81,24 @@ QString Formatter::artists(const QList<ArtistRef>& artists)
     return names.join(tr(" / "));
 }
 
+QString Formatter::bytes(qint64 bytes)
+{
+    // Short Latin units in every language; one decimal below 100 when not whole.
+    static const char* const units[] = {"B", "KB", "MB", "GB", "TB"};
+    double value = double(qMax<qint64>(0, bytes));
+    int unit = 0;
+    while (value >= 1024 && unit < 4) {
+        value /= 1024;
+        ++unit;
+    }
+    const double tenths = std::round(value * 10) / 10;
+    const QLocale locale;
+    const QString number = unit == 0 || tenths >= 100 || tenths == std::floor(tenths)
+                               ? locale.toString(qint64(std::round(value)))
+                               : locale.toString(tenths, 'f', 1);
+    return QStringLiteral("%1 %2").arg(number, QLatin1StringView(units[unit]));
+}
+
 QString Formatter::count(qint64 value)
 {
     const QLocale locale;
