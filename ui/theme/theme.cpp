@@ -105,6 +105,31 @@ QList<QColor> Theme::seedPresets()
             QColor(0xb08a00), QColor(0xe0672e), QColor(0xc8232c), QColor(0xc2185b)};
 }
 
+QVariantMap Theme::staticPalette() const
+{
+    // Tones 90 / 80 (light / dark container) and 30 (on container) of Material's
+    // static hues, as the Android 16 Settings homepage uses them.
+    struct Hue {
+        const char* name;
+        QRgb tone90, tone80, tone30;
+    };
+    static constexpr Hue hues[] = {
+        {"blue", 0xd0e4ff, 0xa1c9ff, 0x04409f},   {"blueVariant", 0xbde9ff, 0x67d4ff, 0x004d68},
+        {"cyan", 0xacedff, 0x60d5f3, 0x004e5d},   {"green", 0xbeefbb, 0x80da88, 0x00522c},
+        {"yellow", 0xffe07c, 0xfcbd00, 0x6d3a01}, {"orange", 0xffdcc3, 0xffb683, 0x753403},
+        {"red", 0xffdadc, 0xffb3ae, 0x8a1a16},    {"pink", 0xffd8ef, 0xffaee4, 0x8d0053},
+        {"purple", 0xeedcfe, 0xd9bafd, 0x5629a4}, {"grey", 0xe3e3e3, 0xc7c7c7, 0x474747},
+    };
+    QVariantMap palette;
+    for (const Hue& hue : hues) {
+        palette.insert(QString::fromLatin1(hue.name),
+                       QVariantMap{{QStringLiteral("container"),
+                                    QColor::fromRgb(m_dark ? hue.tone80 : hue.tone90)},
+                                   {QStringLiteral("onContainer"), QColor::fromRgb(hue.tone30)}});
+    }
+    return palette;
+}
+
 void Theme::setFixedSeed(const QColor& seed)
 {
     if (seed == m_fixedSeed || !seed.isValid())

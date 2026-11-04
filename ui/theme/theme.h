@@ -33,6 +33,9 @@ class Theme : public QObject
     // Seeds to offer for a fixed seed (the settings' swatches): eight hues around the
     // wheel, MD3's baseline purple first.
     Q_PROPERTY(QList<QColor> seedPresets READ seedPresets CONSTANT)
+    // Material's static palette (md.ref.palette, not seeded): hue name to
+    // {container, onContainer}, for colour-coded category icons. See docs/ui/theme.md.
+    Q_PROPERTY(QVariantMap staticPalette READ staticPalette NOTIFY darkChanged)
     Q_PROPERTY(Variant variant READ variant WRITE setVariant NOTIFY variantChanged)
     Q_PROPERTY(
         SpecVersion specVersion READ specVersion WRITE setSpecVersion NOTIFY specVersionChanged)
@@ -81,6 +84,7 @@ class Theme : public QObject
     void setSeedSource(SeedSource source);
     [[nodiscard]] QColor fixedSeed() const { return m_fixedSeed; }
     [[nodiscard]] static QList<QColor> seedPresets();
+    [[nodiscard]] QVariantMap staticPalette() const;
     void setFixedSeed(const QColor& seed);
     [[nodiscard]] QColor seed() const { return m_seed; }
     [[nodiscard]] Variant variant() const { return m_variant; }
