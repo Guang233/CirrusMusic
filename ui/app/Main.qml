@@ -27,6 +27,11 @@ AppWindow {
     }
     Binding {
         target: Theme
+        property: "fixedSeed"
+        value: App.settings.fixedSeed
+    }
+    Binding {
+        target: Theme
         property: "variant"
         value: App.settings.variant
     }

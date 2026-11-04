@@ -1,8 +1,28 @@
 #pragma once
 
+#include <QColor>
 #include <QObject>
 #include <QSettings>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
+
+// Declares one setting of AppSettings: a property `name` (READ name, WRITE setter,
+// NOTIFY nameChanged) stored under `key`, `fallback` until the user changes it. The
+// setter stores and notifies only on a change. Used once per setting in AppSettings;
+// moc expands it like the Q_PROPERTY it contains.
+#define CIRRUS_SETTING(Type, name, setter, key, fallback)                                          \
+    Q_PROPERTY(Type name READ name WRITE setter NOTIFY name##Changed)                              \
+                                                                                                   \
+  public:                                                                                          \
+    [[nodiscard]] Type name() const { return read<Type>(key, fallback); }                          \
+    void setter(const Type& value)                                                                 \
+    {                                                                                              \
+        if (write<Type>(key, value, fallback))                                                     \
+            emit name##Changed();                                                                  \
+    }                                                                                              \
+    Q_SIGNAL void name##Changed();                                                                 \
+                                                                                                   \
+  private:
 
 namespace cirrus::ui
 {
@@ -10,87 +30,73 @@ namespace cirrus::ui
 // User settings (App.settings), persisted with QSettings. Appearance values are the
 // integer values of the matching Theme and Fonts enums, which Main.qml binds to them;
 // this layer does not depend on the theme module.
+//
+// Adding a setting is one CIRRUS_SETTING line here (with what its values mean); the
+// settings page shows it with a row (docs/ui/pages/settings.md §7). Keys are stored
+// on disk: keep them when renaming a property.
 class AppSettings : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Use App.settings")
+
+    // Appearance.
     // Theme.Mode: System (0), Light, Dark.
-    Q_PROPERTY(int themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
-    // Theme.SeedSource: Cover (0), Fixed, System (default).
-    Q_PROPERTY(int seedSource READ seedSource WRITE setSeedSource NOTIFY seedSourceChanged)
+    CIRRUS_SETTING(int, themeMode, setThemeMode, "appearance/themeMode", 0)
+    // Theme.SeedSource: Cover (0), Fixed, System (2, default).
+    CIRRUS_SETTING(int, seedSource, setSeedSource, "appearance/seedSource", 2)
+    // The seed for SeedSource Fixed (MD3's baseline purple until one is picked).
+    CIRRUS_SETTING(QColor, fixedSeed, setFixedSeed, "appearance/fixedSeed", QColor(0x6750a4))
     // Theme.Variant: TonalSpot (0) …
-    Q_PROPERTY(int variant READ variant WRITE setVariant NOTIFY variantChanged)
-    Q_PROPERTY(
-        bool reducedMotion READ reducedMotion WRITE setReducedMotion NOTIFY reducedMotionChanged)
+    CIRRUS_SETTING(int, variant, setVariant, "appearance/variant", 0)
+    CIRRUS_SETTING(bool, reducedMotion, setReducedMotion, "appearance/reducedMotion", false)
     // Fonts.TextSource: Bundled (0, MiSans, default), System, Custom.
-    Q_PROPERTY(int fontSource READ fontSource WRITE setFontSource NOTIFY fontSourceChanged)
+    CIRRUS_SETTING(int, fontSource, setFontSource, "appearance/fontSource", 0)
     // Family for fontSource Custom.
-    Q_PROPERTY(QString customFontFamily READ customFontFamily WRITE setCustomFontFamily NOTIFY
-                   customFontFamilyChanged)
+    CIRRUS_SETTING(QString, customFontFamily, setCustomFontFamily, "appearance/customFontFamily",
+                   QString())
+
+    // Window and system.
     // TitleBarMode (Cirrus.Window), or -1 until the user picks one: the default then
     // follows the desktop. Applied at startup; see docs/ui/README.md §6.1.
-    Q_PROPERTY(int titleBar READ titleBar WRITE setTitleBar NOTIFY titleBarChanged)
+    CIRRUS_SETTING(int, titleBar, setTitleBar, "window/titleBar", -1)
     // What closing the main window does when a tray icon is shown: -1 ask (default),
     // 0 quit, 1 hide to the tray and keep playing. Without a tray it always quits.
-    Q_PROPERTY(int closeAction READ closeAction WRITE setCloseAction NOTIFY closeActionChanged)
+    CIRRUS_SETTING(int, closeAction, setCloseAction, "window/closeAction", -1)
     // Render on the discrete GPU of a hybrid-graphics Linux machine. Applied at
     // startup, before the window exists (ui/app/gpu_preference.h).
-    Q_PROPERTY(bool preferDiscreteGpu READ preferDiscreteGpu WRITE setPreferDiscreteGpu NOTIFY
-                   preferDiscreteGpuChanged)
+    CIRRUS_SETTING(bool, preferDiscreteGpu, setPreferDiscreteGpu, "graphics/preferDiscreteGpu",
+                   true)
+
+    // Playback.
+    // Requested stream quality, the backend's AudioQuality: Standard (0), Exhigh (1,
+    // default), Lossless, HiRes. The service answers with the best it has up to that.
+    CIRRUS_SETTING(int, audioQuality, setAudioQuality, "playback/audioQuality", 1)
+
+    // Lyrics.
+    CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)
+    CIRRUS_SETTING(bool, showRomanization, setShowRomanization, "lyrics/showRomanization", false)
+
     // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
-    Q_PROPERTY(QStringList searchHistory READ searchHistory WRITE setSearchHistory NOTIFY
-                   searchHistoryChanged)
-    Q_PROPERTY(bool showTranslation READ showTranslation WRITE setShowTranslation NOTIFY
-                   showTranslationChanged)
-    Q_PROPERTY(bool showRomanization READ showRomanization WRITE setShowRomanization NOTIFY
-                   showRomanizationChanged)
+    CIRRUS_SETTING(QStringList, searchHistory, setSearchHistory, "search/history", QStringList())
 
   public:
     explicit AppSettings(QObject* parent = nullptr);
 
-    [[nodiscard]] int themeMode() const;
-    void setThemeMode(int mode);
-    [[nodiscard]] int seedSource() const;
-    void setSeedSource(int source);
-    [[nodiscard]] int variant() const;
-    void setVariant(int variant);
-    [[nodiscard]] bool reducedMotion() const;
-    void setReducedMotion(bool reduced);
-    [[nodiscard]] int fontSource() const;
-    void setFontSource(int source);
-    [[nodiscard]] QString customFontFamily() const;
-    void setCustomFontFamily(const QString& family);
-    [[nodiscard]] int titleBar() const;
-    void setTitleBar(int mode);
-    [[nodiscard]] int closeAction() const;
-    void setCloseAction(int action);
-    [[nodiscard]] bool preferDiscreteGpu() const;
-    void setPreferDiscreteGpu(bool prefer);
-    [[nodiscard]] QStringList searchHistory() const;
-    void setSearchHistory(const QStringList& history);
-    [[nodiscard]] bool showTranslation() const;
-    void setShowTranslation(bool show);
-    [[nodiscard]] bool showRomanization() const;
-    void setShowRomanization(bool show);
-
-  signals:
-    void themeModeChanged();
-    void seedSourceChanged();
-    void variantChanged();
-    void reducedMotionChanged();
-    void fontSourceChanged();
-    void customFontFamilyChanged();
-    void titleBarChanged();
-    void closeActionChanged();
-    void preferDiscreteGpuChanged();
-    void searchHistoryChanged();
-    void showTranslationChanged();
-    void showRomanizationChanged();
-
   private:
-    template <class T> T read(const char* key, T fallback) const;
-    template <class T> bool write(const char* key, const T& value, T fallback);
+    template <class T> T read(const char* key, const T& fallback) const
+    {
+        return m_store.value(QLatin1StringView(key), QVariant::fromValue(fallback))
+            .template value<T>();
+    }
+    // Returns whether the stored value changed.
+    template <class T> bool write(const char* key, const T& value, const T& fallback)
+    {
+        if (read(key, fallback) == value)
+            return false;
+        m_store.setValue(QLatin1StringView(key), QVariant::fromValue(value));
+        return true;
+    }
 
     QSettings m_store;
 };
