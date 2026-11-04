@@ -57,6 +57,7 @@ SettingsGroup {
     }
 
     title: qsTr("键盘快捷键")
+    glyph: Symbols.keyboard
 
     Repeater {
         model: group.shortcuts
@@ -95,7 +96,7 @@ SettingsGroup {
     }
     SettingRow {
         text: qsTr("列表和页面里")
-        supportingText: qsTr("↑／↓ 移动，Enter 打开或播放，菜单键或 Shift+F10 打开菜单；标签栏、纸片行和按钮组里用 ←／→ 切换；歌曲列表里 Shift／Ctrl 多选，Ctrl+A 全选。")
+        supportingText: qsTr("↑／↓ 移动，Enter 打开，←／→ 切换标签和选项，菜单键打开菜单")
         focusPolicy: Qt.NoFocus
         hoverEnabled: false
     }

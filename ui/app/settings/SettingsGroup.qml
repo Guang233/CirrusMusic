@@ -11,6 +11,8 @@ Column {
     id: group
 
     property string title
+    // Its icon in the page's index.
+    property string glyph
     default property alias rows: body.data
 
     // Which rows are shown changed: the ends move.

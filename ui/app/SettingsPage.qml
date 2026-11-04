@@ -75,6 +75,8 @@ PageScaffold {
 
         x: 24
         y: 8
+        // Above the page-wide Flickable (declared after it for the Tab order).
+        z: 1
         width: page.indexWidth
         visible: page.wide
         spacing: 2
@@ -86,17 +88,38 @@ PageScaffold {
             id: entries
             model: page.sections
             delegate: ListItem {
+                id: entry
                 required property int index
                 required property SettingsGroup modelData
                 width: parent.width
-                implicitHeight: 48
+                implicitHeight: 52
                 lines: 1
                 segmented: true
                 first: true
                 last: true
-                outerRadius: 24
+                outerRadius: 26
                 highlighted: index === page.current
                 text: modelData.title
+                // A tonal disc per group, the container roles taking turns.
+                leading: Component {
+                    Rectangle {
+                        readonly property int role: entry.index % 3
+                        width: 32
+                        height: 32
+                        radius: 16
+                        color: [Theme.color.primaryContainer, Theme.color.secondaryContainer,
+                                Theme.color.tertiaryContainer][role]
+                        Icon {
+                            anchors.centerIn: parent
+                            glyph: entry.modelData.glyph
+                            size: 20
+                            fill: entry.highlighted ? 1 : 0
+                            color: [Theme.color.onPrimaryContainer,
+                                    Theme.color.onSecondaryContainer,
+                                    Theme.color.onTertiaryContainer][parent.role]
+                        }
+                    }
+                }
                 focusPolicy: index === sectionIndex.focusIndex ? Qt.StrongFocus : Qt.ClickFocus
                 Accessible.role: Accessible.ListItem
                 onClicked: page.scrollTo(index)

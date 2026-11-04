@@ -13,11 +13,11 @@ SettingsGroup {
     required property AppShell shell
 
     title: qsTr("账号")
+    glyph: Symbols.account_circle
 
     SettingRow {
         text: App.session.signedIn ? App.session.nickname : qsTr("未登录")
-        supportingText: App.session.signedIn ? qsTr("网易云音乐账号")
-                                             : qsTr("登录后可以同步歌单、收藏和听歌记录")
+        supportingText: App.session.signedIn ? qsTr("网易云音乐账号") : ""
         focusPolicy: Qt.NoFocus
         hoverEnabled: false
         leading: Component {

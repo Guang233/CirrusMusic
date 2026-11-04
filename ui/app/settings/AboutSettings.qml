@@ -35,6 +35,7 @@ SettingsGroup {
         }]
 
     title: qsTr("关于")
+    glyph: Symbols.info
 
     SettingRow {
         text: qsTr("Cirrus Music %1").arg(Qt.application.version)
@@ -52,7 +53,7 @@ SettingsGroup {
     }
     ActionSetting {
         text: qsTr("第三方许可")
-        supportingText: qsTr("用到的开源组件和字体")
+        supportingText: ""
         actionText: qsTr("查看")
         onTriggered: licensesDialog.open()
     }
