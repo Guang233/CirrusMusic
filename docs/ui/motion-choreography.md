@@ -134,7 +134,7 @@ Main（窗口）
 2. **封面先换**：新封面解码完成前保留旧封面；完成后两层交叉淡入（迷你条和播放页都用 `defaultEffects`）。由 `Cirrus.Components` 的 `CoverArt` 实现。
 3. **颜色跟随**：取色完成（每张 1–7 ms，和解码几乎同时）后：
    - 外壳：主题自己的 CAM16-UCS 混合（`defaultEffects`，约 230 ms），已实现。
-   - 播放页背景：交叉过渡到新背景（`slowEffects`，约 330 ms）。原型里如果觉得太快，用 `Theme.motion.custom` 放慢，并记进 `player.md`。
+   - 播放页背景：交叉过渡到新背景（`slowEffects`，约 330 ms）。原型里如果觉得太快，用 `Theme.motion.custom` 放慢，并记进 [pages/player.md](pages/player.md)。
    - 播放页文字颜色：和背景**同一个进度**过渡。对比度要在起点、终点都达标；以白色系为主的前景在中间态也不会掉到不可读。
 4. 颜色过渡不早于封面开始淡入，避免“颜色已经变了、封面还是上一首”。
 
@@ -174,4 +174,4 @@ MD3E 的导航栏（androidx `WideNavigationRail`）有收起和展开两种形�
 
 - `Spring` 增加带初速度起步的接口（做拖动关闭播放页时）。
 - 容器变换（列表 → 详情）在第一轮页面完成后评估。
-- 播放页内部的动画（歌词滚动、逐字高亮、播放/暂停时封面缩放）写在 `player.md`，阶段 4 开始前完成。
+- 播放页内部的动画（歌词滚动、逐字高亮、播放/暂停时封面缩放）写在 [pages/player.md](pages/player.md)。

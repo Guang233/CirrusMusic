@@ -139,7 +139,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 
 - `status`：`None`／`Loading`／`Ready`／`Failed`／`NoLyrics`／`Instrumental`（纯音乐只在后端明确标记时出现）。
 - `timing`：`PlainText`／`Lines`／`Words`。逐字时间不可用时自动退回逐行。
-- `lines`（列表模型）：每行有 `startMs`、`endMs`、`text`、`translation`、`romanization`、`words`（`[{startMs, durationMs, text}]`）。原文为主轨，有增强版（逐字）时优先用增强版；翻译、音译按时间对齐到原文行，对齐规则在阶段 4 用示例歌词确定，写进 `player.md`。
+- `lines`（列表模型）：每行有 `startMs`、`endMs`、`text`、`translation`、`romanization`、`words`（`[{startMs, durationMs, text}]`）。原文为主轨，有增强版（逐字）时优先用增强版；翻译、音译按时间对齐到原文行，对齐规则在阶段 4 用示例歌词确定，写进 [pages/player.md](pages/player.md) §5.6。
 - `activeLines`：当前行（可能有多行重叠），来自后端的歌词游标。行内的逐字进度由 QML 用 `PlaybackClock` 计算。
 - `hasTranslation`、`hasRomanization`、`offsetMs`、`setOffset(ms)`。是否显示翻译、音译属于用户设置（`App.settings`）。
 
@@ -287,7 +287,7 @@ public:
 
 - **二维码生成**：需要一个生成二维码图像的库（候选 Nayuki QR Code generator，MIT），属于新依赖，接入扫码登录前请维护者确认。假实现先用示例图片。
 - **队列排序**：后端暂不支持移动队列条目。
-- **翻译与原文的对齐规则**：阶段 4 写入 `player.md`。
+- **翻译与原文的对齐规则**：阶段 4 写入 [pages/player.md](pages/player.md) §5.6。
 - **切换标题栏模式是否需要重启**：见 README §6.1，原型中确定。
 
 ## 10. 实现情况（阶段 3 第 2 步，2026-10-30）
