@@ -116,6 +116,9 @@ QtObject {
     readonly property string how_to_reg: "\ue174"
     readonly property string thumb_up: "\uf577"
     readonly property string content_copy: "\ue14d"
+    readonly property string desktop_windows: "\ue30c"
+    readonly property string database: "\uf20e"
+    readonly property string font_download: "\ue167"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -230,6 +233,9 @@ QtObject {
         "person_add",
         "how_to_reg",
         "thumb_up",
-        "content_copy"
+        "content_copy",
+        "desktop_windows",
+        "database",
+        "font_download"
     ]
 }

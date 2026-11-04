@@ -127,3 +127,6 @@ person_add
 how_to_reg
 thumb_up
 content_copy
+desktop_windows
+database
+font_download
