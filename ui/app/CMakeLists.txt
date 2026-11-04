@@ -34,6 +34,21 @@ qt_add_qml_module(appCirrusMusic
         AddToPlaylistDialog.qml
         ChartCard.qml
         SettingsPage.qml
+        settings/SettingsGroup.qml
+        settings/SettingRow.qml
+        settings/SwitchSetting.qml
+        settings/ChoiceSetting.qml
+        settings/MenuSetting.qml
+        settings/ActionSetting.qml
+        settings/SeedSwatches.qml
+        settings/AccountSettings.qml
+        settings/PlaybackSettings.qml
+        settings/LyricsSettings.qml
+        settings/AppearanceSettings.qml
+        settings/WindowSettings.qml
+        settings/StorageSettings.qml
+        settings/ShortcutSettings.qml
+        settings/AboutSettings.qml
         HomePage.qml
         TodayCard.qml
         FmCard.qml
@@ -65,6 +80,9 @@ set_target_properties(appCirrusMusic PROPERTIES
     # Keep the historical location build/<preset>/appCirrusMusic used by docs and launch configs.
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+# Shown in Settings › About.
+target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_VERSION="${PROJECT_VERSION}")
 
 target_link_libraries(appCirrusMusic PRIVATE
     Qt6::Quick

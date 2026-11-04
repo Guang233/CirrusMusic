@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
     // application object exists.
     QCoreApplication::setOrganizationName(QStringLiteral("Cirrus"));
     QCoreApplication::setApplicationName(QStringLiteral("CirrusMusic"));
+    QCoreApplication::setApplicationVersion(QStringLiteral(CIRRUS_VERSION));
     cirrus::ui::gpu::apply(cirrus::ui::AppSettings().preferDiscreteGpu());
 
     Application app(argc, argv);

@@ -3,288 +3,149 @@ import QtQuick
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
-import Cirrus.Window
-import Cirrus.Presentation
 
-// Settings, bound to App.settings (docs/ui/presentation.md §5.1).
+// Settings (docs/ui/pages/settings.md): one long page of groups, each its own file
+// under settings/ built from the row types there; on wide windows an index of the
+// groups on the left follows the scroll and jumps to a group. A new group is one line
+// in `groups` below: the index picks it up.
 PageScaffold {
     id: page
 
     required property AppShell shell
 
+    readonly property real indexWidth: 200
+    readonly property bool wide: width >= 24 + indexWidth + 32 + 720 + 24
+    readonly property real contentX: wide ? 24 + indexWidth + 32 : 24
+    readonly property real contentWidth: Math.min(width - contentX - 24, 720)
+    // The groups in order, for the index.
+    property list<SettingsGroup> sections
+    // The group at the top of the view.
+    property int current: 0
+
+    function collectSections(): void {
+        const found = [];
+        for (let i = 0; i < groups.children.length; ++i) {
+            const group = groups.children[i] as SettingsGroup;
+            if (group && group.visible)
+                found.push(group);
+        }
+        sections = found;
+        updateCurrent();
+    }
+
+    function updateCurrent(): void {
+        if (sections.length === 0)
+            return;
+        // At the end the last groups can't reach the top: the last one counts then.
+        if (flick.contentY >= flick.contentHeight - flick.height - 1) {
+            current = sections.length - 1;
+            return;
+        }
+        let found = 0;
+        for (let i = 0; i < sections.length; ++i) {
+            if (sections[i].y <= flick.contentY + 24)
+                found = i;
+        }
+        current = found;
+    }
+
+    function scrollTo(index: int): void {
+        const group = sections[index];
+        if (!group)
+            return;
+        scroll.to = Math.max(0, Math.min(group.y - 8, flick.contentHeight - flick.height));
+        scroll.restart();
+    }
+
     title: qsTr("设置")
+    // The groups are in place before onChildrenChanged would notice them.
+    Component.onCompleted: Qt.callLater(collectSections)
 
-    // A label above a single-choice connected button group.
-    component Choice: Column {
-        id: choice
-        property string label
-        property string hint
-        // [{value, text}]
-        property var options: []
-        property int value
-        signal chosen(int value)
+    // The index: one Tab stop (the current group); ↑/↓ move, Enter goes there.
+    Column {
+        id: sectionIndex
 
-        spacing: 8
-        Text {
-            text: choice.label
-            color: Theme.color.onSurface
-            font: Theme.type.bodyLarge.font
+        property int focusIndex: page.current
+
+        function moveFocus(step: int): void {
+            const next = Math.max(0, Math.min(page.sections.length - 1, focusIndex + step));
+            (entries.itemAt(next) as Item)?.forceActiveFocus(Qt.TabFocusReason);
+            focusIndex = next;
         }
-        ConnectedButtonGroup {
-            exclusive: true
-            Repeater {
-                model: choice.options
-                delegate: Button {
-                    required property var modelData
-                    size: Md.Small
-                    variant: Md.Tonal
-                    checkable: true
-                    checked: choice.value === modelData.value
-                    text: modelData.text
-                    onClicked: choice.chosen(modelData.value)
-                }
-            }
-        }
-        Text {
-            width: parent.width
-            visible: text !== ""
-            text: choice.hint
-            wrapMode: Text.WordWrap
-            color: Theme.color.onSurfaceVariant
-            font: Theme.type.bodySmall.font
-        }
-    }
 
-    component Section: Text {
-        topPadding: 16
-        color: Theme.color.primary
-        font: Theme.type.titleSmall.font
-    }
+        x: 24
+        y: 8
+        width: page.indexWidth
+        visible: page.wide
+        spacing: 2
+        onActiveFocusChanged: if (!activeFocus) focusIndex = page.current
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("设置分组")
 
-    component Toggle: ListItem {
-        id: toggle
-        property bool value
-        signal switched(bool value)
-        // Text aligned with the other labels; the item's padding extends to the left.
-        x: -leftPadding
-        width: column.width + leftPadding + rightPadding
-        onClicked: switched(!value)
-        trailing: Component {
-            Switch {
-                focusPolicy: Qt.NoFocus
-                checked: toggle.value
-                onToggled: toggle.switched(checked)
+        Repeater {
+            id: entries
+            model: page.sections
+            delegate: ListItem {
+                required property int index
+                required property SettingsGroup modelData
+                width: parent.width
+                implicitHeight: 48
+                lines: 1
+                segmented: true
+                first: true
+                last: true
+                outerRadius: 24
+                highlighted: index === page.current
+                text: modelData.title
+                focusPolicy: index === sectionIndex.focusIndex ? Qt.StrongFocus : Qt.ClickFocus
+                Accessible.role: Accessible.ListItem
+                onClicked: page.scrollTo(index)
+                Keys.onUpPressed: sectionIndex.moveFocus(-1)
+                Keys.onDownPressed: sectionIndex.moveFocus(1)
+                Keys.onReturnPressed: page.scrollTo(index)
+                Keys.onEnterPressed: page.scrollTo(index)
             }
         }
     }
 
     Flickable {
-        id: settingsFlick
+        id: flick
         anchors.fill: parent
-        contentHeight: column.implicitHeight + 32
+        contentHeight: groups.implicitHeight + 48
         clip: true
         // Overshoots and springs back at the ends.
         boundsBehavior: Flickable.DragAndOvershootBounds
+        onContentYChanged: page.updateCurrent()
         ScrollBar.vertical: ScrollBar {}
 
         Column {
-            id: column
-            x: 24
-            width: Math.min(parent.width - 48, 720)
-            spacing: 16
+            id: groups
+            x: page.contentX
+            width: page.contentWidth
+            topPadding: 8
+            spacing: 32
+            onChildrenChanged: Qt.callLater(page.collectSections)
 
-            Section {
-                text: qsTr("账号")
+            AccountSettings {
+                shell: page.shell
             }
-            Row {
-                spacing: 16
-                CoverArt {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 48
-                    height: 48
-                    radius: width / 2
-                    glyph: Symbols.person
-                    coverKey: App.session.avatarKey
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: column.width - 64 - 16 - accountButton.width
-                    text: App.session.signedIn ? App.session.nickname : qsTr("未登录")
-                    elide: Text.ElideRight
-                    color: Theme.color.onSurface
-                    font: Theme.type.bodyLarge.font
-                }
-                Button {
-                    id: accountButton
-                    anchors.verticalCenter: parent.verticalCenter
-                    variant: App.session.signedIn ? Md.Outlined : Md.Filled
-                    glyph: App.session.signedIn ? Symbols.logout : Symbols.login
-                    text: App.session.signedIn ? qsTr("退出登录") : qsTr("登录")
-                    onClicked: App.session.signedIn ? App.session.signOut() : page.shell.openLogin()
-                }
+            PlaybackSettings {}
+            LyricsSettings {}
+            AppearanceSettings {}
+            WindowSettings {}
+            StorageSettings {
+                shell: page.shell
             }
-
-            Section {
-                text: qsTr("外观")
-            }
-            Choice {
-                width: column.width
-                label: qsTr("明暗")
-                options: [{
-                        value: 0,
-                        text: qsTr("跟随系统")
-                    }, {
-                        value: 1,
-                        text: qsTr("亮色")
-                    }, {
-                        value: 2,
-                        text: qsTr("暗色")
-                    }]
-                value: App.settings.themeMode
-                onChosen: value => App.settings.themeMode = value
-            }
-            Choice {
-                width: column.width
-                label: qsTr("主题色来源")
-                hint: qsTr("跟随封面时，界面配色随正在播放的歌曲变化。")
-                options: [{
-                        value: 2,
-                        text: qsTr("系统强调色")
-                    }, {
-                        value: 0,
-                        text: qsTr("跟随封面")
-                    }, {
-                        value: 1,
-                        text: qsTr("固定")
-                    }]
-                value: App.settings.seedSource
-                onChosen: value => App.settings.seedSource = value
-            }
-            Choice {
-                width: column.width
-                label: qsTr("字体")
-                hint: Fonts.bundledAvailable
-                      ? qsTr("内置字体为小米 MiSans。字体缺少的字符（如韩文、emoji）由系统字体补全。")
-                      : qsTr("这个版本没有内置字体，使用系统字体。")
-                options: [{
-                        value: Fonts.Bundled,
-                        text: qsTr("内置（MiSans）")
-                    }, {
-                        value: Fonts.System,
-                        text: qsTr("系统字体")
-                    }, {
-                        value: Fonts.Custom,
-                        text: qsTr("自定义")
-                    }]
-                value: App.settings.fontSource
-                onChosen: value => App.settings.fontSource = value
-            }
-            // The custom family, from the installed fonts.
-            Row {
-                visible: App.settings.fontSource === Fonts.Custom
-                spacing: 12
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: qsTr("字体族")
-                    color: Theme.color.onSurfaceVariant
-                    font: Theme.type.bodyMedium.font
-                }
-                Button {
-                    id: familyButton
-                    variant: Md.Outlined
-                    trailingGlyph: Symbols.keyboard_arrow_down
-                    text: Fonts.customFamily !== "" && Fonts.sans === Fonts.customFamily
-                          ? Fonts.customFamily : qsTr("选择字体")
-                    onClicked: familyMenu.popup(familyButton, 0, familyButton.height)
-                }
-                Menu {
-                    id: familyMenu
-                    Instantiator {
-                        // Built when first needed: there can be hundreds.
-                        active: App.settings.fontSource === Fonts.Custom
-                        model: active ? Fonts.families() : []
-                        delegate: MenuItem {
-                            required property string modelData
-                            checkable: true
-                            checked: modelData === App.settings.customFontFamily
-                            text: modelData
-                            onTriggered: App.settings.customFontFamily = modelData
-                        }
-                        onObjectAdded: (index, object) => familyMenu.insertItem(index, object as MenuItem)
-                        onObjectRemoved: (index, object) => familyMenu.removeItem(object as MenuItem)
-                    }
-                }
-            }
-            Toggle {
-                text: qsTr("减少动态效果")
-                supportingText: qsTr("页面切换改为淡入淡出，不做位移和缩放")
-                value: App.settings.reducedMotion
-                onSwitched: value => App.settings.reducedMotion = value
-            }
-
-            Section {
-                text: qsTr("窗口")
-            }
-            Choice {
-                width: column.width
-                label: qsTr("窗口装饰")
-                hint: qsTr("顶栏（导航按钮、搜索）始终都在。应用绘制：窗口按钮、阴影和圆角由应用绘制。无：不画窗口按钮和阴影，适合 niri、sway、Hyprland 等平铺窗口管理器。系统：使用桌面自己的标题栏，出问题时再用。也可以用启动参数 --titlebar=custom|hidden|system 临时指定。")
-                options: [{
-                        value: TitleBarMode.Custom,
-                        text: qsTr("应用绘制")
-                    }, {
-                        value: TitleBarMode.Hidden,
-                        text: qsTr("无")
-                    }, {
-                        value: TitleBarMode.System,
-                        text: qsTr("系统")
-                    }]
-                value: (page.Window.window as AppWindow)?.titleBar ?? -1
-                onChosen: value => {
-                    App.settings.titleBar = value;
-                    (page.Window.window as AppWindow)?.setTitleBar(value);
-                }
-            }
-            Choice {
-                width: column.width
-                label: qsTr("关闭主窗口时")
-                hint: Desktop.trayAvailable
-                      ? qsTr("最小化到托盘后继续播放。从托盘图标可以重新打开窗口或退出。")
-                      : qsTr("当前桌面没有系统托盘（例如没有装托盘扩展的 GNOME）。在后台播放时，再次打开 Cirrus Music 回到窗口，在窗口里按 Ctrl+Q 退出。")
-                options: [{
-                        value: -1,
-                        text: qsTr("每次询问")
-                    }, {
-                        value: 1,
-                        text: Desktop.trayAvailable ? qsTr("最小化到托盘") : qsTr("后台播放")
-                    }, {
-                        value: 0,
-                        text: qsTr("退出")
-                    }]
-                value: App.settings.closeAction
-                onChosen: value => App.settings.closeAction = value
-            }
-            Toggle {
-                visible: Desktop.switchableGraphics
-                text: qsTr("使用独立显卡")
-                supportingText: qsTr("界面更流畅，但更耗电；窗口隐藏时不占用显卡。重启后生效。")
-                value: App.settings.preferDiscreteGpu
-                onSwitched: value => App.settings.preferDiscreteGpu = value
-            }
-
-            Section {
-                text: qsTr("歌词")
-            }
-            Toggle {
-                text: qsTr("显示翻译")
-                value: App.settings.showTranslation
-                onSwitched: value => App.settings.showTranslation = value
-            }
-            Toggle {
-                text: qsTr("显示音译")
-                value: App.settings.showRomanization
-                onSwitched: value => App.settings.showRomanization = value
-            }
+            ShortcutSettings {}
+            AboutSettings {}
         }
+    }
+
+    NumberAnimation {
+        id: scroll
+        target: flick
+        property: "contentY"
+        duration: Theme.motion.defaultSpatial.duration
+        easing: Theme.motion.defaultSpatial.easing
     }
 }
