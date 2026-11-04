@@ -30,6 +30,9 @@ class Theme : public QObject
     Q_PROPERTY(SeedSource seedSource READ seedSource WRITE setSeedSource NOTIFY seedSourceChanged)
     Q_PROPERTY(QColor fixedSeed READ fixedSeed WRITE setFixedSeed NOTIFY fixedSeedChanged)
     Q_PROPERTY(QColor seed READ seed NOTIFY seedChanged)
+    // Seeds to offer for a fixed seed (the settings' swatches): eight hues around the
+    // wheel, MD3's baseline purple first.
+    Q_PROPERTY(QList<QColor> seedPresets READ seedPresets CONSTANT)
     Q_PROPERTY(Variant variant READ variant WRITE setVariant NOTIFY variantChanged)
     Q_PROPERTY(
         SpecVersion specVersion READ specVersion WRITE setSpecVersion NOTIFY specVersionChanged)
@@ -77,6 +80,7 @@ class Theme : public QObject
     [[nodiscard]] SeedSource seedSource() const { return m_seedSource; }
     void setSeedSource(SeedSource source);
     [[nodiscard]] QColor fixedSeed() const { return m_fixedSeed; }
+    [[nodiscard]] static QList<QColor> seedPresets();
     void setFixedSeed(const QColor& seed);
     [[nodiscard]] QColor seed() const { return m_seed; }
     [[nodiscard]] Variant variant() const { return m_variant; }

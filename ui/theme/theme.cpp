@@ -99,6 +99,12 @@ void Theme::setSeedSource(SeedSource source)
     updateScheme();
 }
 
+QList<QColor> Theme::seedPresets()
+{
+    return {QColor(0x6750a4), QColor(0x3f6fd8), QColor(0x00838f), QColor(0x3f8f4a),
+            QColor(0xb08a00), QColor(0xe0672e), QColor(0xc8232c), QColor(0xc2185b)};
+}
+
 void Theme::setFixedSeed(const QColor& seed)
 {
     if (seed == m_fixedSeed || !seed.isValid())
