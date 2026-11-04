@@ -6,6 +6,8 @@ import QtQuick.Templates as T
 // its neighbours give up the same amount (via their widthDelta springs). Neighbours
 // only give up padding (`shrinkLimit`), so their labels never elide; the pressed
 // button grows by what they give.
+// An `exclusive` group is one Tab stop (the checked button, or the first): ←/→ check
+// the neighbouring button, as a click would (radio-group keys).
 Row {
     id: root
 
@@ -53,6 +55,7 @@ Row {
             if (root.trackedButtons.indexOf(b) < 0) {
                 b.downChanged.connect(root.relayout);
                 b.visibleChanged.connect(root.scheduleAttach);
+                b.checkedChanged.connect(root.updateTabStop);
                 root.trackedButtons.push(b);
             }
         }
@@ -62,12 +65,40 @@ Row {
                             : i === 0 ? Md.First : i === last ? Md.Last : Md.Middle;
         });
         exclusiveGroup.buttons = root.exclusive ? buttons : [];
+        root.updateTabStop();
+    }
+
+    // Exclusive: only the checked button (or the first) takes the focus from Tab.
+    function updateTabStop() {
+        if (!root || !root.exclusive)
+            return;
+        const buttons = root.groupButtons();
+        const stop = Math.max(0, buttons.findIndex(b => b.checked));
+        buttons.forEach((b, i) => b.focusPolicy = i === stop ? Qt.StrongFocus : Qt.ClickFocus);
+    }
+
+    // Checks the button `step` away from the focused one; the focus moves first, so
+    // the old one can stop being the Tab stop.
+    function moveChecked(step: int): bool {
+        const buttons = root.groupButtons();
+        const from = buttons.findIndex(b => b.activeFocus);
+        if (!root.exclusive || from < 0)
+            return false;
+        const to = Math.max(0, Math.min(buttons.length - 1, from + step));
+        if (to !== from) {
+            buttons[to].forceActiveFocus(Qt.TabFocusReason);
+            if (!buttons[to].checked)
+                buttons[to].click();
+        }
+        return true;
     }
 
     spacing: connected ? 2 : 12
     onChildrenChanged: scheduleAttach()
     onConnectedChanged: scheduleAttach()
     onExclusiveChanged: scheduleAttach()
+    Keys.onLeftPressed: event => event.accepted = moveChecked(-1)
+    Keys.onRightPressed: event => event.accepted = moveChecked(1)
 
     T.ButtonGroup {
         id: exclusiveGroup
