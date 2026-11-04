@@ -10,6 +10,7 @@ SettingsGroup {
 
     title: qsTr("窗口与系统")
     glyph: Symbols.desktop_windows
+    hue: "grey"
 
     ChoiceSetting {
         text: qsTr("窗口装饰")

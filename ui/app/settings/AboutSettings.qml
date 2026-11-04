@@ -36,6 +36,7 @@ SettingsGroup {
 
     title: qsTr("关于")
     glyph: Symbols.info
+    hue: "grey"
 
     SettingRow {
         text: qsTr("Cirrus Music %1").arg(Qt.application.version)

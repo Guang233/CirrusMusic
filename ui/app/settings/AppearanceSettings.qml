@@ -7,6 +7,7 @@ import Cirrus.Presentation
 SettingsGroup {
     title: qsTr("外观")
     glyph: Symbols.palette
+    hue: "orange"
 
     ChoiceSetting {
         text: qsTr("明暗")

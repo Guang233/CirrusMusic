@@ -58,6 +58,7 @@ SettingsGroup {
 
     title: qsTr("键盘快捷键")
     glyph: Symbols.keyboard
+    hue: "grey"
 
     Repeater {
         model: group.shortcuts

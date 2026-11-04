@@ -11,8 +11,10 @@ Column {
     id: group
 
     property string title
-    // Its icon in the page's index.
+    // Its icon in the page's index, on a disc of a Theme.staticPalette hue; related
+    // groups share a hue, as on the Android 16 Settings homepage.
     property string glyph
+    property string hue: "grey"
     default property alias rows: body.data
 
     // Which rows are shown changed: the ends move.

@@ -6,6 +6,7 @@ import Cirrus.Presentation
 SettingsGroup {
     title: qsTr("歌词")
     glyph: Symbols.lyrics
+    hue: "pink"
 
     SwitchSetting {
         text: qsTr("显示翻译")

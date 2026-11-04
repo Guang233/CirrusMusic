@@ -37,6 +37,7 @@ Behavior on opacity {
 | `Theme.specVersion` | `Theme.SpecVersion.Spec2025`（默认）／`Spec2021` |
 | `Theme.fixedSeed`、`Theme.seed` | 固定种子色（默认 MD3 基准色 `#6750a4`）；实际使用的种子色（只读） |
 | `Theme.seedPresets` | 设置页色板提供的 8 个固定种子色（色环上分散的色相，第一个是基准紫） |
+| `Theme.staticPalette` | Material 静态色板（`md.ref.palette`，不随种子变）：`blue`、`blueVariant`、`cyan`、`green`、`yellow`、`orange`、`red`、`pink`、`purple`、`grey`，每个是 `{container, onContainer}`（色调 90／暗色 80，与 30）。只用于按类别着色的图标，如设置索引，与 Android 16 设置首页一致 |
 | `Theme.mode`、`Theme.dark` | `Theme.Mode.System`（默认）／`Light`／`Dark`；当前是否暗色（只读） |
 | `Theme.variant`、`Theme.contrast` | 方案变体（默认 TonalSpot）；对比度 -1…1 |
 | `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个，供播放页背景） |

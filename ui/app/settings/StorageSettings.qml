@@ -13,6 +13,7 @@ SettingsGroup {
 
     title: qsTr("存储与隐私")
     glyph: Symbols.database
+    hue: "yellow"
 
     // The page shows the usage as of opening it.
     Component.onCompleted: App.cache.refresh()

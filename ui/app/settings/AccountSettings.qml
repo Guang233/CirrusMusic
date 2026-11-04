@@ -14,6 +14,7 @@ SettingsGroup {
 
     title: qsTr("账号")
     glyph: Symbols.account_circle
+    hue: "cyan"
 
     SettingRow {
         text: App.session.signedIn ? App.session.nickname : qsTr("未登录")

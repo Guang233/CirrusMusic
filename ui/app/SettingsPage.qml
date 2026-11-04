@@ -100,23 +100,20 @@ PageScaffold {
                 outerRadius: 26
                 highlighted: index === page.current
                 text: modelData.title
-                // A tonal disc per group, the container roles taking turns.
+                // The group's icon on a disc of its static hue (SettingsGroup.hue).
                 leading: Component {
                     Rectangle {
-                        readonly property int role: entry.index % 3
+                        readonly property var hue: Theme.staticPalette[entry.modelData.hue]
                         width: 32
                         height: 32
                         radius: 16
-                        color: [Theme.color.primaryContainer, Theme.color.secondaryContainer,
-                                Theme.color.tertiaryContainer][role]
+                        color: hue.container
                         Icon {
                             anchors.centerIn: parent
                             glyph: entry.modelData.glyph
                             size: 20
                             fill: entry.highlighted ? 1 : 0
-                            color: [Theme.color.onPrimaryContainer,
-                                    Theme.color.onSecondaryContainer,
-                                    Theme.color.onTertiaryContainer][parent.role]
+                            color: parent.hue.onContainer
                         }
                     }
                 }

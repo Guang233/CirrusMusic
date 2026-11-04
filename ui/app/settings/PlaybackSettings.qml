@@ -7,6 +7,7 @@ import Cirrus.Presentation
 SettingsGroup {
     title: qsTr("播放")
     glyph: Symbols.graphic_eq
+    hue: "pink"
 
     MenuSetting {
         text: qsTr("音质")
