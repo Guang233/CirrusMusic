@@ -638,3 +638,8 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
   - 设置项在 `AppSettings` 里一行声明；
   - 页面由通用的设置行组件和每个分组一个文件组成；
   - 做法见该文 §7，细节和验证见 §8。
+- 同日按反馈修改：
+  - 修正左侧索引点击无效；
+  - 索引项加分组图标；
+  - 自定义字体改为可搜索的字体对话框，并可从文件添加（`App.settings.customFontFiles`）；
+  - 设置项说明缩短成一句。
