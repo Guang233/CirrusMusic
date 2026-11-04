@@ -353,7 +353,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 
 ## 12. 阶段计划
 
-**当前进度（2026-11-03）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页已按评审过的设计实现（[pages/artist.md](pages/artist.md)；MV 搁置到音乐功能上线后）；搜索页（综合、单曲、歌手、专辑、歌单、播客、声音，下拉列表的历史与分组建议）和播客页已按评审过的设计实现（[pages/search.md](pages/search.md)；声音的真实播放等后端），音乐库（歌曲清单卡片、集合标签、新建歌单）、最近播放和听歌排行已按评审过的设计实现（[pages/library.md](pages/library.md)；"我喜欢的音乐"就是一个歌单），发现页（歌单分类与精品、排行榜、歌手筛选、新碟与周榜／月榜）已按评审过的设计实现（[pages/discover.md](pages/discover.md)；所有歌单卡片在发现页显示播放量），评论页（排序、楼层、点赞、发表、回复、删除；歌曲从行菜单和迷你播放条进入）已按评审过的设计实现（[pages/comments.md](pages/comments.md)）；设置页的设计已写好，等评审（[pages/settings.md](pages/settings.md)）**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
+**当前进度（2026-11-03）**：阶段 0、1 和阶段 2 第一批控件已完成，Gallery 的 VS Code 预览任务已就绪（`Gallery: watch`）。阶段 3 的两份前置文档（[过渡编排](motion-choreography.md)、[展示层接口](presentation.md)）已写完，标题栏方案已决定（UQ-02，§6.1）。阶段 3 第 1 步窗口原型的代码已完成，等待维护者在各桌面上做交互检查（§6.1 的清单）；第 2 步展示层骨架、第 3 步外壳已完成；第 4 步的通用组件与展示层模型已完成，§6.3 各页面已有未经设计的原型（§15），**按维护者要求改为先设计后实现：首页和外壳（侧边栏、顶部搜索）的设计与第一版已完成（[pages/home.md](pages/home.md)、[pages/shell.md](pages/shell.md)），已按反馈修改；歌单详情页设计已评审（[pages/playlist.md](pages/playlist.md)，2026-11-01），三步都已完成（playlist.md §12）；调整顺序挪到单独的页面并已实现（playlist.md §13）；托盘、后台播放、单实例和独显选择已提前完成（[pages/shell.md §7](pages/shell.md)，原属阶段 6）；专辑页、每日推荐页（含历史日推）已按评审过的设计实现（[pages/album-daily.md](pages/album-daily.md)）；歌手页已按评审过的设计实现（[pages/artist.md](pages/artist.md)；MV 搁置到音乐功能上线后）；搜索页（综合、单曲、歌手、专辑、歌单、播客、声音，下拉列表的历史与分组建议）和播客页已按评审过的设计实现（[pages/search.md](pages/search.md)；声音的真实播放等后端），音乐库（歌曲清单卡片、集合标签、新建歌单）、最近播放和听歌排行已按评审过的设计实现（[pages/library.md](pages/library.md)；"我喜欢的音乐"就是一个歌单），发现页（歌单分类与精品、排行榜、歌手筛选、新碟与周榜／月榜）已按评审过的设计实现（[pages/discover.md](pages/discover.md)；所有歌单卡片在发现页显示播放量），评论页（排序、楼层、点赞、发表、回复、删除；歌曲从行菜单和迷你播放条进入）已按评审过的设计实现（[pages/comments.md](pages/comments.md)）；设置页已按评审过的设计实现（[pages/settings.md](pages/settings.md)；设置项一行声明、按分组文件扩展），之后是阶段 4 的播放页**。文字字体已定为 MiSans（UQ-03）。阶段 3 建议顺序：
 1. 窗口原型：自绘标题栏与系统标题栏切换（§6.1），在 Linux 各桌面上检查。**代码已完成，桌面检查进行中。**
 2. `Cirrus.Presentation` 骨架：`App` 单例、`LoadState`、数据源接口与假实现（presentation.md §2–§7）；`Theme.motion` 加 `segment()`／`lerp()`。**已完成**（presentation.md §10）。
 3. 外壳：导航栏（需要第二批的 NavigationRail）、页面栈与切换动画、迷你播放条。**已完成**（§15）。
@@ -390,7 +390,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | UQ-01 | 外壳种子色默认来源 | **已决定**：默认系统强调色，封面取色为可选项；播放页另行从封面取背景与文字颜色、不用 MD3 配色 | 已决定 |
 | UQ-02 | 窗口标题栏方案（§6.1） | **已决定**：顶栏始终在；窗口装饰三选一：应用绘制（默认）／无（平铺窗口管理器默认）／系统（退路）；设置中可改，另有启动参数作为逃生通道（2026-10-31 更新） | 已决定 |
 | UQ-03 | 文字字体：系统字体还是随包附带 | **已决定（2026-10-30）**：默认随包 MiSans，用户可选系统字体或自定义字体，见 §4.2 | 已关闭 |
-| UQ-04 | 默认配色方案变体 | 暂定 TonalSpot；2025 规范下 Expressive 已保持种子色相，可在原型中比较 | 阶段 3 |
+| UQ-04 | 默认配色方案变体 | **已决定（2026-11-04）**：默认 TonalSpot（标准）；设置里开放标准、表现力、鲜明、中性、单色 5 种（[pages/settings.md](pages/settings.md) S5） | 已决定 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | 倾向始终深色，与 Apple Music 一致 | 阶段 4 开始 |
 | UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
 | UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | **已决定**：不写，以 Gallery 人工检查（交互 + 离屏截图）为准 | 已决定 |
@@ -626,3 +626,15 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
   - 焦点环只在键盘操作时出现（新单例 `InputMode`）。
   - `Snackbar`：large 圆角，弹簧升起，可以用关闭按钮提前关掉。`IconButton` 新增 `inverse`，`iconFill` 改为渐变。
   - 修正第一条回复后多出空白的问题。
+
+### 设置页（2026-11-04）
+
+- 按 [pages/settings.md](pages/settings.md) 重写设置页（S1–S8 按建议）。
+  - 分组列表；宽窗口左侧有分组索引。
+  - 新增音质、固定主题色的色板、配色风格（UQ-04 关闭）、缓存与搜索历史的清除、快捷键列表、关于和第三方许可。
+- 新增播放快捷键：Ctrl+P、Ctrl+←／→、Ctrl+↑／↓、Ctrl+L。另有 Ctrl+, 打开设置。
+- 单选按钮组改为一个 Tab 停留点。
+- 可扩展：
+  - 设置项在 `AppSettings` 里一行声明；
+  - 页面由通用的设置行组件和每个分组一个文件组成；
+  - 做法见该文 §7，细节和验证见 §8。

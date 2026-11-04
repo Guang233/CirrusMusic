@@ -156,6 +156,9 @@ engine.loadFromModule("CirrusMusic", "Main");
 - 外观：明暗模式、种子来源、配色变体、减少动态效果。由 `Main.qml` 绑定到 `Theme`。
 - 窗口：`titleBar`：`Custom`／`System`／`Hidden`；用户没改过时不保存，按桌面取默认值（平铺窗口管理器为 `Hidden`，其余 `Custom`），见 README §6.1（UQ-02）。
 - 播放：音质；歌词：显示翻译、显示音译。
+- 每项在 `app_settings.h` 里用一行 `CIRRUS_SETTING(...)` 声明（[pages/settings.md §7](pages/settings.md)）。
+
+**`App.cache`：资源缓存**：`bytes`、`limitBytes`（未知为 -1）、`clearing`；`refresh()`、`clear()`、`cleared(ok)`。数据源 `CacheSource`：`usage()`、`clear()`，只清封面、歌曲信息和歌词的缓存，不动登录、音乐库和听歌记录。
 
 **`App.network`**：`online`（来自 `QNetworkInformation`）。
 

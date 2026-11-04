@@ -80,7 +80,7 @@
 **按钮组**
 
 - `StandardButtonGroup`：按钮间距 12；按下的按钮宽度扩大 15%，相邻按钮让出空间（`fastSpatial`）。相邻按钮只让出两侧内距（每侧至少留 4，`shrinkLimit`），文字不会被省略；让不出的部分按下的按钮也不再扩大，组的总宽度不变。
-- `ConnectedButtonGroup`：按钮间距 2，组两端为全圆角、内侧圆角 8（按下 4），选中的按钮变为全圆角。可设 `exclusive` 做单选（底层 `T.ButtonGroup`）。
+- `ConnectedButtonGroup`：按钮间距 2，组两端为全圆角、内侧圆角 8（按下 4），选中的按钮变为全圆角。可设 `exclusive` 做单选（底层 `T.ButtonGroup`）；单选时整组是一个 Tab 停留点（选中的那个，没有选中时是第一个），←／→ 选中相邻按钮，效果同点击（2026-11-04）。
 
 ## 4. 选择控件
 
@@ -107,8 +107,8 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 8. 列表、菜单、提示、滚动条
 
-- **ListItem**（继承 `T.ItemDelegate`）：一／二／三行高 56／72／88；`headline`、`supportingText`、`overline`、`trailingText`；`leading`／`trailing` 为任意项（图标、头像、封面、开关）。选中容器 SecondaryContainer。圆角随状态变化（静止 4、悬停 12、按下和选中 16），只在 `segmented`（分段列表）时启用；普通列表为直角。`first`／`last` 把列表首末项的外侧圆角至少设为 `outerRadius`（默认 16）：分段列表（项间距 2，容器色 SurfaceContainer）用它做出整组的外轮廓，放在圆角容器里的普通列表用它让状态层、涟漪和焦点环跟随容器圆角。歌曲列表用分段列表。
-- **Menu / MenuItem / MenuSeparator**（MD3E 标准菜单）：容器 SurfaceContainerLow、圆角 16、2 级阴影、内边距 4；项高 44、圆角 4（首末项外侧 12）、选中 TertiaryContainer。打开时自锚点缩放展开（`fastSpatial`），关闭淡出（`fastEffects`）。
+- **ListItem**（继承 `T.ItemDelegate`）：一／二／三行高至少 56／72／88，`supportingMaximumLines` 大于 2 时说明文字换行并撑高；`headline`、`supportingText`、`overline`、`trailingText`；`leading`／`trailing` 为任意项（图标、头像、封面、开关）。选中容器 SecondaryContainer。圆角随状态变化（静止 4、悬停 12、按下和选中 16），只在 `segmented`（分段列表）时启用；普通列表为直角。`first`／`last` 把列表首末项的外侧圆角至少设为 `outerRadius`（默认 16）：分段列表（项间距 2，容器色 SurfaceContainer）用它做出整组的外轮廓，放在圆角容器里的普通列表用它让状态层、涟漪和焦点环跟随容器圆角。歌曲列表用分段列表。
+- **Menu / MenuItem / MenuSeparator**（MD3E 标准菜单）：容器 SurfaceContainerLow、圆角 16、2 级阴影、内边距 4；项高 44、圆角 4（首末项外侧 12）、选中 TertiaryContainer。`MenuItem.supportingText` 在标签下加一行 bodySmall 说明，项高 60（设置页的选项说明）。打开时自锚点缩放展开（`fastSpatial`），关闭淡出（`fastEffects`）。
 - **ToolTip**：InverseSurface、圆角 4、bodySmall、最小高 24、内距 8×4；悬停 500 ms 后出现；默认在控件上方，控件在窗口顶部 72 px 内时（顶栏）改在下方。
 - **ScrollBar**：常态 4 px 细条，悬停或拖动时变为 8 px；颜色 OnSurfaceVariant，闲置 1 s 后淡出。
 

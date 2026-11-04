@@ -1,4 +1,6 @@
-# 设置页设计（待评审，2026-11-03）
+# 设置页设计（已评审，2026-11-04）
+
+**维护者已定**：S1–S8 按建议。另外要求设置项的代码保证可扩展（§7）。
 
 现在的设置页是阶段 3 早期的原型（`ui/app/SettingsPage.qml`），只有账号、外观、窗口、歌词四节，版式是"标签在上、按钮组在下"，没经过设计。本文把它补全为正式页面：内容按后端现在能做的来，没有的写明"等后端"。
 
@@ -121,3 +123,52 @@
 | S6 | 是否随设置页加播放快捷键（§4） | 加。键盘优先的用户现在没法不用鼠标暂停 |
 | S7 | 等后端的项：先不显示，还是显示成禁用并写"即将支持"？ | 先不显示。禁用的项会让人以为是自己哪里没设置对 |
 | S8 | 开机自动启动 | 以后做 |
+
+## 7. 扩展：加一个设置项
+
+设置会一直增加，所以加一项要尽量少动地方（维护者 2026-11-04 要求）：
+
+1. **存储**：在 `ui/presentation/app_settings.h` 里加一行 `CIRRUS_SETTING(类型, 名字, setter, "分组/键", 默认值)`，上面用注释说明取值的含义。宏会生成属性、读写函数和 `名字Changed` 信号（moc 能展开它），读写走同一个 `QSettings`，值没变时不写也不通知。键会写进用户的配置文件，以后改属性名时键保持不变。
+2. **显示**：在对应分组的文件（`ui/app/settings/*Settings.qml`）里加一行设置项。按控件选类型：
+   - `SwitchSetting`：开关，`value` 加 `onSwitched`。
+   - `ChoiceSetting`：2–3 个短选项，`options: [{value, text}]`、`value`、`onChosen`。
+   - `MenuSetting`：多个选项，或选项需要说明，`options: [{value, text, description}]`。
+   - `ActionSetting`：一个操作按钮，`actionText` 加 `onTriggered`。
+   - `SettingRow`：其他样式，自己写 `trailing`。
+
+   每种都有 `text`、`supportingText`。依赖别的设置才出现的项用 `shown:`，有折叠动画；这台机器上永远没有的项用 `visible:`。分组自动处理首末行的圆角和隐藏行的间隙。
+3. **生效**：影响主题的在 `Main.qml` 里加一个 `Binding`；影响播放等后端行为的由对应的展示层对象读取。
+4. **新分组**：新建 `ui/app/settings/XxxSettings.qml`（根元素是 `SettingsGroup`，设 `title`），在 `SettingsPage.qml` 的 `groups` 里加一行，再加进 `ui/app/CMakeLists.txt`。左侧索引从分组自动生成。
+5. **快捷键**：在别处加 `Shortcut` 后，在 `ShortcutSettings.qml` 的列表里补一行。
+
+## 8. 实现进度（2026-11-04）
+
+已按本文实现。
+
+- **展示层**：
+  - `AppSettings` 改成一行一项（§7），新增 `audioQuality`（默认极高）和 `fixedSeed`。
+  - 新增 `App.cache`（`CacheStatus`：`bytes`、`limitBytes`、`clearing`、`refresh()`、`clear()`、`cleared(ok)`），数据源是 `CacheSource`（`usage`、`clear`）。假实现固定 184.5 MB，上限 640 MB（128 + 512 MiB）。
+  - `Formatter.bytes()`。
+  - 应用版本取自 CMake 的 `PROJECT_VERSION`。
+  - 音质目前只保存，接真实播放（阶段 5）时传给取流。
+- **主题**：`Theme.seedPresets`（8 个预设种子色），`Main.qml` 绑定 `fixedSeed`。
+- **控件**：
+  - 单选的 `ConnectedButtonGroup`／`StandardButtonGroup` 是一个 Tab 停留点，←／→ 切换（选中跟着焦点走），所以评论页的排序按钮也一样。
+  - `ListItem` 的说明文字换行后会撑高。
+  - `MenuItem` 加 `supportingText`（第二行说明，项高 60）。
+- **页面**：
+  - 通用组件都在 `ui/app/settings/`：`SettingsGroup`、`SettingRow`、`SwitchSetting`、`ChoiceSetting`、`MenuSetting`、`ActionSetting`、`SeedSwatches`。
+  - 每个分组一个文件：账号、播放、歌词、外观、窗口与系统、存储与隐私、键盘快捷键、关于。
+  - 左侧索引在内容区宽度够 1000 时出现，跟随滚动高亮，点击后滚到对应分组；是一个 Tab 停留点，↑／↓ 移动。
+- **快捷键**：Ctrl+P、Ctrl+←／→、Ctrl+↑／↓、Ctrl+L、Ctrl+,。
+  - 歌曲列表和调整顺序页里，Ctrl+↑／↓ 留给列表（`Keys.onShortcutOverride`）。
+  - 连按音量键时从上次设的值继续加减，不等播放器回报。
+- **验证**：构建、qmllint、clang-format。离屏截图检查了：
+  - 宽窗口（有索引）、窄窗口（无索引）、亮色和暗色；
+  - 音质菜单（带说明）；
+  - 色板展开；
+  - 缓存占用；
+  - 快捷键列表；
+  - 版本号；
+  - 整页 Tab 顺序，按钮组和色板的 ←／→；
+  - 快捷键：播放／暂停、音量、喜欢、下一首、Ctrl+, 打开设置，列表里 Ctrl+↓ 不改音量。

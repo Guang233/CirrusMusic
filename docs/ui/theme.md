@@ -36,6 +36,7 @@ Behavior on opacity {
 | `Theme.cover` | 当前封面 URL（`qrc:`／`file:`），设为空则不取色；只有种子来源为 Cover 时影响外壳配色 |
 | `Theme.specVersion` | `Theme.SpecVersion.Spec2025`（默认）／`Spec2021` |
 | `Theme.fixedSeed`、`Theme.seed` | 固定种子色（默认 MD3 基准色 `#6750a4`）；实际使用的种子色（只读） |
+| `Theme.seedPresets` | 设置页色板提供的 8 个固定种子色（色环上分散的色相，第一个是基准紫） |
 | `Theme.mode`、`Theme.dark` | `Theme.Mode.System`（默认）／`Light`／`Dark`；当前是否暗色（只读） |
 | `Theme.variant`、`Theme.contrast` | 方案变体（默认 TonalSpot）；对比度 -1…1 |
 | `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个，供播放页背景） |
