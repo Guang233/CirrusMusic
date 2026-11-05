@@ -394,6 +394,61 @@ FocusScope {
                 }
             }
 
+            // Clicking the empty bottom row, where the mini player was, closes the page
+            // (§2.3); hovering it shows a faint band with a chevron as the hint.
+            Item {
+                id: closeBand
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: page.bottomRowHeight
+                opacity: Theme.motion.segment(page.p, 0.55, 1)
+
+                readonly property bool hinted: bandHover.hovered && !page.overControls
+                                               && !page.chromeHidden
+
+                HoverHandler {
+                    id: bandHover
+                    cursorShape: page.overControls ? Qt.ArrowCursor : Qt.PointingHandCursor
+                }
+                TapHandler {
+                    onTapped: if (!page.overControls)
+                                  page.close()
+                }
+                Spring {
+                    id: bandHint
+                    target: closeBand.hinted ? 1 : 0
+                    spec: Theme.motion.fastEffects
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: parent.height * 1.5
+                    bottomLeftRadius: page.panelRadius
+                    bottomRightRadius: page.panelRadius
+                    opacity: bandHint.value
+                    visible: opacity > 0.01
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0
+                            color: Qt.alpha(colors.content, 0)
+                        }
+                        GradientStop {
+                            position: 1
+                            color: Qt.alpha(colors.content, 0.08)
+                        }
+                    }
+                }
+                Icon {
+                    anchors.centerIn: parent
+                    visible: !page.controlsAtBottom && opacity > 0.01
+                    opacity: bandHint.value
+                    glyph: Symbols.expand_more
+                    color: colors.contentVariant
+                }
+            }
+
             // Header, progress and controls: they fade in late and rise a little.
             Item {
                 id: chrome
