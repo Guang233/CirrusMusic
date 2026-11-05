@@ -81,6 +81,16 @@ class AppSettings : public QObject
     CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)
     CIRRUS_SETTING(bool, showRomanization, setShowRomanization, "lyrics/showRomanization", false)
 
+    // Player page (docs/ui/pages/player.md §9.2).
+    // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
+    CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)
+    // Where the controls are on wide windows: 0 under the cover, 1 at the bottom.
+    CIRRUS_SETTING(int, playerControls, setPlayerControls, "player/controls", 0)
+    // Seconds without input before the controls hide while playing; 0 never.
+    CIRRUS_SETTING(int, playerAutoHide, setPlayerAutoHide, "player/autoHide", 3)
+    // The view it opens with, the last one used: 0 cover, 1 lyrics, 2 queue.
+    CIRRUS_SETTING(int, playerView, setPlayerView, "player/view", 1)
+
     // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
     CIRRUS_SETTING(QStringList, searchHistory, setSearchHistory, "search/history", QStringList())
 

@@ -19,6 +19,8 @@ class SongItem
     Q_PROPERTY(QString title MEMBER title CONSTANT)
     Q_PROPERTY(QString secondaryTitle MEMBER secondaryTitle CONSTANT)
     Q_PROPERTY(QString artistText MEMBER artistText CONSTANT)
+    // Keys of the artists with one, in order (the player's "go to artist").
+    Q_PROPERTY(QStringList artistKeys MEMBER artistKeys CONSTANT)
     Q_PROPERTY(QString albumKey MEMBER albumKey CONSTANT)
     Q_PROPERTY(QString albumTitle MEMBER albumTitle CONSTANT)
     Q_PROPERTY(QString coverKey MEMBER coverKey CONSTANT)
@@ -31,9 +33,10 @@ class SongItem
     SongItem() = default;
     explicit SongItem(const SongInfo& song)
         : key(song.key), title(song.title), secondaryTitle(song.secondaryTitle),
-          artistText(Formatter::artists(song.artists)), albumKey(song.albumKey),
-          albumTitle(song.albumTitle), coverKey(song.coverKey), durationMs(song.durationMs),
-          unavailable(song.unavailable), reason(song.reason), voice(song.voice)
+          artistText(Formatter::artists(song.artists)), artistKeys(keysOf(song.artists)),
+          albumKey(song.albumKey), albumTitle(song.albumTitle), coverKey(song.coverKey),
+          durationMs(song.durationMs), unavailable(song.unavailable), reason(song.reason),
+          voice(song.voice)
     {
     }
 
@@ -41,6 +44,7 @@ class SongItem
     QString title;
     QString secondaryTitle;
     QString artistText;
+    QStringList artistKeys;
     QString albumKey;
     QString albumTitle;
     QString coverKey;
@@ -49,6 +53,17 @@ class SongItem
     QString reason;
     bool voice = false;
     friend bool operator==(const SongItem&, const SongItem&) = default;
+
+  private:
+    static QStringList keysOf(const QList<ArtistRef>& artists)
+    {
+        QStringList keys;
+        for (const ArtistRef& artist : artists) {
+            if (!artist.key.isEmpty())
+                keys << artist.key;
+        }
+        return keys;
+    }
 };
 
 } // namespace cirrus::ui
