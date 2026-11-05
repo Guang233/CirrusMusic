@@ -60,10 +60,11 @@
 - **形状变形**：圆形按钮按下时圆角收到“按下圆角”，用 `defaultEffects`（不回弹）；可切换按钮按下用 `fastSpatial`（带回弹），选中后圆形变方形、方形变圆形。
 - `checkable` 即 MD3E 的“切换按钮”，不另设类型。
 
-**IconButton**（`variant`：Standard／Filled／Tonal／Outlined；`size`；`widthMode`：Narrow／Default／Wide；`shape`；`glyph`；`checkable`；`iconFill`；`inverse`）
+**IconButton**（`variant`：Standard／Filled／Tonal／Outlined；`size`；`widthMode`：Narrow／Default／Wide；`shape`；`glyph`；`checkable`；`iconFill`；`inverse`；`tint`）
 
 - 不可切换的按钮改 `iconFill` 时，图标的 FILL 轴用 `defaultEffects` 弹簧过渡（如点赞变实心）。
 - `inverse`：放在 InverseSurface 上的 Standard 按钮（提示条的关闭按钮），内容和状态层改用 InverseOnSurface。
+- `tint`：放在自己背景上的 Standard 按钮（播放页的窗口按钮），设置后内容和状态层都用这个颜色。`WindowButtons.tint`、`TitleBar.buttonTint` 把它传给窗口按钮。
 
 | 尺寸 | 高 | 图标 | 左右内距 窄／默认／宽 | 方形圆角 | 按下圆角 | 选中后圆角（圆→方） |
 | --- | --- | --- | --- | --- | --- | --- |
