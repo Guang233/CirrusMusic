@@ -7,15 +7,9 @@
 namespace cirrus::ui
 {
 
-ColorScope::ColorScope(QObject* parent) : QQuickAttachedPropertyPropagator(parent)
-{
-    initialize();
-}
+ColorScope::ColorScope(QObject* parent) : QQuickAttachedPropertyPropagator(parent) { initialize(); }
 
-ColorScope* ColorScope::qmlAttachedProperties(QObject* object)
-{
-    return new ColorScope(object);
-}
+ColorScope* ColorScope::qmlAttachedProperties(QObject* object) { return new ColorScope(object); }
 
 ColorScheme* ColorScope::scheme() const
 {
