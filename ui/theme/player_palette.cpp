@@ -19,7 +19,7 @@ namespace mcu = material_color_utilities;
 
 // Tone ranges and levels; docs/ui/pages/player.md §3.1 explains the contrast budget.
 struct Levels {
-    double gridLow, gridHigh, gridChroma; // cover tones 0-100 map linearly into the range
+    double gridLow, gridHigh, gridChroma; // the cover's tones map linearly into the range
     double solidTone;
     double content, contentVariant, contentChroma;
     double shadowTone;
@@ -29,6 +29,9 @@ constexpr Levels kLight{82, 94, 0.7, 90, 18, 40, 8, 35};
 // Below this mean chroma the cover counts as black and white: neutral content.
 constexpr double kNeutralChroma = 5.0;
 constexpr double kGlareTone = 98;
+// The cover's own tone span is stretched over the grid range, but a span narrower than
+// this counts as this wide: a flat cover stays calm, a busy one uses the whole range.
+constexpr double kMinToneSpan = 35.0;
 
 QColor fromHct(double hue, double chroma, double tone)
 {
@@ -85,12 +88,22 @@ QList<QColor> PlayerPalette::computeColors() const
 
     // Grid; meanwhile the chroma-weighted mean hue (gray cells don't vote) and the
     // darkest cell.
+    QList<mcu::Hct> cells;
+    double lowest = 100, highest = 0;
+    for (int i = 0; i < kGridCells; ++i) {
+        cells.append(valid ? toHct(m_palette.grid[i]) : mcu::Hct(0, 0, 40));
+        lowest = std::min(lowest, cells.last().get_tone());
+        highest = std::max(highest, cells.last().get_tone());
+    }
+    const double span = std::max(highest - lowest, kMinToneSpan);
+    const double middle = (lowest + highest) / 2;
+
     double x = 0, y = 0, chromaSum = 0;
     mcu::Hct darkest(0, 0, 100);
     for (int i = 0; i < kGridCells; ++i) {
-        const mcu::Hct cell = valid ? toHct(m_palette.grid[i]) : mcu::Hct(0, 0, 40);
-        const double tone =
-            levels.gridLow + cell.get_tone() / 100.0 * (levels.gridHigh - levels.gridLow);
+        const mcu::Hct& cell = cells[i];
+        const double tone = levels.gridLow + (0.5 + (cell.get_tone() - middle) / span) *
+                                                 (levels.gridHigh - levels.gridLow);
         colors[i] = fromHct(cell.get_hue(), cell.get_chroma() * levels.gridChroma, tone);
         const double angle = cell.get_hue() * std::numbers::pi / 180.0;
         x += cell.get_chroma() * std::cos(angle);
