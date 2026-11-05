@@ -3,6 +3,7 @@ import QtQuick
 import Cirrus.Theme
 import Cirrus.Window
 import Cirrus.Presentation
+import Cirrus.Player
 
 // Application window. `titleBar` comes from main.cpp (--titlebar, CIRRUS_TITLEBAR,
 // App.settings.titleBar, else the desktop default); see docs/ui/README.md §6.1.
@@ -70,12 +71,49 @@ AppWindow {
         id: topBar
         anchors.fill: parent
         shell: shell
+        visible: !player.covering
     }
 
     AppShell {
         id: shell
         anchors.fill: parent
         searchField: topBar.searchField
+        covered: player.opened
+        miniCoverHidden: player.flying
+        // Hidden once the player page covers it (docs/ui/motion-choreography.md §2.2).
+        opacity: 1 - Theme.motion.segment(player.progress, 0.5, 0.6)
+        visible: !player.covering
+        onPlayerRequested: player.open()
+        onUncoverRequested: player.close()
+    }
+
+    // The player page, over everything including the top bar (docs/ui/pages/player.md).
+    overlay: PlayerPage {
+        id: player
+        anchors.fill: parent
+        appWindow: window
+        miniBar: shell.miniBar
+        miniCover: shell.miniCover
+        onCommentsRequested: {
+            close();
+            const song = App.player.current;
+            shell.openSongComments(song.key, song.title, song.artistText, song.coverKey);
+        }
+        onArtistRequested: key => {
+            close();
+            shell.openArtist(key);
+        }
+        onAlbumRequested: key => {
+            close();
+            shell.openAlbum(key);
+        }
+        onAddToPlaylistRequested: key => shell.addToPlaylist([key])
+        onLoginRequested: shell.openLogin()
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+F"
+        enabled: App.player.current.key !== ""
+        onActivated: player.opened ? player.close() : player.open()
     }
 
     // Closing hides the window (playback goes on, in the tray when there is one) or

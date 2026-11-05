@@ -38,6 +38,17 @@ Item {
     property int discoverTab: 0
     // The account's playlists (the rail's, and the add-to-playlist dialog's).
     readonly property LibraryPageModel library: myLibrary
+    // The player page covers the shell: its own keys (search, back, the rail) pause.
+    property bool covered: false
+    // For the player page's shared element (MiniPlayer.bar, coverItem, coverHidden).
+    readonly property Item miniBar: miniPlayer.bar
+    readonly property Item miniCover: miniPlayer.coverItem
+    property alias miniCoverHidden: miniPlayer.coverHidden
+
+    // The mini player asks for the player page.
+    signal playerRequested
+    // Something on top (the player page) should give way, e.g. for the settings.
+    signal uncoverRequested
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
@@ -390,6 +401,7 @@ Item {
 
     MiniPlayer {
         id: miniPlayer
+        onOpenRequested: shell.playerRequested()
         onCommentsRequested: {
             const song = App.player.current;
             shell.openSongComments(song.key, song.title, song.artistText, song.coverKey);
@@ -458,11 +470,12 @@ Item {
 
     Shortcut {
         sequence: "Esc"
-        enabled: !shell.large && rail.expanded
+        enabled: !shell.covered && !shell.large && rail.expanded
         onActivated: rail.expanded = false
     }
     Shortcut {
         sequence: "Ctrl+K"
+        enabled: !shell.covered
         onActivated: {
             shell.searchField.forceActiveFocus();
             shell.searchField.selectAll();
@@ -471,6 +484,7 @@ Item {
     // Pages with an in-page find take Ctrl+F; elsewhere it is the search too.
     Shortcut {
         sequences: [StandardKey.Find]
+        enabled: !shell.covered
         onActivated: {
             const songPage = stack.currentItem as SongCollectionPage;
             if (songPage && songPage.findable) {
@@ -483,7 +497,10 @@ Item {
     }
     Shortcut {
         sequences: [StandardKey.Preferences, "Ctrl+,"]
-        onActivated: shell.openSettings()
+        onActivated: {
+            shell.uncoverRequested();
+            shell.openSettings();
+        }
     }
 
     // Playback, from anywhere (docs/ui/pages/settings.md §4). Text fields and lists
@@ -539,15 +556,16 @@ Item {
     }
     Shortcut {
         sequences: [StandardKey.Back]
-        enabled: shell.canGoBack
+        enabled: !shell.covered && shell.canGoBack
         onActivated: shell.back()
     }
     Shortcut {
         sequences: [StandardKey.Forward]
-        enabled: shell.canGoForward
+        enabled: !shell.covered && shell.canGoForward
         onActivated: shell.forward()
     }
     TapHandler {
+        enabled: !shell.covered
         acceptedButtons: Qt.BackButton | Qt.ForwardButton
         onTapped: (eventPoint, button) => {
             if (button === Qt.BackButton)

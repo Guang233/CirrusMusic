@@ -17,6 +17,11 @@ Item {
     property real bottomMargin: 4
     readonly property real reservedHeight: (implicitHeight + bottomMargin) * reveal.value
     readonly property bool wide: width >= 560
+    // For the player page's shared element: the card it grows from and the cover that
+    // flies; the cover is hidden while its copy is in flight.
+    readonly property Item bar: card
+    readonly property Item coverItem: cover
+    property bool coverHidden: false
 
     // Opens the player page (UI phase 4).
     signal openRequested
@@ -59,6 +64,7 @@ Item {
             width: 48
             height: 48
             coverKey: App.player.current.coverKey
+            opacity: root.coverHidden ? 0 : 1
         }
 
         Column {
