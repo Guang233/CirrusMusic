@@ -28,6 +28,7 @@ constexpr Levels kDark{15, 35, 1.0, 20, 85, 68, 5, 10};
 constexpr Levels kLight{82, 94, 0.7, 90, 18, 40, 8, 35};
 // Below this mean chroma the cover counts as black and white: neutral content.
 constexpr double kNeutralChroma = 5.0;
+constexpr double kGlareTone = 98;
 
 QColor fromHct(double hue, double chroma, double tone)
 {
@@ -105,6 +106,7 @@ QList<QColor> PlayerPalette::computeColors() const
     const double contentChroma = neutral ? 0.0 : levels.contentChroma;
     colors[Content] = fromHct(hue, contentChroma, levels.content);
     colors[ContentVariant] = fromHct(hue, contentChroma, levels.contentVariant);
+    colors[Glare] = fromHct(hue, contentChroma, kGlareTone);
 
     const mcu::Hct main = valid && !m_palette.dominant.isEmpty()
                               ? toHct(m_palette.dominant.constFirst())

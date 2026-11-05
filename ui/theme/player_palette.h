@@ -22,6 +22,8 @@ class Theme;
 //  content         text and icons: the background's mean hue at a low chroma, tone
 //                  85 / 18; contentVariant is the secondary level (tone 68 / 40)
 //  shadow          the cover's shadow: its darkest color, made darker
+//  glare           the light sliding over the tilted cover: near white in the content
+//                  hue, in both modes
 //  scheme          MD3 roles for the player's menus, dialogs and panels
 //                  (ColorScope.scheme), from the cover's seed
 // A new palette or a light/dark switch blends everything together (slowEffects;
@@ -39,6 +41,7 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     Q_PROPERTY(QColor content READ content NOTIFY colorsChanged)
     Q_PROPERTY(QColor contentVariant READ contentVariant NOTIFY colorsChanged)
     Q_PROPERTY(QColor shadow READ shadow NOTIFY colorsChanged)
+    Q_PROPERTY(QColor glare READ glare NOTIFY colorsChanged)
     Q_PROPERTY(cirrus::ui::ColorScheme* scheme READ scheme CONSTANT)
 
   public:
@@ -54,6 +57,7 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     [[nodiscard]] QColor content() const { return m_current.value(Content); }
     [[nodiscard]] QColor contentVariant() const { return m_current.value(ContentVariant); }
     [[nodiscard]] QColor shadow() const { return m_current.value(Shadow); }
+    [[nodiscard]] QColor glare() const { return m_current.value(Glare); }
     [[nodiscard]] ColorScheme* scheme() const { return m_scheme; }
 
     void classBegin() override {}
@@ -67,7 +71,7 @@ class PlayerPalette : public QObject, public QQmlParserStatus
   private:
     static constexpr int kGridCells = CoverPalette::kGridSize * CoverPalette::kGridSize;
     // Indices after the grid in the color lists.
-    enum Extra { Solid = kGridCells, Content, ContentVariant, Shadow, ColorCount };
+    enum Extra { Solid = kGridCells, Content, ContentVariant, Shadow, Glare, ColorCount };
 
     [[nodiscard]] QList<QColor> computeColors() const;
     void update(bool animate);
