@@ -130,3 +130,6 @@ content_copy
 desktop_windows
 database
 font_download
+fullscreen
+fullscreen_exit
+tune

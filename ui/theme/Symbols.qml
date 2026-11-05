@@ -119,6 +119,9 @@ QtObject {
     readonly property string desktop_windows: "\ue30c"
     readonly property string database: "\uf20e"
     readonly property string font_download: "\ue167"
+    readonly property string fullscreen: "\ue5d0"
+    readonly property string fullscreen_exit: "\ue5d1"
+    readonly property string tune: "\ue429"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -236,6 +239,9 @@ QtObject {
         "content_copy",
         "desktop_windows",
         "database",
-        "font_download"
+        "font_download",
+        "fullscreen",
+        "fullscreen_exit",
+        "tune"
     ]
 }
