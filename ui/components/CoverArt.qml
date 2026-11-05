@@ -61,7 +61,8 @@ Item {
         const incoming = base === first ? second : first;
         base.opacity = 0;
         base.source = "";
-        incoming.opacity = incoming.status === Image.Ready ? 1 : 0;
+        // Still loading here only when it is reloading at a new size (retained).
+        incoming.opacity = incoming.status === Image.Ready || incoming.status === Image.Loading ? 1 : 0;
         base = incoming;
     }
 
@@ -73,9 +74,12 @@ Item {
         sourceSize: root.sourceSize
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
+        // A new size (the item resizing) reloads it: keep the old pixels meanwhile.
+        retainWhileLoading: true
         opacity: 0
         onStatusChanged: {
-            if (z === 2 && status !== Image.Loading)
+            // Only the incoming layer fades in; the shown one may just be resizing.
+            if (this !== root.base && status !== Image.Loading)
                 root.reveal(this);
         }
     }

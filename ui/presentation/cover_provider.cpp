@@ -45,14 +45,12 @@ class CoverResponse : public QQuickImageResponse
         emit finished();
     }
 
-    // Any thread, with the job mutex held. `finished` is emitted on the response's own
-    // thread, so it never arrives before requestImageResponse() returned and the caller
-    // connected to it, even for a cache hit.
+    // Any thread, with the job mutex held.
     void finish(const QImage& image, const QString& error)
     {
         m_image = image;
         m_error = error;
-        QMetaObject::invokeMethod(this, &CoverResponse::finished, Qt::QueuedConnection);
+        emit finished();
     }
 
   private:
@@ -111,15 +109,19 @@ QQuickImageResponse* CoverProvider::requestImageResponse(const QString& id,
     const QString cacheKey =
         QStringLiteral("%1@%2x%3").arg(key).arg(requestedSize.width()).arg(requestedSize.height());
 
-    // Replies always come from another thread, after this function returned.
+    // Replies always come after this function returned (event loop or another thread).
     QImage cached;
     {
         const QMutexLocker lock(&m_cache->mutex);
         if (const QImage* hit = m_cache->images.object(cacheKey))
             cached = *hit;
     }
+    // A hit is delivered from the GUI thread's event loop, never right away from
+    // another thread: a caller on the GUI thread (Theme) connects to `finished` after
+    // this returns.
     if (!cached.isNull()) {
-        QThreadPool::globalInstance()->start([job, cached]() { deliver(job, cached, {}); });
+        QMetaObject::invokeMethod(
+            m_guiContext, [job, cached]() { deliver(job, cached, {}); }, Qt::QueuedConnection);
         return response;
     }
 
