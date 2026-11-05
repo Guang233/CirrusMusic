@@ -16,6 +16,8 @@ Item {
     property string title
     // Space kept free on the leading side, e.g. for the macOS traffic lights.
     property real leadingInset
+    // The window buttons' color on a background of their own (the player page).
+    property alias buttonTint: buttons.tint
     default property alias content: content.data
 
     readonly property bool hasContent: content.visibleChildren.length > 0

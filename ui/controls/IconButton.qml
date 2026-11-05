@@ -18,6 +18,9 @@ T.Button {
     property bool showToolTip: true
     // Standard icon buttons on InverseSurface (a snackbar's close): InverseOnSurface.
     property bool inverse: false
+    // Standard icon buttons on a background of their own (the player page): this color
+    // for the icon and the state layer, when set.
+    property color tint: "transparent"
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
@@ -76,6 +79,7 @@ T.Button {
                              selection.value);
         default:
             return inverse ? ColorScope.scheme.inverseOnSurface
+                 : tint.a > 0 ? tint
                            : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.primary,
                                        selection.value);
         }

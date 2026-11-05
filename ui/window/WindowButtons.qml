@@ -15,6 +15,8 @@ Row {
 
     readonly property bool maximized: Window.visibility === Window.Maximized
                                       || Window.visibility === Window.FullScreen
+    // Icon color on a background of their own (the player page), when set.
+    property color tint: "transparent"
 
     function toggleMaximized() {
         if (maximized)
@@ -33,6 +35,7 @@ Row {
         readonly property real stroke: 1.75
 
         size: Md.XSmall
+        tint: root.tint
 
         contentItem: Item {
             Shape {

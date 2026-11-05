@@ -14,7 +14,8 @@ import Cirrus.Theme
 // docs/ui/pages/shell.md) stays there in every mode; without it the row collapses
 // unless it has window controls. `showTitle` shows `title` in the row (the gallery;
 // the app draws its name itself). Default children fill the area below the row,
-// over `surfaceColor`.
+// over `surfaceColor`. `overlay` children cover the whole window, title bar row
+// included (the player page).
 //   AppWindow { title: qsTr("Cirrus Music"); Page { anchors.fill: parent } }
 Window {
     id: window
@@ -22,6 +23,7 @@ Window {
     property int titleBar: TitleBarMode.Custom
     default property alias content: body.data
     property alias titleContent: titleBarItem.content
+    property alias overlay: overlayItem.data
     property alias frame: windowFrame
     property bool showTitle: true
     property color surfaceColor: Theme.color.surface
@@ -100,6 +102,11 @@ Window {
             anchors.right: parent.right
             anchors.top: titleBarItem.bottom
             anchors.bottom: parent.bottom
+        }
+
+        Item {
+            id: overlayItem
+            anchors.fill: parent
         }
     }
 
