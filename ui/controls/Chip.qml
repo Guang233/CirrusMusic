@@ -31,15 +31,15 @@ T.Button {
     readonly property bool selected: (checkable || filter) && checked
     readonly property string leadingGlyph: selected ? Symbols.check : glyph
     readonly property color labelColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(checkable || removable || filter ? Theme.color.onSurfaceVariant
-                                           : Theme.color.onSurface,
-                    Theme.color.onSecondaryContainer, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(checkable || removable || filter ? ColorScope.scheme.onSurfaceVariant
+                                           : ColorScope.scheme.onSurface,
+                    ColorScope.scheme.onSecondaryContainer, selection.value)
     signal removeClicked
 
     readonly property color iconColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.primary, Theme.color.onSecondaryContainer, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.primary, ColorScope.scheme.onSecondaryContainer, selection.value)
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
@@ -95,13 +95,13 @@ T.Button {
             contentItem: Icon {
                 glyph: Symbols.close
                 size: 18
-                color: control.enabled ? Theme.color.onSurfaceVariant
-                                       : Qt.alpha(Theme.color.onSurface,
+                color: control.enabled ? ColorScope.scheme.onSurfaceVariant
+                                       : Qt.alpha(ColorScope.scheme.onSurface,
                                                   Theme.state.disabledContent)
             }
             background: StateLayer {
                 radius: width / 2
-                color: Theme.color.onSurfaceVariant
+                color: ColorScope.scheme.onSurfaceVariant
                 hovered: remove.hovered
                 pressed: remove.pressed
             }
@@ -112,17 +112,17 @@ T.Button {
         implicitHeight: 32
         radius: Theme.shape.small
         color: !control.enabled && control.selected
-               ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContainer)
-               : Qt.alpha(Theme.color.secondaryContainer, selection.value)
+               ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer)
+               : Qt.alpha(ColorScope.scheme.secondaryContainer, selection.value)
         border.width: 1 - selection.value
-        border.color: control.enabled ? Theme.color.outlineVariant
-                                      : Qt.alpha(Theme.color.onSurface,
+        border.color: control.enabled ? ColorScope.scheme.outlineVariant
+                                      : Qt.alpha(ColorScope.scheme.onSurface,
                                                  Theme.state.disabledContainer)
 
         StateLayer {
             anchors.fill: parent
             radius: parent.radius
-            color: control.selected ? Theme.color.onSecondaryContainer : Theme.color.onSurfaceVariant
+            color: control.selected ? ColorScope.scheme.onSecondaryContainer : ColorScope.scheme.onSurfaceVariant
             hovered: control.hovered && control.enabled && !remove.hovered
             pressed: control.down
             focused: control.visualFocus || control.highlighted

@@ -33,7 +33,7 @@ Rectangle {
                     Math.max(288, label.implicitWidth + 16 + closeButton.width + 12))
     height: Math.max(48, label.implicitHeight + 28)
     radius: Theme.shape.large
-    color: Theme.color.inverseSurface
+    color: ColorScope.scheme.inverseSurface
     visible: shown.value > 0.01
     opacity: shown.value
     transform: [
@@ -86,7 +86,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         wrapMode: Text.Wrap
         text: control.text
-        color: Theme.color.inverseOnSurface
+        color: ColorScope.scheme.inverseOnSurface
         font: Theme.type.bodyMedium.font
     }
     IconButton {

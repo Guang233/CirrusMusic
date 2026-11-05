@@ -80,7 +80,7 @@ ListView {
         segmented: true
         first: index === 0
         last: index === list.count - 1
-        containerColor: Theme.color.surfaceContainer
+        containerColor: ColorScope.scheme.surfaceContainer
         highlighted: current
         text: !loaded ? "" : secondaryTitle !== "" ? qsTr("%1（%2）").arg(title).arg(secondaryTitle)
                                                    : title
@@ -96,7 +96,7 @@ ListView {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: row.loaded
                     text: row.durationText
-                    color: Theme.color.onSurfaceVariant
+                    color: ColorScope.scheme.onSurfaceVariant
                     font: Theme.type.labelSmall.font
                 }
                 IconButton {
@@ -137,7 +137,7 @@ ListView {
                     anchors.centerIn: parent
                     visible: !row.current
                     text: row.index + 1
-                    color: Theme.color.onSurfaceVariant
+                    color: ColorScope.scheme.onSurfaceVariant
                     font: Theme.type.titleSmall.font
                 }
                 Icon {
@@ -145,7 +145,7 @@ ListView {
                     visible: row.current
                     glyph: Symbols.graphic_eq
                     size: 20
-                    color: Theme.color.onSecondaryContainer
+                    color: ColorScope.scheme.onSecondaryContainer
                 }
             }
         }

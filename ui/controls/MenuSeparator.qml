@@ -18,6 +18,6 @@ T.MenuSeparator {
     contentItem: Rectangle {
         implicitWidth: 80
         implicitHeight: 1
-        color: Theme.color.outlineVariant
+        color: ColorScope.scheme.outlineVariant
     }
 }

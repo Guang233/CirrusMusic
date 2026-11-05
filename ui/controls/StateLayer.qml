@@ -8,7 +8,7 @@ import Cirrus.Theme
 Item {
     id: root
 
-    property color color: Theme.color.onSurface
+    property color color: ColorScope.scheme.onSurface
     property bool hovered
     property bool pressed
     property bool focused

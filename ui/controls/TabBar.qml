@@ -70,7 +70,7 @@ T.TabBar {
             anchors.bottom: parent.bottom
             width: parent.width
             height: 1
-            color: Theme.color.surfaceContainerHighest
+            color: ColorScope.scheme.surfaceContainerHighest
         }
         Rectangle {
             x: slideX.value
@@ -80,8 +80,8 @@ T.TabBar {
             visible: control.currentTab !== null
             topLeftRadius: 3
             topRightRadius: 3
-            color: control.enabled ? Theme.color.primary
-                                   : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+            color: control.enabled ? ColorScope.scheme.primary
+                                   : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
         }
     }
 }

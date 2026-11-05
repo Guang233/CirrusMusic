@@ -11,8 +11,8 @@ Item {
 
     property bool running: visible
     property bool contained: false
-    property color color: contained ? Theme.color.onPrimaryContainer : Theme.color.primary
-    property color containerColor: Theme.color.primaryContainer
+    property color color: contained ? ColorScope.scheme.onPrimaryContainer : ColorScope.scheme.primary
+    property color containerColor: ColorScope.scheme.primaryContainer
 
     readonly property list<int> sequence: [MaterialShape.SoftBurst, MaterialShape.Cookie9Sided,
         MaterialShape.Pentagon, MaterialShape.Pill, MaterialShape.Sunny,

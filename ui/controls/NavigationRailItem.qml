@@ -26,8 +26,8 @@ T.AbstractButton {
     readonly property real expandedWidth: sidePadding + expandedIndicatorWidth + sidePadding
 
     readonly property color iconColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.onSecondaryContainer, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onSecondaryContainer, selection.value)
 
     implicitWidth: Theme.motion.lerp(96, expandedWidth, progress)
     implicitHeight: Theme.motion.lerp(64, 56, progress)
@@ -67,13 +67,13 @@ T.AbstractButton {
                 height: parent.height
                 radius: height / 2
                 visible: indicatorScale.value > 0.001
-                color: Theme.color.secondaryContainer
+                color: ColorScope.scheme.secondaryContainer
                 opacity: selection.value
             }
             StateLayer {
                 anchors.fill: parent
                 radius: height / 2
-                color: Theme.color.onSecondaryContainer
+                color: ColorScope.scheme.onSecondaryContainer
                 hovered: control.hovered && control.enabled
                 pressed: control.down
                 focused: control.visualFocus
@@ -110,7 +110,7 @@ T.AbstractButton {
             horizontalAlignment: Text.AlignHCenter
             font: Theme.type.labelMedium.font
             color: !control.enabled ? control.iconColor
-                                    : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.secondary,
+                                    : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.secondary,
                                                 selection.value)
         }
 

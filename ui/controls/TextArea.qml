@@ -25,9 +25,9 @@ FocusScope {
     signal submitted
 
     readonly property bool hasSupporting: supportingText !== "" || counterText !== ""
-    readonly property color accent: error ? Theme.color.error : Theme.color.primary
-    readonly property color mutedColor: enabled ? Theme.color.onSurfaceVariant
-                                                : Qt.alpha(Theme.color.onSurface,
+    readonly property color accent: error ? ColorScope.scheme.error : ColorScope.scheme.primary
+    readonly property color mutedColor: enabled ? ColorScope.scheme.onSurfaceVariant
+                                                : Qt.alpha(ColorScope.scheme.onSurface,
                                                            Theme.state.disabledContent)
     readonly property real lineHeight: metrics.height
     readonly property real fieldHeight: Math.max(56, Math.min(
@@ -64,11 +64,11 @@ FocusScope {
         radius: control.radius
         color: "transparent"
         border.width: 1 + focusSpring.value
-        border.color: !control.enabled ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-                    : control.error ? Theme.color.error
-                    : Theme.mix(Theme.mix(Theme.color.outline, Theme.color.onSurface,
+        border.color: !control.enabled ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+                    : control.error ? ColorScope.scheme.error
+                    : Theme.mix(Theme.mix(ColorScope.scheme.outline, ColorScope.scheme.onSurface,
                                           hoverSpring.value),
-                                Theme.color.primary, focusSpring.value)
+                                ColorScope.scheme.primary, focusSpring.value)
     }
 
     Flickable {
@@ -98,10 +98,10 @@ FocusScope {
             padding: 16
             wrapMode: TextEdit.Wrap
             font: Theme.type.bodyLarge.font
-            color: control.enabled ? Theme.color.onSurface
-                                   : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+            color: control.enabled ? ColorScope.scheme.onSurface
+                                   : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
             selectionColor: Qt.alpha(control.accent, 0.4)
-            selectedTextColor: Theme.color.onSurface
+            selectedTextColor: ColorScope.scheme.onSurface
             placeholderTextColor: control.mutedColor
             selectByMouse: true
             onCursorRectangleChanged: if (activeFocus) flick.follow(cursorRectangle)
@@ -156,7 +156,7 @@ FocusScope {
         visible: control.supportingText !== ""
         text: control.supportingText
         elide: Text.ElideRight
-        color: control.error ? Theme.color.error : control.mutedColor
+        color: control.error ? ColorScope.scheme.error : control.mutedColor
         font: Theme.type.bodySmall.font
     }
     Text {
@@ -165,7 +165,7 @@ FocusScope {
         y: control.fieldHeight + 4
         visible: control.counterText !== ""
         text: control.counterText
-        color: control.error ? Theme.color.error : control.mutedColor
+        color: control.error ? ColorScope.scheme.error : control.mutedColor
         font: Theme.type.bodySmall.font
     }
 }

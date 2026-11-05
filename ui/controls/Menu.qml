@@ -82,12 +82,12 @@ T.Menu {
         Rectangle {
             anchors.fill: parent
             radius: Theme.shape.large
-            color: Theme.color.surfaceContainerLow
+            color: ColorScope.scheme.surfaceContainerLow
         }
     }
 
     T.Overlay.modal: Rectangle {
-        color: Qt.alpha(Theme.color.scrim, 0.32)
+        color: Qt.alpha(ColorScope.scheme.scrim, 0.32)
     }
     T.Overlay.modeless: Item {}
 }

@@ -14,7 +14,7 @@ Item {
     property int fromShape: MaterialShape.Circle
     property int toShape: MaterialShape.Circle
     property real progress: 1
-    property color color: Theme.color.primary
+    property color color: ColorScope.scheme.primary
     property springSpec spec: Theme.motion.defaultSpatial
     // Corner radius of the software fallback; circles are always fully round.
     property real fallbackRadius: Theme.shape.large

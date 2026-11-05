@@ -28,7 +28,7 @@ Item {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.model ? root.model.loadMoreError.message : ""
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.bodyMedium.font
         }
         Button {

@@ -10,11 +10,11 @@ T.ProgressBar {
 
     property real thickness: 4
     readonly property real gap: 4
-    readonly property color activeColor: enabled ? Theme.color.primary
-                                                 : Qt.alpha(Theme.color.onSurface,
+    readonly property color activeColor: enabled ? ColorScope.scheme.primary
+                                                 : Qt.alpha(ColorScope.scheme.onSurface,
                                                             Theme.state.disabledContent)
-    readonly property color trackColor: enabled ? Theme.color.secondaryContainer
-                                                : Qt.alpha(Theme.color.onSurface,
+    readonly property color trackColor: enabled ? ColorScope.scheme.secondaryContainer
+                                                : Qt.alpha(ColorScope.scheme.onSurface,
                                                            Theme.state.disabledContainer)
 
     // Indeterminate cycle time in ms; segments follow the MD3 keyframes.

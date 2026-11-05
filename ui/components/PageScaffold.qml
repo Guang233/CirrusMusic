@@ -26,7 +26,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.title
             elide: Text.ElideRight
-            color: Theme.color.onSurface
+            color: ColorScope.scheme.onSurface
             font: Theme.type.titleLarge.font
             Accessible.role: Accessible.Heading
         }

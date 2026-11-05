@@ -37,11 +37,11 @@ T.ItemDelegate {
                                      && supportingMaximumLines > 1 ? 3
                                    : supportingText !== "" ? 2 : 1
     readonly property color headlineColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurface, Theme.color.onSecondaryContainer, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurface, ColorScope.scheme.onSecondaryContainer, selection.value)
     readonly property color mutedColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.onSecondaryContainer,
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onSecondaryContainer,
                     selection.value)
     readonly property real cornerTarget: !segmented ? 0
                                        : highlighted || down ? Theme.shape.large
@@ -169,7 +169,7 @@ T.ItemDelegate {
         readonly property real topRadius: control.first ? Math.max(control.outerRadius, inner) : inner
         readonly property real bottomRadius: control.last ? Math.max(control.outerRadius, inner) : inner
 
-        color: Theme.mix(control.containerColor, Theme.color.secondaryContainer, selection.value)
+        color: Theme.mix(control.containerColor, ColorScope.scheme.secondaryContainer, selection.value)
         topLeftRadius: topRadius
         topRightRadius: topRadius
         bottomLeftRadius: bottomRadius
@@ -181,7 +181,7 @@ T.ItemDelegate {
             topRightRadius: container.topRadius
             bottomLeftRadius: container.bottomRadius
             bottomRightRadius: container.bottomRadius
-            color: Theme.color.onSurface
+            color: ColorScope.scheme.onSurface
             hovered: control.hovered && control.enabled
             pressed: control.down
             focused: control.visualFocus

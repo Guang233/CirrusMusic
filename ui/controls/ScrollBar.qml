@@ -39,8 +39,8 @@ T.ScrollBar {
             width: vertical ? Math.max(1, thickness.value) : parent.width
             height: vertical ? parent.height : Math.max(1, thickness.value)
             radius: Math.min(width, height) / 2
-            color: control.pressed ? Theme.color.onSurface
-                                   : Qt.alpha(Theme.color.onSurfaceVariant,
+            color: control.pressed ? ColorScope.scheme.onSurface
+                                   : Qt.alpha(ColorScope.scheme.onSurfaceVariant,
                                               control.expanded ? 0.9 : 0.6)
         }
     }

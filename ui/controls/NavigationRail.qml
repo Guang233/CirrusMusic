@@ -30,7 +30,7 @@ Rectangle {
     // Space above the header (or the items without one).
     property real topInset: 44
     // Color while docked; floating it becomes SurfaceContainer.
-    property color restColor: Theme.color.surface
+    property color restColor: ColorScope.scheme.surface
     default property alias items: column.data
 
     // 0 collapsed, 1 expanded; drives the width and every item's layout.
@@ -93,7 +93,7 @@ Rectangle {
     readonly property real floating: modal ? progress : 0
 
     implicitWidth: Theme.motion.lerp(collapsedWidth, expandedWidth, progress)
-    color: Theme.mix(restColor, Theme.color.surfaceContainer, floating)
+    color: Theme.mix(restColor, ColorScope.scheme.surfaceContainer, floating)
     topRightRadius: Theme.shape.large * floating
     bottomRightRadius: Theme.shape.large * floating
 

@@ -46,7 +46,7 @@ T.AbstractButton {
                 width: plays.implicitWidth + 12
                 height: 20
                 radius: Theme.shape.extraSmall
-                color: Qt.alpha(Theme.color.inverseSurface, 0.72)
+                color: Qt.alpha(ColorScope.scheme.inverseSurface, 0.72)
 
                 Row {
                     id: plays
@@ -57,12 +57,12 @@ T.AbstractButton {
                         glyph: Symbols.play_arrow
                         fill: 1
                         size: 14
-                        color: Theme.color.inverseOnSurface
+                        color: ColorScope.scheme.inverseOnSurface
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: App.format.count(control.plays)
-                        color: Theme.color.inverseOnSurface
+                        color: ColorScope.scheme.inverseOnSurface
                         font: Theme.type.labelSmall.font
                     }
                 }
@@ -75,7 +75,7 @@ T.AbstractButton {
                 horizontalAlignment: control.artist ? Text.AlignHCenter : Text.AlignLeft
                 text: control.text
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: ColorScope.scheme.onSurface
                 font: Theme.type.titleSmall.font
             }
             Text {
@@ -84,7 +84,7 @@ T.AbstractButton {
                 horizontalAlignment: control.artist ? Text.AlignHCenter : Text.AlignLeft
                 text: control.subtitle
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: ColorScope.scheme.onSurfaceVariant
                 font: Theme.type.bodySmall.font
             }
         }
@@ -94,7 +94,7 @@ T.AbstractButton {
         StateLayer {
             anchors.fill: parent
             radius: Theme.shape.large
-            color: Theme.color.onSurface
+            color: ColorScope.scheme.onSurface
             hovered: control.hovered
             pressed: control.down
             focused: control.visualFocus

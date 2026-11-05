@@ -15,22 +15,22 @@ T.TextField {
     property string supportingText
     property bool error: false
     // Outlined only: color behind the floated label's gap; match the surface below.
-    property color gapColor: Theme.color.surface
+    property color gapColor: ColorScope.scheme.surface
 
     readonly property bool outlined: variant === Md.Outlined
     readonly property bool floated: activeFocus || length > 0 || preeditText.length > 0
     readonly property bool hasSupporting: supportingText !== ""
     readonly property real fieldHeight: 56
-    readonly property color accent: error ? Theme.color.error : Theme.color.primary
-    readonly property color mutedColor: enabled ? Theme.color.onSurfaceVariant
-                                                : Qt.alpha(Theme.color.onSurface,
+    readonly property color accent: error ? ColorScope.scheme.error : ColorScope.scheme.primary
+    readonly property color mutedColor: enabled ? ColorScope.scheme.onSurfaceVariant
+                                                : Qt.alpha(ColorScope.scheme.onSurface,
                                                            Theme.state.disabledContent)
     readonly property color indicatorColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : error ? Theme.color.error
-        : activeFocus ? Theme.color.primary
-        : hovered ? Theme.color.onSurface : (outlined ? Theme.color.outline
-                                                      : Theme.color.onSurfaceVariant)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : error ? ColorScope.scheme.error
+        : activeFocus ? ColorScope.scheme.primary
+        : hovered ? ColorScope.scheme.onSurface : (outlined ? ColorScope.scheme.outline
+                                                      : ColorScope.scheme.onSurfaceVariant)
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset, 240)
     implicitHeight: fieldHeight + (hasSupporting ? 20 : 0)
@@ -40,10 +40,10 @@ T.TextField {
     bottomPadding: (label !== "" && !outlined ? 8 : 16) + (hasSupporting ? 20 : 0)
     verticalAlignment: TextInput.AlignVCenter
     font: Theme.type.bodyLarge.font
-    color: enabled ? Theme.color.onSurface : Qt.alpha(Theme.color.onSurface,
+    color: enabled ? ColorScope.scheme.onSurface : Qt.alpha(ColorScope.scheme.onSurface,
                                                       Theme.state.disabledContent)
     selectionColor: Qt.alpha(accent, 0.4)
-    selectedTextColor: Theme.color.onSurface
+    selectedTextColor: ColorScope.scheme.onSurface
     placeholderTextColor: mutedColor
     Accessible.name: label !== "" ? label : placeholderText
     Accessible.description: supportingText
@@ -104,8 +104,8 @@ T.TextField {
             width: parent.width
             height: control.fieldHeight
             color: control.outlined ? "transparent"
-                 : control.enabled ? Theme.color.surfaceContainerHighest
-                                   : Qt.alpha(Theme.color.onSurface, 0.04)
+                 : control.enabled ? ColorScope.scheme.surfaceContainerHighest
+                                   : Qt.alpha(ColorScope.scheme.onSurface, 0.04)
             topLeftRadius: Theme.shape.extraSmall
             topRightRadius: Theme.shape.extraSmall
             bottomLeftRadius: control.outlined ? Theme.shape.extraSmall : 0
@@ -116,7 +116,7 @@ T.TextField {
             StateLayer {
                 anchors.fill: parent
                 visible: !control.outlined
-                color: Theme.color.onSurface
+                color: ColorScope.scheme.onSurface
                 hovered: control.hovered && control.enabled && !control.activeFocus
                 topLeftRadius: container.topLeftRadius
                 topRightRadius: container.topRightRadius
@@ -143,7 +143,7 @@ T.TextField {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: control.trailingGlyph !== ""
                 glyph: control.trailingGlyph
-                color: control.error && control.enabled ? Theme.color.error : control.mutedColor
+                color: control.error && control.enabled ? ColorScope.scheme.error : control.mutedColor
             }
 
             // Outlined: the floated label sits on the border over a gap in it.
@@ -170,8 +170,8 @@ T.TextField {
                 text: control.label
                 font: Theme.type.bodyLarge.font
                 color: !control.enabled ? control.mutedColor
-                     : control.error ? Theme.color.error
-                     : control.activeFocus ? Theme.color.primary : Theme.color.onSurfaceVariant
+                     : control.error ? ColorScope.scheme.error
+                     : control.activeFocus ? ColorScope.scheme.primary : ColorScope.scheme.onSurfaceVariant
             }
         }
 
@@ -182,7 +182,7 @@ T.TextField {
             width: parent.width - 32
             text: control.supportingText
             font: Theme.type.bodySmall.font
-            color: control.error && control.enabled ? Theme.color.error : control.mutedColor
+            color: control.error && control.enabled ? ColorScope.scheme.error : control.mutedColor
             elide: Text.ElideRight
         }
     }

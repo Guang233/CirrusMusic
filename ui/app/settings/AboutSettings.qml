@@ -74,14 +74,14 @@ SettingsGroup {
                     Text {
                         width: parent.width
                         text: parent.modelData.name
-                        color: Theme.color.onSurface
+                        color: ColorScope.scheme.onSurface
                         font: Theme.type.titleSmall.font
                     }
                     Text {
                         width: parent.width
                         text: qsTr("%1 · %2").arg(parent.modelData.use).arg(parent.modelData.license)
                         wrapMode: Text.Wrap
-                        color: Theme.color.onSurfaceVariant
+                        color: ColorScope.scheme.onSurfaceVariant
                         font: Theme.type.bodyMedium.font
                     }
                 }

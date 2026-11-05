@@ -19,11 +19,11 @@ T.MenuItem {
                                       : false
     readonly property bool selected: checkable && checked
     readonly property color contentColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurface, Theme.color.onTertiaryContainer, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurface, ColorScope.scheme.onTertiaryContainer, selection.value)
     readonly property color mutedColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.onTertiaryContainer,
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onTertiaryContainer,
                     selection.value)
     readonly property string leadingGlyph: glyph !== "" ? glyph : selected ? Symbols.check : ""
     readonly property string shortcutText: action && action.shortcut ? String(action.shortcut)
@@ -104,8 +104,8 @@ T.MenuItem {
         readonly property real inner: control.selected ? Theme.shape.medium
                                                        : Theme.shape.extraSmall
         implicitHeight: control.implicitHeight
-        color: Theme.mix(Qt.alpha(Theme.color.tertiaryContainer, 0),
-                         Theme.color.tertiaryContainer, selection.value)
+        color: Theme.mix(Qt.alpha(ColorScope.scheme.tertiaryContainer, 0),
+                         ColorScope.scheme.tertiaryContainer, selection.value)
         topLeftRadius: control.first ? outer : inner
         topRightRadius: control.first ? outer : inner
         bottomLeftRadius: control.last ? outer : inner

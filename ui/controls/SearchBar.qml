@@ -12,7 +12,7 @@ T.TextField {
     id: control
 
     property string leadingGlyph: Symbols.search
-    property color containerColor: Theme.color.surfaceContainerHigh
+    property color containerColor: ColorScope.scheme.surfaceContainerHigh
     property bool handlesEscape: true
 
     implicitWidth: 360
@@ -21,11 +21,11 @@ T.TextField {
     rightPadding: length > 0 ? 56 : 16
     verticalAlignment: TextInput.AlignVCenter
     font: Theme.type.bodyLarge.font
-    color: enabled ? Theme.color.onSurface : Qt.alpha(Theme.color.onSurface,
+    color: enabled ? ColorScope.scheme.onSurface : Qt.alpha(ColorScope.scheme.onSurface,
                                                       Theme.state.disabledContent)
-    selectionColor: Qt.alpha(Theme.color.primary, 0.4)
-    selectedTextColor: Theme.color.onSurface
-    placeholderTextColor: Theme.color.onSurfaceVariant
+    selectionColor: Qt.alpha(ColorScope.scheme.primary, 0.4)
+    selectedTextColor: ColorScope.scheme.onSurface
+    placeholderTextColor: ColorScope.scheme.onSurfaceVariant
     Accessible.name: placeholderText
     Accessible.role: Accessible.EditableText
 
@@ -41,7 +41,7 @@ T.TextField {
 
     cursorDelegate: Rectangle {
         width: 2
-        color: Theme.color.primary
+        color: ColorScope.scheme.primary
         visible: control.activeFocus && control.selectionStart === control.selectionEnd
                  && blink.on
 
@@ -86,12 +86,12 @@ T.TextField {
         implicitHeight: 56
         radius: height / 2
         color: control.enabled ? control.containerColor
-                               : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContainer)
+                               : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer)
 
         StateLayer {
             anchors.fill: parent
             radius: parent.radius
-            color: Theme.color.onSurface
+            color: ColorScope.scheme.onSurface
             hovered: control.hovered && control.enabled && !control.activeFocus
         }
 
@@ -99,8 +99,8 @@ T.TextField {
             x: 16
             anchors.verticalCenter: parent.verticalCenter
             glyph: control.leadingGlyph
-            color: control.enabled ? Theme.color.onSurface
-                                   : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+            color: control.enabled ? ColorScope.scheme.onSurface
+                                   : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
         }
     }
 }

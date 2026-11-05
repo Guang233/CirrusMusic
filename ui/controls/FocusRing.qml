@@ -21,7 +21,7 @@ Rectangle {
     anchors.margins: -(offset + thickness)
     color: "transparent"
     border.width: thickness
-    border.color: Theme.color.secondary
+    border.color: ColorScope.scheme.secondary
     topLeftRadius: Math.max(0, containerTopLeftRadius + offset + thickness)
     topRightRadius: Math.max(0, containerTopRightRadius + offset + thickness)
     bottomRightRadius: Math.max(0, containerBottomRightRadius + offset + thickness)

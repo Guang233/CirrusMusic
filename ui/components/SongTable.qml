@@ -264,8 +264,8 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: sortTitle.text
-                    color: sortTitle.active || sortTitle.hovered ? Theme.color.onSurface
-                                                                : Theme.color.onSurfaceVariant
+                    color: sortTitle.active || sortTitle.hovered ? ColorScope.scheme.onSurface
+                                                                : ColorScope.scheme.onSurfaceVariant
                     font: Theme.type.labelMedium.font
                 }
                 Icon {
@@ -273,7 +273,7 @@ Item {
                     visible: sortTitle.active
                     glyph: table.songs.descending ? Symbols.arrow_downward : Symbols.arrow_upward
                     size: 16
-                    color: Theme.color.onSurface
+                    color: ColorScope.scheme.onSurface
                 }
             }
         }
@@ -301,7 +301,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             horizontalAlignment: Text.AlignRight
             text: "#"
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
         }
         SortTitle {
@@ -317,7 +317,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: table.showReason
             text: qsTr("推荐理由")
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
         }
         SortTitle {
@@ -335,7 +335,7 @@ Item {
             visible: table.showLiked
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("喜欢")
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
         }
         SortTitle {
@@ -533,12 +533,12 @@ Item {
             readonly property bool last: index === list.count - 1
             readonly property bool showsFocus: list.activeFocus && table.keyboardUsed
                                                && index === table.currentRow
-            readonly property color strongColor: current ? Theme.color.primary
-                                               : Theme.mix(Theme.color.onSurface,
-                                                           Theme.color.onSecondaryContainer,
+            readonly property color strongColor: current ? ColorScope.scheme.primary
+                                               : Theme.mix(ColorScope.scheme.onSurface,
+                                                           ColorScope.scheme.onSecondaryContainer,
                                                            selection.value)
-            readonly property color mutedColor: Theme.mix(Theme.color.onSurfaceVariant,
-                                                          Theme.color.onSecondaryContainer,
+            readonly property color mutedColor: Theme.mix(ColorScope.scheme.onSurfaceVariant,
+                                                          ColorScope.scheme.onSecondaryContainer,
                                                           selection.value)
 
             // ListView puts delegates at x 0: the row's body is inset inside.
@@ -577,7 +577,7 @@ Item {
                     readonly property real bottomRadius: row.last ? Math.max(Theme.shape.large, inner)
                                                                   : inner
                     anchors.fill: parent
-                    color: Theme.mix(Theme.color.surfaceContainer, Theme.color.secondaryContainer,
+                    color: Theme.mix(ColorScope.scheme.surfaceContainer, ColorScope.scheme.secondaryContainer,
                                      selection.value)
                     topLeftRadius: topRadius
                     topRightRadius: topRadius
@@ -649,7 +649,7 @@ Item {
                             visible: !row.hovered && !row.current
                             text: table.voices && row.serial >= 0 ? row.serial
                                 : table.numberByPosition ? row.position : row.index + 1
-                            color: table.ranked && row.index < 3 ? Theme.color.primary
+                            color: table.ranked && row.index < 3 ? ColorScope.scheme.primary
                                                                  : row.mutedColor
                             font: Fonts.tabular(Theme.type.labelLarge.font)
                         }
@@ -660,7 +660,7 @@ Item {
                             visible: !row.hovered && row.current
                             glyph: Symbols.graphic_eq
                             size: 20
-                            color: Theme.color.primary
+                            color: ColorScope.scheme.primary
                         }
                         IconButton {
                             anchors.right: parent.right
@@ -762,7 +762,7 @@ Item {
                         visible: row.missing
                         text: qsTr("歌曲信息暂时无法获取")
                         elide: Text.ElideRight
-                        color: Theme.color.onSurfaceVariant
+                        color: ColorScope.scheme.onSurfaceVariant
                         font: Theme.type.bodyMedium.font
                     }
 
@@ -864,7 +864,7 @@ Item {
             x: -table.rowX
             width: table.width - table.scrollBarWidth
             height: parent.height
-            color: Theme.color.surface
+            color: ColorScope.scheme.surface
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true

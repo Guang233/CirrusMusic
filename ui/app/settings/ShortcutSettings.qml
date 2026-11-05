@@ -47,11 +47,11 @@ SettingsGroup {
         width: Math.max(28, label.implicitWidth + 16)
         height: 28
         radius: Theme.shape.small
-        color: Theme.color.surfaceContainerHighest
+        color: ColorScope.scheme.surfaceContainerHighest
         Text {
             id: label
             anchors.centerIn: parent
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelLarge.font
         }
     }
@@ -83,7 +83,7 @@ SettingsGroup {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: key.index > 0
                                 text: qsTr("或")
-                                color: Theme.color.onSurfaceVariant
+                                color: ColorScope.scheme.onSurfaceVariant
                                 font: Theme.type.bodySmall.font
                             }
                             Keycap {

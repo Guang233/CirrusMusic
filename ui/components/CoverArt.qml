@@ -94,12 +94,12 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: root.masked ? 0 : root.radius
-            color: Theme.color.surfaceContainerHighest
+            color: ColorScope.scheme.surfaceContainerHighest
             Icon {
                 anchors.centerIn: parent
                 glyph: root.glyph
                 size: Math.round(Math.min(root.width, root.height) * 0.4)
-                color: Theme.color.onSurfaceVariant
+                color: ColorScope.scheme.onSurfaceVariant
             }
         }
         Layer {

@@ -21,7 +21,7 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
         glyph: root.glyph
         size: 48
-        color: Theme.color.onSurfaceVariant
+        color: ColorScope.scheme.onSurfaceVariant
     }
     Text {
         width: parent.width
@@ -29,7 +29,7 @@ Column {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
         text: root.title
-        color: Theme.color.onSurface
+        color: ColorScope.scheme.onSurface
         font: Theme.type.titleMedium.font
     }
     Text {
@@ -38,7 +38,7 @@ Column {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
         text: root.message
-        color: Theme.color.onSurfaceVariant
+        color: ColorScope.scheme.onSurfaceVariant
         font: Theme.type.bodyMedium.font
     }
     Item {

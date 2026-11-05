@@ -49,7 +49,7 @@ T.ToolTip {
     contentItem: Text {
         text: control.text
         font: Theme.type.bodySmall.font
-        color: Theme.color.inverseOnSurface
+        color: ColorScope.scheme.inverseOnSurface
         wrapMode: Text.Wrap
         width: Math.min(implicitWidth, 280)
         verticalAlignment: Text.AlignVCenter
@@ -57,7 +57,7 @@ T.ToolTip {
 
     background: Rectangle {
         implicitHeight: 24
-        color: Theme.color.inverseSurface
+        color: ColorScope.scheme.inverseSurface
         radius: Theme.shape.extraSmall
     }
 }

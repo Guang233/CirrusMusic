@@ -63,7 +63,7 @@ Item {
                 readonly property real inner: Theme.shape.extraSmall
                 width: parent.width
                 height: 72
-                color: Theme.color.surfaceContainer
+                color: ColorScope.scheme.surfaceContainer
                 topLeftRadius: index === 0 ? outer : inner
                 topRightRadius: topLeftRadius
                 bottomLeftRadius: index === root.rows - 1 ? outer : inner

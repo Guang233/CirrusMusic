@@ -10,16 +10,16 @@ T.Switch {
 
     readonly property real handleSize: down ? 28 : checked || showIcons ? 24 : 16
     readonly property color trackColor: !enabled
-        ? Qt.alpha(checked ? Theme.color.onSurface : Theme.color.surfaceContainerHighest,
+        ? Qt.alpha(checked ? ColorScope.scheme.onSurface : ColorScope.scheme.surfaceContainerHighest,
                    Theme.state.disabledContainer)
-        : Theme.mix(Theme.color.surfaceContainerHighest, Theme.color.primary, selection.value)
+        : Theme.mix(ColorScope.scheme.surfaceContainerHighest, ColorScope.scheme.primary, selection.value)
     readonly property color handleColor: {
         if (!enabled)
-            return checked ? Theme.color.surface
-                           : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent);
+            return checked ? ColorScope.scheme.surface
+                           : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent);
         const active = hovered || down || visualFocus;
-        return Theme.mix(active ? Theme.color.onSurfaceVariant : Theme.color.outline,
-                         active ? Theme.color.primaryContainer : Theme.color.onPrimary,
+        return Theme.mix(active ? ColorScope.scheme.onSurfaceVariant : ColorScope.scheme.outline,
+                         active ? ColorScope.scheme.primaryContainer : ColorScope.scheme.onPrimary,
                          selection.value);
     }
 
@@ -64,8 +64,8 @@ T.Switch {
             radius: height / 2
             color: control.trackColor
             border.width: 2 * (1 - selection.value)
-            border.color: control.enabled ? Theme.color.outline
-                                          : Qt.alpha(Theme.color.onSurface,
+            border.color: control.enabled ? ColorScope.scheme.outline
+                                          : Qt.alpha(ColorScope.scheme.onSurface,
                                                      Theme.state.disabledContainer)
 
             FocusRing {
@@ -83,7 +83,7 @@ T.Switch {
             StateLayer {
                 anchors.fill: parent
                 radius: width / 2
-                color: control.checked ? Theme.color.primary : Theme.color.onSurface
+                color: control.checked ? ColorScope.scheme.primary : ColorScope.scheme.onSurface
                 hovered: control.hovered && control.enabled
                 pressed: control.pressed
                 focused: false
@@ -103,10 +103,10 @@ T.Switch {
                     size: 16
                     weight: 600
                     color: !control.enabled
-                           ? (control.checked ? Qt.alpha(Theme.color.onSurface, 0.38)
-                                              : Theme.color.surfaceContainerHighest)
-                           : control.checked ? Theme.color.onPrimaryContainer
-                                             : Theme.color.surfaceContainerHighest
+                           ? (control.checked ? Qt.alpha(ColorScope.scheme.onSurface, 0.38)
+                                              : ColorScope.scheme.surfaceContainerHighest)
+                           : control.checked ? ColorScope.scheme.onPrimaryContainer
+                                             : ColorScope.scheme.surfaceContainerHighest
                 }
             }
         }
@@ -119,8 +119,8 @@ T.Switch {
                                                               + control.spacing : 0
         text: control.text
         font: control.font
-        color: control.enabled ? Theme.color.onSurface
-                               : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+        color: control.enabled ? ColorScope.scheme.onSurface
+                               : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }

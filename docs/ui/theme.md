@@ -43,6 +43,7 @@ Behavior on opacity {
 | `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个，供播放页背景） |
 | `Theme.extracting` | 是否正在取色 |
 | `Theme.color` | 53 个颜色角色（含 2025 规范新增的 primaryDim、secondaryDim、tertiaryDim、errorDim）；`Theme.color.roles` 为角色名列表 |
+| `ColorScope.scheme` | 附加属性：元素及其内部（包括弹出层、对话框）使用的颜色角色，类型同 `Theme.color`。不设置时就是 `Theme.color`；在某个元素上设置后，子元素、弹出层、窗口都继承（`QQuickAttachedPropertyPropagator`，与 `Material.theme` 同样的机制）。控件（`Cirrus.Controls`）、通用组件（`Cirrus.Components`）和设置分组文件读它而不读 `Theme.color`，播放页借此让菜单、面板套用封面配色（[pages/player.md §9.1](pages/player.md)）；外壳页面仍读 `Theme.color` |
 | `Theme.type`、`Theme.shape`、`Theme.state`、`Theme.elevation` | 字体层级、圆角、状态层与禁用透明度、高度 |
 | `Theme.motion` | 9 个弹簧令牌、`reduced`（减少动态效果）、`curve()`（采样曲线） |
 | `Theme.contrastRatio(a, b)` | WCAG 对比度 |

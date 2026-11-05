@@ -106,7 +106,7 @@ T.Popup {
         Rectangle {
             anchors.fill: parent
             radius: Theme.shape.extraLarge
-            color: Theme.color.surfaceContainerHigh
+            color: ColorScope.scheme.surfaceContainerHigh
         }
     }
 
@@ -150,7 +150,7 @@ T.Popup {
                     visible: control.glyph !== ""
                     glyph: control.glyph
                     size: 24
-                    color: Theme.color.secondary
+                    color: ColorScope.scheme.secondary
                 }
                 Text {
                     id: titleText
@@ -161,7 +161,7 @@ T.Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     wrapMode: Text.Wrap
                     text: control.title
-                    color: Theme.color.onSurface
+                    color: ColorScope.scheme.onSurface
                     font: Theme.type.titleLarge.font
                     Accessible.role: Accessible.Heading
                 }
@@ -180,7 +180,7 @@ T.Popup {
                 visible: control.supportingText !== ""
                 wrapMode: Text.Wrap
                 text: control.supportingText
-                color: Theme.color.onSurfaceVariant
+                color: ColorScope.scheme.onSurfaceVariant
                 font: Theme.type.bodyMedium.font
             }
             Column {
@@ -224,7 +224,7 @@ T.Popup {
     }
 
     T.Overlay.modal: Rectangle {
-        color: Qt.alpha(Theme.color.scrim, 0.32)
+        color: Qt.alpha(ColorScope.scheme.scrim, 0.32)
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.motion.fastEffects.duration

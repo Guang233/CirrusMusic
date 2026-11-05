@@ -7,9 +7,9 @@ T.RadioButton {
     id: control
 
     readonly property color ringColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : checked ? Theme.color.primary
-        : hovered || down || visualFocus ? Theme.color.onSurface : Theme.color.onSurfaceVariant
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : checked ? ColorScope.scheme.primary
+        : hovered || down || visualFocus ? ColorScope.scheme.onSurface : ColorScope.scheme.onSurfaceVariant
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
@@ -38,7 +38,7 @@ T.RadioButton {
         StateLayer {
             anchors.fill: parent
             radius: width / 2
-            color: control.checked ? Theme.color.primary : Theme.color.onSurface
+            color: control.checked ? ColorScope.scheme.primary : ColorScope.scheme.onSurface
             hovered: control.hovered && control.enabled
             pressed: control.down
             focused: false
@@ -79,8 +79,8 @@ T.RadioButton {
                                                               + control.spacing : 0
         text: control.text
         font: control.font
-        color: control.enabled ? Theme.color.onSurface
-                               : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+        color: control.enabled ? ColorScope.scheme.onSurface
+                               : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }

@@ -71,7 +71,7 @@ Item {
                     readonly property int variant: index % 4
                     width: parent.width
                     height: 56
-                    color: Theme.color.surfaceContainer
+                    color: ColorScope.scheme.surfaceContainer
                     topLeftRadius: index === 0 ? outer : inner
                     topRightRadius: topLeftRadius
                     bottomLeftRadius: index === root.rows - 1 ? outer : inner

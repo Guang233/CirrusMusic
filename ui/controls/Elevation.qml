@@ -15,7 +15,7 @@ RectangularShadow {
     offset.x: 0
     offset.y: level > 0 ? 0.5 + level * 0.5 : 0
     blur: level > 0 ? 1 + level * 1.6 : 0
-    color: Qt.alpha(Theme.color.shadow, Theme.dark ? 0.55 : 0.22)
+    color: Qt.alpha(ColorScope.scheme.shadow, Theme.dark ? 0.55 : 0.22)
 
     Behavior on level {
         NumberAnimation {

@@ -56,7 +56,7 @@ Row {
                 radius: width / 2
                 color: "transparent"
                 border.width: 2
-                border.color: Theme.color.onSurface
+                border.color: ColorScope.scheme.onSurface
                 opacity: Math.min(1, ring.value)
             }
             Rectangle {
@@ -69,7 +69,7 @@ Row {
             StateLayer {
                 anchors.fill: parent
                 radius: width / 2
-                color: Theme.color.onSurface
+                color: ColorScope.scheme.onSurface
                 hovered: swatch.hovered
                 pressed: swatch.down
                 focused: swatch.visualFocus

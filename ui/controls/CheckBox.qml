@@ -10,16 +10,16 @@ T.CheckBox {
     property bool error: false
 
     readonly property bool marked: checkState !== Qt.Unchecked
-    readonly property color accent: error ? Theme.color.error : Theme.color.primary
+    readonly property color accent: error ? ColorScope.scheme.error : ColorScope.scheme.primary
     readonly property color boxColor: !enabled
-        ? (marked ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent) : "transparent")
+        ? (marked ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent) : "transparent")
         : Theme.mix(Qt.alpha(accent, 0), accent, selection.value)
     readonly property color outlineColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : error ? Theme.color.error
-        : hovered || down || visualFocus ? Theme.color.onSurface : Theme.color.onSurfaceVariant
-    readonly property color markColor: !enabled ? Theme.color.surface
-                                     : error ? Theme.color.onError : Theme.color.onPrimary
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : error ? ColorScope.scheme.error
+        : hovered || down || visualFocus ? ColorScope.scheme.onSurface : ColorScope.scheme.onSurfaceVariant
+    readonly property color markColor: !enabled ? ColorScope.scheme.surface
+                                     : error ? ColorScope.scheme.onError : ColorScope.scheme.onPrimary
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
                             implicitContentWidth + leftPadding + rightPadding)
@@ -54,7 +54,7 @@ T.CheckBox {
         StateLayer {
             anchors.fill: parent
             radius: width / 2
-            color: control.marked ? control.accent : Theme.color.onSurface
+            color: control.marked ? control.accent : ColorScope.scheme.onSurface
             hovered: control.hovered && control.enabled
             pressed: control.down
             focused: false
@@ -123,8 +123,8 @@ T.CheckBox {
                                                               + control.spacing : 0
         text: control.text
         font: control.font
-        color: control.enabled ? Theme.color.onSurface
-                               : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
+        color: control.enabled ? ColorScope.scheme.onSurface
+                               : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }

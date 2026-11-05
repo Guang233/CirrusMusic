@@ -105,7 +105,7 @@ Dialog {
                 anchors.centerIn: parent
                 visible: list.count === 0
                 text: qsTr("没有找到这个字体")
-                color: Theme.color.onSurfaceVariant
+                color: ColorScope.scheme.onSurfaceVariant
                 font: Theme.type.bodyMedium.font
             }
         }

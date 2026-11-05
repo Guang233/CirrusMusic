@@ -24,7 +24,7 @@ ListItem {
     // focus itself set Qt.NoFocus.
     focusPolicy: Qt.StrongFocus
     segmented: true
-    containerColor: Theme.color.surfaceContainerLow
+    containerColor: ColorScope.scheme.surfaceContainerLow
     supportingMaximumLines: 8
     // Two-line height at least; longer text grows the row (the control stays centered).
     lines: supportingText !== "" ? 2 : 1

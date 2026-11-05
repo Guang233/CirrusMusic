@@ -73,7 +73,7 @@ Item {
                 width: parent.width
                 text: App.player.current.title
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: ColorScope.scheme.onSurface
                 font: Theme.type.titleSmall.font
             }
             Text {
@@ -81,7 +81,7 @@ Item {
                 width: parent.width
                 text: failed ? App.player.failureMessage : App.player.current.artistText
                 elide: Text.ElideRight
-                color: failed ? Theme.color.error : Theme.color.onSurfaceVariant
+                color: failed ? ColorScope.scheme.error : ColorScope.scheme.onSurfaceVariant
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -134,7 +134,7 @@ Item {
                     implicitWidth: 28
                     implicitHeight: 28
                     visible: playButton.loading
-                    color: Theme.color.onPrimary
+                    color: ColorScope.scheme.onPrimary
                 }
             }
             IconButton {
@@ -155,7 +155,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: root.wide
             text: App.format.duration(clock.positionMs) + " / " + App.format.duration(App.player.durationMs)
-            color: Theme.color.onSurfaceVariant
+            color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
             // As wide as the longest time of this song, so the controls stay put.
             width: Math.ceil(longest.advanceWidth)

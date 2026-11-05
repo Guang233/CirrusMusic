@@ -12,7 +12,7 @@ Rectangle {
     implicitWidth: row.implicitWidth + 32
     implicitHeight: Math.max(48, label.implicitHeight + 24)
     radius: Theme.shape.medium
-    color: Theme.color.tertiaryContainer
+    color: ColorScope.scheme.tertiaryContainer
 
     Row {
         id: row
@@ -25,7 +25,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             glyph: root.glyph
             size: 20
-            color: Theme.color.onTertiaryContainer
+            color: ColorScope.scheme.onTertiaryContainer
         }
         Text {
             id: label
@@ -33,7 +33,7 @@ Rectangle {
             width: parent.width - icon.width - parent.spacing
             text: root.text
             wrapMode: Text.Wrap
-            color: Theme.color.onTertiaryContainer
+            color: ColorScope.scheme.onTertiaryContainer
             font: Theme.type.bodyMedium.font
         }
     }

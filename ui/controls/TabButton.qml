@@ -14,8 +14,8 @@ T.TabButton {
     readonly property T.TabBar bar: T.TabBar.tabBar
 
     readonly property color contentColor: !enabled
-        ? Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent)
-        : Theme.mix(Theme.color.onSurfaceVariant, Theme.color.primary, selection.value)
+        ? Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent)
+        : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.primary, selection.value)
     // Width of the label (or icon), which the indicator matches.
     readonly property real labelWidth: Math.max(label.implicitWidth, glyph !== "" ? 24 : 0)
 
@@ -72,7 +72,7 @@ T.TabButton {
     background: Item {
         StateLayer {
             anchors.fill: parent
-            color: control.checked ? Theme.color.primary : Theme.color.onSurface
+            color: control.checked ? ColorScope.scheme.primary : ColorScope.scheme.onSurface
             hovered: control.hovered && control.enabled
             pressed: control.down
             focused: control.visualFocus

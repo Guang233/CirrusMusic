@@ -16,11 +16,11 @@ T.Slider {
     readonly property real gap: 6
     readonly property real innerRadius: 2
     readonly property real handleX: leftPadding + 2 + visualPosition * (availableWidth - 4)
-    readonly property color activeColor: enabled ? Theme.color.primary
-                                                 : Qt.alpha(Theme.color.onSurface,
+    readonly property color activeColor: enabled ? ColorScope.scheme.primary
+                                                 : Qt.alpha(ColorScope.scheme.onSurface,
                                                             Theme.state.disabledContent)
-    readonly property color inactiveColor: enabled ? Theme.color.secondaryContainer
-                                                   : Qt.alpha(Theme.color.onSurface,
+    readonly property color inactiveColor: enabled ? ColorScope.scheme.secondaryContainer
+                                                   : Qt.alpha(ColorScope.scheme.onSurface,
                                                               Theme.state.disabledContainer)
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
@@ -107,7 +107,7 @@ T.Slider {
             width: Math.max(48, valueLabel.implicitWidth + 32)
             height: 44
             radius: height / 2
-            color: Theme.color.inverseSurface
+            color: ColorScope.scheme.inverseSurface
 
             Behavior on opacity {
                 NumberAnimation {
@@ -120,7 +120,7 @@ T.Slider {
                 anchors.centerIn: parent
                 text: control.valueText
                 font: Theme.type.labelLarge.font
-                color: Theme.color.inverseOnSurface
+                color: ColorScope.scheme.inverseOnSurface
             }
         }
     }

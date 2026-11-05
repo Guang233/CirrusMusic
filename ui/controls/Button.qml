@@ -41,41 +41,41 @@ T.Button {
     readonly property color containerColor: {
         if (!enabled)
             return variant === Md.Outlined && !toggled || variant === Md.Text
-                    ? "transparent" : Qt.alpha(Theme.color.onSurface, Theme.state.disabledContainer);
+                    ? "transparent" : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer);
         switch (variant) {
         case Md.Tonal:
-            return Theme.mix(Theme.color.secondaryContainer, Theme.color.secondary, selection.value);
+            return Theme.mix(ColorScope.scheme.secondaryContainer, ColorScope.scheme.secondary, selection.value);
         case Md.Outlined:
-            return Theme.mix(Qt.alpha(Theme.color.inverseSurface, 0), Theme.color.inverseSurface,
+            return Theme.mix(Qt.alpha(ColorScope.scheme.inverseSurface, 0), ColorScope.scheme.inverseSurface,
                              selection.value);
         case Md.Text:
             return "transparent";
         case Md.Elevated:
-            return Theme.mix(Theme.color.surfaceContainerLow, Theme.color.primary, selection.value);
+            return Theme.mix(ColorScope.scheme.surfaceContainerLow, ColorScope.scheme.primary, selection.value);
         default:
-            return checkable ? Theme.mix(Theme.color.surfaceContainer, Theme.color.primary,
+            return checkable ? Theme.mix(ColorScope.scheme.surfaceContainer, ColorScope.scheme.primary,
                                          selection.value)
-                             : Theme.color.primary;
+                             : ColorScope.scheme.primary;
         }
     }
     readonly property color contentColor: {
         if (!enabled)
-            return Qt.alpha(Theme.color.onSurface, Theme.state.disabledContent);
+            return Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent);
         switch (variant) {
         case Md.Tonal:
-            return Theme.mix(Theme.color.onSecondaryContainer, Theme.color.onSecondary,
+            return Theme.mix(ColorScope.scheme.onSecondaryContainer, ColorScope.scheme.onSecondary,
                              selection.value);
         case Md.Outlined:
-            return Theme.mix(Theme.color.onSurfaceVariant, Theme.color.inverseOnSurface,
+            return Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.inverseOnSurface,
                              selection.value);
         case Md.Text:
-            return Theme.color.primary;
+            return ColorScope.scheme.primary;
         case Md.Elevated:
-            return Theme.mix(Theme.color.primary, Theme.color.onPrimary, selection.value);
+            return Theme.mix(ColorScope.scheme.primary, ColorScope.scheme.onPrimary, selection.value);
         default:
-            return checkable ? Theme.mix(Theme.color.onSurfaceVariant, Theme.color.onPrimary,
+            return checkable ? Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
                                          selection.value)
-                             : Theme.color.onPrimary;
+                             : ColorScope.scheme.onPrimary;
         }
     }
 
@@ -173,8 +173,8 @@ T.Button {
         color: control.containerColor
         contentColor: control.contentColor
         outlineWidth: control.variant === Md.Outlined ? control.outlineWidth : 0
-        outlineColor: Theme.mix(Theme.color.outlineVariant,
-                                Qt.alpha(Theme.color.outlineVariant, 0), selection.value)
+        outlineColor: Theme.mix(ColorScope.scheme.outlineVariant,
+                                Qt.alpha(ColorScope.scheme.outlineVariant, 0), selection.value)
         elevation: !control.enabled ? 0
                    : control.variant === Md.Elevated ? (control.hovered ? Theme.elevation.level2
                                                                         : Theme.elevation.level1)

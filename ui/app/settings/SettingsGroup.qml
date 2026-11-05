@@ -49,7 +49,7 @@ Column {
     Text {
         leftPadding: 16
         text: group.title
-        color: Theme.color.primary
+        color: ColorScope.scheme.primary
         font: Theme.type.titleSmall.font
         Accessible.role: Accessible.Heading
     }
