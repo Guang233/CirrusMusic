@@ -319,6 +319,7 @@ FocusScope {
             anchors.fill: parent
             radius: page.panelRadius
             colors: colors
+            flowing: App.player.status === Playback.Playing
         }
         // The mini player's frame color, fading into the page's background.
         Rectangle {

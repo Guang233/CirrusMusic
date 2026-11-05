@@ -90,6 +90,12 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, playerAutoHide, setPlayerAutoHide, "player/autoHide", 3)
     // The view it opens with, the last one used: 0 cover, 1 lyrics, 2 queue.
     CIRRUS_SETTING(int, playerView, setPlayerView, "player/view", 1)
+    // Background: 0 flowing light, 1 blurred cover, 2 solid; and the flow's speed:
+    // 0 slow, 1 standard, 2 fast.
+    CIRRUS_SETTING(int, playerBackground, setPlayerBackground, "player/background", 0)
+    CIRRUS_SETTING(int, playerFlowSpeed, setPlayerFlowSpeed, "player/flowSpeed", 1)
+    // The cover tilts toward the pointer.
+    CIRRUS_SETTING(bool, playerTilt, setPlayerTilt, "player/tilt", true)
 
     // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
     CIRRUS_SETTING(QStringList, searchHistory, setSearchHistory, "search/history", QStringList())

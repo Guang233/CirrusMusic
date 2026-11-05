@@ -24,6 +24,14 @@ qt_add_qml_module(cirrus_ui_player
         LyricsView.qml
 )
 
+find_package(Qt6 REQUIRED COMPONENTS ShaderTools)
+qt_add_shaders(cirrus_ui_player "cirrus_ui_player_shaders"
+    PREFIX "/qt/qml/Cirrus/Player"
+    FILES
+        shaders/flow.frag
+        shaders/present.frag
+)
+
 target_link_libraries(cirrus_ui_player
     PRIVATE Qt6::Quick cirrus_ui_theme cirrus_ui_controls cirrus_ui_components cirrus_presentation
             cirrus_ui_window)
