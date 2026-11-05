@@ -134,7 +134,9 @@ FocusScope {
     onWidthChanged: if (opened || grow.value > 0) Qt.callLater(captureRects)
     onHeightChanged: if (opened || grow.value > 0) Qt.callLater(captureRects)
 
-    visible: grow.value > 0.001 || fade.value > 0.001
+    // While the spring runs too: on its first frame and when closing bounces below 0,
+    // the mini cover is already hidden and the flying one must still show.
+    visible: grow.running || grow.value > 0.001 || fade.value > 0.001
     opacity: reduced ? fade.value : 1
     enabled: opened
     focus: opened
@@ -206,6 +208,7 @@ FocusScope {
     readonly property real leftWidth: groupWidth * 0.45
     // The largest cover (also its decode size).
     readonly property real maxCover: 720
+    readonly property real minStackWidth: 360
 
     // Rects of the blocks for the current view and width.
     readonly property var layout: {
@@ -219,20 +222,23 @@ FocusScope {
             const x = columnX + (columnW - size) / 2;
             const y = contentTop + Math.max(0, (availH - size - stackExtra) / 2);
             const below = y + size + 28;
+            // The header, progress and controls under a small cover keep a usable width.
+            const stackW = Math.max(size, Math.min(minStackWidth, columnW - 2 * sideMargin));
+            const stackX = columnX + (columnW - stackW) / 2;
             const panelX = groupX + leftWidth + sideMargin / 2;
             return {
                 cover: Qt.rect(x, y, size, size),
-                header: Qt.rect(x, below, size, headerHeight),
+                header: Qt.rect(stackX, below, stackW, headerHeight),
                 progress: controlsAtBottom ? Qt.rect(sideMargin, bandTop, width - 2 * sideMargin,
                                                      progressHeight)
-                                           : Qt.rect(x, below + headerHeight + 16, size,
+                                           : Qt.rect(stackX, below + headerHeight + 16, stackW,
                                                      progressHeight),
                 controls: controlsAtBottom
                           ? Qt.rect((width - 400) / 2,
                                     height - (bottomRowHeight + controlsHeight) / 2, 400,
                                     controlsHeight)
-                          : Qt.rect(x, below + headerHeight + 16 + progressHeight + 8, size,
-                                    controlsHeight),
+                          : Qt.rect(stackX, below + headerHeight + 16 + progressHeight + 8,
+                                    stackW, controlsHeight),
                 panel: Qt.rect(panelX, contentTop, groupX + groupWidth - panelX,
                                stackBottom - contentTop)
             };
@@ -347,10 +353,6 @@ FocusScope {
                     page.lastPointer = at;
                     page.wake();
                 }
-            }
-            HoverHandler {
-                enabled: page.chromeHidden
-                cursorShape: Qt.BlankCursor
             }
 
             Glide {
@@ -535,11 +537,13 @@ FocusScope {
                 }
             }
 
-            // While hidden, the first click only shows the controls.
+            // While hidden, the first click only shows the controls, and the pointer is
+            // hidden. Setting and resetting an item's cursor takes effect at once, even
+            // with the pointer still; a handler's cursor would wait for the next move.
             MouseArea {
                 anchors.fill: parent
-                enabled: page.chromeHidden
-                visible: enabled
+                acceptedButtons: page.chromeHidden ? Qt.AllButtons : Qt.NoButton
+                cursorShape: page.chromeHidden ? Qt.BlankCursor : undefined
                 onPressed: page.wake()
             }
         }
