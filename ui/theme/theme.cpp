@@ -10,6 +10,8 @@
 #include <QEvent>
 #include <QGuiApplication>
 #include <QPalette>
+#include <QQmlEngine>
+#include <QQuickImageProvider>
 #include <QStyleHints>
 #include <QtQml/qqmlfile.h>
 
@@ -65,6 +67,11 @@ Theme::Theme(QObject* parent)
 
 Theme::~Theme()
 {
+    if (m_response) {
+        disconnect(m_response, nullptr, this, nullptr);
+        m_response->cancel();
+        m_response->deleteLater();
+    }
     // Workers post results to this object; finish them before it goes away.
     m_worker.clear();
     m_worker.waitForDone();
@@ -176,6 +183,18 @@ void Theme::setCover(const QUrl& cover)
 
     const quint64 generation = ++m_generation;
     const bool wasExtracting = extracting();
+    if (m_response) {
+        m_response->cancel();
+        m_response = nullptr;
+    }
+    if (cover.scheme() == QLatin1String("image")) {
+        m_pendingGeneration = generation;
+        if (!wasExtracting)
+            emit extractingChanged();
+        m_worker.clear();
+        requestProviderImage(generation, cover);
+        return;
+    }
     const QString path = QQmlFile::urlToLocalFileOrQrc(cover);
     if (path.isEmpty()) {
         m_pendingGeneration = 0;
@@ -193,6 +212,45 @@ void Theme::setCover(const QUrl& cover)
         QMetaObject::invokeMethod(
             this, [this, generation, palette] { applyPalette(generation, palette); },
             Qt::QueuedConnection);
+    });
+}
+
+void Theme::requestProviderImage(quint64 generation, const QUrl& url)
+{
+    // image://<provider>/<id>, decoded at the quantization size by the same provider
+    // (and cache) the Image items use.
+    QQmlEngine* engine = qmlEngine(this);
+    auto* provider =
+        engine ? dynamic_cast<QQuickAsyncImageProvider*>(engine->imageProvider(url.host()))
+               : nullptr;
+    if (!provider) {
+        qWarning("Theme.cover: no async image provider \"%s\"", qPrintable(url.host()));
+        applyPalette(generation, {});
+        return;
+    }
+    constexpr int kEdge = 128;
+    QQuickImageResponse* response =
+        provider->requestImageResponse(url.path().mid(1), QSize(kEdge, kEdge));
+    m_response = response;
+    connect(response, &QQuickImageResponse::finished, this, [this, response, generation] {
+        if (m_response == response)
+            m_response = nullptr;
+        QImage image;
+        if (response->errorString().isEmpty()) {
+            if (QQuickTextureFactory* factory = response->textureFactory()) {
+                image = factory->image();
+                delete factory;
+            }
+        }
+        response->deleteLater();
+        if (generation != m_generation)
+            return;
+        m_worker.start([this, generation, image] {
+            CoverPalette palette = extractCoverPalette(image);
+            QMetaObject::invokeMethod(
+                this, [this, generation, palette] { applyPalette(generation, palette); },
+                Qt::QueuedConnection);
+        });
     });
 }
 

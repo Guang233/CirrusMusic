@@ -33,14 +33,14 @@ Behavior on opacity {
 | --- | --- |
 | `Theme.seedSource` | `Theme.SeedSource.System`（默认，系统强调色）／`Cover`（可选）／`Fixed` |
 | `Theme.systemAccent` | 系统强调色（平台不提供时无效，此时 System 退回固定种子） |
-| `Theme.cover` | 当前封面 URL（`qrc:`／`file:`），设为空则不取色；只有种子来源为 Cover 时影响外壳配色 |
+| `Theme.cover` | 当前封面 URL：`qrc:`／`file:`，或 `image://<异步图片提供器>/<id>`（经同一个提供器和缓存解码，应用里由 `Main.qml` 绑定到正在播放的歌曲 `image://cover/<key>`）；设为空则不取色。只有种子来源为 Cover 时影响外壳配色，播放页始终用它 |
 | `Theme.specVersion` | `Theme.SpecVersion.Spec2025`（默认）／`Spec2021` |
 | `Theme.fixedSeed`、`Theme.seed` | 固定种子色（默认 MD3 基准色 `#6750a4`）；实际使用的种子色（只读） |
 | `Theme.seedPresets` | 设置页色板提供的 8 个固定种子色（色环上分散的色相，第一个是基准紫） |
 | `Theme.staticPalette` | Material 静态色板（`md.ref.palette`，不随种子变）：`blue`、`blueVariant`、`cyan`、`green`、`yellow`、`orange`、`red`、`pink`、`purple`、`grey`，每个是 `{container, onContainer}`（色调 90／暗色 80，与 30）。只用于按类别着色的图标，如设置索引，与 Android 16 设置首页一致 |
 | `Theme.mode`、`Theme.dark` | `Theme.Mode.System`（默认）／`Light`／`Dark`；当前是否暗色（只读） |
 | `Theme.variant`、`Theme.contrast` | 方案变体（默认 TonalSpot）；对比度 -1…1 |
-| `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个，供播放页背景） |
+| `Theme.coverPalette` | `valid`、`seed`、`accents`（评分后最多 4 个）、`dominant`（按占比最多 5 个）、`grid`（封面平均缩到 5×5，按行排列，供播放页流光） |
 | `Theme.extracting` | 是否正在取色 |
 | `Theme.color` | 53 个颜色角色（含 2025 规范新增的 primaryDim、secondaryDim、tertiaryDim、errorDim）；`Theme.color.roles` 为角色名列表 |
 | `ColorScope.scheme` | 附加属性：元素及其内部（包括弹出层、对话框）使用的颜色角色，类型同 `Theme.color`。不设置时就是 `Theme.color`；在某个元素上设置后，子元素、弹出层、窗口都继承（`QQuickAttachedPropertyPropagator`，与 `Material.theme` 同样的机制）。控件（`Cirrus.Controls`）、通用组件（`Cirrus.Components`）和设置分组文件读它而不读 `Theme.color`，播放页借此让菜单、面板套用封面配色（[pages/player.md §9.1](pages/player.md)）；外壳页面仍读 `Theme.color` |
@@ -71,7 +71,7 @@ Theme.cover 变化 → 递增编号 → 私有单线程线程池：
 - 取色耗时（Release，示例封面 640×640 JPEG）：每张 1–7 ms。
 - **近灰种子**：MD3 评分在封面几乎无彩色时会退回 Google 蓝；Cirrus 改为不过滤重新评分，并在种子色 HCT 色度 < 5 时强制使用 Monochrome 变体。修正前灰色封面会得到青色主题。
 - **种子来源 System（默认）**：Qt 6.11 在 Linux 上不读取 xdg-desktop-portal 的强调色（无平台主题时总是返回默认蓝 `#308cc6`），使用 portal 平台主题也只读明暗。因此 `SystemAppearance` 通过 D-Bus 读取 `org.freedesktop.appearance` 的 `accent-color` 与 `color-scheme`，并监听 `SettingChanged`；GNOME、KDE、niri 等实现了该接口。在 niri 会话中验证：强调色 `#d56199`、暗色偏好均正确读取。Windows/macOS 使用 `QPalette::Accent` 与 `QStyleHints::colorScheme`（未验证）。“跟随系统”的明暗同样优先使用 portal 的值。
-- **种子来源 Cover（可选）**：外壳配色跟随当前封面。播放页的背景与文字颜色另行从封面取色，不使用 MD3 配色（阶段 4 设计），`Theme.coverPalette.dominant` 为其准备。
+- **种子来源 Cover（可选）**：外壳配色跟随当前封面。播放页的背景与文字颜色另行从封面取色，不使用 MD3 配色（阶段 4 设计），由 `PlayerPalette` 计算（见下）。
 - 已知现象：`neon` 封面（大面积近黑紫色背景加细亮线）的种子是暗紫色 `#130c21`，这是 MD3 评分偏向占比大的颜色的结果，主题偏暗紫而不是亮粉／青。暂不干预。
 
 **对比度**：12 张示例封面、亮暗两种模式下，Gallery 检查的 12 组文字／背景组合均 ≥ 6.1（正文要求 4.5）。
@@ -153,5 +153,18 @@ material-color-utilities 的 C++ 实现只有 2021 规范，MD3 Expressive 使�
 
 - 默认变体在原型中再比较（UQ-04）；2026 规范暂不移植。
 - 系统“减少动态效果”设置的读取：目前只有应用内开关（`Theme.motion.reduced`）。
-- `Theme.cover` 目前只接受 `qrc:` 与 `file:`；阶段 5 接入真实封面时改为经图片提供器的不透明 key。
 - 系统强调色在 GNOME/KDE 会话及 Windows/macOS 上的表现（已在 niri 验证）。
+
+## 播放页配色（`PlayerPalette`）
+
+播放页的颜色（[pages/player.md §3](pages/player.md)）由 QML 里的 `PlayerPalette { palette: Theme.coverPalette; dark: … }` 从同一次取色结果计算，换封面或换明暗时所有颜色一起混合过渡（`slowEffects`，减少动态效果时立即切换）：
+
+| 属性 | 内容 |
+| --- | --- |
+| `grid` | 25 个背景色点：封面 5×5 的色调按比例映射到暗色 15–35／亮色 82–94（亮色彩度 ×0.7） |
+| `solid` | 纯色背景：封面主色，色调 20／90 |
+| `content`、`contentVariant` | 内容色：色点按彩度加权的平均色相，彩度 5（暗）／8（亮），色调 85、68（暗）／18、40（亮）；封面平均彩度低于 5 时为中性色 |
+| `shadow` | 封面投影：封面最暗的颜色，色调 10／35 |
+| `scheme` | 菜单、面板用的 MD3 角色（从封面种子计算，跟随 `Theme.variant`），用于 `ColorScope.scheme` |
+
+12 张示例封面检查过：内容色对任意色点的对比度，暗色主要 ≥ 5.4、次要 ≥ 3.3，亮色主要 ≥ 8.8、次要 ≥ 4.0。

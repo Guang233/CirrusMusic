@@ -45,12 +45,14 @@ class CoverResponse : public QQuickImageResponse
         emit finished();
     }
 
-    // Any thread, with the job mutex held.
+    // Any thread, with the job mutex held. `finished` is emitted on the response's own
+    // thread, so it never arrives before requestImageResponse() returned and the caller
+    // connected to it, even for a cache hit.
     void finish(const QImage& image, const QString& error)
     {
         m_image = image;
         m_error = error;
-        emit finished();
+        QMetaObject::invokeMethod(this, &CoverResponse::finished, Qt::QueuedConnection);
     }
 
   private:

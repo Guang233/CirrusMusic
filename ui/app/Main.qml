@@ -35,6 +35,13 @@ AppWindow {
         property: "variant"
         value: App.settings.variant
     }
+    // The playing song's cover: the "follow the cover" seed and the player's colors.
+    Binding {
+        target: Theme
+        property: "cover"
+        value: App.player.current.coverKey !== "" ? "image://cover/" + App.player.current.coverKey
+                                                  : ""
+    }
     Binding {
         target: Theme.motion
         property: "reduced"

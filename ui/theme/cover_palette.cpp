@@ -23,8 +23,6 @@ constexpr int kDominantColors = 5;
 
 CoverPalette extractCoverPalette(const QString& path)
 {
-    namespace mcu = material_color_utilities;
-
     QImageReader reader(path);
     reader.setAutoTransform(true);
     const QSize size = reader.size();
@@ -35,6 +33,15 @@ CoverPalette extractCoverPalette(const QString& path)
         qCWarning(lcPalette) << "cannot decode cover" << path << reader.errorString();
         return {};
     }
+    return extractCoverPalette(std::move(image));
+}
+
+CoverPalette extractCoverPalette(QImage image)
+{
+    namespace mcu = material_color_utilities;
+
+    if (image.isNull())
+        return {};
     if (image.width() > kDecodeEdge || image.height() > kDecodeEdge)
         image =
             image.scaled(kDecodeEdge, kDecodeEdge, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -71,6 +78,14 @@ CoverPalette extractCoverPalette(const QString& path)
               [](const auto& a, const auto& b) { return a.second > b.second; });
     for (std::size_t i = 0; i < byCount.size() && i < kDominantColors; ++i)
         palette.dominant << QColor::fromRgb(byCount[i].first);
+
+    // Smooth downscaling averages each cell's area.
+    const QImage grid = image.scaled(CoverPalette::kGridSize, CoverPalette::kGridSize,
+                                     Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    for (int y = 0; y < grid.height(); ++y) {
+        for (int x = 0; x < grid.width(); ++x)
+            palette.grid << QColor::fromRgb(grid.pixel(x, y) | 0xff000000u);
+    }
     return palette;
 }
 

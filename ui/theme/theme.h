@@ -7,9 +7,12 @@
 
 #include <QColor>
 #include <QObject>
+#include <QPointer>
 #include <QThreadPool>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
+
+class QQuickImageResponse;
 
 namespace cirrus::ui
 {
@@ -41,6 +44,7 @@ class Theme : public QObject
         SpecVersion specVersion READ specVersion WRITE setSpecVersion NOTIFY specVersionChanged)
     Q_PROPERTY(QColor systemAccent READ systemAccent NOTIFY systemAccentChanged)
     Q_PROPERTY(qreal contrast READ contrast WRITE setContrast NOTIFY contrastChanged)
+    // The current cover: a local file, a qrc path or image://<async provider>/<id>.
     Q_PROPERTY(QUrl cover READ cover WRITE setCover NOTIFY coverChanged)
     Q_PROPERTY(cirrus::ui::CoverPalette coverPalette READ coverPalette NOTIFY coverPaletteChanged)
     Q_PROPERTY(bool extracting READ extracting NOTIFY extractingChanged)
@@ -115,6 +119,8 @@ class Theme : public QObject
     // Full MD3 scheme for an arbitrary seed without touching the live theme,
     // e.g. the dark scheme the player derives from its cover. Keys are role names.
     Q_INVOKABLE QVariantMap schemeFor(const QColor& seed, bool dark) const;
+    // The same for C++ (PlayerPalette): roles in ColorScheme::Role order.
+    [[nodiscard]] ColorScheme::Colors computeColors(const QColor& seed, bool dark) const;
 
   signals:
     void modeChanged();
@@ -133,9 +139,9 @@ class Theme : public QObject
   private:
     void updateDark();
     void updateScheme(bool animate = true);
+    void requestProviderImage(quint64 generation, const QUrl& url);
     void applyPalette(quint64 generation, const CoverPalette& palette);
     [[nodiscard]] QColor resolveSeed() const;
-    [[nodiscard]] ColorScheme::Colors computeColors(const QColor& seed, bool dark) const;
 
     Mode m_mode = Mode::System;
     bool m_dark = false;
@@ -154,6 +160,7 @@ class Theme : public QObject
     Motion* m_motion;
     SystemAppearance* m_system;
     QThreadPool m_worker;
+    QPointer<QQuickImageResponse> m_response; // the pending image://… request
 };
 
 } // namespace cirrus::ui
