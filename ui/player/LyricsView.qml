@@ -13,7 +13,7 @@ Item {
     required property PlayerPalette colors
 
     readonly property int status: App.lyrics.status
-    readonly property real fontSize: Math.max(26, Math.min(40, width / 16))
+    readonly property real fontSize: Math.max(26, Math.min(56, width / 17))
 
     Text {
         anchors.left: parent.left

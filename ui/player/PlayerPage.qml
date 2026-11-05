@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Templates as T
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
@@ -44,16 +45,26 @@ FocusScope {
     property bool chromeHidden: false
     readonly property bool canHide: opened && App.settings.playerAutoHide > 0
                                     && App.player.status === Playback.Playing
-                                    && !(InputMode.keyboard && controlsFocused)
+                                    && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
-    // Keyboard focus is on one of the controls that hide.
+    // Someone is working the hiding controls with the keyboard: one of them has the
+    // focus, reached by keyboard (the play button focused on opening does not count).
     readonly property bool controlsFocused: {
-        for (let item = appWindow.activeFocusItem; item; item = item.parent) {
+        if (!InputMode.keyboard)
+            return false;
+        const focused = appWindow.activeFocusItem;
+        const control = focused as T.Control;
+        if (!focused || (control && !control.visualFocus))
+            return false;
+        for (let item = focused; item; item = item.parent) {
             if (item === hideable)
                 return true;
         }
         return false;
     }
+    // Where the pointer last was: Qt Quick re-sends hover events at the same place
+    // whenever the scene changes (lyrics scrolling), which must not count as movement.
+    property point lastPointer: Qt.point(-1, -1)
     readonly property bool overControls: progressHover.hovered || controlsHover.hovered
                                          || rowHover.hovered || topHover.hovered
 
@@ -188,21 +199,27 @@ FocusScope {
     // The bottom band of the bottom layout: progress over the controls.
     readonly property real bandTop: height - bottomRowHeight - progressHeight - 16
     readonly property real stackBottom: controlsAtBottom ? bandTop - 16 : contentBottom
-    readonly property real leftWidth: Math.min(520, width * 0.4)
+    // Two columns share a centered group that grows with the window, up to 1800; the
+    // cover column takes 45% of it.
+    readonly property real groupWidth: Math.min(width - 2 * sideMargin, 1800)
+    readonly property real groupX: (width - groupWidth) / 2
+    readonly property real leftWidth: groupWidth * 0.45
+    // The largest cover (also its decode size).
+    readonly property real maxCover: 720
 
     // Rects of the blocks for the current view and width.
     readonly property var layout: {
         const availH = stackBottom - contentTop;
         if (view === 0 || (wide && view > 0)) {
             const columnW = view === 0 ? width : leftWidth;
-            const columnX = view === 0 ? 0 : sideMargin / 2;
-            const size = Math.max(120, Math.min(view === 0 ? 560 : 480, height * (view === 0 ? 0.55
-                                                                                              : 0.52),
-                                                columnW - 2 * sideMargin, availH - stackExtra));
+            const columnX = view === 0 ? 0 : groupX;
+            const size = Math.max(120, Math.min(maxCover, height * (view === 0 ? 0.55 : 0.52),
+                                                columnW - (view === 0 ? 2 * sideMargin : sideMargin),
+                                                availH - stackExtra));
             const x = columnX + (columnW - size) / 2;
             const y = contentTop + Math.max(0, (availH - size - stackExtra) / 2);
             const below = y + size + 28;
-            const panelX = leftWidth + sideMargin / 2;
+            const panelX = groupX + leftWidth + sideMargin / 2;
             return {
                 cover: Qt.rect(x, y, size, size),
                 header: Qt.rect(x, below, size, headerHeight),
@@ -216,7 +233,7 @@ FocusScope {
                                     controlsHeight)
                           : Qt.rect(x, below + headerHeight + 16 + progressHeight + 8, size,
                                     controlsHeight),
-                panel: Qt.rect(panelX, contentTop, width - panelX - sideMargin,
+                panel: Qt.rect(panelX, contentTop, groupX + groupWidth - panelX,
                                stackBottom - contentTop)
             };
         }
@@ -322,7 +339,13 @@ FocusScope {
 
             // Pointer movement anywhere shows the controls again.
             HoverHandler {
-                onPointChanged: page.wake()
+                onPointChanged: {
+                    const at = point.scenePosition;
+                    if (Math.abs(at.x - page.lastPointer.x) + Math.abs(at.y - page.lastPointer.y) < 2)
+                        return;
+                    page.lastPointer = at;
+                    page.wake();
+                }
             }
             HoverHandler {
                 enabled: page.chromeHidden
@@ -385,6 +408,7 @@ FocusScope {
                         anchors.fill: parent
                         colors: colors
                         compact: !page.wide && page.view > 0
+                        titleSize: Math.max(22, Math.min(32, page.layout.cover.width / 20))
                         onCommentsRequested: page.commentsRequested()
                         onArtistRequested: key => page.artistRequested(key)
                         onAlbumRequested: key => page.albumRequested(key)

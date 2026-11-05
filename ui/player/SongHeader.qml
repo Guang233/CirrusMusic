@@ -13,6 +13,8 @@ Item {
     required property PlayerPalette colors
     // Smaller type in the narrow header row.
     property bool compact: false
+    // The title's size; the page grows it with the cover.
+    property real titleSize: 24
 
     signal commentsRequested
     signal artistRequested(string key)
@@ -37,7 +39,7 @@ Item {
             text: root.song.title
             elide: Text.ElideRight
             color: root.colors.content
-            font: Fonts.font(700, root.compact ? 17 : 24)
+            font: Fonts.font(700, root.compact ? 17 : root.titleSize)
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -47,7 +49,7 @@ Item {
                                                         : root.song.artistText
             elide: Text.ElideRight
             color: root.colors.contentVariant
-            font: Fonts.font(500, root.compact ? 14 : 18)
+            font: Fonts.font(500, root.compact ? 14 : root.titleSize * 0.75)
 
             HoverHandler {
                 id: artistHover

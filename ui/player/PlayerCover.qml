@@ -16,7 +16,7 @@ Item {
     // The drawn cover, scaled while paused: the shared element flies to its rect.
     readonly property Item art: drawn
     // The largest the cover gets, in device pixels.
-    readonly property int decodeSize: Math.ceil(560 * Screen.devicePixelRatio)
+    readonly property int decodeSize: Math.ceil(720 * Screen.devicePixelRatio)
     readonly property bool playing: App.player.status === Playback.Playing
                                     || App.player.status === Playback.Loading
 
