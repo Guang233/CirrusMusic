@@ -16,6 +16,7 @@ class AppSettings;
 class CacheStatus;
 class FakeControls;
 class Formatter;
+class CurrentLyrics;
 class Library;
 class NetworkStatus;
 class Player;
@@ -33,6 +34,7 @@ class App : public QObject
     Q_MOC_INCLUDE("cache_status.h")
     Q_MOC_INCLUDE("fake_controls.h")
     Q_MOC_INCLUDE("formatter.h")
+    Q_MOC_INCLUDE("lyrics.h")
     Q_MOC_INCLUDE("library.h")
     Q_MOC_INCLUDE("network_status.h")
     Q_MOC_INCLUDE("player.h")
@@ -43,6 +45,7 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::CacheStatus* cache READ cache CONSTANT)
     Q_PROPERTY(cirrus::ui::Formatter* format READ format CONSTANT)
     Q_PROPERTY(cirrus::ui::Library* library READ library CONSTANT)
+    Q_PROPERTY(cirrus::ui::CurrentLyrics* lyrics READ lyrics CONSTANT)
     Q_PROPERTY(cirrus::ui::NetworkStatus* network READ network CONSTANT)
     Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
     Q_PROPERTY(cirrus::ui::Session* session READ session CONSTANT)
@@ -65,6 +68,7 @@ class App : public QObject
     [[nodiscard]] CacheStatus* cache() const { return m_cache; }
     [[nodiscard]] Formatter* format() const { return m_format; }
     [[nodiscard]] Library* library() const { return m_library; }
+    [[nodiscard]] CurrentLyrics* lyrics() const { return m_lyrics; }
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
@@ -91,6 +95,7 @@ class App : public QObject
     Player* m_player;
     Session* m_session;
     Library* m_library;
+    CurrentLyrics* m_lyrics;
 };
 
 } // namespace cirrus::ui

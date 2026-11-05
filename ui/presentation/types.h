@@ -290,4 +290,38 @@ struct CacheUsage {
     qint64 limitBytes = 0;
 };
 
+// A timed piece of a lyric line: a word, a character or a syllable.
+struct TimedText {
+    qint64 startMs = 0;
+    qint64 endMs = 0;
+    QString text;
+};
+
+// Lyrics as the provider has them (docs/api/music-queries-and-lyrics.md §3): three
+// languages, each in a standard and an enhanced version, kept apart; CurrentLyrics
+// (App.lyrics) picks and aligns them. Times are on the song's clock.
+struct LyricLine {
+    qint64 startMs = -1; // -1 for plain text
+    qint64 endMs = -1;   // -1 when unknown (the last line)
+    QString text;
+    QList<TimedText> words; // with Words timing
+};
+struct LyricTrack {
+    enum Timing { PlainText, Lines, Words };
+    Timing timing = Lines;
+    QList<LyricLine> lines;
+    qint64 offsetMs = 0; // positive: shown later
+};
+struct LanguageLyrics {
+    std::optional<LyricTrack> standard; // lrc, tlyric, romalrc
+    std::optional<LyricTrack> enhanced; // yrc, ytlrc, yromalrc (not always Words)
+};
+struct SongLyrics {
+    LanguageLyrics original;
+    LanguageLyrics translation;
+    LanguageLyrics romanization;
+    bool noLyric = false;      // the provider says there are none
+    bool instrumental = false; // the provider says it is instrumental
+};
+
 } // namespace cirrus::ui

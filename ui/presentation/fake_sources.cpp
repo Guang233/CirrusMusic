@@ -2423,6 +2423,76 @@ class FakeCache : public QObject, public CacheSource
     qint64 m_bytes = 193'462'272; // 184.5 MiB
 };
 
+// Sample lyrics (ui/samples/lyrics/<song>.json) split into the provider's tracks:
+// line-timed original, translation and romanization, the original by word as the
+// enhanced version, and syllable-timed romaji where a line has it. "so-033" is
+// instrumental; songs without a file have none.
+class FakeLyrics : public QObject, public LyricsSource
+{
+  public:
+    explicit FakeLyrics(FakeControls* controls) : m_controls(controls) {}
+
+    Request lyrics(const QString& songKey, Reply<SongLyrics> reply) override
+    {
+        const QString id = songKey.section(u'~', 0, 0);
+        return replyLater<SongLyrics>(this, m_controls, std::move(reply),
+                                      [id]() { return Outcome<SongLyrics>{load(id)}; });
+    }
+
+  private:
+    static QList<TimedText> timed(const QJsonArray& array)
+    {
+        QList<TimedText> result;
+        for (const QJsonValue& value : array) {
+            const QJsonObject object = value.toObject();
+            result << TimedText{object["startMs"].toInteger(), object["endMs"].toInteger(),
+                                object["text"].toString()};
+        }
+        return result;
+    }
+
+    static SongLyrics load(const QString& id)
+    {
+        SongLyrics lyrics;
+        if (id == QLatin1String("so-033")) {
+            lyrics.instrumental = true;
+            return lyrics;
+        }
+        QFile file(kSamples + QStringLiteral("lyrics/") + id + QStringLiteral(".json"));
+        if (!file.open(QIODevice::ReadOnly)) {
+            lyrics.noLyric = true;
+            return lyrics;
+        }
+        LyricTrack original, words, translation, romanization, syllables;
+        original.timing = translation.timing = romanization.timing = LyricTrack::Lines;
+        words.timing = syllables.timing = LyricTrack::Words;
+        const QJsonArray lines = QJsonDocument::fromJson(file.readAll())["lines"].toArray();
+        for (const QJsonValue& value : lines) {
+            const QJsonObject object = value.toObject();
+            const qint64 start = object["startMs"].toInteger();
+            const qint64 end = object["endMs"].toInteger();
+            const QString text = object["text"].toString();
+            original.lines << LyricLine{start, end, text, {}};
+            translation.lines << LyricLine{start, end, object["translation"].toString(), {}};
+            romanization.lines << LyricLine{start, end, object["romanization"].toString(), {}};
+            if (!text.isEmpty())
+                words.lines << LyricLine{start, end, text, timed(object["words"].toArray())};
+            if (object.contains("romanizationWords"))
+                syllables.lines << LyricLine{start, end, object["romanization"].toString(),
+                                             timed(object["romanizationWords"].toArray())};
+        }
+        lyrics.original.standard = original;
+        lyrics.original.enhanced = words;
+        lyrics.translation.standard = translation;
+        lyrics.romanization.standard = romanization;
+        if (!syllables.lines.isEmpty())
+            lyrics.romanization.enhanced = syllables;
+        return lyrics;
+    }
+
+    FakeControls* m_controls;
+};
+
 Sources makeFakeSources()
 {
     Sources sources;
@@ -2436,6 +2506,7 @@ Sources makeFakeSources()
     sources.library = std::make_unique<FakeLibrary>(sources.fakeControls.get(), samples, account);
     sources.comments = std::make_unique<FakeComments>(sources.fakeControls.get(), samples, account);
     sources.cache = std::make_unique<FakeCache>(sources.fakeControls.get());
+    sources.lyrics = std::make_unique<FakeLyrics>(sources.fakeControls.get());
     return sources;
 }
 

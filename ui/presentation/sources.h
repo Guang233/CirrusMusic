@@ -177,6 +177,14 @@ class CacheSource
     virtual Request clear(Reply<bool> reply) = 0;
 };
 
+// A song's lyrics, all languages and versions.
+class LyricsSource
+{
+  public:
+    virtual ~LyricsSource() = default;
+    virtual Request lyrics(const QString& songKey, Reply<SongLyrics> reply) = 0;
+};
+
 // Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.
 class SessionSource
 {
@@ -248,6 +256,7 @@ struct Sources {
     std::unique_ptr<LibrarySource> library;
     std::unique_ptr<CommentSource> comments;
     std::unique_ptr<CacheSource> cache;
+    std::unique_ptr<LyricsSource> lyrics;
 };
 
 } // namespace cirrus::ui

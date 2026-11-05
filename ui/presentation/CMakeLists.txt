@@ -69,6 +69,10 @@ qt_add_qml_module(cirrus_presentation
         session.cpp
         library.h
         library.cpp
+        lyrics.h
+        lyrics.cpp
+        ruby.h
+        ruby.cpp
         song_detail_loader.h
         song_detail_loader.cpp
         qr_provider.h

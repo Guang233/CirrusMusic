@@ -6,6 +6,7 @@
 #include "fake_controls.h"
 #include "formatter.h"
 #include "library.h"
+#include "lyrics.h"
 #include "network_status.h"
 #include "player.h"
 #include "qr_provider.h"
@@ -34,7 +35,8 @@ App::App(Sources sources)
       m_cache(new CacheStatus(m_sources.cache.get(), this)), m_format(new Formatter(this)),
       m_network(new NetworkStatus(this)), m_player(new Player(m_sources.playback.get(), this)),
       m_session(new Session(m_sources.session.get(), this)),
-      m_library(new Library(m_sources.library.get(), m_session, this))
+      m_library(new Library(m_sources.library.get(), m_session, this)),
+      m_lyrics(new CurrentLyrics(m_sources.lyrics.get(), m_player, this))
 {
     if (m_sources.fakeControls)
         m_sources.fakeControls->attach(m_network);

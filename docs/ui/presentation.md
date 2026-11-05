@@ -140,8 +140,9 @@ engine.loadFromModule("CirrusMusic", "Main");
 - `status`：`None`／`Loading`／`Ready`／`Failed`／`NoLyrics`／`Instrumental`（纯音乐只在后端明确标记时出现）。
 - `timing`：`PlainText`／`Lines`／`Words`。逐字时间不可用时自动退回逐行。
 - `lines`（列表模型）：每行有 `startMs`、`endMs`、`text`、`translation`、`romanization`、`words`（`[{startMs, durationMs, text}]`）。原文为主轨，有增强版（逐字）时优先用增强版；翻译、音译按时间对齐到原文行，对齐规则在阶段 4 用示例歌词确定，写进 [pages/player.md](pages/player.md) §5.6。
-- `activeLines`：当前行（可能有多行重叠），来自后端的歌词游标。行内的逐字进度由 QML 用 `PlaybackClock` 计算。
-- `hasTranslation`、`hasRomanization`、`offsetMs`、`setOffset(ms)`。是否显示翻译、音译属于用户设置（`App.settings`）。
+- `positionMs`：QML 把 `PlaybackClock` 的平滑位置逐帧写进来；`current`（最后一个已开始的行，间奏期间保持，开头前为 -1）与 `activeLines`（正在唱的行，可能多行重叠，间奏期间为空）只在跨行时变化。不依赖后端的歌词游标，行内的逐字进度由 QML 计算。
+- `hasTranslation`、`hasRomanization`、`japanese`（出现假名）、`hasRuby`（至少一行对齐成注音）、`offsetMs`、`setOffset(ms)`（本次运行内按歌曲记住，不存盘）、`retry()`。是否显示翻译、音译属于用户设置（`App.settings`）。
+- 数据源 `LyricsSource::lyrics(songKey)` 交出 `SongLyrics`：三种语言各有 standard、enhanced 两轨，原样保留（`types.h`）；选轨、对齐、注音都在 `CurrentLyrics` 里做（[pages/player.md](pages/player.md) §5.6、§6.3）。
 
 **`App.library`：喜欢与收藏状态**
 
@@ -318,8 +319,9 @@ public:
 | `App.player`（`Player`） | §5.1 的成员，枚举在 QML 中为 `Playback.Playing`、`Playback.Shuffle`、`Playback.RepeatOne`；`current` 是 `songItem` 值类型（与 `SongListModel` 角色同名）；`now()` 给出 `positionAt` 所用的单调时钟（毫秒） |
 | `PlaybackClock`（`Cirrus.Components`） | `positionMs` 逐帧外推，只在播放中且 `active` 时运行 |
 | `SongListModel.current` | 跟随 `App.player.current`，只更新受影响的行 |
+| `App.lyrics`（`CurrentLyrics`，`lyrics.h`） | 跟随 `App.player.current` 取歌词；行模型 `LyricLinesModel` 的角色：`startMs`、`endMs`、`text`、`translation`、`romanization`、`words`（`[{startMs, endMs, text, from, to}]`）、`ruby`（`[{text, ruby, from, to}]`）、`gapMs`；空行不进模型，只标出前一行的结束。枚举在 QML 中为 `Lyrics.Ready`、`Lyrics.Words` 等。注音对齐在 `ruby.h`。`FakeLyrics` 读 `ui/samples/lyrics/`，`so-033` 为纯音乐，其余没有文件的歌曲为"暂无歌词"，失败由 `App.debug` 注入 |
 | `FakePlayback` | 加载耗时取 `App.debug.delayMs`；歌曲自然结束后按顺序／随机、循环（关、列表、单曲）继续；列表放完进入 `Ended`；`so-012` 与离线时进入 `Failed`；时长未知的 `so-008` 按 200 秒模拟且不能拖动。示例目录的 `playable: false` 现在映射为 `unavailable` |
 
-尚未实现：`App.session`、`App.queue`、`App.lyrics`、`App.library`，`CollectionListModel` 与其他页面模型（随第 4 步的页面加），大歌单按需批量取详情，账号变化处理（§4.2）。
+尚未实现：`App.session`、`App.queue`、`App.library`，`CollectionListModel` 与其他页面模型（随第 4 步的页面加），大歌单按需批量取详情，账号变化处理（§4.2）。
 
 验证：用临时检查程序（未提交）在离屏下跑通 13 项状态转换（加载、空、拒绝、网络失败与重试、刷新失败保留内容、离线与恢复后自动重试、未登录、部分数据、新请求取代旧请求、空 key 回到 Idle），以及时长、数量格式化。
