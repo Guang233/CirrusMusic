@@ -13,6 +13,7 @@ qt_add_qml_module(cirrus_ui_samples
         catalog.json
         lyrics/so-001.json
         lyrics/so-005.json
+        lyrics/so-031.json
         covers/sunset.jpg
         covers/ocean.jpg
         covers/forest.jpg

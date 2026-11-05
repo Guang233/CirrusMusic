@@ -1,0 +1,721 @@
+{
+  "songId": "so-031",
+  "note": "Invented sample lyrics; word timings are synthesized.",
+  "lines": [
+    {
+      "startMs": 0,
+      "endMs": 10000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 10000,
+      "endMs": 15500,
+      "text": "夜空に星屑が降る",
+      "translation": "星屑从夜空落下",
+      "romanization": "yozora ni hoshikuzu ga furu",
+      "words": [
+        {
+          "startMs": 10000,
+          "endMs": 10584,
+          "text": "夜"
+        },
+        {
+          "startMs": 10584,
+          "endMs": 11169,
+          "text": "空"
+        },
+        {
+          "startMs": 11169,
+          "endMs": 11753,
+          "text": "に"
+        },
+        {
+          "startMs": 11753,
+          "endMs": 12338,
+          "text": "星"
+        },
+        {
+          "startMs": 12338,
+          "endMs": 12922,
+          "text": "屑"
+        },
+        {
+          "startMs": 12922,
+          "endMs": 13506,
+          "text": "が"
+        },
+        {
+          "startMs": 13506,
+          "endMs": 14091,
+          "text": "降"
+        },
+        {
+          "startMs": 14091,
+          "endMs": 14675,
+          "text": "る"
+        }
+      ],
+      "romanizationWords": [
+        {
+          "startMs": 10000,
+          "endMs": 10584,
+          "text": "yo"
+        },
+        {
+          "startMs": 10584,
+          "endMs": 11169,
+          "text": "zora"
+        },
+        {
+          "startMs": 11169,
+          "endMs": 11753,
+          "text": "ni"
+        },
+        {
+          "startMs": 11753,
+          "endMs": 12338,
+          "text": "hoshi"
+        },
+        {
+          "startMs": 12338,
+          "endMs": 12922,
+          "text": "kuzu"
+        },
+        {
+          "startMs": 12922,
+          "endMs": 13506,
+          "text": "ga"
+        },
+        {
+          "startMs": 13506,
+          "endMs": 14091,
+          "text": "fu"
+        },
+        {
+          "startMs": 14091,
+          "endMs": 14675,
+          "text": "ru"
+        }
+      ]
+    },
+    {
+      "startMs": 15500,
+      "endMs": 21000,
+      "text": "君は今日も遠くを見てる",
+      "translation": "你今天也望着远方",
+      "romanization": "kimi wa kyou mo tooku wo miteru",
+      "words": [
+        {
+          "startMs": 15500,
+          "endMs": 15925,
+          "text": "君"
+        },
+        {
+          "startMs": 15925,
+          "endMs": 16350,
+          "text": "は"
+        },
+        {
+          "startMs": 16350,
+          "endMs": 16775,
+          "text": "今"
+        },
+        {
+          "startMs": 16775,
+          "endMs": 17200,
+          "text": "日"
+        },
+        {
+          "startMs": 17200,
+          "endMs": 17625,
+          "text": "も"
+        },
+        {
+          "startMs": 17625,
+          "endMs": 18050,
+          "text": "遠"
+        },
+        {
+          "startMs": 18050,
+          "endMs": 18475,
+          "text": "く"
+        },
+        {
+          "startMs": 18475,
+          "endMs": 18900,
+          "text": "を"
+        },
+        {
+          "startMs": 18900,
+          "endMs": 19325,
+          "text": "見"
+        },
+        {
+          "startMs": 19325,
+          "endMs": 19750,
+          "text": "て"
+        },
+        {
+          "startMs": 19750,
+          "endMs": 20175,
+          "text": "る"
+        }
+      ]
+    },
+    {
+      "startMs": 21000,
+      "endMs": 27000,
+      "text": "ちょっと待って もう一回",
+      "translation": "等一下 再来一次",
+      "romanization": "chotto matte mou ikkai",
+      "words": [
+        {
+          "startMs": 21000,
+          "endMs": 21464,
+          "text": "ち"
+        },
+        {
+          "startMs": 21464,
+          "endMs": 21927,
+          "text": "ょ"
+        },
+        {
+          "startMs": 21927,
+          "endMs": 22391,
+          "text": "っ"
+        },
+        {
+          "startMs": 22391,
+          "endMs": 22855,
+          "text": "と"
+        },
+        {
+          "startMs": 22855,
+          "endMs": 23318,
+          "text": "待"
+        },
+        {
+          "startMs": 23318,
+          "endMs": 23782,
+          "text": "っ"
+        },
+        {
+          "startMs": 23782,
+          "endMs": 24245,
+          "text": "て"
+        },
+        {
+          "startMs": 24245,
+          "endMs": 24709,
+          "text": "も"
+        },
+        {
+          "startMs": 24709,
+          "endMs": 25173,
+          "text": "う"
+        },
+        {
+          "startMs": 25173,
+          "endMs": 25636,
+          "text": "一"
+        },
+        {
+          "startMs": 25636,
+          "endMs": 26100,
+          "text": "回"
+        }
+      ]
+    },
+    {
+      "startMs": 27000,
+      "endMs": 33000,
+      "text": "運命(さだめ)なんて信じない",
+      "translation": "我才不相信什么命运",
+      "romanization": "sadame nante shinjinai",
+      "words": [
+        {
+          "startMs": 27000,
+          "endMs": 27364,
+          "text": "運"
+        },
+        {
+          "startMs": 27364,
+          "endMs": 27729,
+          "text": "命"
+        },
+        {
+          "startMs": 27729,
+          "endMs": 28093,
+          "text": "("
+        },
+        {
+          "startMs": 28093,
+          "endMs": 28457,
+          "text": "さ"
+        },
+        {
+          "startMs": 28457,
+          "endMs": 28821,
+          "text": "だ"
+        },
+        {
+          "startMs": 28821,
+          "endMs": 29186,
+          "text": "め"
+        },
+        {
+          "startMs": 29186,
+          "endMs": 29550,
+          "text": ")"
+        },
+        {
+          "startMs": 29550,
+          "endMs": 29914,
+          "text": "な"
+        },
+        {
+          "startMs": 29914,
+          "endMs": 30279,
+          "text": "ん"
+        },
+        {
+          "startMs": 30279,
+          "endMs": 30643,
+          "text": "て"
+        },
+        {
+          "startMs": 30643,
+          "endMs": 31007,
+          "text": "信"
+        },
+        {
+          "startMs": 31007,
+          "endMs": 31371,
+          "text": "じ"
+        },
+        {
+          "startMs": 31371,
+          "endMs": 31736,
+          "text": "な"
+        },
+        {
+          "startMs": 31736,
+          "endMs": 32100,
+          "text": "い"
+        }
+      ]
+    },
+    {
+      "startMs": 33000,
+      "endMs": 39000,
+      "text": "(oh yeah) 光のスピードで",
+      "translation": "（oh yeah）以光的速度",
+      "romanization": "oh yeah hikari no supiido de",
+      "words": [
+        {
+          "startMs": 33000,
+          "endMs": 33340,
+          "text": "("
+        },
+        {
+          "startMs": 33340,
+          "endMs": 33680,
+          "text": "o"
+        },
+        {
+          "startMs": 33680,
+          "endMs": 34020,
+          "text": "h"
+        },
+        {
+          "startMs": 34020,
+          "endMs": 34360,
+          "text": "y"
+        },
+        {
+          "startMs": 34360,
+          "endMs": 34700,
+          "text": "e"
+        },
+        {
+          "startMs": 34700,
+          "endMs": 35040,
+          "text": "a"
+        },
+        {
+          "startMs": 35040,
+          "endMs": 35380,
+          "text": "h"
+        },
+        {
+          "startMs": 35380,
+          "endMs": 35720,
+          "text": ")"
+        },
+        {
+          "startMs": 35720,
+          "endMs": 36060,
+          "text": "光"
+        },
+        {
+          "startMs": 36060,
+          "endMs": 36400,
+          "text": "の"
+        },
+        {
+          "startMs": 36400,
+          "endMs": 36740,
+          "text": "ス"
+        },
+        {
+          "startMs": 36740,
+          "endMs": 37080,
+          "text": "ピ"
+        },
+        {
+          "startMs": 37080,
+          "endMs": 37420,
+          "text": "ー"
+        },
+        {
+          "startMs": 37420,
+          "endMs": 37760,
+          "text": "ド"
+        },
+        {
+          "startMs": 37760,
+          "endMs": 38100,
+          "text": "で"
+        }
+      ]
+    },
+    {
+      "startMs": 39000,
+      "endMs": 46000,
+      "text": "",
+      "translation": null,
+      "romanization": null,
+      "words": []
+    },
+    {
+      "startMs": 46000,
+      "endMs": 51500,
+      "text": "本気(マジ)で好きだよ",
+      "translation": "是真的喜欢你啊",
+      "romanization": "maji de suki da yo",
+      "words": [
+        {
+          "startMs": 46000,
+          "endMs": 46425,
+          "text": "本"
+        },
+        {
+          "startMs": 46425,
+          "endMs": 46850,
+          "text": "気"
+        },
+        {
+          "startMs": 46850,
+          "endMs": 47275,
+          "text": "("
+        },
+        {
+          "startMs": 47275,
+          "endMs": 47700,
+          "text": "マ"
+        },
+        {
+          "startMs": 47700,
+          "endMs": 48125,
+          "text": "ジ"
+        },
+        {
+          "startMs": 48125,
+          "endMs": 48550,
+          "text": ")"
+        },
+        {
+          "startMs": 48550,
+          "endMs": 48975,
+          "text": "で"
+        },
+        {
+          "startMs": 48975,
+          "endMs": 49400,
+          "text": "好"
+        },
+        {
+          "startMs": 49400,
+          "endMs": 49825,
+          "text": "き"
+        },
+        {
+          "startMs": 49825,
+          "endMs": 50250,
+          "text": "だ"
+        },
+        {
+          "startMs": 50250,
+          "endMs": 50675,
+          "text": "よ"
+        }
+      ]
+    },
+    {
+      "startMs": 51500,
+      "endMs": 57000,
+      "text": "星屑のメロディー",
+      "translation": "星屑的旋律",
+      "romanization": "hoshikuzu no merodii",
+      "words": [
+        {
+          "startMs": 51500,
+          "endMs": 52084,
+          "text": "星"
+        },
+        {
+          "startMs": 52084,
+          "endMs": 52669,
+          "text": "屑"
+        },
+        {
+          "startMs": 52669,
+          "endMs": 53253,
+          "text": "の"
+        },
+        {
+          "startMs": 53253,
+          "endMs": 53838,
+          "text": "メ"
+        },
+        {
+          "startMs": 53838,
+          "endMs": 54422,
+          "text": "ロ"
+        },
+        {
+          "startMs": 54422,
+          "endMs": 55006,
+          "text": "デ"
+        },
+        {
+          "startMs": 55006,
+          "endMs": 55591,
+          "text": "ィ"
+        },
+        {
+          "startMs": 55591,
+          "endMs": 56175,
+          "text": "ー"
+        }
+      ],
+      "romanizationWords": [
+        {
+          "startMs": 51500,
+          "endMs": 52084,
+          "text": "hoshi"
+        },
+        {
+          "startMs": 52084,
+          "endMs": 52669,
+          "text": "kuzu"
+        },
+        {
+          "startMs": 52669,
+          "endMs": 53253,
+          "text": "no"
+        },
+        {
+          "startMs": 53253,
+          "endMs": 53838,
+          "text": "me"
+        },
+        {
+          "startMs": 53838,
+          "endMs": 54422,
+          "text": "ro"
+        },
+        {
+          "startMs": 54422,
+          "endMs": 55591,
+          "text": "di"
+        },
+        {
+          "startMs": 55591,
+          "endMs": 56175,
+          "text": "i"
+        }
+      ]
+    },
+    {
+      "startMs": 57000,
+      "endMs": 64000,
+      "text": "ずっとずっと歌っていたい",
+      "translation": "想一直一直唱下去",
+      "romanization": "zutto zutto utatte itai",
+      "words": [
+        {
+          "startMs": 57000,
+          "endMs": 57325,
+          "text": "ず"
+        },
+        {
+          "startMs": 57325,
+          "endMs": 57649,
+          "text": "っ"
+        },
+        {
+          "startMs": 57649,
+          "endMs": 57974,
+          "text": "と"
+        },
+        {
+          "startMs": 57974,
+          "endMs": 58298,
+          "text": "ず"
+        },
+        {
+          "startMs": 58298,
+          "endMs": 58623,
+          "text": "っ"
+        },
+        {
+          "startMs": 58623,
+          "endMs": 58947,
+          "text": "と"
+        },
+        {
+          "startMs": 58947,
+          "endMs": 59272,
+          "text": "歌"
+        },
+        {
+          "startMs": 59272,
+          "endMs": 59596,
+          "text": "っ"
+        },
+        {
+          "startMs": 59596,
+          "endMs": 59921,
+          "text": "て"
+        },
+        {
+          "startMs": 59921,
+          "endMs": 60245,
+          "text": "い"
+        },
+        {
+          "startMs": 60245,
+          "endMs": 60570,
+          "text": "た"
+        },
+        {
+          "startMs": 60570,
+          "endMs": 62950,
+          "text": "い"
+        }
+      ]
+    },
+    {
+      "startMs": 64000,
+      "endMs": 69000,
+      "text": "東京へ行こう",
+      "translation": "去东京吧",
+      "romanization": "toukyou e ikou",
+      "words": [
+        {
+          "startMs": 64000,
+          "endMs": 64708,
+          "text": "東"
+        },
+        {
+          "startMs": 64708,
+          "endMs": 65417,
+          "text": "京"
+        },
+        {
+          "startMs": 65417,
+          "endMs": 66125,
+          "text": "へ"
+        },
+        {
+          "startMs": 66125,
+          "endMs": 66833,
+          "text": "行"
+        },
+        {
+          "startMs": 66833,
+          "endMs": 67542,
+          "text": "こ"
+        },
+        {
+          "startMs": 67542,
+          "endMs": 68250,
+          "text": "う"
+        }
+      ]
+    },
+    {
+      "startMs": 69000,
+      "endMs": 77000,
+      "text": "さよならは言わないで",
+      "translation": "请不要说再见",
+      "romanization": "sayonara wa iwanai",
+      "words": [
+        {
+          "startMs": 69000,
+          "endMs": 69680,
+          "text": "さ"
+        },
+        {
+          "startMs": 69680,
+          "endMs": 70360,
+          "text": "よ"
+        },
+        {
+          "startMs": 70360,
+          "endMs": 71040,
+          "text": "な"
+        },
+        {
+          "startMs": 71040,
+          "endMs": 71720,
+          "text": "ら"
+        },
+        {
+          "startMs": 71720,
+          "endMs": 72400,
+          "text": "は"
+        },
+        {
+          "startMs": 72400,
+          "endMs": 73080,
+          "text": "言"
+        },
+        {
+          "startMs": 73080,
+          "endMs": 73760,
+          "text": "わ"
+        },
+        {
+          "startMs": 73760,
+          "endMs": 74440,
+          "text": "な"
+        },
+        {
+          "startMs": 74440,
+          "endMs": 75120,
+          "text": "い"
+        },
+        {
+          "startMs": 75120,
+          "endMs": 75800,
+          "text": "で"
+        }
+      ]
+    }
+  ]
+}

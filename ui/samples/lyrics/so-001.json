@@ -1,6 +1,6 @@
 {
   "songId": "so-001",
-  "note": "Invented sample lyrics; word timings are synthesized evenly.",
+  "note": "Invented sample lyrics; word timings are synthesized.",
   "lines": [
     {
       "startMs": 0,
@@ -24,41 +24,41 @@
         },
         {
           "startMs": 12519,
-          "endMs": 13038,
+          "endMs": 13039,
           "text": "落"
         },
         {
-          "startMs": 13038,
+          "startMs": 13039,
           "endMs": 13558,
           "text": "日"
         },
         {
           "startMs": 13558,
-          "endMs": 14077,
+          "endMs": 14078,
           "text": "折"
         },
         {
-          "startMs": 14077,
+          "startMs": 14078,
           "endMs": 14597,
           "text": "成"
         },
         {
           "startMs": 14597,
-          "endMs": 15116,
+          "endMs": 15117,
           "text": "一"
         },
         {
-          "startMs": 15116,
+          "startMs": 15117,
           "endMs": 15636,
           "text": "张"
         },
         {
           "startMs": 15636,
-          "endMs": 16155,
+          "endMs": 16156,
           "text": "船"
         },
         {
-          "startMs": 16155,
+          "startMs": 16156,
           "endMs": 16675,
           "text": "票"
         }
@@ -78,36 +78,36 @@
         },
         {
           "startMs": 18084,
-          "endMs": 18668,
+          "endMs": 18669,
           "text": "进"
         },
         {
-          "startMs": 18668,
+          "startMs": 18669,
           "endMs": 19253,
           "text": "你"
         },
         {
           "startMs": 19253,
-          "endMs": 19837,
+          "endMs": 19838,
           "text": "外"
         },
         {
-          "startMs": 19837,
-          "endMs": 20421,
+          "startMs": 19838,
+          "endMs": 20422,
           "text": "套"
         },
         {
-          "startMs": 20421,
+          "startMs": 20422,
           "endMs": 21006,
           "text": "的"
         },
         {
           "startMs": 21006,
-          "endMs": 21590,
+          "endMs": 21591,
           "text": "口"
         },
         {
-          "startMs": 21590,
+          "startMs": 21591,
           "endMs": 22175,
           "text": "袋"
         }
@@ -127,21 +127,21 @@
         },
         {
           "startMs": 23460,
-          "endMs": 23920,
+          "endMs": 23921,
           "text": "面"
         },
         {
-          "startMs": 23920,
+          "startMs": 23921,
           "endMs": 24381,
           "text": "上"
         },
         {
           "startMs": 24381,
-          "endMs": 24841,
+          "endMs": 24842,
           "text": "的"
         },
         {
-          "startMs": 24841,
+          "startMs": 24842,
           "endMs": 25302,
           "text": "灯"
         },
@@ -152,31 +152,31 @@
         },
         {
           "startMs": 25762,
-          "endMs": 26222,
+          "endMs": 26223,
           "text": "盏"
         },
         {
-          "startMs": 26222,
+          "startMs": 26223,
           "endMs": 26683,
           "text": "一"
         },
         {
           "startMs": 26683,
-          "endMs": 27143,
+          "endMs": 27144,
           "text": "盏"
         },
         {
-          "startMs": 27143,
+          "startMs": 27144,
           "endMs": 27604,
           "text": "亮"
         },
         {
           "startMs": 27604,
-          "endMs": 28064,
+          "endMs": 28065,
           "text": "起"
         },
         {
-          "startMs": 28064,
+          "startMs": 28065,
           "endMs": 28525,
           "text": "来"
         }
@@ -196,36 +196,36 @@
         },
         {
           "startMs": 29990,
-          "endMs": 30480,
+          "endMs": 30481,
           "text": "是"
         },
         {
-          "startMs": 30480,
+          "startMs": 30481,
           "endMs": 30971,
           "text": "有"
         },
         {
           "startMs": 30971,
-          "endMs": 31461,
+          "endMs": 31462,
           "text": "人"
         },
         {
-          "startMs": 31461,
-          "endMs": 31951,
+          "startMs": 31462,
+          "endMs": 31952,
           "text": "在"
         },
         {
-          "startMs": 31951,
+          "startMs": 31952,
           "endMs": 32442,
           "text": "远"
         },
         {
           "startMs": 32442,
-          "endMs": 32932,
+          "endMs": 32933,
           "text": "方"
         },
         {
-          "startMs": 32932,
+          "startMs": 32933,
           "endMs": 33423,
           "text": "替"
         },
@@ -236,21 +236,21 @@
         },
         {
           "startMs": 33913,
-          "endMs": 34403,
+          "endMs": 34404,
           "text": "们"
         },
         {
-          "startMs": 34403,
+          "startMs": 34404,
           "endMs": 34894,
           "text": "说"
         },
         {
           "startMs": 34894,
-          "endMs": 35384,
+          "endMs": 35385,
           "text": "晚"
         },
         {
-          "startMs": 35384,
+          "startMs": 35385,
           "endMs": 35875,
           "text": "安"
         }
@@ -283,11 +283,11 @@
         },
         {
           "startMs": 45062,
-          "endMs": 45593,
+          "endMs": 45594,
           "text": "航"
         },
         {
-          "startMs": 45593,
+          "startMs": 45594,
           "endMs": 46125,
           "text": "线"
         },
@@ -298,16 +298,16 @@
         },
         {
           "startMs": 46656,
-          "endMs": 47187,
+          "endMs": 47188,
           "text": "有"
         },
         {
-          "startMs": 47187,
-          "endMs": 47718,
+          "startMs": 47188,
+          "endMs": 47719,
           "text": "终"
         },
         {
-          "startMs": 47718,
+          "startMs": 47719,
           "endMs": 48250,
           "text": "点"
         }
@@ -322,11 +322,11 @@
       "words": [
         {
           "startMs": 49000,
-          "endMs": 49637,
+          "endMs": 49638,
           "text": "只"
         },
         {
-          "startMs": 49637,
+          "startMs": 49638,
           "endMs": 50275,
           "text": "有"
         },
@@ -342,11 +342,11 @@
         },
         {
           "startMs": 51550,
-          "endMs": 52187,
+          "endMs": 52188,
           "text": "耳"
         },
         {
-          "startMs": 52187,
+          "startMs": 52188,
           "endMs": 52825,
           "text": "边"
         }
@@ -376,21 +376,21 @@
         },
         {
           "startMs": 55321,
-          "endMs": 55928,
+          "endMs": 55929,
           "text": "线"
         },
         {
-          "startMs": 55928,
-          "endMs": 56535,
+          "startMs": 55929,
+          "endMs": 56536,
           "text": "慢"
         },
         {
-          "startMs": 56535,
-          "endMs": 57142,
+          "startMs": 56536,
+          "endMs": 57143,
           "text": "一"
         },
         {
-          "startMs": 57142,
+          "startMs": 57143,
           "endMs": 57750,
           "text": "点"
         }
@@ -405,26 +405,26 @@
       "words": [
         {
           "startMs": 58500,
-          "endMs": 59113,
+          "endMs": 59114,
           "text": "让"
         },
         {
-          "startMs": 59113,
-          "endMs": 59727,
+          "startMs": 59114,
+          "endMs": 59728,
           "text": "这"
         },
         {
-          "startMs": 59727,
-          "endMs": 60341,
+          "startMs": 59728,
+          "endMs": 60342,
           "text": "一"
         },
         {
-          "startMs": 60341,
-          "endMs": 60955,
+          "startMs": 60342,
+          "endMs": 60956,
           "text": "刻"
         },
         {
-          "startMs": 60955,
+          "startMs": 60956,
           "endMs": 61569,
           "text": "再"
         },
@@ -459,21 +459,21 @@
       "words": [
         {
           "startMs": 65000,
-          "endMs": 65180,
+          "endMs": 65181,
           "text": "这"
         },
         {
-          "startMs": 65180,
-          "endMs": 65361,
+          "startMs": 65181,
+          "endMs": 65362,
           "text": "是"
         },
         {
-          "startMs": 65361,
-          "endMs": 65542,
+          "startMs": 65362,
+          "endMs": 65543,
           "text": "一"
         },
         {
-          "startMs": 65542,
+          "startMs": 65543,
           "endMs": 65723,
           "text": "句"
         },
@@ -489,26 +489,26 @@
         },
         {
           "startMs": 66085,
-          "endMs": 66265,
+          "endMs": 66266,
           "text": "写"
         },
         {
-          "startMs": 66265,
-          "endMs": 66446,
+          "startMs": 66266,
+          "endMs": 66447,
           "text": "得"
         },
         {
-          "startMs": 66446,
-          "endMs": 66627,
+          "startMs": 66447,
+          "endMs": 66628,
           "text": "很"
         },
         {
-          "startMs": 66627,
-          "endMs": 66808,
+          "startMs": 66628,
+          "endMs": 66809,
           "text": "长"
         },
         {
-          "startMs": 66808,
+          "startMs": 66809,
           "endMs": 66989,
           "text": "很"
         },
@@ -524,21 +524,21 @@
         },
         {
           "startMs": 67351,
-          "endMs": 67531,
+          "endMs": 67532,
           "text": "歌"
         },
         {
-          "startMs": 67531,
-          "endMs": 67712,
+          "startMs": 67532,
+          "endMs": 67713,
           "text": "词"
         },
         {
-          "startMs": 67712,
-          "endMs": 67893,
+          "startMs": 67713,
+          "endMs": 67894,
           "text": "，"
         },
         {
-          "startMs": 67893,
+          "startMs": 67894,
           "endMs": 68074,
           "text": "用"
         },
@@ -559,21 +559,21 @@
         },
         {
           "startMs": 68617,
-          "endMs": 68797,
+          "endMs": 68798,
           "text": "歌"
         },
         {
-          "startMs": 68797,
-          "endMs": 68978,
+          "startMs": 68798,
+          "endMs": 68979,
           "text": "词"
         },
         {
-          "startMs": 68978,
-          "endMs": 69159,
+          "startMs": 68979,
+          "endMs": 69160,
           "text": "视"
         },
         {
-          "startMs": 69159,
+          "startMs": 69160,
           "endMs": 69340,
           "text": "图"
         },
@@ -589,26 +589,26 @@
         },
         {
           "startMs": 69702,
-          "endMs": 69882,
+          "endMs": 69883,
           "text": "窗"
         },
         {
-          "startMs": 69882,
-          "endMs": 70063,
+          "startMs": 69883,
+          "endMs": 70064,
           "text": "口"
         },
         {
-          "startMs": 70063,
-          "endMs": 70244,
+          "startMs": 70064,
+          "endMs": 70245,
           "text": "下"
         },
         {
-          "startMs": 70244,
-          "endMs": 70425,
+          "startMs": 70245,
+          "endMs": 70426,
           "text": "的"
         },
         {
-          "startMs": 70425,
+          "startMs": 70426,
           "endMs": 70606,
           "text": "自"
         },
@@ -624,21 +624,21 @@
         },
         {
           "startMs": 70968,
-          "endMs": 71148,
+          "endMs": 71149,
           "text": "行"
         },
         {
-          "startMs": 71148,
-          "endMs": 71329,
+          "startMs": 71149,
+          "endMs": 71330,
           "text": "、"
         },
         {
-          "startMs": 71329,
-          "endMs": 71510,
+          "startMs": 71330,
+          "endMs": 71511,
           "text": "行"
         },
         {
-          "startMs": 71510,
+          "startMs": 71511,
           "endMs": 71691,
           "text": "间"
         },
@@ -659,21 +659,21 @@
         },
         {
           "startMs": 72234,
-          "endMs": 72414,
+          "endMs": 72415,
           "text": "字"
         },
         {
-          "startMs": 72414,
-          "endMs": 72595,
+          "startMs": 72415,
+          "endMs": 72596,
           "text": "高"
         },
         {
-          "startMs": 72595,
-          "endMs": 72776,
+          "startMs": 72596,
+          "endMs": 72777,
           "text": "亮"
         },
         {
-          "startMs": 72776,
+          "startMs": 72777,
           "endMs": 72957,
           "text": "是"
         },

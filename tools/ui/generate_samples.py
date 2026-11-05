@@ -240,6 +240,35 @@ LYRIC_LINES = {
         (49000, "Tidal memory, never alone", "潮汐的记忆，从不孤单", None),
         (54500, "Undertow and afterglow", "暗流与余晖", None),
     ],
+    # Japanese, for the romaji ruby (docs/ui/pages/player.md §6.3): particles, yōon,
+    # sokuon, long vowels, readings in brackets, a backing vocal in brackets, English,
+    # and a last line whose romanization misses a word (it must fall back).
+    "so-031": [
+        (0, "", None, None),
+        (10000, "夜空に星屑が降る", "星屑从夜空落下", "yozora ni hoshikuzu ga furu"),
+        (15500, "君は今日も遠くを見てる", "你今天也望着远方", "kimi wa kyou mo tooku wo miteru"),
+        (21000, "ちょっと待って もう一回", "等一下 再来一次", "chotto matte mou ikkai"),
+        (27000, "運命(さだめ)なんて信じない", "我才不相信什么命运", "sadame nante shinjinai"),
+        (33000, "(oh yeah) 光のスピードで", "（oh yeah）以光的速度", "oh yeah hikari no supiido de"),
+        (39000, "", None, None),
+        (46000, "本気(マジ)で好きだよ", "是真的喜欢你啊", "maji de suki da yo"),
+        (51500, "星屑のメロディー", "星屑的旋律", "hoshikuzu no merodii"),
+        (57000, "ずっとずっと歌っていたい", "想一直一直唱下去", "zutto zutto utatte itai"),
+        (64000, "東京へ行こう", "去东京吧", "toukyou e ikou"),
+        (69000, "さよならは言わないで", "请不要说再见", "sayonara wa iwanai"),
+    ],
+}
+
+# Per line (by start ms): "hold" gives one word 40% of the sung time (a long note);
+# "romajiWords" times the romanization by syllable, as (text, original words spanned).
+LYRIC_EXTRAS = {
+    "so-031": {
+        10000: {"romajiWords": [("yo", 1), ("zora", 1), ("ni", 1), ("hoshi", 1), ("kuzu", 1),
+                                ("ga", 1), ("fu", 1), ("ru", 1)]},
+        51500: {"romajiWords": [("hoshi", 1), ("kuzu", 1), ("no", 1), ("me", 1), ("ro", 1),
+                                ("di", 2), ("i", 1)]},
+        57000: {"hold": 11},
+    },
 }
 
 LYRICS = {song_id: f"lyrics/{song_id}.json" for song_id in LYRIC_LINES}
@@ -250,25 +279,41 @@ def build_lyrics(song_id, duration_ms):
     result = []
     for index, (start, text, translation, romanization) in enumerate(lines):
         end = lines[index + 1][0] if index + 1 < len(lines) else min(duration_ms, start + 8000)
-        tokens = list(text) if any("\u4e00" <= c <= "\u9fff" for c in text) else text.split(" ")
+        cjk = any("\u3040" <= c <= "\u30ff" or "\u4e00" <= c <= "\u9fff" for c in text)
+        tokens = list(text) if cjk else text.split(" ")
         tokens = [t for t in tokens if t.strip()]
+        extras = LYRIC_EXTRAS.get(song_id, {}).get(start, {})
         sung = max(1, round((end - start) * 0.85))
-        words = []
-        for i, token in enumerate(tokens):
-            w_start = start + sung * i // len(tokens)
-            w_end = start + sung * (i + 1) // len(tokens)
-            words.append({"startMs": w_start, "endMs": w_end, "text": token})
-        result.append({
+        # Word boundaries as fractions of the sung time; a held word takes 40%.
+        weights = [1.0] * len(tokens)
+        if "hold" in extras and tokens:
+            weights[extras["hold"]] = 0.4 / 0.6 * (len(tokens) - 1)
+        bounds = [0.0]
+        for w in weights:
+            bounds.append(bounds[-1] + w)
+        times = [start + round(sung * b / bounds[-1]) for b in bounds] if tokens else []
+        words = [{"startMs": times[i], "endMs": times[i + 1], "text": token}
+                 for i, token in enumerate(tokens)]
+        line = {
             "startMs": start,
             "endMs": end,
             "text": text,
             "translation": translation or None,
             "romanization": romanization,
             "words": words,
-        })
+        }
+        if "romajiWords" in extras:
+            romaji, first = [], 0
+            for syllable, span in extras["romajiWords"]:
+                romaji.append({"startMs": times[first], "endMs": times[first + span],
+                               "text": syllable})
+                first += span
+            assert first == len(tokens), (song_id, start)
+            line["romanizationWords"] = romaji
+        result.append(line)
     return {
         "songId": song_id,
-        "note": "Invented sample lyrics; word timings are synthesized evenly.",
+        "note": "Invented sample lyrics; word timings are synthesized.",
         "lines": result,
     }
 

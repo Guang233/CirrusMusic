@@ -581,7 +581,8 @@
       "albumId": "al-11",
       "trackNumber": 1,
       "durationMs": 233000,
-      "playable": true
+      "playable": true,
+      "lyrics": "lyrics/so-031.json"
     },
     {
       "id": "so-032",

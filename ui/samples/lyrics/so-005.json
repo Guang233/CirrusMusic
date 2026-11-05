@@ -1,6 +1,6 @@
 {
   "songId": "so-005",
-  "note": "Invented sample lyrics; word timings are synthesized evenly.",
+  "note": "Invented sample lyrics; word timings are synthesized.",
   "lines": [
     {
       "startMs": 0,
@@ -24,36 +24,36 @@
         },
         {
           "startMs": 9584,
-          "endMs": 10168,
+          "endMs": 10169,
           "text": "tide"
         },
         {
-          "startMs": 10168,
+          "startMs": 10169,
           "endMs": 10753,
           "text": "keeps"
         },
         {
           "startMs": 10753,
-          "endMs": 11337,
+          "endMs": 11338,
           "text": "every"
         },
         {
-          "startMs": 11337,
-          "endMs": 11921,
+          "startMs": 11338,
+          "endMs": 11922,
           "text": "word"
         },
         {
-          "startMs": 11921,
+          "startMs": 11922,
           "endMs": 12506,
           "text": "we"
         },
         {
           "startMs": 12506,
-          "endMs": 13090,
+          "endMs": 13091,
           "text": "left"
         },
         {
-          "startMs": 13090,
+          "startMs": 13091,
           "endMs": 13675,
           "text": "behind"
         }
@@ -68,21 +68,21 @@
       "words": [
         {
           "startMs": 14500,
-          "endMs": 15167,
+          "endMs": 15168,
           "text": "Folded"
         },
         {
-          "startMs": 15167,
-          "endMs": 15835,
+          "startMs": 15168,
+          "endMs": 15836,
           "text": "in"
         },
         {
-          "startMs": 15835,
-          "endMs": 16503,
+          "startMs": 15836,
+          "endMs": 16504,
           "text": "the"
         },
         {
-          "startMs": 16503,
+          "startMs": 16504,
           "endMs": 17171,
           "text": "sand"
         },
@@ -112,11 +112,11 @@
       "words": [
         {
           "startMs": 20000,
-          "endMs": 20566,
+          "endMs": 20567,
           "text": "I"
         },
         {
-          "startMs": 20566,
+          "startMs": 20567,
           "endMs": 21133,
           "text": "count"
         },
@@ -127,11 +127,11 @@
         },
         {
           "startMs": 21700,
-          "endMs": 22266,
+          "endMs": 22267,
           "text": "waves"
         },
         {
-          "startMs": 22266,
+          "startMs": 22267,
           "endMs": 22833,
           "text": "and"
         },
@@ -142,11 +142,11 @@
         },
         {
           "startMs": 23400,
-          "endMs": 23966,
+          "endMs": 23967,
           "text": "the"
         },
         {
-          "startMs": 23966,
+          "startMs": 23967,
           "endMs": 24533,
           "text": "count"
         },
@@ -176,11 +176,11 @@
         },
         {
           "startMs": 27912,
-          "endMs": 28868,
+          "endMs": 28869,
           "text": "hold"
         },
         {
-          "startMs": 28868,
+          "startMs": 28869,
           "endMs": 29825,
           "text": "on"
         }
@@ -271,16 +271,16 @@
       "words": [
         {
           "startMs": 49000,
-          "endMs": 50168,
+          "endMs": 50169,
           "text": "Tidal"
         },
         {
-          "startMs": 50168,
-          "endMs": 51337,
+          "startMs": 50169,
+          "endMs": 51338,
           "text": "memory,"
         },
         {
-          "startMs": 51337,
+          "startMs": 51338,
           "endMs": 52506,
           "text": "never"
         },
@@ -300,11 +300,11 @@
       "words": [
         {
           "startMs": 54500,
-          "endMs": 56766,
+          "endMs": 56767,
           "text": "Undertow"
         },
         {
-          "startMs": 56766,
+          "startMs": 56767,
           "endMs": 59033,
           "text": "and"
         },
