@@ -163,6 +163,8 @@ void LyricLinesModel::reset(QList<ShownLine> lines)
 CurrentLyrics::CurrentLyrics(LyricsSource* source, Player* player, QObject* parent)
     : QObject(parent), m_source(source), m_player(player), m_lines(new LyricLinesModel(this))
 {
+    connect(this, &CurrentLyrics::changed, this, &CurrentLyrics::shiftChanged);
+    connect(this, &CurrentLyrics::offsetChanged, this, &CurrentLyrics::shiftChanged);
     connect(m_player, &Player::currentChanged, this, [this] {
         if (m_player->current().key != m_key)
             load();
@@ -356,7 +358,7 @@ void CurrentLyrics::updateCurrent()
     QList<int> active;
     const QList<ShownLine>& lines = m_lines->lines();
     if (m_status == lyrics::Ready && m_timing != lyrics::PlainText && !lines.isEmpty()) {
-        const qint64 t = m_positionMs - offsetMs() - m_trackOffsetMs;
+        const qint64 t = m_positionMs - shiftMs();
         const auto after = std::upper_bound(
             lines.begin(), lines.end(), t,
             [](qint64 value, const ShownLine& line) { return value < line.startMs; });

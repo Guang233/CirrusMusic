@@ -79,7 +79,7 @@ class AppSettings : public QObject
 
     // Lyrics.
     CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)
-    CIRRUS_SETTING(bool, showRomanization, setShowRomanization, "lyrics/showRomanization", false)
+    CIRRUS_SETTING(bool, showRomanization, setShowRomanization, "lyrics/showRomanization", true)
 
     // Player page (docs/ui/pages/player.md §9.2).
     // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
@@ -96,6 +96,17 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, playerFlowSpeed, setPlayerFlowSpeed, "player/flowSpeed", 1)
     // The cover tilts toward the pointer.
     CIRRUS_SETTING(bool, playerTilt, setPlayerTilt, "player/tilt", true)
+    // Lyrics on the player page (player.md §5, §9.2): size in percent, weight 100-900,
+    // 0 left / 1 centered, the current line 0 upper / 1 centered, romaji as ruby over
+    // Japanese, word-by-word fill, the other lines blurred, the long-note glow.
+    CIRRUS_SETTING(int, lyricScale, setLyricScale, "lyrics/scale", 100)
+    CIRRUS_SETTING(int, lyricWeight, setLyricWeight, "lyrics/weight", 700)
+    CIRRUS_SETTING(int, lyricAlign, setLyricAlign, "lyrics/align", 0)
+    CIRRUS_SETTING(int, lyricAnchor, setLyricAnchor, "lyrics/anchor", 0)
+    CIRRUS_SETTING(bool, lyricRuby, setLyricRuby, "lyrics/ruby", true)
+    CIRRUS_SETTING(bool, lyricWordFill, setLyricWordFill, "lyrics/wordFill", true)
+    CIRRUS_SETTING(bool, lyricBlur, setLyricBlur, "lyrics/blur", true)
+    CIRRUS_SETTING(bool, lyricGlow, setLyricGlow, "lyrics/glow", true)
 
     // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
     CIRRUS_SETTING(QStringList, searchHistory, setSearchHistory, "search/history", QStringList())

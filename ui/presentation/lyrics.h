@@ -100,6 +100,9 @@ class CurrentLyrics : public QObject
     Q_PROPERTY(cirrus::ui::LyricLinesModel* lines READ lines CONSTANT)
     // User offset for this song in ms; positive shows the lyrics later.
     Q_PROPERTY(qint64 offsetMs READ offsetMs NOTIFY offsetChanged)
+    // Line and word times are this much behind the playback position (the user offset
+    // plus the file's own): line time = positionMs - shiftMs.
+    Q_PROPERTY(qint64 shiftMs READ shiftMs NOTIFY shiftChanged)
     Q_PROPERTY(qint64 positionMs READ positionMs WRITE setPositionMs NOTIFY positionChanged)
     // The last line that has started (-1 before the first); stays through a gap.
     Q_PROPERTY(int current READ current NOTIFY currentChanged)
@@ -117,6 +120,7 @@ class CurrentLyrics : public QObject
     [[nodiscard]] bool hasRuby() const { return m_hasRuby; }
     [[nodiscard]] LyricLinesModel* lines() const { return m_lines; }
     [[nodiscard]] qint64 offsetMs() const;
+    [[nodiscard]] qint64 shiftMs() const { return offsetMs() + m_trackOffsetMs; }
     [[nodiscard]] qint64 positionMs() const { return m_positionMs; }
     void setPositionMs(qint64 positionMs);
     [[nodiscard]] int current() const { return m_current; }
@@ -132,6 +136,7 @@ class CurrentLyrics : public QObject
   signals:
     void changed();
     void offsetChanged();
+    void shiftChanged();
     void positionChanged();
     void currentChanged();
 
