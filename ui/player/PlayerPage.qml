@@ -47,6 +47,7 @@ FocusScope {
                                     && App.player.status === Playback.Playing
                                     && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
+                                    && !lyricsView.handBrowsing
     // Someone is working the hiding controls with the keyboard: one of them has the
     // focus, reached by keyboard (the play button focused on opening does not count).
     readonly property bool controlsFocused: {
@@ -380,8 +381,10 @@ FocusScope {
                     spec: Theme.motion.defaultEffects
                 }
                 LyricsView {
+                    id: lyricsView
                     anchors.fill: parent
                     colors: colors
+                    positionMs: clock.positionMs
                     visible: page.view === 1
                 }
                 Text {
@@ -639,7 +642,9 @@ FocusScope {
             App.player.playPause();
             break;
         case Qt.Key_Escape:
-            if (page.fullScreenByPlayer || page.appWindow.visibility === Window.FullScreen)
+            if (lyricsView.handBrowsing)
+                lyricsView.stopBrowsing(true);
+            else if (page.fullScreenByPlayer || page.appWindow.visibility === Window.FullScreen)
                 page.toggleFullScreen();
             else
                 page.close();

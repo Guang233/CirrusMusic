@@ -22,6 +22,9 @@ qt_add_qml_module(cirrus_ui_player
         SongHeader.qml
         VolumeButton.qml
         LyricsView.qml
+        LyricLine.qml
+        LyricSegment.qml
+        InterludeDots.qml
 )
 
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)
@@ -30,6 +33,8 @@ qt_add_shaders(cirrus_ui_player "cirrus_ui_player_shaders"
     FILES
         shaders/flow.frag
         shaders/present.frag
+        shaders/fill.frag
+        shaders/edgefade.frag
 )
 
 target_link_libraries(cirrus_ui_player

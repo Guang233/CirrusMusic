@@ -1,78 +1,341 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Presentation
 
-// The lyrics column (docs/ui/pages/player.md §5). A first version: the current line
-// held at 30% of the height, the others dimmed, translation under each line, and the
-// states without lyrics. Waterfall scrolling, word-by-word fill, blur, browsing,
-// interludes and ruby come in step 4.
-Item {
+// The lyrics column (docs/ui/pages/player.md §5). Every line is a LyricLine from a
+// Repeater, placed by the summed heights of the lines before it (`tops`) so that the
+// current line (the anchor) sits at 30% of the height (or centered); a new current
+// line sets off the waterfall. Scrolling or dragging browses (§5.4): the track moves
+// by hand, nothing follows, a click jumps to a line; three seconds later it returns.
+FocusScope {
     id: root
 
     required property PlayerPalette colors
+    // The smooth playback position (PlaybackClock).
+    property real positionMs
 
     readonly property int status: App.lyrics.status
-    readonly property real fontSize: Math.max(26, Math.min(56, width / 17))
+    readonly property bool ready: status === Lyrics.Ready
+    readonly property bool plain: App.lyrics.timing === Lyrics.PlainText
+    // Plain text: all lines lit, free scrolling, no jumping.
+    readonly property bool allLit: plain
+    readonly property bool seekable: ready && !plain
+    // Line and word times.
+    readonly property real timeMs: positionMs - App.lyrics.shiftMs
+    readonly property var active: App.lyrics.activeLines
+    readonly property int current: App.lyrics.current
 
-    Text {
-        anchors.left: parent.left
-        y: parent.height * 0.3
-        width: parent.width
-        visible: root.status !== Lyrics.Ready
-        wrapMode: Text.Wrap
-        color: root.colors.contentVariant
-        font: Fonts.font(700, root.fontSize)
-        text: root.status === Lyrics.Loading ? qsTr("正在加载歌词")
-            : root.status === Lyrics.Instrumental ? qsTr("纯音乐，请欣赏")
-            : root.status === Lyrics.Failed ? qsTr("歌词加载失败")
-            : root.status === Lyrics.NoLyrics ? qsTr("暂无歌词") : ""
+    // Settings (§9.2).
+    readonly property real fontSize: Math.max(26, Math.min(56, width / 17))
+                                     * Math.max(0.5, App.settings.lyricScale / 100)
+    readonly property int weight: Math.max(100, Math.min(900, App.settings.lyricWeight))
+    readonly property bool centered: App.settings.lyricAlign === 1
+    readonly property bool wordFill: App.settings.lyricWordFill
+                                     && App.lyrics.timing === Lyrics.Words
+    readonly property bool rubyOn: App.settings.lyricRuby && App.settings.showRomanization
+    readonly property bool blurOn: App.settings.lyricBlur
+    readonly property bool glow: App.settings.lyricGlow && !Theme.motion.reduced
+    readonly property bool showTranslation: App.settings.showTranslation
+    readonly property bool showRomanization: App.settings.showRomanization
+    readonly property bool shaders: GraphicsInfo.api !== GraphicsInfo.Software
+                                    && GraphicsInfo.api !== GraphicsInfo.Unknown
+    readonly property font lineFont: Fonts.font(weight, fontSize)
+    readonly property font smallFont: Fonts.font(weight, fontSize * 0.6)
+    readonly property font rubyFont: Fonts.font(weight, fontSize * 0.42)
+    readonly property real rubyRoom: rubyOn && App.lyrics.hasRuby ? fontSize * 0.42 * 1.35 : 0
+    readonly property real spaceWidth: space.advanceWidth
+    readonly property real lineGap: fontSize * 0.9
+
+    // --- Layout ------------------------------------------------------------------------
+
+    // Each line's top within the track, and the track's height.
+    property var tops: []
+    property real totalHeight: 0
+    // Snap instead of gliding (a new song, a resize).
+    property bool instant: true
+
+    readonly property int count: lines.count
+    function lineAt(index: int): LyricLine {
+        return lines.itemAt(index) as LyricLine;
+    }
+    function layout(): void {
+        const next = [];
+        let y = 0;
+        for (let i = 0; i < lines.count; ++i) {
+            next.push(y);
+            const item = lineAt(i);
+            y += (item ? item.implicitHeight : 0) + lineGap;
+        }
+        tops = next;
+        totalHeight = y;
+    }
+    function scheduleLayout(): void {
+        Qt.callLater(layout);
+    }
+    function snapNextLayout(): void {
+        instant = true;
+        scheduleLayout();
+        Qt.callLater(() => root.instant = false);
+    }
+    onWidthChanged: snapNextLayout()
+    onFontSizeChanged: snapNextLayout()
+    Connections {
+        target: App.lyrics.lines
+        function onModelReset() {
+            root.stopBrowsing(false);
+            root.snapNextLayout();
+        }
     }
 
-    ListView {
-        id: list
-        anchors.fill: parent
-        visible: root.status === Lyrics.Ready
-        clip: true
-        interactive: false
-        model: App.lyrics.lines
-        currentIndex: Math.max(0, App.lyrics.current)
-        highlightRangeMode: ListView.StrictlyEnforceRange
-        preferredHighlightBegin: height * 0.3
-        preferredHighlightEnd: height * 0.3 + 1
-        highlightMoveDuration: Theme.motion.reduced ? 0 : 500
-        spacing: root.fontSize * 0.9
+    // The upcoming line during a long gap before it (§5.5): its dots take the anchor.
+    readonly property int interludeIndex: {
+        if (!ready || plain)
+            return -1;
+        const next = current + 1;
+        const item = next < count ? lineAt(next) : null;
+        if (!item || item.gapMs < 4000)
+            return -1;
+        return timeMs >= item.startMs - item.gapMs && timeMs < item.startMs ? next : -1;
+    }
+    // The line at the anchor position.
+    readonly property int liveAnchor: plain ? 0
+                                            : interludeIndex >= 0 ? interludeIndex
+                                                                  : active.length > 0 ? active[0]
+                                                                                      : Math.max(0, current)
+    property int frozenAnchor: 0
+    readonly property int anchorIndex: plain ? 0 : browsing ? frozenAnchor : liveAnchor
+    readonly property real anchorY: {
+        if (plain)
+            return notice.height + 24;
+        if (App.settings.lyricAnchor === 1) {
+            const item = lineAt(anchorIndex);
+            return (height - (item ? item.implicitHeight : 0)) / 2;
+        }
+        return height * 0.3;
+    }
 
-        delegate: Column {
-            id: line
-            required property int index
-            required property string text
-            required property string translation
-            readonly property bool active: App.lyrics.activeLines.indexOf(index) >= 0
-            width: ListView.view.width
-            spacing: 6
-            opacity: active ? 1 : 0.4
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.motion.defaultEffects.duration
+    // --- Browsing (§5.4) -----------------------------------------------------------------
+
+    // Browsing by hand; plain text is always browsed.
+    property bool handBrowsing: false
+    readonly property bool browsing: plain || handBrowsing
+    // The track's offset while browsing; it springs back to 0 afterwards.
+    property real browseOffset: 0
+    readonly property real scrollY: scroll.value
+    // 0.4 for the other lines while following, 0.6 while browsing.
+    readonly property real dimLevel: 0.4 + 0.2 * browseLevel.value
+    // A line chosen with ↑ ↓ (keyboard browsing); -1 none.
+    property int keyIndex: -1
+    readonly property bool keyboardBrowsing: activeFocus && InputMode.keyboard && keyIndex >= 0
+
+    function startBrowsing(): void {
+        if (!browsing) {
+            frozenAnchor = liveAnchor;
+            handBrowsing = true;
+        }
+        if (!plain)
+            browseTimer.restart();
+    }
+    function stopBrowsing(animate: bool): void {
+        browseTimer.stop();
+        handBrowsing = false;
+        keyIndex = -1;
+        browseOffset = 0;
+        if (animate)
+            scroll.target = 0;
+        else
+            scroll.snapTo(0);
+    }
+    function scrollTo(offset: real): void {
+        const first = tops[0] ?? 0;
+        const last = tops[Math.max(0, count - 1)] ?? 0;
+        const anchorTop = tops[anchorIndex] ?? 0;
+        browseOffset = Math.max(-(last - anchorTop), Math.min(anchorTop - first, offset));
+        scroll.snapTo(browseOffset);
+    }
+    function scrollBy(delta: real): void {
+        startBrowsing();
+        scrollTo(browseOffset + delta);
+    }
+    function seekToLine(index: int): void {
+        const item = lineAt(index);
+        if (!item || !seekable)
+            return;
+        App.player.seek(Math.max(0, item.startMs + App.lyrics.shiftMs));
+        stopBrowsing(true);
+    }
+    function moveKey(step: int): void {
+        startBrowsing();
+        const from = keyIndex >= 0 ? keyIndex : anchorIndex;
+        keyIndex = Math.max(0, Math.min(count - 1, from + step));
+        scrollTo(-((tops[keyIndex] ?? 0) - (tops[anchorIndex] ?? 0)));
+    }
+
+    Timer {
+        id: browseTimer
+        interval: 3000
+        onTriggered: root.stopBrowsing(true)
+    }
+    Spring {
+        id: scroll
+        spec: Theme.motion.defaultSpatial
+    }
+    Spring {
+        id: browseLevel
+        target: root.browsing && !root.plain ? 1 : 0
+        spec: Theme.motion.defaultEffects
+    }
+
+    activeFocusOnTab: ready && count > 0
+    Accessible.role: Accessible.List
+    Accessible.name: qsTr("歌词")
+    Keys.onPressed: event => {
+        if (!root.ready)
+            return;
+        switch (event.key) {
+        case Qt.Key_Up:
+            root.moveKey(-1);
+            break;
+        case Qt.Key_Down:
+            root.moveKey(1);
+            break;
+        case Qt.Key_Return:
+        case Qt.Key_Enter:
+            if (root.keyIndex < 0 || !root.seekable)
+                return;
+            root.seekToLine(root.keyIndex);
+            break;
+        case Qt.Key_Escape:
+            if (!root.handBrowsing)
+                return;
+            root.stopBrowsing(true);
+            break;
+        default:
+            return;
+        }
+        event.accepted = true;
+    }
+    onActiveFocusChanged: if (!activeFocus)
+                              keyIndex = -1
+
+    TextMetrics {
+        id: space
+        font: root.lineFont
+        text: " "
+    }
+
+    // --- Lines -----------------------------------------------------------------------
+
+    Item {
+        id: viewport
+        anchors.fill: parent
+        clip: true
+        visible: root.ready
+        // Lines fade out at the edges rather than being cut.
+        layer.enabled: root.shaders
+        layer.effect: ShaderEffect {
+            property var source
+            readonly property real fadeTop: Math.min(0.4, root.fontSize * 1.5 / Math.max(1, viewport.height))
+            readonly property real fadeBottom: Math.min(0.4, root.fontSize * 2.5 / Math.max(1, viewport.height))
+            fragmentShader: Qt.resolvedUrl("shaders/edgefade.frag.qsb")
+        }
+
+        WheelHandler {
+            target: null
+            onWheel: event => root.scrollBy(event.pixelDelta.y !== 0 ? event.pixelDelta.y
+                                                                     : event.angleDelta.y / 120
+                                                                       * root.fontSize * 2.5)
+        }
+        DragHandler {
+            id: drag
+            target: null
+            xAxis.enabled: false
+            property real startOffset
+            onActiveChanged: if (active) {
+                                 root.startBrowsing();
+                                 startOffset = root.browseOffset;
+                             } else if (!root.plain) {
+                                 browseTimer.restart();
+                             }
+            onActiveTranslationChanged: if (active)
+                                            root.scrollTo(startOffset + activeTranslation.y)
+        }
+
+        Item {
+            id: track
+            width: parent.width
+            y: root.scrollY
+
+            Repeater {
+                id: lines
+                model: App.lyrics.lines
+                onItemAdded: root.scheduleLayout()
+                onItemRemoved: root.scheduleLayout()
+
+                LyricLine {
+                    view: root
                 }
             }
+        }
+    }
 
-            Text {
-                width: parent.width
-                text: line.text
-                wrapMode: Text.Wrap
-                color: root.colors.content
-                font: Fonts.font(700, root.fontSize)
+    // Plain text has no timing: a note above it.
+    Text {
+        id: notice
+        width: parent.width
+        visible: root.ready && root.plain
+        height: visible ? implicitHeight : 0
+        text: qsTr("歌词没有时间信息")
+        horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
+        color: root.colors.contentVariant
+        font: Fonts.font(500, 14)
+    }
+
+    // --- Without lyrics (§5.7) -------------------------------------------------------
+
+    Column {
+        y: parent.height * 0.3
+        width: parent.width
+        spacing: root.fontSize * 0.6
+        visible: root.status === Lyrics.Loading
+
+        Repeater {
+            model: [0.7, 0.5, 0.62]
+            Rectangle {
+                required property real modelData
+                x: root.centered ? (parent.width - width) / 2 : 0
+                width: parent.width * modelData
+                height: root.fontSize * 0.8
+                radius: height / 2
+                color: Qt.alpha(root.colors.content, 0.1)
             }
-            Text {
-                width: parent.width
-                visible: App.settings.showTranslation && line.translation !== ""
-                text: line.translation
-                wrapMode: Text.Wrap
-                color: root.colors.contentVariant
-                font: Fonts.font(600, root.fontSize * 0.6)
-            }
+        }
+    }
+    Column {
+        y: parent.height * 0.3
+        width: parent.width
+        spacing: 16
+        visible: root.status === Lyrics.NoLyrics || root.status === Lyrics.Instrumental
+                 || root.status === Lyrics.Failed
+
+        Text {
+            width: parent.width
+            wrapMode: Text.Wrap
+            horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
+            color: root.colors.contentVariant
+            font: root.lineFont
+            text: root.status === Lyrics.Instrumental ? qsTr("纯音乐，请欣赏")
+                : root.status === Lyrics.Failed ? qsTr("歌词加载失败") : qsTr("暂无歌词")
+        }
+        Button {
+            x: root.centered ? (parent.width - width) / 2 : 0
+            visible: root.status === Lyrics.Failed
+            variant: Md.Tonal
+            glyph: Symbols.refresh
+            text: qsTr("重试")
+            onClicked: App.lyrics.retry()
         }
     }
 }
