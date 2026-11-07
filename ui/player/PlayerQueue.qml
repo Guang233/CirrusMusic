@@ -175,7 +175,7 @@ FocusScope {
             required property bool unavailable
 
             readonly property bool isPlaying: index === root.playing
-            readonly property bool active: item.hovered || handleArea.containsMouse
+            readonly property bool active: rowHover.hovered
                                            || root.dragRow === index
                                            || (list.activeFocus && InputMode.keyboard
                                                && list.currentIndex === index)
@@ -183,6 +183,11 @@ FocusScope {
             width: ListView.view.width
             height: root.rowHeight
             opacity: root.dragRow === index ? 0.5 : 1
+
+            // Over the whole row, the disabled item of a song that can't play included.
+            HoverHandler {
+                id: rowHover
+            }
             Accessible.role: Accessible.ListItem
             Accessible.name: title + " " + artistText
 
@@ -206,26 +211,10 @@ FocusScope {
                         coverKey: row.coverKey
                     }
                 }
-                trailing: Component {
-                    Row {
-                        spacing: 4
-                        Icon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: row.isPlaying
-                            glyph: Symbols.graphic_eq
-                            color: ColorScope.scheme.onSecondaryContainer
-                        }
-                        IconButton {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: root.editable
-                            opacity: row.active ? 1 : 0
-                            focusPolicy: Qt.NoFocus
-                            glyph: Symbols.close
-                            text: qsTr("从队列中删除")
-                            onClicked: App.player.removeAt(row.index)
-                        }
-                    }
-                }
+                // Room on the right for the remove button (outside: a song that can't
+                // play is a disabled item, and can still be removed).
+                rightPadding: root.editable ? 56 : 16
+                trailingGlyph: row.isPlaying ? Symbols.graphic_eq : ""
                 onClicked: {
                     list.currentIndex = row.index;
                     if (!row.isPlaying)
@@ -238,14 +227,25 @@ FocusScope {
                     offset: -2
                     containerRadius: Theme.shape.medium
                 }
-                TapHandler {
-                    acceptedButtons: Qt.RightButton
-                    onTapped: eventPoint => {
-                        list.currentIndex = row.index;
-                        menu.row = row;
-                        menu.popup(row, eventPoint.position.x, eventPoint.position.y);
-                    }
+            }
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: eventPoint => {
+                    list.currentIndex = row.index;
+                    menu.row = row;
+                    menu.popup(row, eventPoint.position.x, eventPoint.position.y);
                 }
+            }
+            IconButton {
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.editable
+                opacity: row.active ? 1 : 0
+                focusPolicy: Qt.NoFocus
+                glyph: Symbols.close
+                text: qsTr("从队列中删除")
+                onClicked: App.player.removeAt(row.index)
             }
 
             // The handle: the only place a drag starts.

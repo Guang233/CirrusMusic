@@ -44,8 +44,13 @@ FocusScope {
     property int view: Math.min(1, App.settings.playerView)
     readonly property bool wide: width >= 1000
     // Where the controls and the title go, as set; changes glide (see the Connections).
-    property int controlsPlace: App.settings.playerControls
-    property int headerPlace: App.settings.playerHeader
+    // Not bindings: a binding would move them before the glide is switched on.
+    property int controlsPlace: -1
+    property int headerPlace: -1
+    Component.onCompleted: {
+        controlsPlace = App.settings.playerControls;
+        headerPlace = App.settings.playerHeader;
+    }
     readonly property bool controlsAtBottom: wide && controlsPlace === 1
     readonly property bool headerAtBottom: wide && headerPlace === 1
     // Views switch with motion; window resizes follow at once.
