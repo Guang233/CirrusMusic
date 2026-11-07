@@ -85,6 +85,18 @@ SettingsGroup {
         value: App.settings.playerHeader
         onChosen: value => App.settings.playerHeader = value
     }
+    ChoiceSetting {
+        text: qsTr("右侧时间")
+        options: [{
+                value: 0,
+                text: qsTr("剩余时间")
+            }, {
+                value: 1,
+                text: qsTr("总时长")
+            }]
+        value: App.settings.playerTimeRight
+        onChosen: value => App.settings.playerTimeRight = value
+    }
     MenuSetting {
         text: qsTr("自动隐藏控件")
         options: [{

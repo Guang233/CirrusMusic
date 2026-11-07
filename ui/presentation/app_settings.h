@@ -88,6 +88,8 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, playerControls, setPlayerControls, "player/controls", 0)
     // The title and artist: 0 under the cover, 1 in the bottom row.
     CIRRUS_SETTING(int, playerHeader, setPlayerHeader, "player/header", 0)
+    // The time right of the progress bar: 0 the time left, 1 the song's length.
+    CIRRUS_SETTING(int, playerTimeRight, setPlayerTimeRight, "player/timeRight", 0)
     // Seconds without input before the controls hide while playing; 0 never.
     CIRRUS_SETTING(int, playerAutoHide, setPlayerAutoHide, "player/autoHide", 3)
     // The view it opens with, the last one used: 0 cover, 1 lyrics, 2 queue.

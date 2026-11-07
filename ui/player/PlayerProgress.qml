@@ -5,7 +5,9 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // The player's progress bar (docs/ui/pages/player.md §1.1): thin, thicker on hover or
-// while dragged, the elapsed and remaining time under it. Dragging only previews; the
+// while dragged, the elapsed time under it and the time left or the length (a setting;
+// a click on it switches). The fill springs to a new place (a seek, the next song) like
+// ProgressBar, and follows the clock otherwise. Dragging only previews; the
 // seek happens on release, and the bar keeps the released position until the player
 // reports the new one, so it never snaps back.
 Item {
@@ -56,6 +58,12 @@ Item {
     }
 
     Spring {
+        id: fill
+        target: root.durationMs > 0 ? Math.min(1, root.shownMs / root.durationMs) : 0
+        spec: Theme.motion.defaultEffects
+        threshold: 0.0005
+    }
+    Spring {
         id: thick
         target: area.containsMouse || area.pressed || root.activeFocus ? 1 : 0
         spec: Theme.motion.fastSpatial
@@ -78,9 +86,7 @@ Item {
             Rectangle {
                 height: parent.height
                 radius: parent.radius
-                width: root.durationMs > 0
-                       ? Math.max(height, parent.width * Math.min(1, root.shownMs / root.durationMs))
-                       : 0
+                width: root.durationMs > 0 ? Math.max(height, parent.width * fill.value) : 0
                 color: root.colors.content
             }
         }
@@ -127,11 +133,24 @@ Item {
         font: Fonts.tabular(Theme.type.labelMedium.font)
     }
     Text {
+        id: rightTime
         anchors.right: parent.right
         y: root.timesBeside ? (bar.height - height) / 2 : bar.height
         visible: root.showTimes
-        text: root.durationMs > 0 ? "-" + App.format.duration(root.durationMs - root.shownMs) : "--:--"
+        text: root.durationMs <= 0 ? "--:--"
+              : App.settings.playerTimeRight === 1 ? App.format.duration(root.durationMs)
+              : "-" + App.format.duration(root.durationMs - root.shownMs)
         color: root.colors.contentVariant
         font: Fonts.tabular(Theme.type.labelMedium.font)
+
+        // A click switches between the time left and the length.
+        TapHandler {
+            margin: 6
+            onTapped: App.settings.playerTimeRight = 1 - App.settings.playerTimeRight
+        }
+        HoverHandler {
+            margin: 6
+            cursorShape: Qt.PointingHandCursor
+        }
     }
 }
