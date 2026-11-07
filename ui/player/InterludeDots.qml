@@ -28,7 +28,8 @@ Item {
     implicitHeight: dot
 
     scale: breath * (ending < 0.4 ? 1 + 0.25 * ending / 0.4 : 1.25 * (1 - (ending - 0.4) / 0.6))
-    opacity: ending < 0.6 ? 1 : 1 - (ending - 0.6) / 0.4
+    // Gone once the gap is over (the room above the line still closes then).
+    opacity: !running ? 0 : ending < 0.6 ? 1 : 1 - (ending - 0.6) / 0.4
 
     Row {
         spacing: root.dot * 0.8

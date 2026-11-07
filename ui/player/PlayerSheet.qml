@@ -33,9 +33,11 @@ Rectangle {
         spec: Theme.motion.reduced ? Theme.motion.defaultEffects : Theme.motion.defaultSpatial
     }
 
-    // Takes the clicks over it.
+    // Takes the clicks, the hover and the wheel over it: nothing reaches the lyrics.
     MouseArea {
         anchors.fill: parent
+        hoverEnabled: true
+        onWheel: wheel => wheel.accepted = true
     }
 
     Text {

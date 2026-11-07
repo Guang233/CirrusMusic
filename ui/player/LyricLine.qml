@@ -116,13 +116,6 @@ Item {
         spec: Theme.motion.defaultSpatial
     }
 
-    layer.enabled: line.view.shaders && onScreen && blurAmount.value > 0.1
-    layer.smooth: true
-    layer.effect: MultiEffect {
-        blurEnabled: true
-        blurMax: 8
-        blur: blurAmount.value / 8
-    }
 
     function buildPieces(): var {
         if (!showRuby && !wordsMode)
@@ -253,6 +246,15 @@ Item {
         id: column
         width: parent.width
         spacing: line.fontSize * 0.15
+        // Only the text blurs: the hover layer reaches past the line, and a layer on the
+        // whole line would cut its rounded corners square.
+        layer.enabled: line.view.shaders && line.onScreen && blurAmount.value > 0.1
+        layer.smooth: true
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blurMax: 8
+            blur: blurAmount.value / 8
+        }
 
         // The interlude dots open a room above the line.
         Item {

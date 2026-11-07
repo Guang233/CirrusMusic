@@ -120,8 +120,7 @@ Item {
 
     Text {
         anchors.left: parent.left
-        anchors.top: root.timesBeside ? undefined : bar.bottom
-        anchors.verticalCenter: root.timesBeside ? bar.verticalCenter : undefined
+        y: root.timesBeside ? (bar.height - height) / 2 : bar.height
         visible: root.showTimes
         text: App.format.duration(root.shownMs)
         color: root.colors.contentVariant
@@ -129,8 +128,7 @@ Item {
     }
     Text {
         anchors.right: parent.right
-        anchors.top: root.timesBeside ? undefined : bar.bottom
-        anchors.verticalCenter: root.timesBeside ? bar.verticalCenter : undefined
+        y: root.timesBeside ? (bar.height - height) / 2 : bar.height
         visible: root.showTimes
         text: root.durationMs > 0 ? "-" + App.format.duration(root.durationMs - root.shownMs) : "--:--"
         color: root.colors.contentVariant

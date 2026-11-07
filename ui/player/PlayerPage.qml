@@ -468,7 +468,7 @@ FocusScope {
             }
 
             // Clicking the empty bottom row, where the mini player was, closes the page
-            // (§2.3); hovering it shows a faint band with a chevron as the hint.
+            // (§2.3); hovering it shows a very faint band with a chevron as the hint.
             Item {
                 id: closeBand
                 anchors.left: parent.left
@@ -497,7 +497,7 @@ FocusScope {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    height: parent.height * 1.5
+                    height: parent.height
                     bottomLeftRadius: page.panelRadius
                     bottomRightRadius: page.panelRadius
                     opacity: bandHint.value
@@ -509,14 +509,14 @@ FocusScope {
                         }
                         GradientStop {
                             position: 1
-                            color: Qt.alpha(colors.content, 0.08)
+                            color: Qt.alpha(colors.content, 0.035)
                         }
                     }
                 }
                 Icon {
                     anchors.centerIn: parent
                     visible: !page.controlsAtBottom && opacity > 0.01
-                    opacity: bandHint.value
+                    opacity: 0.6 * bandHint.value
                     glyph: Symbols.expand_more
                     color: colors.contentVariant
                 }
@@ -693,6 +693,9 @@ FocusScope {
             MouseArea {
                 anchors.fill: parent
                 visible: page.sheet !== 0
+                // The lyrics under it don't react while a panel is open.
+                hoverEnabled: true
+                onWheel: wheel => wheel.accepted = true
                 onPressed: page.sheet = 0
             }
             Sheet {
