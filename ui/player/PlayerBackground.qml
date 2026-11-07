@@ -8,7 +8,9 @@ import Cirrus.Presentation
 // (App.settings.playerBackground):
 // - 0 flowing light: the cover's 5 × 5 colors as soft points drifting and slowly
 //   turning (shaders/flow.frag, a quarter of the size), scaled up with a dither.
-// - 1 blurred cover: the cover, heavily blurred, toned with the solid color; still.
+// - 1 blurred cover: the cover enlarged twice, the copies turning slowly against each
+//   other, heavily blurred at a quarter of the size and toned with the solid color;
+//   it flows and rests like the light.
 // - 2 solid: the solid color.
 // Without shaders (software renderer) it is a still gradient of the same colors. The
 // flow slows to a stop while paused and doesn't run with reduced motion or unseen.
@@ -44,7 +46,7 @@ Item {
 
     FrameAnimation {
         readonly property real target: root.flowing ? root.speedFactor : 0
-        running: root.visible && root.shaders && root.style === 0 && !Theme.motion.reduced
+        running: root.visible && root.shaders && root.style !== 2 && !Theme.motion.reduced
                  && (target > 0 || root.speed > 0.001)
         onTriggered: {
             // Eases to the target speed over about two seconds.
@@ -137,24 +139,48 @@ Item {
 
     Item {
         id: blurred
-        width: root.width
-        height: root.height
+        width: Math.max(16, Math.ceil(root.width / 4))
+        height: Math.max(16, Math.ceil(root.height / 4))
         visible: false
 
-        Image {
-            id: coverImage
+        Item {
+            id: covers
             anchors.fill: parent
-            source: root.shaders && root.style === 1 && App.player.current.coverKey !== ""
-                    ? "image://cover/" + App.player.current.coverKey : ""
-            sourceSize: Qt.size(96, 96)
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            retainWhileLoading: true
             visible: false
+            readonly property real side: Math.hypot(width, height) * 1.1
+            readonly property string source: root.shaders && root.style === 1
+                                             && App.player.current.coverKey !== ""
+                                             ? "image://cover/" + App.player.current.coverKey : ""
+
+            // Two copies, the second smaller and offset, turning the other way.
+            Image {
+                anchors.centerIn: parent
+                width: covers.side
+                height: covers.side
+                source: covers.source
+                sourceSize: Qt.size(64, 64)
+                smooth: true
+                asynchronous: true
+                retainWhileLoading: true
+                rotation: root.flowTime * 360 / 80
+            }
+            Image {
+                x: parent.width * 0.5 - width * 0.5 + parent.width * 0.18 * Math.cos(root.flowTime / 13)
+                y: parent.height * 0.5 - height * 0.5 + parent.height * 0.18 * Math.sin(root.flowTime / 17)
+                width: covers.side * 0.7
+                height: covers.side * 0.7
+                source: covers.source
+                sourceSize: Qt.size(64, 64)
+                smooth: true
+                asynchronous: true
+                retainWhileLoading: true
+                opacity: 0.8
+                rotation: -root.flowTime * 360 / 60
+            }
         }
         MultiEffect {
             anchors.fill: parent
-            source: coverImage
+            source: covers
             blurEnabled: true
             blurMax: 64
             blur: 1
@@ -170,6 +196,7 @@ Item {
         id: blurredTexture
         sourceItem: root.shaders && root.style === 1 ? blurred : null
         hideSource: true
+        smooth: true
         visible: false
     }
 
