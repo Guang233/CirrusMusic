@@ -86,6 +86,8 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)
     // Where the controls are on wide windows: 0 under the cover, 1 at the bottom.
     CIRRUS_SETTING(int, playerControls, setPlayerControls, "player/controls", 0)
+    // The title and artist: 0 under the cover, 1 in the bottom row.
+    CIRRUS_SETTING(int, playerHeader, setPlayerHeader, "player/header", 0)
     // Seconds without input before the controls hide while playing; 0 never.
     CIRRUS_SETTING(int, playerAutoHide, setPlayerAutoHide, "player/autoHide", 3)
     // The view it opens with, the last one used: 0 cover, 1 lyrics, 2 queue.

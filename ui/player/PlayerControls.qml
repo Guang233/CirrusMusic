@@ -11,6 +11,8 @@ Item {
 
     required property PlayerPalette colors
     readonly property Item playButton: play
+    // Smaller, for the bottom bar.
+    property bool compact: false
 
     // Not signed in: liking needs the sign-in first.
     signal loginRequested
@@ -47,7 +49,7 @@ Item {
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         color: root.colors.content
-        iconSize: 22
+        iconSize: root.compact ? 20 : 22
         glyph: [Symbols.repeat, Symbols.repeat_one, Symbols.shuffle, Symbols.playlist_play][root.mode]
         text: root.modeNames[root.mode]
         onClicked: root.setMode((root.mode + 1) % 4)
@@ -55,10 +57,10 @@ Item {
 
     PlayerButton {
         anchors.right: play.left
-        anchors.rightMargin: Math.min(24, root.width / 16)
+        anchors.rightMargin: Math.min(root.compact ? 12 : 24, root.width / 16)
         anchors.verticalCenter: parent.verticalCenter
         color: root.colors.content
-        iconSize: 36
+        iconSize: root.compact ? 28 : 36
         enabled: App.player.canPrevious
         glyph: Symbols.skip_previous
         text: qsTr("上一首")
@@ -72,7 +74,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         color: root.colors.content
-        iconSize: 52
+        iconSize: root.compact ? 40 : 52
         glyph: playing ? Symbols.pause : Symbols.play_arrow
         text: loading ? qsTr("正在加载") : playing ? qsTr("暂停") : qsTr("播放")
         onClicked: App.player.playPause()
@@ -80,10 +82,10 @@ Item {
 
     PlayerButton {
         anchors.left: play.right
-        anchors.leftMargin: Math.min(24, root.width / 16)
+        anchors.leftMargin: Math.min(root.compact ? 12 : 24, root.width / 16)
         anchors.verticalCenter: parent.verticalCenter
         color: root.colors.content
-        iconSize: 36
+        iconSize: root.compact ? 28 : 36
         enabled: App.player.canNext
         glyph: Symbols.skip_next
         text: qsTr("下一首")
@@ -97,7 +99,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: key !== "" && !App.player.current.voice
         color: root.colors.content
-        iconSize: 22
+        iconSize: root.compact ? 20 : 22
         glyph: Symbols.favorite
         iconFill: liked ? 1 : 0
         text: liked ? qsTr("取消喜欢") : qsTr("喜欢")

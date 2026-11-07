@@ -73,6 +73,18 @@ SettingsGroup {
         value: App.settings.playerControls
         onChosen: value => App.settings.playerControls = value
     }
+    ChoiceSetting {
+        text: qsTr("歌名位置")
+        options: [{
+                value: 0,
+                text: qsTr("封面下方")
+            }, {
+                value: 1,
+                text: qsTr("底部")
+            }]
+        value: App.settings.playerHeader
+        onChosen: value => App.settings.playerHeader = value
+    }
     MenuSetting {
         text: qsTr("自动隐藏控件")
         options: [{

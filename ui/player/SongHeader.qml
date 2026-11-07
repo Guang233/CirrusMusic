@@ -15,6 +15,9 @@ Item {
     property bool compact: false
     // The title's size; the page grows it with the cover.
     property real titleSize: 24
+    // The "more" button right after the text instead of at the right edge (the bottom
+    // row, where the header is wide).
+    property bool moreAfterText: false
 
     signal commentsRequested
     signal artistRequested(string key)
@@ -28,13 +31,15 @@ Item {
 
     Column {
         id: texts
+        readonly property real room: root.width - more.width - 8
         anchors.left: parent.left
-        anchors.right: more.left
-        anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
+        width: root.moreAfterText ? Math.min(room, Math.max(titleText.implicitWidth, artist.implicitWidth))
+                                  : room
         spacing: 2
 
         Text {
+            id: titleText
             width: parent.width
             text: root.song.title
             elide: Text.ElideRight
@@ -73,7 +78,7 @@ Item {
 
     PlayerButton {
         id: more
-        anchors.right: parent.right
+        x: root.moreAfterText ? texts.width + 8 : root.width - width
         anchors.verticalCenter: parent.verticalCenter
         visible: root.song.key !== ""
         color: root.colors.content

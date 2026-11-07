@@ -20,6 +20,9 @@ Item {
     readonly property real shownMs: previewMs >= 0 ? previewMs : positionMs
     // Without the time row (the bottom layout puts the times beside the bar).
     property bool showTimes: true
+    // The times on either side of the bar, on its line (the bottom layout).
+    property bool timesBeside: false
+    readonly property real timeWidth: timesBeside ? 52 : 0
 
     function seekBy(deltaMs: real): void {
         if (!seekable)
@@ -29,7 +32,7 @@ Item {
         caughtUp.restart();
     }
 
-    implicitHeight: showTimes ? 44 : 20
+    implicitHeight: showTimes && !timesBeside ? 44 : 20
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
     Accessible.name: qsTr("播放进度")
@@ -60,7 +63,8 @@ Item {
 
     Item {
         id: bar
-        width: parent.width
+        x: root.timeWidth
+        width: parent.width - 2 * root.timeWidth
         height: 20
 
         Rectangle {
@@ -116,7 +120,8 @@ Item {
 
     Text {
         anchors.left: parent.left
-        anchors.top: bar.bottom
+        anchors.top: root.timesBeside ? undefined : bar.bottom
+        anchors.verticalCenter: root.timesBeside ? bar.verticalCenter : undefined
         visible: root.showTimes
         text: App.format.duration(root.shownMs)
         color: root.colors.contentVariant
@@ -124,7 +129,8 @@ Item {
     }
     Text {
         anchors.right: parent.right
-        anchors.top: bar.bottom
+        anchors.top: root.timesBeside ? undefined : bar.bottom
+        anchors.verticalCenter: root.timesBeside ? bar.verticalCenter : undefined
         visible: root.showTimes
         text: root.durationMs > 0 ? "-" + App.format.duration(root.durationMs - root.shownMs) : "--:--"
         color: root.colors.contentVariant

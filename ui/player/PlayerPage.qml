@@ -24,7 +24,9 @@ FocusScope {
     // The display settings panel's content (the app's PlayerPanelSettings); without
     // it there is no settings button.
     property Component settingsContent
-    property bool settingsOpen: false
+    // The side panel open (§8, §9.1): 0 none, 1 the queue, 2 the display settings.
+    property int sheet: 0
+    readonly property bool settingsOpen: sheet === 2
 
     property bool opened: false
     readonly property bool reduced: Theme.motion.reduced
@@ -38,10 +40,14 @@ FocusScope {
                                                                        || (grow.value > 0.001
                                                                            && grow.value < 0.999))
 
-    // 0 cover, 1 lyrics, 2 queue.
-    property int view: App.settings.playerView
+    // 0 cover, 1 lyrics (the queue is a side panel now).
+    property int view: Math.min(1, App.settings.playerView)
     readonly property bool wide: width >= 1000
-    readonly property bool controlsAtBottom: wide && App.settings.playerControls === 1
+    // Where the controls and the title go, as set; changes glide (see the Connections).
+    property int controlsPlace: App.settings.playerControls
+    property int headerPlace: App.settings.playerHeader
+    readonly property bool controlsAtBottom: wide && controlsPlace === 1
+    readonly property bool headerAtBottom: wide && headerPlace === 1
     // Views switch with motion; window resizes follow at once.
     property bool animateLayout: false
 
@@ -51,7 +57,7 @@ FocusScope {
                                     && App.player.status === Playback.Playing
                                     && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
-                                    && !lyricsView.handBrowsing && !settingsOpen
+                                    && !lyricsView.handBrowsing && sheet === 0
     // Someone is working the hiding controls with the keyboard: one of them has the
     // focus, reached by keyboard (the play button focused on opening does not count).
     readonly property bool controlsFocused: {
@@ -93,7 +99,7 @@ FocusScope {
     function close(): void {
         if (!opened)
             return;
-        settingsOpen = false;
+        sheet = 0;
         if (fullScreenByPlayer)
             toggleFullScreen();
         captureRects();
@@ -191,12 +197,39 @@ FocusScope {
                 page.forceActiveFocus();
         }
     }
-    onSettingsOpenChanged: {
-        if (settingsOpen) {
-            settingsPanel.used = true;
-            settingsClose.forceActiveFocus(Qt.OtherFocusReason);
-        } else if (settingsScope.activeFocus || settingsClose.activeFocus)
-            settingsButton.forceActiveFocus(Qt.OtherFocusReason);
+    // The focus goes into the panel that opens, and back to its button when it closes.
+    property int lastSheet: 0
+    onSheetChanged: {
+        const before = lastSheet === 1 ? queueSheet : lastSheet === 2 ? settingsSheet : null;
+        const opener = lastSheet === 1 ? queueButton : settingsButton;
+        lastSheet = sheet;
+        if (sheet === 1) {
+            queuePanel.list.forceActiveFocus(Qt.OtherFocusReason);
+        } else if (sheet === 2) {
+            settingsSheet.used = true;
+            settingsSheet.closeButton.forceActiveFocus(Qt.OtherFocusReason);
+        } else if (before) {
+            for (let it = appWindow.activeFocusItem; it; it = it.parent) {
+                if (it === before) {
+                    opener.forceActiveFocus(Qt.OtherFocusReason);
+                    break;
+                }
+            }
+        }
+    }
+    // A new place for the controls or the title glides there.
+    Connections {
+        target: App.settings
+        function onPlayerControlsChanged() {
+            page.animateLayout = true;
+            settle.restart();
+            page.controlsPlace = App.settings.playerControls;
+        }
+        function onPlayerHeaderChanged() {
+            page.animateLayout = true;
+            settle.restart();
+            page.headerPlace = App.settings.playerHeader;
+        }
     }
     onCanHideChanged: if (canHide)
                           hideTimer.restart()
@@ -206,7 +239,12 @@ FocusScope {
     // --- Layout ----------------------------------------------------------------------
 
     readonly property real topHeight: 48
-    readonly property real bottomRowHeight: 64
+    // The bottom row: the view buttons on the right, the title on the left when it is
+    // there. With the controls at the bottom it is a bar about the mini player's
+    // height: the controls in the middle over the progress bar (§1.2).
+    readonly property real barHeight: 88
+    readonly property real bottomRowHeight: controlsAtBottom ? barHeight : 64
+    readonly property real rowCenter: height - bottomRowHeight / 2
     readonly property real contentTop: topHeight + 8
     readonly property real contentBottom: height - bottomRowHeight - 8
     readonly property real sideMargin: wide ? 48 : 24
@@ -214,11 +252,18 @@ FocusScope {
     readonly property real headerHeight: 64
     readonly property real progressHeight: 44
     readonly property real controlsHeight: 76
-    readonly property real stackExtra: 28 + headerHeight + (controlsAtBottom ? 0
-                                                                              : 16 + progressHeight + 8 + controlsHeight)
-    // The bottom band of the bottom layout: progress over the controls.
-    readonly property real bandTop: height - bottomRowHeight - progressHeight - 16
-    readonly property real stackBottom: controlsAtBottom ? bandTop - 16 : contentBottom
+    readonly property real stackExtra: {
+        const parts = [];
+        if (!headerAtBottom)
+            parts.push(headerHeight);
+        if (!controlsAtBottom)
+            parts.push(progressHeight + 8 + controlsHeight);
+        return parts.length === 0 ? 0 : 28 + parts.reduce((a, b) => a + b, 0) + 16 * (parts.length - 1);
+    }
+    readonly property real stackBottom: contentBottom
+    // The bottom bar's middle: controls over the progress bar.
+    readonly property real barCenterWidth: Math.min(560, width * 0.42)
+    readonly property real barCenterX: (width - barCenterWidth) / 2
     // Two columns share a centered group that grows with the window, up to 1800; the
     // cover column takes 45% of it.
     readonly property real groupWidth: Math.min(width - 2 * sideMargin, 1800)
@@ -240,23 +285,26 @@ FocusScope {
             const x = columnX + (columnW - size) / 2;
             const y = contentTop + Math.max(0, (availH - size - stackExtra) / 2);
             const below = y + size + 28;
+            const progressY = headerAtBottom ? below : below + headerHeight + 16;
+            // The title in the bottom row: up to the bar's middle or the view buttons.
+            const headerRight = controlsAtBottom ? barCenterX - 24
+                                                 : width - sideMargin - viewButtons.width - 24;
             // The header, progress and controls under a small cover keep a usable width.
             const stackW = Math.max(size, Math.min(minStackWidth, columnW - 2 * sideMargin));
             const stackX = columnX + (columnW - stackW) / 2;
             const panelX = groupX + leftWidth + sideMargin / 2;
             return {
                 cover: Qt.rect(x, y, size, size),
-                header: Qt.rect(stackX, below, stackW, headerHeight),
-                progress: controlsAtBottom ? Qt.rect(sideMargin, bandTop, width - 2 * sideMargin,
-                                                     progressHeight)
-                                           : Qt.rect(stackX, below + headerHeight + 16, stackW,
-                                                     progressHeight),
-                controls: controlsAtBottom
-                          ? Qt.rect((width - 400) / 2,
-                                    height - (bottomRowHeight + controlsHeight) / 2, 400,
-                                    controlsHeight)
-                          : Qt.rect(stackX, below + headerHeight + 16 + progressHeight + 8,
-                                    stackW, controlsHeight),
+                header: headerAtBottom ? Qt.rect(sideMargin, rowCenter - 28,
+                                                 Math.max(120, headerRight - sideMargin), 56)
+                                       : Qt.rect(stackX, below, stackW, headerHeight),
+                progress: controlsAtBottom ? Qt.rect(barCenterX, height - 30, barCenterWidth, 20)
+                                           : Qt.rect(stackX, progressY, stackW, progressHeight),
+                controls: controlsAtBottom ? Qt.rect((width - Math.min(360, barCenterWidth)) / 2,
+                                                     height - barHeight + 6,
+                                                     Math.min(360, barCenterWidth), 52)
+                                           : Qt.rect(stackX, progressY + progressHeight + 8,
+                                                     stackW, controlsHeight),
                 panel: Qt.rect(panelX, contentTop, groupX + groupWidth - panelX,
                                stackBottom - contentTop)
             };
@@ -273,6 +321,16 @@ FocusScope {
             panel: Qt.rect(sideMargin, contentTop + 64 + 24, width - 2 * sideMargin,
                            progressY - contentTop - 64 - 40)
         };
+    }
+
+    // A side panel's place: the right of the page, between the top row and the bottom
+    // row.
+    component Sheet: PlayerSheet {
+        width: Math.min(440, page.width - 2 * page.sideMargin)
+        x: page.width - page.sideMargin / 2 - width
+        y: page.contentTop
+        height: page.contentBottom - y
+        onCloseRequested: page.sheet = 0
     }
 
     // An item that glides to `to` (springs) while views switch, and follows at once
@@ -407,14 +465,6 @@ FocusScope {
                     positionMs: clock.positionMs
                     visible: page.view === 1
                 }
-                PlayerQueue {
-                    anchors.fill: parent
-                    colors: colors
-                    visible: page.view === 2
-                    onArtistRequested: key => page.artistRequested(key)
-                    onAlbumRequested: key => page.albumRequested(key)
-                    onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key, title)
-                }
             }
 
             // Clicking the empty bottom row, where the mini player was, closes the page
@@ -488,7 +538,8 @@ FocusScope {
                         id: header
                         anchors.fill: parent
                         colors: colors
-                        compact: !page.wide && page.view > 0
+                        compact: (!page.wide && page.view > 0) || page.headerAtBottom
+                        moreAfterText: page.headerAtBottom
                         titleSize: Math.max(22, Math.min(32, page.layout.cover.width / 20))
                         onCommentsRequested: page.commentsRequested()
                         onArtistRequested: key => page.artistRequested(key)
@@ -521,6 +572,7 @@ FocusScope {
                             anchors.fill: parent
                             colors: colors
                             positionMs: clock.positionMs
+                            timesBeside: page.controlsAtBottom
                         }
                         HoverHandler {
                             id: progressHover
@@ -533,6 +585,7 @@ FocusScope {
                             id: controls
                             anchors.fill: parent
                             colors: colors
+                            compact: page.controlsAtBottom
                             onLoginRequested: page.loginRequested()
                         }
                         HoverHandler {
@@ -540,12 +593,21 @@ FocusScope {
                         }
                     }
 
-                    // The bottom row: volume and the view switches.
+                    // The bottom row: volume, lyrics, the queue and the display settings.
                     Row {
+                        id: viewButtons
                         anchors.right: parent.right
                         anchors.rightMargin: page.sideMargin - 10
-                        y: page.height - page.bottomRowHeight + (page.bottomRowHeight - height) / 2
+                        y: rowY.value - height / 2
                         spacing: 4
+
+                        Spring {
+                            id: rowY
+                            spec: Theme.motion.defaultSpatial
+                            readonly property real to: page.rowCenter
+                            onToChanged: page.animateLayout ? target = to : snapTo(to)
+                            Component.onCompleted: snapTo(to)
+                        }
 
                         HoverHandler {
                             id: rowHover
@@ -564,22 +626,23 @@ FocusScope {
                             onClicked: page.setView(page.view === 1 ? 0 : 1)
                         }
                         PlayerButton {
+                            id: queueButton
                             checkable: true
-                            checked: page.view === 2
+                            checked: page.sheet === 1
                             color: colors.content
                             glyph: Symbols.queue_music
                             text: qsTr("播放队列")
-                            onClicked: page.setView(page.view === 2 ? 0 : 2)
+                            onClicked: page.sheet = page.sheet === 1 ? 0 : 1
                         }
                         PlayerButton {
                             id: settingsButton
                             visible: page.settingsContent !== null
                             checkable: true
-                            checked: page.settingsOpen
+                            checked: page.sheet === 2
                             color: colors.content
                             glyph: Symbols.tune
                             text: qsTr("显示设置")
-                            onClicked: page.settingsOpen = !page.settingsOpen
+                            onClicked: page.sheet = page.sheet === 2 ? 0 : 2
                         }
                     }
 
@@ -625,63 +688,35 @@ FocusScope {
                 }
             }
 
-            // The display settings panel (§9.1): slides in from the right over the
-            // lyrics or queue; see-through, so changes show behind it. A click beside it
-            // or Esc closes it, and the focus goes back to the button.
+            // The side panels (§8, §9.1): from the right, over the lyrics; see-through,
+            // so display changes show behind. A click beside them or Esc closes them.
             MouseArea {
                 anchors.fill: parent
-                visible: page.settingsOpen
-                onPressed: page.settingsOpen = false
+                visible: page.sheet !== 0
+                onPressed: page.sheet = 0
             }
-            Rectangle {
-                id: settingsPanel
-                readonly property real panelWidth: Math.min(440, page.width - 2 * page.sideMargin)
-                width: panelWidth
-                y: page.contentTop
-                height: page.height - page.bottomRowHeight - 8 - y
-                x: page.width - page.sideMargin / 2 - panelWidth * slide.value
-                   + (1 - slide.value) * page.sideMargin
-                // Visible at once on opening: the focus moves into it.
-                visible: page.settingsOpen || slide.value > 0.001
-                opacity: Math.min(1, slide.value * 2)
+            Sheet {
+                id: queueSheet
+                title: qsTr("播放队列")
+                shown: page.sheet === 1
+                PlayerQueue {
+                    id: queuePanel
+                    anchors.fill: parent
+                    onArtistRequested: key => page.artistRequested(key)
+                    onAlbumRequested: key => page.albumRequested(key)
+                    onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key, title)
+                }
+            }
+            Sheet {
+                id: settingsSheet
                 // Loaded on first opening, then kept.
                 property bool used: false
-                radius: Theme.shape.extraLarge
-                color: Qt.alpha(colors.scheme.surface, 0.8)
-                // Takes the clicks over it.
-                MouseArea {
-                    anchors.fill: parent
-                }
+                title: qsTr("显示设置")
+                shown: page.sheet === 2
 
-                Spring {
-                    id: slide
-                    target: page.settingsOpen ? 1 : 0
-                    spec: page.reduced ? Theme.motion.defaultEffects : Theme.motion.defaultSpatial
-                }
-
-                Text {
-                    id: settingsTitle
-                    x: 24
-                    y: 20
-                    text: qsTr("显示设置")
-                    color: colors.scheme.onSurface
-                    font: Theme.type.titleLarge.font
-                    Accessible.role: Accessible.Heading
-                }
-                IconButton {
-                    id: settingsClose
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: settingsTitle.verticalCenter
-                    glyph: Symbols.close
-                    text: qsTr("关闭")
-                    onClicked: page.settingsOpen = false
-                }
                 Flickable {
                     id: settingsFlick
                     anchors.fill: parent
-                    anchors.topMargin: 64
-                    anchors.bottomMargin: 12
                     clip: true
                     contentHeight: settingsLoader.height + 12
                     boundsBehavior: Flickable.StopAtBounds
@@ -690,7 +725,7 @@ FocusScope {
                     // Tabbing to a row out of view scrolls it in.
                     Connections {
                         target: page.appWindow
-                        enabled: page.settingsOpen
+                        enabled: page.sheet === 2
                         function onActiveFocusItemChanged() {
                             const item = page.appWindow.activeFocusItem;
                             let inside = false;
@@ -717,7 +752,7 @@ FocusScope {
                         Loader {
                             id: settingsLoader
                             width: parent.width
-                            active: settingsPanel.used
+                            active: settingsSheet.used
                             sourceComponent: page.settingsContent
                             onLoaded: item.width = Qt.binding(() => width)
                         }
@@ -781,8 +816,8 @@ FocusScope {
             App.player.playPause();
             break;
         case Qt.Key_Escape:
-            if (page.settingsOpen)
-                page.settingsOpen = false;
+            if (page.sheet !== 0)
+                page.sheet = 0;
             else if (lyricsView.handBrowsing)
                 lyricsView.stopBrowsing(true);
             else if (page.fullScreenByPlayer || page.appWindow.visibility === Window.FullScreen)
@@ -806,7 +841,7 @@ FocusScope {
                 page.setView(page.view === 1 ? 0 : 1);
                 break;
             case Qt.Key_Q:
-                page.setView(page.view === 2 ? 0 : 2);
+                page.sheet = page.sheet === 1 ? 0 : 1;
                 break;
             case Qt.Key_F:
                 page.toggleFullScreen();
