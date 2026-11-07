@@ -338,6 +338,9 @@ FocusScope {
         width: Math.max(0, page.panelRect.width)
         height: Math.max(0, page.panelRect.height)
         clip: page.p < 0.999
+        // Over the last stretch near the mini player it fades, so the mini player shows
+        // through instead of appearing at once when the page is gone.
+        opacity: page.miniBar && !page.reduced ? Theme.motion.segment(page.p, 0, 0.3) : 1
 
         PlayerBackground {
             anchors.fill: parent
