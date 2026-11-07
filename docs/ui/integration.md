@@ -193,4 +193,10 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 离屏验证：真实封面第一次走网络（7 天有效期落盘），第二次启动命中缓存；示例封面正常；存储设置显示真实占用，清除后为 0 B 并有提示。
   - **后端修正**（`docs/tasks/resource-cache-backend.md` 已记录）：图片主机的 Content-Type 是非标准的 `image/jpg`，原先所有封面都被当成网络错误；`cacheRetention` 解析不了以 GMT 结尾的 HTTP 日期，且先把有效期截到 7 天再减 Age，原先任何真实响应都不落盘。后两处与 API 响应共用。
   - **测试目录不能放在 `/tmp` 下**：缓存目录要求所有上级目录都不能被组或其他人写（`safePath`），`/tmp` 不满足，缓存会报 Storage 错误。用 `build/linux-dev-local/xdg/` 这类目录。
-- 第 3 步（登录）：下一步。
+- **第 3 步（登录）代码完成，待真实账号验证（2026-11-07）**：
+  - 后端加了手机号＋验证码、手机号＋密码、邮箱＋密码登录和发送验证码（[credential-login.md](../api/credential-login.md)），发送验证码可以和扫码同时进行。
+  - `BackendSession`：扫码（`autoPoll`，二维码用 Nayuki 在本地画，`third_party/qrcodegen` v1.8.0）、手机号／邮箱登录、发送验证码、退出登录；后端就绪后若之前记住过账号（`account/remembered` 设置，按密钥环保存结果更新）就调用 `restore()`，没记住过的不恢复，游客启动时不会闪"正在登录"。失败码转成简短提示（`failureText`）。
+  - 登录对话框改成左扫码、右输入（shell.md §4）。离屏验证：真实二维码能生成并显示，标签、分段、区号菜单、本地格式校验正常。
+  - **待验证**（需要维护者操作，离屏做不了）：扫码登录、验证码登录、密码登录（可能被要求安全验证）、记住登录后重启恢复、退出登录。验证后再做 D5 的上报来源核对。
+  - 头像：后端的身份只有 ID 和昵称，侧边栏暂时显示默认头像。
+- 第 4 步（搜索）：下一步。

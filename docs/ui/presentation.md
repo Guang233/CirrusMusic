@@ -110,7 +110,9 @@ engine.loadFromModule("CirrusMusic", "Main");
 | `status` | `Starting`／`Guest`／`SigningIn`／`SignedIn`／`Expired`／`Unavailable`（后端启动失败） |
 | `nickname`、`avatarKey` | 已登录时有效 |
 | `qrLogin` | 扫码登录子模型：`qrImage`（`image://qr/...`，二维码在 C++ 里生成，QML 拿不到登录 URL）、`phase`（`WaitingForScan`／`WaitingForConfirmation`／`Confirming`／`Expired`／`Failed`）、`remember`（是否记住登录） |
+| `formLogin` | 手机号／邮箱登录子模型：`busy`（登录中）、`error`（已翻译的失败原因）、`smsState`（`SmsIdle`／`SmsSending`／`SmsSent`）、`smsError`、`resendAt`（可以重发验证码的时刻，`Date.now()` 毫秒） |
 | `beginQrLogin()`、`refreshQr()`、`cancelLogin()`、`signOut()` | 意图。返回值不代表成功，结果看 `status` |
+| `beginFormLogin(method, countryCode, account, secret)`、`sendSmsCode(countryCode, phone)`、`clearFormError()` | 手机号／邮箱登录（`Account.PhoneCode`／`PhonePassword`／`EmailPassword`），`secret` 是验证码或密码（数据源立即算成 MD5，不保存）；记住登录同 `qrLogin.remember`。发送验证码可以和扫码同时进行 |
 | `accountChanged()` | 信号，见 §4.2 |
 
 **`App.player`：当前播放**
