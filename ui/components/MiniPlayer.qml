@@ -4,12 +4,12 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// The persistent mini player (docs/ui/README.md §6.2): the cover and title on the
-// left; in the middle the transport controls over a seek bar that waves while playing,
-// the times at its ends; the comments on the right. Flat, no shadow: in the app it is
-// part of the frame under the content panel (docs/ui/pages/shell.md §0). It slides in
-// once something is queued; the shell keeps `reservedHeight` free below the pages.
-// Narrow bars drop "previous" and the times.
+// The persistent mini player (docs/ui/README.md §6.2), one row: the cover and title,
+// a seek bar that waves while playing (the times at its ends), the transport buttons
+// and the comments. Narrower bars shorten the seek bar, then trade it (and "previous")
+// for a progress ring around the play button (`tier`). Flat, no shadow: in the app it
+// is part of the frame under the content panel (docs/ui/pages/shell.md §0). It slides
+// in once something is queued; the shell keeps `reservedHeight` free below the pages.
 Item {
     id: root
 
@@ -17,7 +17,11 @@ Item {
     // Space to keep free below the content, including the bottom margin.
     property real bottomMargin: 4
     readonly property real reservedHeight: (implicitHeight + bottomMargin) * reveal.value
-    readonly property bool wide: width >= 560
+    // 2 wide: the seek bar with the times; 1 medium: a shorter one, the time over the
+    // handle while dragging; 0 narrow: no seek bar, no "previous", a progress ring
+    // around the play button.
+    readonly property int tier: width >= 760 ? 2 : width >= 560 ? 1 : 0
+    readonly property bool wide: tier > 0
     // For the player page's shared elements: the card it grows from, and the cover,
     // title, buttons and seek bar that fly to their places on the page. While `flying`
     // the cover and the times are hidden (the page draws copies of the rest).
@@ -25,7 +29,7 @@ Item {
     readonly property Item coverItem: cover
     readonly property Item titleItem: texts
     readonly property Item controlsItem: controls
-    readonly property Item seekItem: seek
+    readonly property Item seekItem: center.visible ? seek : null
     property bool flying: false
 
     // Opens the player page (UI phase 4).
@@ -39,7 +43,7 @@ Item {
     signal commentsRequested
 
     readonly property real timeWidth: 44
-    implicitHeight: 80
+    implicitHeight: 72
     visible: reveal.value > 0
 
     Spring {
@@ -86,8 +90,8 @@ Item {
             id: texts
             anchors.left: cover.right
             anchors.leftMargin: 12
-            anchors.right: center.left
-            anchors.rightMargin: 16
+            anchors.right: center.visible ? center.left : controls.left
+            anchors.rightMargin: center.visible ? 24 : 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -108,80 +112,95 @@ Item {
             }
         }
 
-        // The middle: the buttons over the seek bar (like the player page's bottom
-        // layout). Centered on wide bars; on narrow ones at the right, without
-        // "previous" and the times.
-        Item {
-            id: center
-            readonly property real barWidth: root.wide ? Math.min(520, root.width * 0.4) : 160
-            x: root.wide ? (parent.width - width) / 2
-                         : parent.width - width - (commentsButton.visible ? commentsButton.width + 16 : 12)
-            y: (parent.height - height) / 2
-            width: barWidth + (root.wide ? 2 * root.timeWidth : 0)
-            height: controls.height + 2 + seek.height
+        // Pressing a button widens it and squeezes its neighbours (MD3E button
+        // group). The play button is wide, square while playing and round while
+        // paused, and spins a loading indicator while the song loads.
+        StandardButtonGroup {
+            id: controls
+            anchors.right: commentsButton.visible ? commentsButton.left : parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
 
-            // Pressing a button widens it and squeezes its neighbours (MD3E button
-            // group). The play button is wide, square while playing and round while
-            // paused, and spins a loading indicator while the song loads.
-            StandardButtonGroup {
-                id: controls
-                anchors.horizontalCenter: parent.horizontalCenter
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.wide
+                enabled: App.player.canPrevious
+                variant: Md.Tonal
+                glyph: Symbols.skip_previous
+                iconFill: 1
+                text: qsTr("上一首")
+                onClicked: App.player.previous()
+            }
+            IconButton {
+                id: playButton
+                readonly property bool loading: App.player.status === Playback.Loading
+                readonly property bool playing: App.player.status === Playback.Playing || loading
+                anchors.verticalCenter: parent.verticalCenter
+                variant: Md.Filled
+                widthMode: root.tier > 0 ? Md.Wide : Md.Default
+                // Round inside the ring on narrow bars.
+                shape: playing && root.tier > 0 ? Md.Square : Md.Round
+                glyph: loading ? "" : playing ? Symbols.pause : Symbols.play_arrow
+                iconFill: 1
+                text: loading ? qsTr("正在加载") : playing ? qsTr("暂停") : qsTr("播放")
+                onClicked: App.player.playPause()
 
-                IconButton {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: root.wide
-                    enabled: App.player.canPrevious
-                    variant: Md.Tonal
-                    glyph: Symbols.skip_previous
-                    iconFill: 1
-                    text: qsTr("上一首")
-                    onClicked: App.player.previous()
+                // Narrow bars have no seek bar: a ring around the button shows the
+                // progress.
+                CircularProgress {
+                    anchors.centerIn: parent
+                    width: parent.height + 12
+                    height: width
+                    thickness: 3
+                    visible: root.tier === 0 && App.player.durationMs > 0
+                    from: 0
+                    to: Math.max(1, App.player.durationMs)
+                    value: clock.positionMs
                 }
-                IconButton {
-                    id: playButton
-                    readonly property bool loading: App.player.status === Playback.Loading
-                    readonly property bool playing: App.player.status === Playback.Playing || loading
-                    anchors.verticalCenter: parent.verticalCenter
-                    variant: Md.Filled
-                    widthMode: Md.Wide
-                    shape: playing ? Md.Square : Md.Round
-                    glyph: loading ? "" : playing ? Symbols.pause : Symbols.play_arrow
-                    iconFill: 1
-                    text: loading ? qsTr("正在加载") : playing ? qsTr("暂停") : qsTr("播放")
-                    onClicked: App.player.playPause()
-
-                    LoadingIndicator {
-                        anchors.centerIn: parent
-                        implicitWidth: 28
-                        implicitHeight: 28
-                        visible: playButton.loading
-                        color: ColorScope.scheme.onPrimary
-                    }
-                }
-                IconButton {
-                    anchors.verticalCenter: parent.verticalCenter
-                    enabled: App.player.canNext
-                    variant: Md.Tonal
-                    glyph: Symbols.skip_next
-                    iconFill: 1
-                    text: qsTr("下一首")
-                    onClicked: App.player.next()
+                LoadingIndicator {
+                    anchors.centerIn: parent
+                    implicitWidth: 28
+                    implicitHeight: 28
+                    visible: playButton.loading
+                    color: ColorScope.scheme.onPrimary
                 }
             }
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                enabled: App.player.canNext
+                variant: Md.Tonal
+                glyph: Symbols.skip_next
+                iconFill: 1
+                text: qsTr("下一首")
+                onClicked: App.player.next()
+            }
+        }
+
+
+        // The seek bar between the title and the buttons, the times at its ends on
+        // wide bars; narrow bars have none (the play button's ring instead).
+        Item {
+            id: center
+            anchors.right: controls.left
+            anchors.rightMargin: 24
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.tier > 0
+            width: root.tier === 2 ? Math.min(560, root.width * 0.4) : Math.min(240, root.width * 0.32)
+            height: seek.height
 
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: seek.verticalCenter
-                visible: root.wide
+                visible: root.tier === 2
                 opacity: root.flying ? 0 : 1
                 text: App.format.duration(seek.shownMs)
                 color: ColorScope.scheme.onSurfaceVariant
                 font: Fonts.tabular(Theme.type.labelSmall.font)
             }
 
-            // The seek bar: a wave while playing (a setting), a line while paused, and
-            // a short bar to drag. Dragging only previews; the seek happens on release
-            // and the handle stays there until the player has caught up.
+            // The seek bar: a wave while playing (a setting), a line while paused,
+            // and a short bar to drag. Dragging only previews; the seek happens on
+            // release and the handle stays there until the player has caught up.
             Slider {
                 id: seek
 
@@ -195,10 +214,11 @@ Item {
                     caughtUp.restart();
                 }
 
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: controls.bottom
-                anchors.topMargin: 2
-                width: center.barWidth
+                anchors.left: parent.left
+                anchors.leftMargin: root.tier === 2 ? root.timeWidth : 0
+                anchors.right: parent.right
+                anchors.rightMargin: root.tier === 2 ? root.timeWidth : 0
+                anchors.verticalCenter: parent.verticalCenter
                 trackHeight: 4
                 handleHeight: 16
                 wavy: App.settings.miniWave
@@ -206,6 +226,9 @@ Item {
                 enabled: App.player.seekable && App.player.durationMs > 0
                 opacity: App.player.durationMs > 0 ? 1 : 0
                 live: false
+                // Without the times: the time it would go to, over the handle while dragging.
+                showValueLabel: root.tier === 1
+                valueText: App.format.duration(shownMs)
                 focusPolicy: Qt.TabFocus
                 from: 0
                 to: Math.max(1, App.player.durationMs)
@@ -234,7 +257,7 @@ Item {
             Text {
                 anchors.right: parent.right
                 anchors.verticalCenter: seek.verticalCenter
-                visible: root.wide
+                visible: root.tier === 2
                 opacity: root.flying ? 0 : 1
                 horizontalAlignment: Text.AlignRight
                 text: App.player.durationMs <= 0 ? "--:--"
