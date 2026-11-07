@@ -134,6 +134,7 @@
    - `ChoiceSetting`：2–3 个短选项，`options: [{value, text}]`、`value`、`onChosen`。
    - `MenuSetting`：多个选项，或选项需要说明，`options: [{value, text, description}]`。
    - `ActionSetting`：一个操作按钮，`actionText` 加 `onTriggered`。
+   - `SliderSetting`：范围内的数值，`from`、`to`、`stepSize`、`value`、`onMoved`，`format` 决定旁边显示的数值文字。
    - `SettingRow`：其他样式，自己写 `trailing`。
 
    每种都有 `text`、`supportingText`。依赖别的设置才出现的项用 `shown:`，有折叠动画；这台机器上永远没有的项用 `visible:`。分组自动处理首末行的圆角和隐藏行的间隙。
@@ -157,7 +158,7 @@
   - `ListItem` 的说明文字换行后会撑高。
   - `MenuItem` 加 `supportingText`（第二行说明，项高 60）。
 - **页面**：
-  - 通用组件都在 `ui/app/settings/`：`SettingsGroup`、`SettingRow`、`SwitchSetting`、`ChoiceSetting`、`MenuSetting`、`ActionSetting`、`SeedSwatches`。
+  - 通用组件都在 `ui/app/settings/`：`SettingsGroup`、`SettingRow`、`SwitchSetting`、`ChoiceSetting`、`MenuSetting`、`ActionSetting`、`SliderSetting`、`SeedSwatches`。
   - 每个分组一个文件：账号、播放、歌词、外观、窗口与系统、存储与隐私、键盘快捷键、关于。
   - 左侧索引在内容区宽度够 1000 时出现，跟随滚动高亮，点击后滚到对应分组；是一个 Tab 停留点，↑／↓ 移动。
 - **快捷键**：Ctrl+P、Ctrl+←／→、Ctrl+↑／↓、Ctrl+L、Ctrl+,。
