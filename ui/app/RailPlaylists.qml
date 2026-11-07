@@ -68,6 +68,10 @@ Flickable {
             Accessible.name: group.title
             onClicked: group.open = !group.open
 
+            HoverHandler {
+                enabled: header.hoverEnabled
+                cursorShape: Qt.PointingHandCursor
+            }
             background: Item {
                 StateLayer {
                     x: 20

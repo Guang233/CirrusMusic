@@ -124,4 +124,10 @@ T.Switch {
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
     }
+
+    // A hand pointer wherever the control shows hover (controls.md §2).
+    HoverHandler {
+        enabled: control.hoverEnabled
+        cursorShape: Qt.PointingHandCursor
+    }
 }

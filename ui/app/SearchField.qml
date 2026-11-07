@@ -312,6 +312,10 @@ SearchBar {
         focusPolicy: Qt.NoFocus
         Accessible.name: text
 
+        HoverHandler {
+            enabled: line.hoverEnabled
+            cursorShape: Qt.PointingHandCursor
+        }
         Spring {
             id: lineCorner
             target: line.picked || line.hovered || line.pressed ? Theme.shape.medium

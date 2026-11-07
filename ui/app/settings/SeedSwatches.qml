@@ -43,6 +43,10 @@ Row {
             Keys.onLeftPressed: swatches.choose(index - 1)
             Keys.onRightPressed: swatches.choose(index + 1)
 
+            HoverHandler {
+                enabled: swatch.hoverEnabled
+                cursorShape: Qt.PointingHandCursor
+            }
             Spring {
                 id: ring
                 target: swatch.selected ? 1 : 0

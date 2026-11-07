@@ -61,6 +61,10 @@ Item {
         TapHandler {
             onTapped: root.openRequested()
         }
+        // A click anywhere free opens the player page.
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
 
         CoverArt {
             id: cover

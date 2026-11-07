@@ -34,6 +34,10 @@ Item {
                 root.signInRequested();
         }
 
+        HoverHandler {
+            enabled: account.hoverEnabled
+            cursorShape: Qt.PointingHandCursor
+        }
         background: StateLayer {
             radius: height / 2
             color: Theme.color.onSurfaceVariant

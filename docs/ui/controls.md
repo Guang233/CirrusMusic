@@ -35,6 +35,8 @@
 - FILL 量化到 0.05 一档：每个不同的可变轴取值都会生成一份字形缓存，动画时不量化会无谓增加缓存。
 - 代价：原生渲染的字形在 `scale` 变换下是位图缩放，缩放动画期间会略模糊；Windows（DirectWrite）、macOS（CoreText）上的效果未验证。
 
+**指针**：能点的控件在显示悬停的地方把指针变成手形（`HoverHandler { enabled: control.hoverEnabled; cursorShape: Qt.PointingHandCursor }`，2026-11-07 维护者要求）。Button、IconButton、Chip、CheckBox、RadioButton、Switch、Slider、ListItem、MenuItem、NavigationRailItem、TabButton 都有；页面里自绘的可点卡片和行（歌单卡片、侧边栏行、搜索建议、种子色等）照此加。规则是"有悬停层的地方才有手形"：只显示信息的行设 `hoverEnabled: false`，既没有悬停层也没有手形。输入框保持 I 形指针。歌曲表格、评论、调整顺序这类单击只是选中的列表保持箭头，其中的链接（歌手、专辑）是手形。
+
 **状态到颜色**：禁用时容器为 OnSurface 12%、内容为 OnSurface 38%；选中（切换）状态用 `defaultEffects` 弹簧在两套颜色之间混合。
 
 ## 3. 按钮

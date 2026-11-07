@@ -22,6 +22,10 @@ T.AbstractButton {
     Accessible.role: Accessible.Button
     Accessible.name: text
 
+    HoverHandler {
+        enabled: control.hoverEnabled
+        cursorShape: Qt.PointingHandCursor
+    }
     background: Item {
         Rectangle {
             id: container

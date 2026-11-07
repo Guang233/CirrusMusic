@@ -26,6 +26,10 @@ T.AbstractButton {
                       plays >= 0 ? qsTr("播放 %1 次").arg(App.format.count(plays)) : ""]
         .filter(part => part !== "").join("，")
 
+    HoverHandler {
+        enabled: control.hoverEnabled
+        cursorShape: Qt.PointingHandCursor
+    }
     contentItem: Column {
         spacing: 8
 

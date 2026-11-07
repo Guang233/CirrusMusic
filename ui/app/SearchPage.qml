@@ -402,6 +402,10 @@ Item {
             .filter(part => part !== "").join(qsTr("，"))
         onClicked: page.shell.openCollection(overview.bestKind, overview.bestKey)
 
+        HoverHandler {
+            enabled: card.hoverEnabled
+            cursorShape: Qt.PointingHandCursor
+        }
         contentItem: Item {
             CoverArt {
                 id: bestCover

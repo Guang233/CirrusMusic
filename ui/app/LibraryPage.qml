@@ -149,6 +149,10 @@ Item {
         focusPolicy: Qt.TabFocus
         Accessible.name: subtitle !== "" ? text + "，" + subtitle : text
 
+        HoverHandler {
+            enabled: card.hoverEnabled
+            cursorShape: Qt.PointingHandCursor
+        }
         contentItem: Item {
             Icon {
                 id: cardIcon

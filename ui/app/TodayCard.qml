@@ -45,6 +45,7 @@ Rectangle {
 
     HoverHandler {
         id: hover
+        cursorShape: card.signedIn && card.ready ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
     TapHandler {
         enabled: card.signedIn && card.ready
