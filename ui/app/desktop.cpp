@@ -10,6 +10,7 @@
 #include <QEvent>
 #include <QGuiApplication>
 #include <QQmlEngine>
+#include <QWindow>
 
 namespace cirrus::ui
 {
@@ -68,12 +69,32 @@ bool Desktop::checkTray()
 
 void Desktop::quit() { QCoreApplication::quit(); }
 
+void Desktop::setShutdown(std::function<void(std::function<void()>)> shutdown)
+{
+    m_shutdown = std::move(shutdown);
+}
+
 bool Desktop::eventFilter(QObject* watched, QEvent* event)
 {
     // QCoreApplication::quit() and the session ending both close the windows first.
-    if (watched == QCoreApplication::instance() && event->type() == QEvent::Quit && !m_quitting) {
-        m_quitting = true;
-        emit quittingChanged();
+    if (watched == QCoreApplication::instance() && event->type() == QEvent::Quit) {
+        if (!m_quitting) {
+            m_quitting = true;
+            emit quittingChanged();
+        }
+        if (m_shutdown && m_shutdownStage < 2) {
+            // Held until the shutdown is done; the windows go away meanwhile.
+            if (m_shutdownStage == 0) {
+                m_shutdownStage = 1;
+                for (QWindow* window : QGuiApplication::topLevelWindows())
+                    window->hide();
+                m_shutdown([this] {
+                    m_shutdownStage = 2;
+                    QCoreApplication::quit();
+                });
+            }
+            return true;
+        }
     }
     return QObject::eventFilter(watched, event);
 }

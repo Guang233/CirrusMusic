@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
+
 class QJSEngine;
 class QQmlEngine;
 
@@ -43,6 +45,10 @@ class Desktop : public QObject
     // trayAvailable. Call before hiding the window.
     Q_INVOKABLE bool checkTray();
     Q_INVOKABLE void quit();
+    // Runs before the app quits, however that is asked (the tray, Ctrl+Q, closing the
+    // window, the session ending): the windows hide, `shutdown` gets a callback to run
+    // when it is done (the backend has stopped), and only then the app quits.
+    void setShutdown(std::function<void(std::function<void()>)> shutdown);
 
   signals:
     void trayAvailableChanged();
@@ -57,6 +63,9 @@ class Desktop : public QObject
     Tray* m_tray = nullptr;
     bool m_trayAvailable = false;
     bool m_quitting = false;
+    std::function<void(std::function<void()>)> m_shutdown;
+    // 0 running, 1 shutting down, 2 done (the next Quit goes through).
+    int m_shutdownStage = 0;
 };
 
 } // namespace cirrus::ui

@@ -1,6 +1,7 @@
 #include "app.h"
 #include "app_icon.h"
 #include "app_settings.h"
+#include "backend_host.h"
 #include "desktop.h"
 #include "fake_sources.h"
 #include "gpu_preference.h"
@@ -8,8 +9,10 @@
 #include "title_bar_mode.h"
 
 #include <QCommandLineParser>
+#include <QFile>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QSettings>
 #ifdef CIRRUS_UI_TRAY
 // QSystemTrayIcon needs QApplication (docs/10-linux-integration.md §4).
 #include <QApplication>
@@ -29,14 +32,31 @@ Q_IMPORT_QML_PLUGIN(Cirrus_PlayerPlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_SamplesPlugin)
 Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 
+namespace
+{
+
+// The settings lived in ~/.config/Cirrus/CirrusMusic.conf before the app identity was
+// decided (UQ-06); they move to the app's own file once.
+void moveOldSettings()
+{
+    const QString now = QSettings().fileName();
+    const QString before =
+        QSettings(QStringLiteral("Cirrus"), QStringLiteral("CirrusMusic")).fileName();
+    if (!QFile::exists(now) && QFile::exists(before))
+        QFile::rename(before, now);
+}
+
+} // namespace
+
 int main(int argc, char* argv[])
 {
-    // Development placeholders for where settings live, until the app identity is
-    // decided (UQ-06). Set first: the GPU choice reads the settings before the
-    // application object exists.
+    // The app's identity (UQ-06, docs/ui/integration.md §6 D1). Set first: the GPU
+    // choice reads the settings before the application object exists.
     QCoreApplication::setOrganizationName(QStringLiteral("Cirrus"));
-    QCoreApplication::setApplicationName(QStringLiteral("CirrusMusic"));
+    QCoreApplication::setApplicationName(QStringLiteral("Cirrus"));
     QCoreApplication::setApplicationVersion(QStringLiteral(CIRRUS_VERSION));
+    QGuiApplication::setDesktopFileName(QStringLiteral("com.guang233.Cirrus"));
+    moveOldSettings();
     cirrus::ui::gpu::apply(cirrus::ui::AppSettings().preferDiscreteGpu());
 
     Application app(argc, argv);
@@ -52,10 +72,22 @@ int main(int argc, char* argv[])
     if (!instance.claim())
         return 0;
 
-    // Fake data until the backend sources exist (UI phase 5).
+    // The backend (UI phase 5, docs/ui/integration.md): closed before the app quits.
+    QString unwritable;
+    const auto paths = cirrus::ui::BackendHost::preparePaths(&unwritable);
+    if (!paths) {
+        qCritical("Cannot create %s", qPrintable(unwritable));
+        return 1;
+    }
+    cirrus::ui::BackendHost backend(*paths);
+
+    // Fake data for what the backend sources don't cover yet.
     cirrus::ui::App::install(cirrus::ui::makeFakeSources());
     auto* presentation = cirrus::ui::App::instance();
     cirrus::ui::Desktop desktop(&instance);
+    desktop.setShutdown(
+        [&backend](std::function<void()> done) { backend.shutdown(std::move(done)); });
+    backend.start();
 
     // --titlebar, then CIRRUS_TITLEBAR, then the user's setting, then the desktop default.
     namespace titlebar = cirrus::ui::titlebar;
