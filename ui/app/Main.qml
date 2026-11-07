@@ -13,7 +13,7 @@ AppWindow {
     width: 1200
     height: 800
     visible: true
-    title: qsTr("Cirrus Music")
+    title: qsTr("Cirrus")
 
     // Appearance follows the user's settings.
     Binding {

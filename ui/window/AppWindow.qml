@@ -16,7 +16,7 @@ import Cirrus.Theme
 // the app draws its name itself). Default children fill the area below the row,
 // over `surfaceColor`. `overlay` children cover the whole window, title bar row
 // included (the player page).
-//   AppWindow { title: qsTr("Cirrus Music"); Page { anchors.fill: parent } }
+//   AppWindow { title: qsTr("Cirrus"); Page { anchors.fill: parent } }
 Window {
     id: window
 

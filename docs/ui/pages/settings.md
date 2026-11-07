@@ -75,7 +75,7 @@
   - 单色（Monochrome）
 
   其余 4 种（Content、Fidelity、Rainbow、FruitSalad）适合按图片取色，跟设置的场景重复或太花，不放。
-- **关于**：应用图标、"Cirrus Music"、版本号。说明文字："非官方客户端，与网易云音乐没有关联。"另有"第三方许可"按钮，打开对话框，列出用到的开源组件及其许可：Qt、MiSans、Material Symbols、m3shapes、material-color-utilities，以及其他按实际依赖补全。
+- **关于**：应用图标、"Cirrus"、版本号。说明文字："非官方客户端，与网易云音乐没有关联。"另有"第三方许可"按钮，打开对话框，列出用到的开源组件及其许可：Qt、MiSans、Material Symbols、m3shapes、material-color-utilities，以及其他按实际依赖补全。
 
 ## 3. 行为
 

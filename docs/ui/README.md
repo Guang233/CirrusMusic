@@ -392,7 +392,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | UQ-03 | 文字字体：系统字体还是随包附带 | **已决定（2026-10-30）**：默认随包 MiSans，用户可选系统字体或自定义字体，见 §4.2 | 已关闭 |
 | UQ-04 | 默认配色方案变体 | **已决定（2026-11-04）**：默认 TonalSpot（标准）；设置里开放标准、表现力、鲜明、中性、单色 5 种（[pages/settings.md](pages/settings.md) S5） | 已决定 |
 | UQ-05 | 播放页在亮色主题下是否仍使用深色背景、浅色文字 | **已决定（2026-11-05）**：亮暗两套，都从封面取色，默认跟随外观，可在设置里固定；文字、图标也从封面取淡色（[pages/player.md §3](pages/player.md)） | 已决定 |
-| UQ-06 | 应用身份（app ID）、配置与缓存目录 | 原型阶段用开发占位值 | 阶段 5 开始 |
+| UQ-06 | 应用身份（app ID）、配置与缓存目录 | **已决定（2026-11-07）**：应用名 Cirrus（仓库名 CirrusMusic 只为区分），app ID `com.guang233.Cirrus`；目录见 [integration.md](integration.md) §6 D1，阶段 5 第 1 步落地 | 已决定 |
 | UQ-07 | UI 是否编写 Qt Quick Test 自动化测试 | **已决定**：不写，以 Gallery 人工检查（交互 + 离屏截图）为准 | 已决定 |
 | UQ-08 | m3shapes 直接依赖还是自行移植 | **已决定**：以固定提交引入、自写静态库 CMake，软件渲染下降级 | 已决定 |
 | UQ-09 | 配色规范版本 | **已决定**：采用 2025 规范，已移植到 C++ 并与 TS 逐色验证（[theme.md §3](theme.md)） | 已决定 |

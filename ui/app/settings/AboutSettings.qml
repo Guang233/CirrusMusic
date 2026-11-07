@@ -39,7 +39,7 @@ SettingsGroup {
     hue: "grey"
 
     SettingRow {
-        text: qsTr("Cirrus Music %1").arg(Qt.application.version)
+        text: qsTr("Cirrus %1").arg(Qt.application.version)
         supportingText: qsTr("非官方客户端，与网易云音乐没有关联。界面文字使用小米 MiSans 字体。")
         focusPolicy: Qt.NoFocus
         hoverEnabled: false

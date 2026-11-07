@@ -41,13 +41,13 @@ Dialog {
             width: parent.width - x
             text: Desktop.trayAvailable
                   ? qsTr("从托盘图标可以重新打开窗口或退出。")
-                  : qsTr("当前桌面没有系统托盘：再次打开 Cirrus Music 回到窗口，在窗口里按 Ctrl+Q 退出。")
+                  : qsTr("当前桌面没有系统托盘：再次打开 Cirrus 回到窗口，在窗口里按 Ctrl+Q 退出。")
             wrapMode: Text.Wrap
             color: Theme.color.onSurfaceVariant
             font: Theme.type.bodySmall.font
         }
         RadioButton {
-            text: qsTr("退出 Cirrus Music")
+            text: qsTr("退出 Cirrus")
         }
         CheckBox {
             id: remember

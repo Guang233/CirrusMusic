@@ -23,7 +23,7 @@ Tray::Tray(QObject* parent)
     m_next = m_menu->addAction(tr("下一首"), player, &Player::next);
     m_menu->addSeparator();
     m_menu->addAction(tr("显示主窗口"), this, &Tray::showRequested);
-    m_menu->addAction(tr("退出 Cirrus Music"), this, &Tray::quitRequested);
+    m_menu->addAction(tr("退出 Cirrus"), this, &Tray::quitRequested);
 
     m_icon->setIcon(appIcon());
     m_icon->setContextMenu(m_menu.get());
@@ -54,7 +54,7 @@ void Tray::update()
     const QString title =
         song.artistText.isEmpty() ? song.title : tr("%1 - %2").arg(song.title, song.artistText);
     m_song->setText(hasSong ? title : tr("未在播放"));
-    m_icon->setToolTip(hasSong ? title : QStringLiteral("Cirrus Music"));
+    m_icon->setToolTip(hasSong ? title : QStringLiteral("Cirrus"));
 
     const bool playing =
         player->status() == playback::Playing || player->status() == playback::Loading;

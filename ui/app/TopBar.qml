@@ -38,7 +38,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             opacity: Theme.motion.segment((lead.width - 96) / 176, 0.6, 1)
             visible: opacity > 0
-            text: qsTr("Cirrus Music")
+            text: qsTr("Cirrus")
             elide: Text.ElideRight
             color: Theme.color.onSurface
             font: Theme.type.titleMedium.font
