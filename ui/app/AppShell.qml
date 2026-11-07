@@ -49,6 +49,8 @@ Item {
     signal playerRequested
     // Something on top (the player page) should give way, e.g. for the settings.
     signal uncoverRequested
+    // A notice while covered: whatever covers the shell shows it.
+    signal coveredNotice(string text)
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
     readonly property var destinations: [{
@@ -166,7 +168,13 @@ Item {
 
     // A short message at the bottom of the content panel (Snackbar).
     function notify(text: string) {
-        snackbar.show(text);
+        if (covered)
+            coveredNotice(text);
+        else
+            snackbar.show(text);
+    }
+    function focusMiniPlayer() {
+        miniPlayer.takeFocus();
     }
 
     // "收藏到歌单" for `keys`: picks one of the account's playlists (sign-in first).

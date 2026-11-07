@@ -25,6 +25,11 @@ Item {
 
     // Opens the player page (UI phase 4).
     signal openRequested
+
+    // The focus comes back here when the player page closes: its play button.
+    function takeFocus(): void {
+        playButton.forceActiveFocus(Qt.OtherFocusReason);
+    }
     // The current song's comments (not for voices).
     signal commentsRequested
 

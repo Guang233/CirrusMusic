@@ -118,6 +118,11 @@ FocusScope {
             fullScreenByPlayer = true;
         }
     }
+    // A short message (Snackbar) above the bottom row, in the cover's colors: the
+    // shell's notices while the page covers it.
+    function notify(text: string): void {
+        snackbar.show(text);
+    }
     // Shows the hidden controls and starts counting again.
     function wake(): void {
         chromeHidden = false;
@@ -726,6 +731,15 @@ FocusScope {
                 cursorShape: page.chromeHidden ? Qt.BlankCursor : undefined
                 onPressed: page.wake()
             }
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+        anchors.bottomMargin: page.bottomRowHeight
+        Snackbar {
+            id: snackbar
+            anchors.bottom: parent.bottom
         }
     }
 

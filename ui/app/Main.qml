@@ -85,6 +85,7 @@ AppWindow {
         visible: !player.covering
         onPlayerRequested: player.open()
         onUncoverRequested: player.close()
+        onCoveredNotice: text => player.notify(text)
     }
 
     // The player page, over everything including the top bar (docs/ui/pages/player.md).
@@ -112,6 +113,9 @@ AppWindow {
         }
         onAddToPlaylistRequested: key => shell.addToPlaylist([key])
         onLoginRequested: shell.openLogin()
+        // The focus goes back to the mini player (motion-choreography §2.2).
+        onOpenedChanged: if (!opened)
+                             shell.focusMiniPlayer()
     }
     Shortcut {
         sequence: "Ctrl+Shift+F"
