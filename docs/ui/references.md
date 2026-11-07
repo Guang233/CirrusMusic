@@ -10,6 +10,7 @@
 | --- | --- | --- | --- |
 | [material-color-utilities](https://github.com/material-foundation/material-color-utilities) | Apache-2.0 | 封面取色、HCT、配色方案（C++ 版本） | 已引入 `5b3618b1`；C++ 只有 2021 规范，与 2025 规范的差异见 [theme.md §3](theme.md) |
 | [m3shapes](https://github.com/soramanew/m3shapes) | Apache-2.0 | MD3E 形状与变形（androidx graphics-shapes 的 Qt QML 移植） | 已引入（提交 `8a6fe89`，`third_party/m3shapes`），见 [controls.md](controls.md) |
+| [QR Code generator](https://github.com/nayuki/QR-Code-generator)（Nayuki） | MIT | 在本地生成登录二维码（integration.md §6 D2） | 已引入（`v1.8.0`，`third_party/qrcodegen`，不改源码） |
 | [Material Symbols](https://github.com/google/material-design-icons) | Apache-2.0 | 图标 | 已引入子集，见 `ui/theme/fonts/README.md` |
 | [Google Sans Flex](https://github.com/google/fonts/tree/main/ofl/googlesansflex) | OFL-1.1 | 拉丁字体候选 | 未打包：默认文字字体为 MiSans（UQ-03） |
 

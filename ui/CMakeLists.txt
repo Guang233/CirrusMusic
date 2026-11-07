@@ -13,6 +13,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/third_party/material-color-utilities"
                  "${CMAKE_BINARY_DIR}/third_party/material-color-utilities")
 add_subdirectory("${PROJECT_SOURCE_DIR}/third_party/m3shapes"
                  "${CMAKE_BINARY_DIR}/third_party/m3shapes")
+add_subdirectory("${PROJECT_SOURCE_DIR}/third_party/qrcodegen"
+                 "${CMAKE_BINARY_DIR}/third_party/qrcodegen")
 add_subdirectory(theme)
 add_subdirectory(controls)
 add_subdirectory(window)
