@@ -185,7 +185,8 @@ class LyricsSource
     virtual Request lyrics(const QString& songKey, Reply<SongLyrics> reply) = 0;
 };
 
-// Account state and QR sign-in. Like PlaybackSource: intents, then snapshots.
+// Account state, QR and phone/email sign-in. Like PlaybackSource: intents, then
+// snapshots.
 class SessionSource
 {
   public:
@@ -200,6 +201,13 @@ class SessionSource
     virtual void refreshQr() = 0;
     virtual void cancelLogin() = 0;
     virtual void signOut() = 0;
+    // Phone/email sign-in. `secret` is the SMS code or the password; a source hashes a
+    // password at once and never keeps it. Replaces a QR sign-in in progress.
+    virtual void beginFormLogin(account::FormMethod method, const QString& countryCode,
+                                const QString& user, const QString& secret, bool remember) = 0;
+    // An SMS code for a PhoneCode sign-in; works beside a QR code being shown.
+    virtual void sendSmsCode(const QString& countryCode, const QString& phone) = 0;
+    virtual void clearFormError() = 0;
 };
 
 // Encoded images (JPEG, PNG) by cover key; the cover image provider decodes them.

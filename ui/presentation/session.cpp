@@ -27,8 +27,23 @@ void QrLogin::update(account::QrPhase phase, int serial)
     emit changed();
 }
 
+void FormLogin::update(const SessionSnapshot& snapshot)
+{
+    if (m_busy == snapshot.formBusy && m_error == snapshot.formError &&
+        m_smsState == snapshot.smsState && m_smsError == snapshot.smsError &&
+        m_resendAt == snapshot.smsResendAt)
+        return;
+    m_busy = snapshot.formBusy;
+    m_error = snapshot.formError;
+    m_smsState = snapshot.smsState;
+    m_smsError = snapshot.smsError;
+    m_resendAt = snapshot.smsResendAt;
+    emit changed();
+}
+
 Session::Session(SessionSource* source, QObject* parent)
-    : QObject(parent), m_source(source), m_qrLogin(new QrLogin(this))
+    : QObject(parent), m_source(source), m_qrLogin(new QrLogin(this)),
+      m_formLogin(new FormLogin(this))
 {
     if (!m_source)
         return;
@@ -45,6 +60,7 @@ void Session::update()
     m_nickname = snapshot.nickname;
     m_avatarKey = snapshot.avatarKey;
     m_qrLogin->update(snapshot.qrPhase, snapshot.qrSerial);
+    m_formLogin->update(snapshot);
     emit changed();
     if (accountChange)
         emit accountChanged();
@@ -72,6 +88,26 @@ void Session::signOut()
 {
     if (m_source)
         m_source->signOut();
+}
+
+void Session::beginFormLogin(int method, const QString& countryCode, const QString& user,
+                             const QString& secret)
+{
+    if (m_source && method >= account::PhoneCode && method <= account::EmailPassword)
+        m_source->beginFormLogin(account::FormMethod(method), countryCode, user, secret,
+                                 m_qrLogin->remember());
+}
+
+void Session::sendSmsCode(const QString& countryCode, const QString& phone)
+{
+    if (m_source)
+        m_source->sendSmsCode(countryCode, phone);
+}
+
+void Session::clearFormError()
+{
+    if (m_source)
+        m_source->clearFormError();
 }
 
 } // namespace cirrus::ui

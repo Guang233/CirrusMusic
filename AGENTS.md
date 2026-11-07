@@ -28,6 +28,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - Animate control state colors with a `Spring` 0–1 progress plus `Theme.mix(a, b, t)`, not `Behavior on color` (it lags while the theme blends).
 - `Icon` must keep `Text.NativeRendering` + `Font.PreferNoHinting`: Material Symbols' FILL axis uses overlapping contours, which distance-field/curve rendering and hinting break (holes, hairline seams). See `docs/ui/controls.md` §2.
 - Vendored m3shapes lives in `third_party/m3shapes` (unmodified upstream sources, own CMake); executables link `m3shapesplugin` and `Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)`.
+- Vendored Nayuki qrcodegen (`third_party/qrcodegen`, v1.8.0, unmodified) draws the sign-in QR code; only `cirrus_presentation_backend` links it.
 - No Qt Quick Test for UI (UQ-07): verify in the gallery. `--grab` sets `GalleryState.capturing`, which opens menus/tooltips for screenshots.
 
 ## Build and verify

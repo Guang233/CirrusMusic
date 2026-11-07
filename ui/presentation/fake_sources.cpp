@@ -3,6 +3,7 @@
 #include "fake_controls.h"
 #include "formatter.h"
 
+#include <QCoreApplication>
 #include <QDate>
 #include <QDateTime>
 #include <QFile>
@@ -1649,6 +1650,59 @@ class FakeSession : public QObject, public SessionSource
     }
 
     void signOut() override { m_controls->setAccount(account::Guest); }
+
+    // Code "000000" and password "wrong" fail; anything else signs in after a moment.
+    void beginFormLogin(account::FormMethod method, const QString&, const QString&,
+                        const QString& secret, bool) override
+    {
+        if (m_state.status == account::SignedIn || m_state.formBusy)
+            return;
+        m_step.stop(); // like the backend: the QR attempt ends
+        m_state.status = account::SigningIn;
+        m_state.qrPhase = account::NoQr;
+        m_state.qrImage = {};
+        m_state.formBusy = true;
+        m_state.formError.clear();
+        const bool wrong = method == account::PhoneCode ? secret == QStringLiteral("000000")
+                                                        : secret == QStringLiteral("wrong");
+        QTimer::singleShot(kSignInMs, this, [this, method, wrong]() {
+            if (!m_state.formBusy)
+                return;
+            m_state.formBusy = false;
+            if (wrong) {
+                m_state.formError = method == account::PhoneCode
+                                        ? QCoreApplication::translate("Session", "验证码错误")
+                                        : QCoreApplication::translate("Session", "密码错误");
+                applyAccount();
+                return;
+            }
+            m_controls->setAccount(account::SignedIn);
+        });
+        notify();
+    }
+
+    void sendSmsCode(const QString&, const QString&) override
+    {
+        if (m_state.smsState == account::SmsSending)
+            return;
+        m_state.smsState = account::SmsSending;
+        m_state.smsError.clear();
+        QTimer::singleShot(800, this, [this]() {
+            m_state.smsState = account::SmsSent;
+            m_state.smsResendAt = QDateTime::currentMSecsSinceEpoch() + 60000;
+            notify();
+        });
+        notify();
+    }
+
+    void clearFormError() override
+    {
+        if (m_state.formError.isEmpty() && m_state.smsError.isEmpty())
+            return;
+        m_state.formError.clear();
+        m_state.smsError.clear();
+        notify();
+    }
 
   private:
     void applyAccount()
