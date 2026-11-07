@@ -20,7 +20,10 @@ Item {
     // 2 wide: the seek bar with the times; 1 medium: a shorter one, the time over the
     // handle while dragging; 0 narrow: no seek bar, no "previous", a progress ring
     // around the play button.
-    readonly property int tier: width >= 760 ? 2 : width >= 560 ? 1 : 0
+    // The thresholds leave the title at least `titleRoom` beside a seek bar of a usable
+    // length.
+    readonly property int tier: width >= 880 ? 2 : width >= 660 ? 1 : 0
+    readonly property real titleRoom: 160
     readonly property bool wide: tier > 0
     // Layout decisions read these, not `visible`: the page captures this layout while
     // the shell is hidden behind it, when every `visible` here reads false.
@@ -188,7 +191,10 @@ Item {
             anchors.rightMargin: 24
             anchors.verticalCenter: parent.verticalCenter
             visible: root.tier > 0
-            width: root.tier === 2 ? Math.min(560, root.width * 0.4) : Math.min(240, root.width * 0.32)
+            // Grows with the bar (45% of it) on wide bars, as long as the title keeps its
+            // room; at most 280 on medium ones.
+            readonly property real room: controls.x - 24 - (cover.x + cover.width + 12 + root.titleRoom + 24)
+            width: Math.max(0, root.tier === 2 ? Math.min(root.width * 0.45, room) : Math.min(280, room))
             height: seek.height
 
             Text {
