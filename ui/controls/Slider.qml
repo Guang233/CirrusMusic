@@ -5,11 +5,18 @@ import Cirrus.Theme
 
 // MD3E slider (horizontal): a bar handle with gaps to both track halves and a stop
 // dot at the end. `showValueLabel` shows `valueText` above the handle while dragging.
+// `wavy` draws the part left of the handle as the MD3E wave (WaveLine), flowing while
+// `waving`; with a thin track and a short handle it makes a seek bar.
 //   Slider { from: 0; to: 100; value: 40; showValueLabel: true }
+//   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing }
 T.Slider {
     id: control
 
     property real trackHeight: 16
+    property real handleHeight: 44
+    property bool wavy: false
+    property bool waving: true
+    property real waveAmplitude: 3
     property bool showValueLabel: false
     property string valueText: Math.round(value).toString()
 
@@ -39,18 +46,20 @@ T.Slider {
 
     background: Item {
         implicitWidth: 200
-        implicitHeight: control.trackHeight
+        implicitHeight: control.wavy ? control.trackHeight + 2 * control.waveAmplitude
+                                     : control.trackHeight
         x: control.leftPadding
         y: control.topPadding + (control.availableHeight - height) / 2
         width: control.availableWidth
-        height: control.trackHeight
+        height: implicitHeight
 
         // Active part, left of the handle.
         Rectangle {
             readonly property real end: control.handleX - control.leftPadding - control.gap
-            visible: end > 0
+            visible: end > 0 && !control.wavy
+            y: (parent.height - height) / 2
             width: Math.max(0, end)
-            height: parent.height
+            height: control.trackHeight
             color: control.activeColor
             topLeftRadius: height / 2
             bottomLeftRadius: height / 2
@@ -58,13 +67,25 @@ T.Slider {
             bottomRightRadius: Math.min(control.innerRadius, width / 2)
         }
 
+        WaveLine {
+            readonly property real end: control.handleX - control.leftPadding - control.gap
+            visible: control.wavy && end > 0
+            width: Math.max(control.trackHeight, end)
+            height: parent.height
+            color: control.activeColor
+            thickness: control.trackHeight
+            waving: control.waving
+            amplitude: control.waveAmplitude
+        }
+
         // Inactive part, right of the handle.
         Rectangle {
             readonly property real start: control.handleX - control.leftPadding + control.gap
             visible: start < parent.width
             x: start
+            y: (parent.height - height) / 2
             width: Math.max(0, parent.width - start)
-            height: parent.height
+            height: control.trackHeight
             color: control.inactiveColor
             topRightRadius: height / 2
             bottomRightRadius: height / 2
@@ -85,7 +106,7 @@ T.Slider {
 
     handle: Rectangle {
         implicitWidth: 4
-        implicitHeight: 44
+        implicitHeight: control.handleHeight
         x: control.handleX - width / 2
         y: control.topPadding + (control.availableHeight - height) / 2
         width: Math.max(1, handleWidth.value)

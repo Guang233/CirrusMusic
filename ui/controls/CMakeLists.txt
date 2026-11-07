@@ -36,6 +36,7 @@ qt_add_qml_module(cirrus_ui_controls
         Snackbar.qml
         Slider.qml
         ProgressBar.qml
+        WaveLine.qml
         CircularProgress.qml
         LoadingIndicator.qml
         ListItem.qml

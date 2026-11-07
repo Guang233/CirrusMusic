@@ -7,7 +7,7 @@ import Cirrus.Theme
 // at the end when determinate. Indeterminate runs two sliding segments.
 // `wavy` (determinate) draws the active part as a wave, flowing forward while `waving`
 // and smoothing out to a line when not; the bar is then tall enough for the wave.
-// Under the software renderer the wave stays a line.
+// Under the software renderer the wave stays a line (WaveLine).
 //   ProgressBar { wavy: true; waving: playing; value: position }
 T.ProgressBar {
     id: control
@@ -21,10 +21,7 @@ T.ProgressBar {
     property real waveAmplitude: 3
     property real wavelength: 32
     property real waveSpeed: wavelength
-    property real wavePhase: 0
     readonly property bool waveDrawn: wavy && !indeterminate
-                                      && GraphicsInfo.api !== GraphicsInfo.Software
-                                      && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property color activeColor: enabled ? ColorScope.scheme.primary
                                                  : Qt.alpha(ColorScope.scheme.onSurface,
                                                             Theme.state.disabledContent)
@@ -98,20 +95,6 @@ T.ProgressBar {
         onTriggered: control.elapsed += frameTime * 1000
     }
 
-    // The wave's height: down to a line when it stops waving.
-    Spring {
-        id: waveHeight
-        target: control.wavy && control.waving ? control.waveAmplitude : 0
-        spec: Theme.motion.slowEffects
-        threshold: 0.01
-    }
-    FrameAnimation {
-        running: control.waveDrawn && waveHeight.value > 0.01 && control.visible
-                 && !Theme.motion.reduced
-        onTriggered: control.wavePhase = (control.wavePhase + frameTime * control.waveSpeed)
-                                         % control.wavelength
-    }
-
     contentItem: Item {
         implicitWidth: 240
         implicitHeight: control.implicitHeight
@@ -155,20 +138,17 @@ T.ProgressBar {
             color: control.activeColor
         }
         // The wavy active part.
-        ShaderEffect {
+        WaveLine {
             readonly property var interval: control.activeIntervals[0] ?? [0, 0]
-            property color strokeColor: control.activeColor
-            property size boxSize: Qt.size(width, height)
-            property real thickness: control.thickness
-            property real amplitude: waveHeight.value
-            property real wavelength: control.wavelength
-            property real phase: control.wavePhase
-            property real pixel: 1 / Screen.devicePixelRatio
-
             visible: control.waveDrawn && width > 0.5
             width: Math.max(interval[1], control.thickness)
             height: parent.height
-            fragmentShader: Qt.resolvedUrl("shaders/wave.frag.qsb")
+            color: control.activeColor
+            thickness: control.thickness
+            waving: control.waving
+            amplitude: control.waveAmplitude
+            wavelength: control.wavelength
+            speed: control.waveSpeed
         }
     }
 }
