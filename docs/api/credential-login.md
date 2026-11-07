@@ -19,7 +19,7 @@
 
 - **登录**：`QrLoginService::beginCredential(CredentialLogin)` 开始一次认证尝试，和扫码共用 `QrLoginOptions`（总时限、记住登录），不轮询。登录接口返回 `code=200` 时，响应 Cookie 和 QR 803 一样只暂存进本次尝试；然后照常调用 AccountIdentity 复核身份，再 prepare → 精确 token 交接 → Authenticated，记住登录时写入密钥环。
 - 同一个尝试 token 只允许一次登录：已经申请过二维码或已经授权的 token 再提交登录会被拒绝。
-- **发送验证码**：`sendSmsCode(SmsCodeRequest)` 只在 Guest／Expired 会话、没有进行中的认证时受理，不推进会话、不停止播放、不作废其他请求（Facade 不递增 generation）。结果是 `smsCodeSent(token, variant<bool, AuthFailure>)`，同一时间最多一个。
+- **发送验证码**：`sendSmsCode(SmsCodeRequest)` 在 Guest／Expired 会话，或扫码尝试正在等待扫码时受理（登录框左边扫码、右边手机号同时可用）；登录、身份复核、交接进行中时拒绝。不推进会话、不停止播放、不作废其他请求（Facade 不递增 generation）。它不暂存 Cookie，所以在网关里独立于扫码／身份的单飞请求运行，同一时间最多一个。结果是 `smsCodeSent(token, variant<bool, AuthFailure>)`；会话 token 在等待中变了（如二维码过期）时结果被丢弃，调用方自己清掉等待状态。
 - **Facade**：`beginCredentialLogin(login, options)`、`sendSmsCode(request)`；输入非法时直接返回 0。结果复用 `signedIn`／`failed`，发送验证码用新的 `smsCodeSent`。
 
 ## 3. 失败与安全验证

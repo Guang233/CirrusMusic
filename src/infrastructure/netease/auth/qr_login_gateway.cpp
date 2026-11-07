@@ -114,6 +114,9 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
                             if (m_promotionId == id) {
                                 m_promotionId = 0;
                             }
+                            if (m_smsId == id) {
+                                m_smsApiId = 0; // m_smsId clears when the rejection lands
+                            }
                             rejectLater(id, {AuthError::StaleContext});
                             if (apiId != 0 && m_client) {
                                 m_client->cancel(apiId);
@@ -128,6 +131,7 @@ QrLoginGateway::QrLoginGateway(SessionApiClient& client, QObject* parent)
         m_authorizedContext = {};
         m_verified.reset();
         m_promotionId = 0;
+        m_smsApiId = 0;
         m_apiIds.clear();
         const auto ids = m_pending.keys();
         for (const auto id : ids) {
@@ -242,6 +246,9 @@ QrLoginGateway::~QrLoginGateway()
         for (const auto id : ids) {
             m_client->cancel(id);
         }
+        if (m_smsApiId != 0) {
+            m_client->cancel(m_smsApiId);
+        }
     }
 }
 
@@ -350,12 +357,26 @@ quint64 QrLoginGateway::requestCredentialLogin(domain::SessionToken context,
 
 quint64 QrLoginGateway::sendSmsCode(domain::SessionToken context, domain::SmsCodeRequest request)
 {
-    QJsonObject parameters;
-    if (domain::validSmsCodeRequest(request)) {
-        parameters.insert(QStringLiteral("ctcode"), request.countryCode);
-        parameters.insert(QStringLiteral("cellphone"), request.phone);
+    Q_ASSERT(QThread::currentThread() == thread());
+    const auto id = ++m_nextId;
+    m_pending.insert(id, {context, ApiOperation::SmsCodeSend});
+    if (!m_client) {
+        rejectLater(id, {AuthError::Network});
+    } else if (!m_client->accepts(context)) {
+        rejectLater(id, {AuthError::StaleContext});
+    } else if (m_smsId != 0) {
+        rejectLater(id, {AuthError::Busy});
+    } else if (!domain::validSmsCodeRequest(request)) {
+        rejectLater(id, {AuthError::InvalidRequest});
+    } else {
+        // Outside the single-flight slot: a QR code being polled keeps working.
+        const QJsonObject parameters{{QStringLiteral("ctcode"), request.countryCode},
+                                     {QStringLiteral("cellphone"), request.phone}};
+        m_smsId = id;
+        m_smsApiId = m_client->submit(context, ApiOperation::SmsCodeSend, parameters);
+        m_pending[id].apiId = m_smsApiId;
     }
-    return submitWith(context, ApiOperation::SmsCodeSend, std::move(parameters));
+    return id;
 }
 
 quint64 QrLoginGateway::submitWith(domain::SessionToken context, ApiOperation operation,
@@ -382,7 +403,7 @@ quint64 QrLoginGateway::submitWith(domain::SessionToken context, ApiOperation op
                // One sign-in per attempt token: never after a QR key or an authorization.
                (credential && (m_keyContext == context || m_authorizedContext == context ||
                                m_verified.has_value())) ||
-               ((credential || operation == ApiOperation::SmsCodeSend) && parameters.isEmpty())) {
+               operation == ApiOperation::SmsCodeSend || (credential && parameters.isEmpty())) {
         rejectLater(id, {AuthError::InvalidRequest});
     } else {
         const auto apiId = m_client->submit(context, operation, parameters);
@@ -426,6 +447,10 @@ void QrLoginGateway::finishFailure(quint64 id, AuthFailure failure)
     if (id == m_promotionId) {
         m_promotionId = 0;
     }
+    if (id == m_smsId) {
+        m_smsId = 0;
+        m_smsApiId = 0;
+    }
     if (pending.promotion) {
         emit promotionCompleted(id, pending.context, failure);
     } else if (pending.operation == ApiOperation::AccountIdentity) {
@@ -458,7 +483,7 @@ void QrLoginGateway::cancel(quint64 id)
 
 void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const ApiResult& result)
 {
-    const auto id = m_apiIds.value(apiId);
+    const auto id = apiId != 0 && apiId == m_smsApiId ? m_smsId : m_apiIds.value(apiId);
     const auto it = m_pending.constFind(id);
     if (it == m_pending.constEnd()) {
         return;
@@ -519,7 +544,8 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
             finishFailure(id, failureFor(result));
             return;
         }
-        m_apiIds.remove(apiId);
+        m_smsId = 0;
+        m_smsApiId = 0;
         m_pending.remove(id);
         emit smsCodeCompleted(id, context, true);
         return;

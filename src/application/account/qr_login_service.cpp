@@ -113,10 +113,16 @@ bool QrLoginService::sendSmsCode(domain::SmsCodeRequest request)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     const auto snapshot = m_session.snapshot();
+    // Guest/Expired, or while a QR code waits for a scan (the dialog shows both at once);
+    // never during a credential login, identity check or handoff.
+    const bool idle = snapshot.phase == domain::SessionPhase::Guest ||
+                      snapshot.phase == domain::SessionPhase::Expired;
+    const bool waitingForQr = snapshot.phase == domain::SessionPhase::Authenticating &&
+                              m_credentialRequest == 0 && m_identityRequest == 0 &&
+                              m_promotionRequest == 0;
     if (!m_gateway || !domain::validSmsCodeRequest(request) || m_smsRequest != 0 ||
-        m_synchronized != snapshot.token || m_context != snapshot.token ||
-        (snapshot.phase != domain::SessionPhase::Guest &&
-         snapshot.phase != domain::SessionPhase::Expired)) {
+        m_context != snapshot.token || m_synchronized != snapshot.token ||
+        !(idle || waitingForQr)) {
         return false;
     }
     const auto id = m_gateway->sendSmsCode(snapshot.token, std::move(request));

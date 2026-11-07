@@ -64,6 +64,9 @@ class QrLoginGateway final : public application::IQrLoginGateway
     domain::SessionToken m_boundContext;
     QString m_boundAccount;
     quint64 m_promotionId = 0;
+    // SMS codes stage no cookies, so they run beside the single QR/identity request.
+    quint64 m_smsId = 0;
+    quint64 m_smsApiId = 0;
     quint64 m_nextId = 0;
 };
 
