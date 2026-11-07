@@ -17,14 +17,19 @@ Row {
 
     property var trackedButtons: []
 
-    function groupButtons() {
+    // Every button child, shown or not.
+    function allButtons() {
         const result = [];
         for (let i = 0; i < root.children.length; ++i) {
             const child = root.children[i];
-            if (child instanceof T.AbstractButton && child.visible && child.widthDelta !== undefined)
+            if (child instanceof T.AbstractButton && child.widthDelta !== undefined)
                 result.push(child);
         }
         return result;
+    }
+    // The buttons shown: they get the group positions.
+    function groupButtons() {
+        return root.allButtons().filter(b => b.visible);
     }
 
     function relayout() {
@@ -49,9 +54,12 @@ Row {
             Qt.callLater(root.attach);
     }
 
+    // Tracks every button, also those not shown yet (a group created hidden, e.g. on a
+    // folded row or a page not shown yet): they join the exclusive group now and get
+    // their positions once shown.
     function attach() {
-        const buttons = root.groupButtons();
-        for (const b of buttons) {
+        const all = root.allButtons();
+        for (const b of all) {
             if (root.trackedButtons.indexOf(b) < 0) {
                 b.downChanged.connect(root.relayout);
                 b.visibleChanged.connect(root.scheduleAttach);
@@ -59,12 +67,13 @@ Row {
                 root.trackedButtons.push(b);
             }
         }
+        const buttons = root.groupButtons();
         const last = buttons.length - 1;
         buttons.forEach((b, i) => {
             b.groupPosition = !root.connected || last === 0 ? Md.Alone
                             : i === 0 ? Md.First : i === last ? Md.Last : Md.Middle;
         });
-        exclusiveGroup.buttons = root.exclusive ? buttons : [];
+        exclusiveGroup.buttons = root.exclusive ? all : [];
         root.updateTabStop();
     }
 
