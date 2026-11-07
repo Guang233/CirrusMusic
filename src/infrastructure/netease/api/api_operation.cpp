@@ -3,6 +3,7 @@
 #include "comment_operation.h"
 #include "comment_write_operation.h"
 #include "discovery_browse_operation.h"
+#include "domain/account/credential_login_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
 #include "domain/music/playlist_discovery_types.h"
@@ -16,6 +17,65 @@
 
 namespace cirrus::netease
 {
+namespace
+{
+
+QString stringParameter(const QJsonObject& parameters, QLatin1StringView name)
+{
+    const auto value = parameters.value(name);
+    return value.isString() ? value.toString() : QString();
+}
+
+// Closed credential sign-in payloads, fixed fields as in the locked reference
+// (captcha_sent.js, login_cellphone.js, login.js). nullopt for other operations too.
+std::optional<QJsonObject> credentialPayload(ApiOperation operation, const QJsonObject& parameters)
+{
+    using namespace Qt::StringLiterals;
+    if (operation == ApiOperation::SmsCodeSend) {
+        const auto country = stringParameter(parameters, "ctcode"_L1);
+        const auto phone = stringParameter(parameters, "cellphone"_L1);
+        if (parameters.size() != 2 || !domain::validCountryCode(country) ||
+            !domain::validPhoneNumber(phone))
+            return std::nullopt;
+        return QJsonObject{{u"ctcode"_s, country},
+                           {u"secrete"_s, u"music_middleuser_pclogin"_s},
+                           {u"cellphone"_s, phone}};
+    }
+    if (operation == ApiOperation::CellphoneLogin) {
+        const auto country = stringParameter(parameters, "countrycode"_L1);
+        const auto phone = stringParameter(parameters, "phone"_L1);
+        const auto captcha = stringParameter(parameters, "captcha"_L1);
+        const auto password = stringParameter(parameters, "password"_L1);
+        const bool byCode = parameters.contains("captcha"_L1);
+        if (parameters.size() != 3 || !domain::validCountryCode(country) ||
+            !domain::validPhoneNumber(phone) ||
+            (byCode ? !domain::validSmsCode(captcha) : !domain::validPasswordDigest(password)))
+            return std::nullopt;
+        QJsonObject payload{{u"type"_s, u"1"_s},        {u"https"_s, u"true"_s},
+                            {u"phone"_s, phone},        {u"countrycode"_s, country},
+                            {u"remember"_s, u"true"_s}, {u"secureCaptcha"_s, QString()}};
+        if (byCode)
+            payload.insert(u"captcha"_s, captcha);
+        else
+            payload.insert(u"password"_s, password);
+        return payload;
+    }
+    if (operation == ApiOperation::EmailLogin) {
+        const auto email = stringParameter(parameters, "username"_L1);
+        const auto password = stringParameter(parameters, "password"_L1);
+        if (parameters.size() != 2 || !domain::validEmail(email) ||
+            !domain::validPasswordDigest(password))
+            return std::nullopt;
+        return QJsonObject{{u"type"_s, u"0"_s},
+                           {u"https"_s, u"true"_s},
+                           {u"username"_s, email},
+                           {u"password"_s, password},
+                           {u"rememberLogin"_s, u"true"_s}};
+    }
+    return std::nullopt;
+}
+
+} // namespace
 
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                                       const QJsonObject& parameters)
@@ -225,6 +285,16 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return ApiOperationContract{QStringLiteral("/api/login/qrcode/client/login")};
     case ApiOperation::AccountIdentity:
         return ApiOperationContract{QStringLiteral("/api/w/nuser/account/get"), Protocol::Weapi};
+    // Credential sign-in (docs/api/credential-login.md): protocols follow the locked
+    // reference (captcha_sent/login_cellphone weapi; login eapi by default).
+    case ApiOperation::SmsCodeSend:
+        return ApiOperationContract{QStringLiteral("/api/sms/captcha/sent"), Protocol::Weapi};
+    case ApiOperation::CellphoneLogin:
+        return ApiOperationContract{QStringLiteral("/api/w/login/cellphone"), Protocol::Weapi,
+                                    ResponseEncoding::Json, 256 * 1024};
+    case ApiOperation::EmailLogin:
+        return ApiOperationContract{QStringLiteral("/api/w/login"), Protocol::Eapi,
+                                    ResponseEncoding::Json, 256 * 1024};
     case ApiOperation::SearchAlbums:
     case ApiOperation::SearchArtists:
     case ApiOperation::SearchPlaylists:
@@ -624,8 +694,17 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
                            {QStringLiteral("level"), level},
                            {QStringLiteral("encodeType"), QStringLiteral("flac")}};
     }
+    if (const auto credential = credentialPayload(operation, parameters))
+        return *credential;
+    if (operation == ApiOperation::SmsCodeSend || operation == ApiOperation::CellphoneLogin ||
+        operation == ApiOperation::EmailLogin)
+        return std::nullopt;
     QJsonObject payload{{QStringLiteral("type"), 3}};
     switch (operation) {
+    case ApiOperation::SmsCodeSend:
+    case ApiOperation::CellphoneLogin:
+    case ApiOperation::EmailLogin:
+        break; // strict credential adapter above
     case ApiOperation::LatestAlbums:
     case ApiOperation::NewAlbums:
     case ApiOperation::AlbumCharts:
@@ -736,7 +815,12 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     }
     switch (operation) {
     case ApiOperation::SongWikiText:
+    case ApiOperation::SmsCodeSend:
         return false;
+    case ApiOperation::CellphoneLogin:
+    case ApiOperation::EmailLogin:
+        // Like QR 803: staged for identity verification only, never an account by itself.
+        return *response.businessCode == 200;
     case ApiOperation::LatestAlbums:
     case ApiOperation::NewAlbums:
     case ApiOperation::AlbumCharts:

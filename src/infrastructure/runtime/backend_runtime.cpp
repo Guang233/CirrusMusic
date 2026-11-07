@@ -118,7 +118,8 @@ class BackendWorker final : public QObject
         bool accepted = m_ready && !m_closing && m_service;
         if (accepted) {
             m_generation = command.generation;
-            if (command.action != AccountAction::Poll && m_playback)
+            if (command.action != AccountAction::Poll &&
+                command.action != AccountAction::SendSmsCode && m_playback)
                 m_playback->stop();
             switch (command.action) {
             case AccountAction::BeginLogin:
@@ -136,6 +137,13 @@ class BackendWorker final : public QObject
                 break;
             case AccountAction::SignOut:
                 m_service->signOut();
+                break;
+            case AccountAction::BeginCredentialLogin:
+                m_service->setOptions(command.options);
+                static_cast<void>(m_service->beginCredential(std::move(command.credential)));
+                break;
+            case AccountAction::SendSmsCode:
+                accepted = m_service->sendSmsCode(std::move(command.sms));
                 break;
             }
             // Also acknowledge no-op cancel/signout with an authoritative snapshot.
@@ -533,6 +541,13 @@ class BackendWorker final : public QObject
                     auto event = makeEvent(Kind::SignedIn);
                     event.session.token = token;
                     event.identity = std::move(identity);
+                    emit delivered(event);
+                });
+        connect(m_service.get(), &QrLoginService::smsCodeSent, this,
+                [this](domain::SessionToken token, SmsCodeResult result) {
+                    auto event = makeEvent(Kind::SmsCode);
+                    event.session.token = token;
+                    event.smsCode = std::move(result);
                     emit delivered(event);
                 });
         connect(m_service.get(), &QrLoginService::failed, this,

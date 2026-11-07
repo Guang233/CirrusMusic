@@ -313,9 +313,59 @@ quint64 QrLoginGateway::promoteCredentials(domain::SessionToken attempt,
 
 quint64 QrLoginGateway::submit(domain::SessionToken context, ApiOperation operation, QString key)
 {
+    QJsonObject parameters;
+    if (operation == ApiOperation::QrCheck) {
+        parameters.insert(QStringLiteral("key"), key);
+    }
+    return submitWith(context, operation, std::move(parameters));
+}
+
+quint64 QrLoginGateway::requestCredentialLogin(domain::SessionToken context,
+                                               domain::CredentialLogin login)
+{
+    QJsonObject parameters;
+    auto operation = ApiOperation::CellphoneLogin;
+    switch (login.method) {
+    case domain::CredentialMethod::PhoneCode:
+    case domain::CredentialMethod::PhonePassword:
+        parameters.insert(QStringLiteral("countrycode"), login.countryCode);
+        parameters.insert(QStringLiteral("phone"), login.account);
+        parameters.insert(login.method == domain::CredentialMethod::PhoneCode
+                              ? QStringLiteral("captcha")
+                              : QStringLiteral("password"),
+                          login.secret);
+        break;
+    case domain::CredentialMethod::EmailPassword:
+        operation = ApiOperation::EmailLogin;
+        parameters.insert(QStringLiteral("username"), login.account);
+        parameters.insert(QStringLiteral("password"), login.secret);
+        break;
+    }
+    // Validity is checked in submitWith (operationPayload rejects malformed input too).
+    if (!domain::validCredentialLogin(login)) {
+        parameters = {};
+    }
+    return submitWith(context, operation, std::move(parameters));
+}
+
+quint64 QrLoginGateway::sendSmsCode(domain::SessionToken context, domain::SmsCodeRequest request)
+{
+    QJsonObject parameters;
+    if (domain::validSmsCodeRequest(request)) {
+        parameters.insert(QStringLiteral("ctcode"), request.countryCode);
+        parameters.insert(QStringLiteral("cellphone"), request.phone);
+    }
+    return submitWith(context, ApiOperation::SmsCodeSend, std::move(parameters));
+}
+
+quint64 QrLoginGateway::submitWith(domain::SessionToken context, ApiOperation operation,
+                                   QJsonObject parameters)
+{
     Q_ASSERT(QThread::currentThread() == thread());
     const auto id = ++m_nextId;
     m_pending.insert(id, {context, operation});
+    const bool credential =
+        operation == ApiOperation::CellphoneLogin || operation == ApiOperation::EmailLogin;
     if (!m_client) {
         rejectLater(id, {AuthError::Network});
     } else if (!m_client->accepts(context)) {
@@ -324,15 +374,17 @@ quint64 QrLoginGateway::submit(domain::SessionToken context, ApiOperation operat
         rejectLater(id, {AuthError::Busy});
     } else if ((operation == ApiOperation::QrKey && m_keyContext == context) ||
                (operation == ApiOperation::QrCheck &&
-                (context != m_keyContext || key != m_key || !validQrKey(key))) ||
+                (context != m_keyContext ||
+                 parameters.value(QStringLiteral("key")).toString() != m_key ||
+                 !validQrKey(m_key))) ||
                (operation == ApiOperation::AccountIdentity &&
-                (context != m_authorizedContext || m_verified.has_value()))) {
+                (context != m_authorizedContext || m_verified.has_value())) ||
+               // One sign-in per attempt token: never after a QR key or an authorization.
+               (credential && (m_keyContext == context || m_authorizedContext == context ||
+                               m_verified.has_value())) ||
+               ((credential || operation == ApiOperation::SmsCodeSend) && parameters.isEmpty())) {
         rejectLater(id, {AuthError::InvalidRequest});
     } else {
-        QJsonObject parameters;
-        if (operation == ApiOperation::QrCheck) {
-            parameters.insert(QStringLiteral("key"), key);
-        }
         const auto apiId = m_client->submit(context, operation, parameters);
         m_pending[id].apiId = apiId;
         m_apiIds.insert(apiId, id);
@@ -380,6 +432,11 @@ void QrLoginGateway::finishFailure(quint64 id, AuthFailure failure)
         emit identityCompleted(id, pending.context, failure);
     } else if (pending.operation == ApiOperation::QrKey) {
         emit keyCompleted(id, pending.context, failure);
+    } else if (pending.operation == ApiOperation::CellphoneLogin ||
+               pending.operation == ApiOperation::EmailLogin) {
+        emit credentialLoginCompleted(id, pending.context, failure);
+    } else if (pending.operation == ApiOperation::SmsCodeSend) {
+        emit smsCodeCompleted(id, pending.context, failure);
     } else {
         emit statusCompleted(id, pending.context, failure);
     }
@@ -443,6 +500,28 @@ void QrLoginGateway::receive(quint64 apiId, domain::SessionToken context, const 
         m_apiIds.remove(apiId);
         m_pending.remove(id);
         emit identityCompleted(id, context, *m_verified);
+        return;
+    }
+    if (it->operation == ApiOperation::CellphoneLogin ||
+        it->operation == ApiOperation::EmailLogin) {
+        if (*code != 200) {
+            finishFailure(id, failureFor(result)); // providerCode tells the UI why
+            return;
+        }
+        m_authorizedContext = context; // only enables identity verification, not login
+        m_apiIds.remove(apiId);
+        m_pending.remove(id);
+        emit credentialLoginCompleted(id, context, true);
+        return;
+    }
+    if (it->operation == ApiOperation::SmsCodeSend) {
+        if (*code != 200) {
+            finishFailure(id, failureFor(result));
+            return;
+        }
+        m_apiIds.remove(apiId);
+        m_pending.remove(id);
+        emit smsCodeCompleted(id, context, true);
         return;
     }
     if (it->operation == ApiOperation::QrKey) {

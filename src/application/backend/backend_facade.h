@@ -26,7 +26,15 @@ class CommentWriteRequests;
 
 enum class BackendState { Dormant, Starting, Ready, Failed, Stopping, Stopped };
 enum class StartupError { None, Configuration, Storage, GuestBootstrap };
-enum class AccountAction { BeginLogin, Restore, Poll, Cancel, SignOut };
+enum class AccountAction {
+    BeginLogin,
+    Restore,
+    Poll,
+    Cancel,
+    SignOut,
+    BeginCredentialLogin,
+    SendSmsCode
+};
 enum class PersistenceArea { ProtocolKey, AnonymousToken };
 
 struct BackendCommand {
@@ -34,6 +42,8 @@ struct BackendCommand {
     quint64 generation = 0;
     AccountAction action{};
     QrLoginOptions options;
+    domain::CredentialLogin credential; // BeginCredentialLogin only; ephemeral
+    domain::SmsCodeRequest sms;         // SendSmsCode only
 };
 
 struct MusicCommand {
@@ -114,7 +124,8 @@ struct BackendEvent {
         AuthFailed,
         Saved,
         Acknowledged,
-        StorageWarning
+        StorageWarning,
+        SmsCode
     };
     Kind kind{};
     quint64 generation = 0;
@@ -128,6 +139,7 @@ struct BackendEvent {
     domain::AccountIdentity identity;
     AuthFailure failure;
     SavedSessionResult saved = false;
+    SmsCodeResult smsCode = false;
 };
 
 // Caller/UI-thread asynchronous surface. No QML dependency and no synchronous
@@ -147,6 +159,12 @@ class BackendFacade final : public QObject
     void start();
     void close(); // does NOT sign out; keep event loop alive until stopped()
     [[nodiscard]] quint64 beginLogin(QrLoginOptions options = {});
+    // Phone/email sign-in (docs/api/credential-login.md); results like beginLogin
+    // (signedIn/failed), without a challenge. Password methods take passwordDigest().
+    [[nodiscard]] quint64 beginCredentialLogin(domain::CredentialLogin login,
+                                               QrLoginOptions options = {});
+    // An SMS code for a PhoneCode login; no session change. Result: smsCodeSent.
+    [[nodiscard]] quint64 sendSmsCode(domain::SmsCodeRequest request);
     [[nodiscard]] quint64 restore();
     [[nodiscard]] quint64 poll();
     [[nodiscard]] quint64 cancel();
@@ -250,6 +268,8 @@ class BackendFacade final : public QObject
     void failed(cirrus::domain::SessionToken context, cirrus::application::AuthFailure failure);
     void savedSessionCompleted(cirrus::domain::SessionToken context,
                                cirrus::application::SavedSessionResult result);
+    void smsCodeSent(cirrus::domain::SessionToken context,
+                     cirrus::application::SmsCodeResult result);
     void acknowledged(quint64 commandId, bool accepted);
     void persistenceWarning(cirrus::application::PersistenceArea area);
     void musicCompleted(quint64 id, cirrus::domain::SessionToken context,
@@ -298,7 +318,8 @@ class BackendFacade final : public QObject
     void cancelCommentWith(quint64 id, domain::CommentWriteError error);
     void invalidateCollections(domain::CollectionError error);
     void cancelCollectionWith(quint64 id, domain::CollectionError error);
-    quint64 submit(AccountAction action, QrLoginOptions options = {});
+    quint64 submit(AccountAction action, QrLoginOptions options = {},
+                   domain::CredentialLogin credential = {}, domain::SmsCodeRequest sms = {});
     void setState(BackendState state);
     quint64 submitMusic(MusicQuery query);
     void publishMusic(const MusicCommand& command, MusicResult result,

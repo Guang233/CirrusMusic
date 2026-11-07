@@ -125,7 +125,7 @@
 | FM mode／负反馈 | personal_fm_mode=Eapi同path但mode/subMode/limit；fm_trash=Weapi/time/alg | mode不是本地PlayMode；trash必须显式原FM来源/账号/真实观测time，无固定25、auto next-trigger或自动队列操作 |
 | 日推dislike | recommend_songs_dislike=Weapi resId/resType4/sceneType1 | 原日期/批次成员来源、原token与四结果另设计，不默认自动刷新、伪历史来源 |
 | 评论history/举报 | user_comment_history/comment_report | 未接；账号history消耗/隐私和举报明确写合同，不顺带通知、hug或社交 |
-| 未接登录/权益分支 | cellphone/captcha/refresh/server logout、VIP等 | QR/restore/local signOut已有；不据原模块补密码/refresh/remote logout或将Cookie=auth |
+| 未接登录/权益分支 | refresh/server logout、VIP等 | QR/restore/local signOut已有；手机验证码／手机密码／邮箱密码登录与发送验证码已按维护者要求接入（[credential-login.md](credential-login.md)，2026-11-07）；不补refresh/remote logout或将Cookie=auth |
 | 搜索替代分支 | cloudsearch/search_default/search_match/search_suggest_pc；scoped playlist未证 | 原封闭search/suggestion已有；mobile/PC/default/multi-match目前不自动扩入，scoped仍待补证 |
 | lyrics/url/availability旧分支 | lyric旧版、song_url、check_music、download相关6模块 | 已有新lyrics/XEAPI实际source；不legacy downgrade/资格探测/forwarding/unlocking或假版权 |
 | playlist包装/组合 | playlist_track_all、track_add/delete/tracks、合并update/playcount | playlistSongs与多型mutation已有组合/显式动作；不能把loaded page当全量或伪上报来源/atomic |

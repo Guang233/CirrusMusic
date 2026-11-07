@@ -31,6 +31,10 @@ class QrLoginGateway final : public application::IQrLoginGateway
                       bool remember) override;
     void forgetSession(domain::SessionToken context) override;
     void cancel(quint64 requestId) override;
+    [[nodiscard]] quint64 requestCredentialLogin(domain::SessionToken context,
+                                                 domain::CredentialLogin login) override;
+    [[nodiscard]] quint64 sendSmsCode(domain::SessionToken context,
+                                      domain::SmsCodeRequest request) override;
 
   private:
     struct Pending {
@@ -42,6 +46,8 @@ class QrLoginGateway final : public application::IQrLoginGateway
         QString restoredAccount;
     };
     quint64 submit(domain::SessionToken context, ApiOperation operation, QString key = {});
+    quint64 submitWith(domain::SessionToken context, ApiOperation operation,
+                       QJsonObject parameters);
     void rejectLater(quint64 requestId, application::AuthFailure failure);
     void finishFailure(quint64 requestId, application::AuthFailure failure);
     void receive(quint64 apiId, domain::SessionToken context, const ApiResult& result);

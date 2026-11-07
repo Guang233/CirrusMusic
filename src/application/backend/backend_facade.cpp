@@ -56,14 +56,16 @@ void BackendFacade::close()
     });
 }
 
-quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
+quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options,
+                              domain::CredentialLogin credential, domain::SmsCodeRequest sms)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_state != BackendState::Ready || m_pending.size() >= 32 || !options.isValid())
         return 0;
     const auto id = ++m_nextId;
     m_pending.insert(id);
-    if (action != AccountAction::Poll) {
+    // Polling and sending an SMS code leave the session (and everything on it) alone.
+    if (action != AccountAction::Poll && action != AccountAction::SendSmsCode) {
         ++m_generation;
         m_snapshot = {}; // immediate intent barrier, before backend processes the command
         invalidateMusic(MusicError::StaleContext);
@@ -73,13 +75,26 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options)
         invalidateTogether(domain::TogetherError::StaleContext);
         invalidatePlayback();
     }
-    emit commandRequested({id, m_generation, action, options});
+    emit commandRequested(
+        {id, m_generation, action, options, std::move(credential), std::move(sms)});
     return id;
 }
 
 quint64 BackendFacade::beginLogin(QrLoginOptions options)
 {
     return submit(AccountAction::BeginLogin, options);
+}
+quint64 BackendFacade::beginCredentialLogin(domain::CredentialLogin login, QrLoginOptions options)
+{
+    if (!domain::validCredentialLogin(login))
+        return 0;
+    return submit(AccountAction::BeginCredentialLogin, options, std::move(login));
+}
+quint64 BackendFacade::sendSmsCode(domain::SmsCodeRequest request)
+{
+    if (!domain::validSmsCodeRequest(request))
+        return 0;
+    return submit(AccountAction::SendSmsCode, {}, {}, std::move(request));
 }
 quint64 BackendFacade::restore() { return submit(AccountAction::Restore); }
 quint64 BackendFacade::poll() { return submit(AccountAction::Poll); }
@@ -154,6 +169,9 @@ void BackendFacade::deliver(BackendEvent event)
         break;
     case Kind::AuthFailed:
         emit failed(event.session.token, event.failure);
+        break;
+    case Kind::SmsCode:
+        emit smsCodeSent(event.session.token, event.smsCode);
         break;
     default:
         break;

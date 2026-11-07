@@ -53,6 +53,12 @@ class QrLoginService final : public QObject
     void setOptions(QrLoginOptions options) { m_options = options; } // next begin()
 
     [[nodiscard]] domain::SessionToken begin();
+    // Phone/email sign-in in place of a QR code (docs/api/credential-login.md): the
+    // same attempt, deadline, identity verification and handoff. Invalid input fails.
+    [[nodiscard]] domain::SessionToken beginCredential(domain::CredentialLogin login);
+    // An SMS code for a later PhoneCode login, from a Guest/Expired session only; no
+    // session change. False when refused (busy, signing in, invalid); else smsCodeSent.
+    [[nodiscard]] bool sendSmsCode(domain::SmsCodeRequest request);
     [[nodiscard]] domain::SessionToken
     restore();      // saved credentials still require identity verification
     void signOut(); // local invalidation + removal of the remembered account
@@ -70,8 +76,11 @@ class QrLoginService final : public QObject
     void signedIn(cirrus::domain::SessionToken context, cirrus::domain::AccountIdentity identity);
     void savedSessionCompleted(cirrus::domain::SessionToken context,
                                cirrus::application::SavedSessionResult result);
+    void smsCodeSent(cirrus::domain::SessionToken context,
+                     cirrus::application::SmsCodeResult result);
 
   private:
+    enum class Attempt { Qr, Restore, Credential };
     // Local schedule of one authentication attempt (Authenticating -> Committing).
     struct Schedule {
         quint64 generation = 0; // 0: no active attempt
@@ -84,7 +93,8 @@ class QrLoginService final : public QObject
         quint64 pollTimer = 0;
     };
 
-    [[nodiscard]] domain::SessionToken startAttempt(bool restore);
+    [[nodiscard]] domain::SessionToken startAttempt(Attempt kind,
+                                                    domain::CredentialLogin login = {});
     void sessionChanged(domain::SessionSnapshot snapshot);
     void cancelRequests();
     void endSchedule();
@@ -101,6 +111,9 @@ class QrLoginService final : public QObject
     void statusCompleted(quint64 id, domain::SessionToken context, QrStatusResult result);
     void identityCompleted(quint64 id, domain::SessionToken context, IdentityResult result);
     void promotionCompleted(quint64 id, domain::SessionToken context, PromotionResult result);
+    void credentialCompleted(quint64 id, domain::SessionToken context,
+                             CredentialLoginResult result);
+    void smsCompleted(quint64 id, domain::SessionToken context, SmsCodeResult result);
 
     SessionCoordinator& m_session;
     QPointer<IQrLoginGateway> m_gateway;
@@ -119,6 +132,8 @@ class QrLoginService final : public QObject
     quint64 m_pollRequest = 0;
     quint64 m_identityRequest = 0;
     quint64 m_promotionRequest = 0;
+    quint64 m_credentialRequest = 0;
+    quint64 m_smsRequest = 0;
 };
 
 } // namespace cirrus::application

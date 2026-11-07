@@ -116,7 +116,10 @@ enum class ApiOperation {
     SimilarSongs,
     SimilarArtists,
     SimilarPlaylists,
-    SongWikiText
+    SongWikiText,
+    SmsCodeSend,
+    CellphoneLogin,
+    EmailLogin
 };
 
 struct ApiOperationContract {

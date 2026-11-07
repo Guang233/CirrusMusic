@@ -6,6 +6,7 @@ add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
     domain/account/session_types.h
     domain/account/qr_login_types.h
+    domain/account/credential_login_types.h
     domain/music/music_types.h
     domain/music/resource_cache_types.h
     domain/music/cache_retention.h

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain/account/credential_login_types.h"
 #include "domain/account/qr_login_types.h"
 #include "domain/account/session_types.h"
 
@@ -42,6 +43,10 @@ struct VerifiedLogin {
 using IdentityResult = std::variant<VerifiedLogin, AuthFailure>;
 using PromotionResult = std::variant<domain::AccountIdentity, AuthFailure>;
 using SavedSessionResult = std::variant<bool, AuthFailure>; // true saved, false forgotten
+// Both the same type as SavedSessionResult (one metatype).
+// true: the provider accepted the credentials (like QR 803); identity is still unverified.
+using CredentialLoginResult = std::variant<bool, AuthFailure>;
+using SmsCodeResult = std::variant<bool, AuthFailure>; // true: the provider sent a code
 
 // Narrow, thread-affine port; invoke in the object's owning event-loop thread.
 // All results (including validation failures) are deferred, by value, and carry
@@ -66,6 +71,23 @@ class IQrLoginGateway : public QObject
                               bool remember) = 0;
     virtual void forgetSession(domain::SessionToken context) = 0;
     virtual void cancel(quint64 requestId) = 0;
+    // Credential sign-in (docs/api/credential-login.md). 0: not supported by this
+    // gateway (the caller fails at once); otherwise completes like the QR operations.
+    [[nodiscard]] virtual quint64 requestCredentialLogin(domain::SessionToken context,
+                                                         domain::CredentialLogin login)
+    {
+        Q_UNUSED(context);
+        Q_UNUSED(login);
+        return 0;
+    }
+    // Sends an SMS code for a later PhoneCode login; no session change.
+    [[nodiscard]] virtual quint64 sendSmsCode(domain::SessionToken context,
+                                              domain::SmsCodeRequest request)
+    {
+        Q_UNUSED(context);
+        Q_UNUSED(request);
+        return 0;
+    }
 
   signals:
     void keyCompleted(quint64 requestId, cirrus::domain::SessionToken context,
@@ -78,6 +100,10 @@ class IQrLoginGateway : public QObject
                             cirrus::application::PromotionResult result);
     void savedSessionCompleted(cirrus::domain::SessionToken context,
                                cirrus::application::SavedSessionResult result);
+    void credentialLoginCompleted(quint64 requestId, cirrus::domain::SessionToken context,
+                                  cirrus::application::CredentialLoginResult result);
+    void smsCodeCompleted(quint64 requestId, cirrus::domain::SessionToken context,
+                          cirrus::application::SmsCodeResult result);
 };
 
 } // namespace cirrus::application

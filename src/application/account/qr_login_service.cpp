@@ -31,6 +31,9 @@ QrLoginService::QrLoginService(SessionCoordinator& session, IQrLoginGateway& gat
             &QrLoginService::promotionCompleted);
     connect(&gateway, &IQrLoginGateway::savedSessionCompleted, this,
             &QrLoginService::savedSessionCompleted);
+    connect(&gateway, &IQrLoginGateway::credentialLoginCompleted, this,
+            &QrLoginService::credentialCompleted);
+    connect(&gateway, &IQrLoginGateway::smsCodeCompleted, this, &QrLoginService::smsCompleted);
     connect(&gateway, &QObject::destroyed, this, [this] { fail(m_context, {AuthError::Network}); });
     sessionChanged(session.snapshot());
 }
@@ -44,8 +47,9 @@ QrLoginService::~QrLoginService()
 
 void QrLoginService::cancelRequests()
 {
-    const quint64 ids[]{std::exchange(m_keyRequest, 0), std::exchange(m_pollRequest, 0),
-                        std::exchange(m_identityRequest, 0), std::exchange(m_promotionRequest, 0)};
+    const quint64 ids[]{std::exchange(m_keyRequest, 0),        std::exchange(m_pollRequest, 0),
+                        std::exchange(m_identityRequest, 0),   std::exchange(m_promotionRequest, 0),
+                        std::exchange(m_credentialRequest, 0), std::exchange(m_smsRequest, 0)};
     for (const auto id : ids) {
         if (id != 0 && m_gateway) {
             m_gateway->cancel(id);
@@ -98,8 +102,30 @@ void QrLoginService::sessionChanged(domain::SessionSnapshot snapshot)
     }
 }
 
-domain::SessionToken QrLoginService::begin() { return startAttempt(false); }
-domain::SessionToken QrLoginService::restore() { return startAttempt(true); }
+domain::SessionToken QrLoginService::begin() { return startAttempt(Attempt::Qr); }
+domain::SessionToken QrLoginService::restore() { return startAttempt(Attempt::Restore); }
+domain::SessionToken QrLoginService::beginCredential(domain::CredentialLogin login)
+{
+    return startAttempt(Attempt::Credential, std::move(login));
+}
+
+bool QrLoginService::sendSmsCode(domain::SmsCodeRequest request)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const auto snapshot = m_session.snapshot();
+    if (!m_gateway || !domain::validSmsCodeRequest(request) || m_smsRequest != 0 ||
+        m_synchronized != snapshot.token || m_context != snapshot.token ||
+        (snapshot.phase != domain::SessionPhase::Guest &&
+         snapshot.phase != domain::SessionPhase::Expired)) {
+        return false;
+    }
+    const auto id = m_gateway->sendSmsCode(snapshot.token, std::move(request));
+    if (id == 0) {
+        return false;
+    }
+    m_smsRequest = id;
+    return true;
+}
 
 void QrLoginService::signOut()
 {
@@ -110,8 +136,9 @@ void QrLoginService::signOut()
     m_session.signOut(); // never waits for the keyring or a remote logout
 }
 
-domain::SessionToken QrLoginService::startAttempt(bool restore)
+domain::SessionToken QrLoginService::startAttempt(Attempt kind, domain::CredentialLogin login)
 {
+    const bool restore = kind == Attempt::Restore;
     Q_ASSERT(QThread::currentThread() == thread());
     const auto started = m_scheduler->now();
     const auto options = m_options; // fixed for this attempt
@@ -119,7 +146,8 @@ domain::SessionToken QrLoginService::startAttempt(bool restore)
     if (!m_session.accepts(context)) {
         return context;
     }
-    if (!options.isValid()) {
+    if (!options.isValid() ||
+        (kind == Attempt::Credential && !domain::validCredentialLogin(login))) {
         fail(context, {AuthError::InvalidRequest});
         return context;
     }
@@ -128,15 +156,24 @@ domain::SessionToken QrLoginService::startAttempt(bool restore)
         return context;
     }
     m_schedule.generation = ++m_generations;
-    m_schedule.autoPoll = options.autoPoll && !restore;
+    m_schedule.autoPoll = options.autoPoll && kind == Attempt::Qr;
     m_schedule.rememberSession = options.rememberSession || restore;
     m_schedule.interval = options.pollInterval;
     m_schedule.deadline = started + options.totalTimeout;
     armDeadline();
-    if (restore) {
+    switch (kind) {
+    case Attempt::Restore:
         m_identityRequest = m_gateway->restoreIdentity(context);
-    } else {
+        break;
+    case Attempt::Qr:
         m_keyRequest = m_gateway->requestKey(context);
+        break;
+    case Attempt::Credential:
+        m_credentialRequest = m_gateway->requestCredentialLogin(context, std::move(login));
+        if (m_credentialRequest == 0) {
+            fail(context, {AuthError::InvalidRequest}); // gateway without credential sign-in
+        }
+        break;
     }
     return context;
 }
@@ -227,7 +264,8 @@ bool QrLoginService::poll()
     Q_ASSERT(QThread::currentThread() == thread());
     if (!m_gateway || !m_session.accepts(m_context) || m_key.isEmpty() ||
         m_session.snapshot().phase != domain::SessionPhase::Authenticating || m_pollRequest != 0 ||
-        m_identityRequest != 0 || m_promotionRequest != 0 || m_schedule.generation == 0) {
+        m_credentialRequest != 0 || m_identityRequest != 0 || m_promotionRequest != 0 ||
+        m_schedule.generation == 0) {
         return false;
     }
     // Past deadline: the deadline callback reports Timeout asynchronously, exactly once.
@@ -392,6 +430,37 @@ void QrLoginService::promotionCompleted(quint64 id, domain::SessionToken context
             emit signedIn(context, identity);
         }
     }
+}
+
+void QrLoginService::credentialCompleted(quint64 id, domain::SessionToken context,
+                                         CredentialLoginResult result)
+{
+    if (id != m_credentialRequest || !m_session.accepts(context) || context != m_context) {
+        return;
+    }
+    m_credentialRequest = 0;
+    if (failIfTimedOut()) {
+        return;
+    }
+    if (const auto failure = std::get_if<AuthFailure>(&result)) {
+        fail(context, *failure); // wrong password/code, security check: no retry
+        return;
+    }
+    if (!std::get<bool>(result)) {
+        fail(context, {AuthError::InvalidResponse});
+        return;
+    }
+    // Accepted credentials are like QR 803: verify who it is before anything else.
+    m_identityRequest = m_gateway->verifyIdentity(context);
+}
+
+void QrLoginService::smsCompleted(quint64 id, domain::SessionToken context, SmsCodeResult result)
+{
+    if (id != m_smsRequest || !m_session.accepts(context) || context != m_context) {
+        return;
+    }
+    m_smsRequest = 0;
+    emit smsCodeSent(context, std::move(result));
 }
 
 } // namespace cirrus::application
