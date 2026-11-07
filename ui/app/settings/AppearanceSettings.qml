@@ -108,6 +108,12 @@ SettingsGroup {
         onTriggered: fontPicker.open()
     }
     SwitchSetting {
+        text: qsTr("水波进度条")
+        supportingText: qsTr("迷你播放条播放时的进度条")
+        value: App.settings.miniWave
+        onSwitched: value => App.settings.miniWave = value
+    }
+    SwitchSetting {
         text: qsTr("减少动态效果")
         supportingText: qsTr("用淡入淡出代替位移和缩放")
         value: App.settings.reducedMotion

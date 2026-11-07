@@ -44,6 +44,20 @@ ControlPage {
         enabled: false
         Layout.preferredWidth: 360
     }
+    Caption {
+        text: qsTr("水波（wavy）：波动时向前流动，关掉波动后平滑地变回直线；软件渲染下是直线。")
+    }
+    ProgressBar {
+        wavy: true
+        waving: waveSwitch.checked
+        value: progressValue.value
+        Layout.preferredWidth: 360
+    }
+    Switch {
+        id: waveSwitch
+        checked: true
+        Accessible.name: qsTr("波动")
+    }
 
     SectionTitle {
         text: qsTr("环形进度")

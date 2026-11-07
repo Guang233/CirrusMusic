@@ -103,7 +103,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 7. 进度
 
-- **ProgressBar**（线性）：4 px 粗、轨道与指示之间 4 px 间隙、末端 4 px 停止点（确定进度时）；不确定进度为两段交替滑动。
+- **ProgressBar**（线性）：4 px 粗、轨道与指示之间 4 px 间隙、末端 4 px 停止点（确定进度时）；不确定进度为两段交替滑动。`wavy`（MD3E 水波，确定进度）：已完成的部分画成正弦波（振幅 3 px、波长 32 px、每秒前进一个波长，圆头），控件高度留出波的位置（4 + 2×3 = 10 px），轨道仍是直线；`waving` 为 false 时振幅用 `slowEffects` 弹簧降到 0，变回直线，再打开时重新起伏。波形是着色器（`shaders/wave.frag`，按到曲线的近似距离抗锯齿），软件渲染下是直线；减少动态效果时不流动。
 - **CircularProgress**：40×40、4 px、带间隙；不确定进度为旋转并伸缩的圆弧。
 - **LoadingIndicator**：48 容器、38 指示形状，按 SoftBurst → Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval 循环变形，每 650 ms 一次（弹簧 ζ 0.6、k 200），每次额外旋转 90°，并叠加 4666 ms 一圈的匀速旋转。`contained` 时加 PrimaryContainer 圆形容器。减少动态效果时只保留缓慢旋转。
 - 波浪形（wavy）进度暂不做，播放器设计时再定。

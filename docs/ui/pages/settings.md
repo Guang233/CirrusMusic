@@ -17,6 +17,7 @@
 | | 主题色来源：系统强调色／跟随封面／固定 | 现有；"固定"**加色板** | `Theme.fixedSeed` 已有，没存设置、没有入口（现在固定为 MD3 基准紫）。加 `App.settings.fixedSeed` |
 | | 配色风格 | **新增**（UQ-04） | `Theme.variant` 已有 9 种，`App.settings.variant` 已存，没有入口 |
 | | 字体：内置 MiSans／系统／自定义 | 现有；自定义改用**字体对话框** | 已安装的字体可能有几百个，不用菜单：对话框里有搜索框和列表（每个字体名用它自己的字体显示），也可以「从文件添加」（系统文件对话框，TTF／OTF／TTC／OTC）。从文件添加的字体记在 `App.settings.customFontFiles`，每次启动时加载（`Fonts.fontFiles`、`Fonts.loadFontFile()`） |
+| | 水波进度条（迷你播放条） | **新增**（2026-11-07） | `App.settings.miniWave`，默认开；见 README §15 的 `MiniPlayer` |
 | | 减少动态效果 | 现有 | |
 | 窗口与系统 | 窗口装饰、关闭主窗口时、使用独立显卡 | 现有 | |
 | | 系统媒体控制（MPRIS：媒体键、桌面的播放控件） | 等后端 | 后端有源码，默认不编译，桌面上没验证 |

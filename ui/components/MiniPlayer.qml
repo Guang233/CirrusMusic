@@ -5,7 +5,7 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // The persistent mini player (docs/ui/README.md §6.2): a bar with the cover, title,
-// transport controls, time and a progress line. Flat, no shadow: in the app it is
+// transport controls, time, and a progress bar below them that waves while playing. Flat, no shadow: in the app it is
 // part of the frame under the content panel (docs/ui/pages/shell.md §0). It slides in once something is
 // queued; the shell keeps `reservedHeight` free below the pages. Narrow bars drop
 // "previous" and the time.
@@ -33,7 +33,9 @@ Item {
     // The current song's comments (not for voices).
     signal commentsRequested
 
-    implicitHeight: 72
+    // The cover, texts and buttons sit above the progress bar, clear of it.
+    readonly property real contentOffset: -10
+    implicitHeight: 80
     visible: reveal.value > 0
 
     Spring {
@@ -70,6 +72,7 @@ Item {
             id: cover
             x: 12
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.contentOffset
             width: 48
             height: 48
             coverKey: App.player.current.coverKey
@@ -82,6 +85,7 @@ Item {
             anchors.right: commentsButton.visible ? commentsButton.left : controls.left
             anchors.rightMargin: commentsButton.visible ? 4 : 12
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.contentOffset
             spacing: 2
 
             Text {
@@ -106,6 +110,7 @@ Item {
             anchors.right: controls.left
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.contentOffset
             visible: App.player.current.key !== "" && !App.player.current.voice
             glyph: Symbols.comment
             text: qsTr("评论")
@@ -120,6 +125,7 @@ Item {
             anchors.right: time.visible ? time.left : parent.right
             anchors.rightMargin: time.visible ? 16 : 12
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.contentOffset
 
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
@@ -168,6 +174,7 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 20
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.contentOffset
             visible: root.wide
             text: App.format.duration(clock.positionMs) + " / " + App.format.duration(App.player.durationMs)
             color: ColorScope.scheme.onSurfaceVariant
@@ -186,14 +193,16 @@ Item {
             }
         }
 
+        // A wave while playing (a setting), a line while paused.
         ProgressBar {
             anchors.left: cover.right
             anchors.leftMargin: 12
             anchors.right: parent.right
             anchors.rightMargin: 20
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 7
-            thickness: 3
+            anchors.bottomMargin: 6
+            wavy: App.settings.miniWave
+            waving: App.player.status === Playback.Playing
             visible: App.player.durationMs > 0
             from: 0
             to: Math.max(1, App.player.durationMs)

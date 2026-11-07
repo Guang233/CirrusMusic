@@ -55,6 +55,7 @@ qt_add_shaders(cirrus_ui_controls "cirrus_ui_controls_shaders"
     PREFIX "/qt/qml/Cirrus/Controls"
     FILES
         shaders/ripple.frag
+        shaders/wave.frag
 )
 
 target_link_libraries(cirrus_ui_controls PRIVATE Qt6::Quick cirrus_ui_theme m3shapes)

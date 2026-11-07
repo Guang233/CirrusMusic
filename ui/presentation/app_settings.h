@@ -81,6 +81,8 @@ class AppSettings : public QObject
     CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)
     CIRRUS_SETTING(bool, showRomanization, setShowRomanization, "lyrics/showRomanization", true)
 
+    // The mini player's progress bar waves while playing (docs/ui/README.md §6.2).
+    CIRRUS_SETTING(bool, miniWave, setMiniWave, "miniPlayer/wave", true)
     // Player page (docs/ui/pages/player.md §9.2).
     // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
     CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)
