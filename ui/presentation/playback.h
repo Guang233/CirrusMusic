@@ -56,6 +56,10 @@ struct PlaybackSnapshot {
     playback::Mode mode = playback::Queue;
     // Personal FM is fetching its next song.
     bool fmWaiting = false;
+    // The queue in play order (the shuffled order while shuffling; Personal FM: the
+    // songs so far and the next one), and the current song's place in it (-1: Empty).
+    QStringList queue;
+    int queueIndex = -1;
 };
 
 } // namespace cirrus::ui

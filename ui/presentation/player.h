@@ -6,10 +6,14 @@
 #include <QObject>
 #include <QtQml/qqmlregistration.h>
 
+Q_MOC_INCLUDE("song_list_model.h")
+
 namespace cirrus::ui
 {
 
 class PlaybackSource;
+class SongDetailLoader;
+class SongListModel;
 
 // Current playback (App.player, docs/ui/presentation.md §5.1): the playback source's
 // snapshot for QML, and its commands. Snapshots arrive only when something changes,
@@ -38,6 +42,10 @@ class Player : public QObject
     Q_PROPERTY(bool fmWaiting READ fmWaiting NOTIFY changed)
     // Whether podcast voices can be played (playVoices()); not yet with the backend.
     Q_PROPERTY(bool canPlayVoices READ canPlayVoices CONSTANT)
+    // The queue in play order; rows get details as views ask (ensureQueueLoaded).
+    // A song can be in it twice: the current row is `queueIndex`, not the current role.
+    Q_PROPERTY(cirrus::ui::SongListModel* queue READ queue CONSTANT)
+    Q_PROPERTY(int queueIndex READ queueIndex NOTIFY changed)
 
   public:
     // Without a source (no playback in this build) the player stays Empty.
@@ -58,6 +66,8 @@ class Player : public QObject
     [[nodiscard]] bool canPrevious() const { return m_snapshot.canPrevious; }
     [[nodiscard]] int mode() const { return m_snapshot.mode; }
     [[nodiscard]] bool fmWaiting() const { return m_snapshot.fmWaiting; }
+    [[nodiscard]] SongListModel* queue() const { return m_queue; }
+    [[nodiscard]] int queueIndex() const { return m_snapshot.queueIndex; }
 
     // The clock of `positionAt`, in ms.
     Q_INVOKABLE static double now() { return double(playback::now()); }
@@ -69,6 +79,10 @@ class Player : public QObject
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
     Q_INVOKABLE void seek(qint64 positionMs);
+    // Plays row `index` of `queue`.
+    Q_INVOKABLE void playAt(int index);
+    // Details for queue rows [first, last] (clamped), e.g. the rows on screen.
+    Q_INVOKABLE void ensureQueueLoaded(int first, int last);
     Q_INVOKABLE void setVolume(double volume);
     Q_INVOKABLE void setOrder(int order);
     Q_INVOKABLE void setRepeat(int repeat);
@@ -84,6 +98,8 @@ class Player : public QObject
     PlaybackSource* m_source;
     PlaybackSnapshot m_snapshot;
     SongItem m_current;
+    SongListModel* m_queue;
+    SongDetailLoader* m_queueDetails;
 };
 
 } // namespace cirrus::ui

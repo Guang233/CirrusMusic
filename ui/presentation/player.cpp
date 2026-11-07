@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include "song_detail_loader.h"
+#include "song_list_model.h"
 #include "sources.h"
 
 #include <algorithm>
@@ -7,7 +9,9 @@
 namespace cirrus::ui
 {
 
-Player::Player(PlaybackSource* source, QObject* parent) : QObject(parent), m_source(source)
+Player::Player(PlaybackSource* source, QObject* parent)
+    : QObject(parent), m_source(source), m_queue(new SongListModel(this)),
+      m_queueDetails(new SongDetailLoader(m_queue, this))
 {
     if (!m_source)
         return;
@@ -17,7 +21,13 @@ Player::Player(PlaybackSource* source, QObject* parent) : QObject(parent), m_sou
 
 void Player::update()
 {
+    const bool queueChanged = m_source->snapshot().queue != m_snapshot.queue;
     m_snapshot = m_source->snapshot();
+    if (queueChanged) {
+        // Details come as views ask; the current song's are known already.
+        m_queueDetails->clear();
+        m_queue->reset(m_snapshot.queue, {m_snapshot.current});
+    }
     SongItem current(m_snapshot.current);
     if (current != m_current) {
         m_current = std::move(current);
@@ -81,6 +91,20 @@ void Player::seek(qint64 positionMs)
 {
     if (m_source && m_snapshot.seekable)
         m_source->seek(std::max<qint64>(positionMs, 0));
+}
+
+void Player::playAt(int index)
+{
+    if (m_source && index >= 0 && index < m_snapshot.queue.size())
+        m_source->playAt(index);
+}
+
+void Player::ensureQueueLoaded(int first, int last)
+{
+    const int count = m_queue->rowCount();
+    if (count == 0)
+        return;
+    m_queueDetails->ensureLoaded(std::clamp(first, 0, count - 1), std::clamp(last, 0, count - 1));
 }
 
 void Player::setVolume(double volume)

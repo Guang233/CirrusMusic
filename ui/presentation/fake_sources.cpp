@@ -1890,6 +1890,14 @@ class FakePlayback : public QObject, public PlaybackSource
         notify();
     }
 
+    void playAt(int index) override
+    {
+        if (index < 0 || index >= m_sequence.size())
+            return;
+        m_pos = index;
+        start();
+    }
+
     void setVolume(double volume) override
     {
         m_state.volume = volume;
@@ -2017,6 +2025,10 @@ class FakePlayback : public QObject, public PlaybackSource
 
     void updateNavigation()
     {
+        m_state.queue.clear();
+        for (int entry : std::as_const(m_sequence))
+            m_state.queue << m_queue.at(entry);
+        m_state.queueIndex = m_sequence.isEmpty() ? -1 : m_pos;
         if (m_state.mode == playback::PersonalFm) {
             // FM only goes forward.
             m_state.canNext = true;

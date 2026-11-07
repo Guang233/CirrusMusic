@@ -232,6 +232,8 @@ class PlaybackSource
     // Back to the start of the song when past its first seconds, else the previous one.
     virtual void previous() = 0;
     virtual void seek(qint64 positionMs) = 0;
+    // Plays the entry `index` of the snapshot's queue, keeping the queue and its order.
+    virtual void playAt(int index) = 0;
     virtual void setVolume(double volume) = 0;
     virtual void setOrder(playback::Order order) = 0;
     virtual void setRepeat(playback::Repeat repeat) = 0;
