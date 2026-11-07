@@ -8,6 +8,7 @@
 
 #include <QQmlEngine>
 
+#include <algorithm>
 #include <cmath>
 #include <numbers>
 
@@ -24,11 +25,13 @@ struct Levels {
     double content, contentVariant, contentChroma;
     double shadowTone;
 };
-constexpr Levels kDark{15, 35, 1.0, 20, 85, 68, 5, 10};
-constexpr Levels kLight{82, 94, 0.7, 90, 18, 40, 8, 35};
+constexpr Levels kDark{15, 35, 1.0, 20, 85, 68, 16, 10};
+constexpr Levels kLight{82, 94, 0.7, 90, 18, 40, 18, 35};
 // Below this mean chroma the cover counts as black and white: neutral content.
 constexpr double kNeutralChroma = 5.0;
 constexpr double kGlareTone = 98;
+// The glare stays near white whatever the content chroma.
+constexpr double kGlareChroma = 6;
 // The cover's own tone span is stretched over the grid range, but a span narrower than
 // this counts as this wide: a flat cover stays calm, a busy one uses the whole range.
 constexpr double kMinToneSpan = 35.0;
@@ -119,7 +122,7 @@ QList<QColor> PlayerPalette::computeColors() const
     const double contentChroma = neutral ? 0.0 : levels.contentChroma;
     colors[Content] = fromHct(hue, contentChroma, levels.content);
     colors[ContentVariant] = fromHct(hue, contentChroma, levels.contentVariant);
-    colors[Glare] = fromHct(hue, contentChroma, kGlareTone);
+    colors[Glare] = fromHct(hue, std::min(contentChroma, kGlareChroma), kGlareTone);
 
     const mcu::Hct main = valid && !m_palette.dominant.isEmpty()
                               ? toHct(m_palette.dominant.constFirst())
