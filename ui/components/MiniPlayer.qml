@@ -22,6 +22,9 @@ Item {
     // around the play button.
     readonly property int tier: width >= 760 ? 2 : width >= 560 ? 1 : 0
     readonly property bool wide: tier > 0
+    // Layout decisions read these, not `visible`: the page captures this layout while
+    // the shell is hidden behind it, when every `visible` here reads false.
+    readonly property bool hasComments: App.player.current.key !== "" && !App.player.current.voice
     // For the player page's shared elements: the card it grows from, and the cover,
     // title, buttons and seek bar that fly to their places on the page. While `flying`
     // the cover and the times are hidden (the page draws copies of the rest).
@@ -29,7 +32,7 @@ Item {
     readonly property Item coverItem: cover
     readonly property Item titleItem: texts
     readonly property Item controlsItem: controls
-    readonly property Item seekItem: center.visible ? seek : null
+    readonly property Item seekItem: tier > 0 ? seek : null
     property bool flying: false
 
     // Opens the player page (UI phase 4).
@@ -90,8 +93,8 @@ Item {
             id: texts
             anchors.left: cover.right
             anchors.leftMargin: 12
-            anchors.right: center.visible ? center.left : controls.left
-            anchors.rightMargin: center.visible ? 24 : 16
+            anchors.right: root.tier > 0 ? center.left : controls.left
+            anchors.rightMargin: root.tier > 0 ? 24 : 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -117,7 +120,7 @@ Item {
         // paused, and spins a loading indicator while the song loads.
         StandardButtonGroup {
             id: controls
-            anchors.right: commentsButton.visible ? commentsButton.left : parent.right
+            anchors.right: root.hasComments ? commentsButton.left : parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
 
@@ -193,6 +196,12 @@ Item {
                 anchors.verticalCenter: seek.verticalCenter
                 visible: root.tier === 2
                 opacity: root.flying ? 0 : 1
+                // Back after the flight without popping in.
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Theme.motion.fastEffects.duration
+                    }
+                }
                 text: App.format.duration(seek.shownMs)
                 color: ColorScope.scheme.onSurfaceVariant
                 font: Fonts.tabular(Theme.type.labelSmall.font)
@@ -259,6 +268,12 @@ Item {
                 anchors.verticalCenter: seek.verticalCenter
                 visible: root.tier === 2
                 opacity: root.flying ? 0 : 1
+                // Back after the flight without popping in.
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Theme.motion.fastEffects.duration
+                    }
+                }
                 horizontalAlignment: Text.AlignRight
                 text: App.player.durationMs <= 0 ? "--:--"
                       : App.settings.playerTimeRight === 1 ? App.format.duration(App.player.durationMs)
@@ -273,7 +288,7 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            visible: App.player.current.key !== "" && !App.player.current.voice
+            visible: root.hasComments
             glyph: Symbols.comment
             text: qsTr("评论")
             onClicked: root.commentsRequested()
