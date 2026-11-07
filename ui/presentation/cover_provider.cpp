@@ -133,28 +133,31 @@ QQuickImageResponse* CoverProvider::requestImageResponse(const QString& id,
                 if (!job->response)
                     return;
             }
-            job->request = source->image(key, [job, cacheKey, requestedSize,
-                                               cache](Outcome<QByteArray> outcome) {
-                job->request.release();
-                if (!outcome.value) {
-                    deliver(job, {}, QStringLiteral("cover %1 is unavailable").arg(cacheKey));
-                    return;
-                }
-                QThreadPool::globalInstance()->start([job, cacheKey, requestedSize, cache,
-                                                      bytes = *outcome.value]() {
-                    const QImage image = decode(bytes, requestedSize);
-                    if (image.isNull()) {
-                        deliver(job, {}, QStringLiteral("cannot decode cover %1").arg(cacheKey));
+            job->request = source->image(
+                key, qMax(requestedSize.width(), requestedSize.height()),
+                [job, cacheKey, requestedSize, cache](Outcome<QByteArray> outcome) {
+                    job->request.release();
+                    if (!outcome.value) {
+                        deliver(job, {}, QStringLiteral("cover %1 is unavailable").arg(cacheKey));
                         return;
                     }
-                    {
-                        const QMutexLocker lock(&cache->mutex);
-                        cache->images.insert(cacheKey, new QImage(image),
-                                             int(qMax<qsizetype>(1, image.sizeInBytes() / 1024)));
-                    }
-                    deliver(job, image, {});
+                    QThreadPool::globalInstance()->start(
+                        [job, cacheKey, requestedSize, cache, bytes = *outcome.value]() {
+                            const QImage image = decode(bytes, requestedSize);
+                            if (image.isNull()) {
+                                deliver(job, {},
+                                        QStringLiteral("cannot decode cover %1").arg(cacheKey));
+                                return;
+                            }
+                            {
+                                const QMutexLocker lock(&cache->mutex);
+                                cache->images.insert(
+                                    cacheKey, new QImage(image),
+                                    int(qMax<qsizetype>(1, image.sizeInBytes() / 1024)));
+                            }
+                            deliver(job, image, {});
+                        });
                 });
-            });
         },
         Qt::QueuedConnection);
     return response;

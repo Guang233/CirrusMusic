@@ -2,8 +2,8 @@
 #include "app_icon.h"
 #include "app_settings.h"
 #include "backend_host.h"
+#include "backend_sources.h"
 #include "desktop.h"
-#include "fake_sources.h"
 #include "gpu_preference.h"
 #include "single_instance.h"
 #include "title_bar_mode.h"
@@ -81,8 +81,8 @@ int main(int argc, char* argv[])
     }
     cirrus::ui::BackendHost backend(*paths);
 
-    // Fake data for what the backend sources don't cover yet.
-    cirrus::ui::App::install(cirrus::ui::makeFakeSources());
+    // The backend's sources, fakes for what they don't cover yet.
+    cirrus::ui::App::install(cirrus::ui::makeBackendSources(backend));
     auto* presentation = cirrus::ui::App::instance();
     cirrus::ui::Desktop desktop(&instance);
     desktop.setShutdown(

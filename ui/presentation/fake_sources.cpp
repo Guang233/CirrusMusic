@@ -1754,7 +1754,7 @@ class FakeSession : public QObject, public SessionSource
 class FakeImages : public QObject, public ImageSource
 {
   public:
-    Request image(const QString& key, Reply<QByteArray> reply) override
+    Request image(const QString& key, int /*size*/, Reply<QByteArray> reply) override
     {
         auto alive = std::make_shared<bool>(true);
         QTimer::singleShot(0, this, [alive, key, reply = std::move(reply)]() {

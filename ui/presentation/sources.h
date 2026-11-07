@@ -203,11 +203,13 @@ class SessionSource
 };
 
 // Encoded images (JPEG, PNG) by cover key; the cover image provider decodes them.
+// `size` is the larger side the image is shown at, in pixels (0 when unknown): the
+// source may give a smaller version, or a larger one to scale down.
 class ImageSource
 {
   public:
     virtual ~ImageSource() = default;
-    virtual Request image(const QString& key, Reply<QByteArray> reply) = 0;
+    virtual Request image(const QString& key, int size, Reply<QByteArray> reply) = 0;
 };
 
 // Playback and queue commands, and the playback state. Commands are intents: their
