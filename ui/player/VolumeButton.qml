@@ -2,11 +2,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Templates as T
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Presentation
 
 // Volume (docs/ui/pages/player.md §1.1): an icon button that follows the volume and
-// opens a vertical bar above it; the wheel over the button changes the volume without
-// opening it. In the open bar ↑/↓ step 5%, M mutes or restores, Esc closes.
+// opens a small popup above it, like the menus: a mute button, a slider and the
+// percentage. The wheel over the button changes the volume without opening it. In the
+// popup ←/→ step 1%, ↑/↓ 5%, M mutes or restores, Esc closes.
 PlayerButton {
     id: root
 
@@ -52,11 +54,12 @@ PlayerButton {
     T.Popup {
         id: bar
 
-        x: (root.width - width) / 2
+        x: root.width - width
         y: -height - 8
-        width: 48
-        height: 176
-        padding: 16
+        padding: 8
+        rightPadding: 16
+        implicitWidth: implicitContentWidth + leftPadding + rightPadding
+        implicitHeight: implicitContentHeight + topPadding + bottomPadding
         focus: true
         closePolicy: T.Popup.CloseOnEscape | T.Popup.CloseOnPressOutsideParent
 
@@ -77,17 +80,22 @@ PlayerButton {
             }
         }
 
-        background: Rectangle {
-            radius: width / 2
-            color: Qt.alpha(root.colors.solid, 0.82)
-            border.width: 1
-            border.color: Qt.alpha(root.colors.content, 0.12)
+        // Like the menus: a popup surface in the cover's scheme, with a shadow.
+        background: Item {
+            Elevation {
+                anchors.fill: parent
+                level: Theme.elevation.level2
+                radius: Theme.shape.large
+            }
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.shape.large
+                color: ColorScope.scheme.surfaceContainerLow
+            }
         }
 
-        contentItem: Item {
-            focus: true
-            Accessible.role: Accessible.Slider
-            Accessible.name: qsTr("音量")
+        contentItem: Row {
+            spacing: 4
             Keys.onUpPressed: root.setVolume(root.volume + 0.05)
             Keys.onDownPressed: root.setVolume(root.volume - 0.05)
             Keys.onPressed: event => {
@@ -97,36 +105,34 @@ PlayerButton {
                 }
             }
 
-            Rectangle {
-                id: track
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 8
-                height: parent.height
-                radius: width / 2
-                color: Qt.alpha(root.colors.content, 0.25)
-
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    width: parent.width
-                    height: Math.max(width, parent.height * root.volume)
-                    radius: parent.radius
-                    color: root.colors.content
-                    visible: root.volume > 0
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                glyph: root.glyph
+                text: root.volume > 0 ? qsTr("静音") : qsTr("取消静音")
+                onClicked: root.toggleMute()
+            }
+            Slider {
+                id: slider
+                anchors.verticalCenter: parent.verticalCenter
+                width: 180
+                focus: true
+                from: 0
+                to: 1
+                stepSize: 0.01
+                value: root.volume
+                Accessible.name: qsTr("音量")
+                onMoved: root.setVolume(value)
+                WheelHandler {
+                    onWheel: event => root.setVolume(root.volume + (event.angleDelta.y > 0 ? 0.05 : -0.05))
                 }
             }
-
-            MouseArea {
-                function setAt(y: real): void {
-                    root.setVolume(1 - y / height);
-                }
-                anchors.fill: parent
-                anchors.margins: -8
-                onPressed: mouse => setAt(mouse.y - 8)
-                onPositionChanged: mouse => {
-                    if (pressed)
-                        setAt(mouse.y - 8);
-                }
-                onWheel: wheel => root.setVolume(root.volume + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 40
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(root.volume * 100)
+                color: ColorScope.scheme.onSurfaceVariant
+                font: Fonts.tabular(Theme.type.labelLarge.font)
             }
         }
     }
