@@ -116,5 +116,7 @@ SettingsGroup {
 
     FontPickerDialog {
         id: fontPicker
+        current: App.settings.customFontFamily
+        onPicked: family => App.settings.customFontFamily = family
     }
 }

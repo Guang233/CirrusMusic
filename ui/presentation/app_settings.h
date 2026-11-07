@@ -107,6 +107,9 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, lyricSize, setLyricSize, "lyrics/size", 40)
     CIRRUS_SETTING(int, lyricSpacing, setLyricSpacing, "lyrics/spacing", 9)
     CIRRUS_SETTING(int, lyricWeight, setLyricWeight, "lyrics/weight", 700)
+    // The lyrics' font: 0 the UI font, 1 the bundled one, 2 lyricFontFamily.
+    CIRRUS_SETTING(int, lyricFontSource, setLyricFontSource, "lyrics/fontSource", 0)
+    CIRRUS_SETTING(QString, lyricFontFamily, setLyricFontFamily, "lyrics/fontFamily", QString())
     CIRRUS_SETTING(int, lyricAlign, setLyricAlign, "lyrics/align", 0)
     CIRRUS_SETTING(int, lyricAnchor, setLyricAnchor, "lyrics/anchor", 0)
     CIRRUS_SETTING(bool, lyricRuby, setLyricRuby, "lyrics/ruby", true)

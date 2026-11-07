@@ -19,6 +19,13 @@ FocusScope {
     // The copy dialog, from the line menu.
     signal copyRequested
 
+    // Reads Fonts.sans and Fonts.fontFiles so the fonts follow a font change, or a
+    // font file loaded later.
+    function fontAt(pixelSize: real): font {
+        Fonts.sans;
+        Fonts.fontFiles;
+        return Fonts.fontOf(family, weight, pixelSize);
+    }
     function openLineMenu(index: int, text: string, item: Item, at: point): void {
         lineMenu.text = text;
         lineMenu.popup(item, at.x, at.y);
@@ -52,9 +59,14 @@ FocusScope {
     readonly property bool showRomanization: App.settings.showRomanization
     readonly property bool shaders: GraphicsInfo.api !== GraphicsInfo.Software
                                     && GraphicsInfo.api !== GraphicsInfo.Unknown
-    readonly property font lineFont: Fonts.font(weight, fontSize)
-    readonly property font smallFont: Fonts.font(weight, fontSize * 0.6)
-    readonly property font rubyFont: Fonts.font(weight, fontSize * 0.42)
+    // The lyrics' own family (a setting): "" follows the UI font.
+    readonly property string family: {
+        const source = App.settings.lyricFontSource;
+        return source === 1 ? Fonts.bundled : source === 2 ? App.settings.lyricFontFamily : "";
+    }
+    readonly property font lineFont: fontAt(fontSize)
+    readonly property font smallFont: fontAt(fontSize * 0.6)
+    readonly property font rubyFont: fontAt(fontSize * 0.42)
     readonly property real rubyRoom: rubyOn && App.lyrics.hasRuby ? fontSize * 0.42 * 1.35 : 0
     readonly property real spaceWidth: space.advanceWidth
     readonly property real lineGap: fontSize * Math.max(0, App.settings.lyricSpacing) / 10

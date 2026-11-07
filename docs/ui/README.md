@@ -154,7 +154,7 @@ third_party/
 - MD3 字体层级：15 个基础样式 + 15 个强调样式（Display、Headline、Title、Body、Label 各大中小）。
 - **决定（UQ-03，2026-10-30）：默认使用随包的 MiSans（小米），用户可在设置里改为系统字体或任选一个已安装的字体（`App.settings.fontSource`、`customFontFamily`）。** MiSans 4.009 可变字体（`MiSansVF.ttf`，20 MB，`wght` 150–700）覆盖简繁中文、日文假名、拉丁、希腊、西里尔；缺少的字符（韩文、emoji 等）由系统字体回退。
 - MiSans 的许可（`ui/theme/fonts/MiSans-LICENSE.txt`）要求在软件中注明使用了 MiSans、不得修改、不得单独分发，所以：原样入库、原样打包（不裁剪子集，`tools/ui/prepare_fonts.py` 下载并校验 SHA-256），构建时嵌入可执行文件；设置页的字体选项注明“内置字体为小米 MiSans”。缺少字体文件时构建给出警告并改用系统字体，以后据此另出一个不含 MiSans 的小发行包（维护者决定，后话）。
-- MiSans 的字重轴可无级调节（150–700），但不是标准刻度（Regular 330、Medium 380、Semibold 520、Bold 630），Qt 也不会把 `QFont` 字重映射到这条轴上（只用默认值，700 及以上还会人为加粗）。所以文字字体统一由 `Fonts.font(weight, pixelSize)` 生成：使用 MiSans 时以命名实例为锚点把 CSS 字重线性插值到轴上（如 450 → 355，仍是连续的，可做字重动画），其他字体照常设置字重。`Theme.type` 的样式都经由它生成，字体切换时整套样式重建并通知；没有设置字体的 `Text` 跟随应用默认字体（同样随设置切换）。QML 里需要特定字重时用 `Fonts.font()`，不要写 `font.weight`。
+- MiSans 的字重轴可无级调节（150–700），但不是标准刻度（Regular 330、Medium 380、Semibold 520、Bold 630），Qt 也不会把 `QFont` 字重映射到这条轴上（只用默认值，700 及以上还会人为加粗）。所以文字字体统一由 `Fonts.font(weight, pixelSize)` 生成：使用 MiSans 时以命名实例为锚点把 CSS 字重线性插值到轴上（如 450 → 355，仍是连续的，可做字重动画），其他字体照常设置字重。`Theme.type` 的样式都经由它生成，字体切换时整套样式重建并通知；没有设置字体的 `Text` 跟随应用默认字体（同样随设置切换）。QML 里需要特定字重时用 `Fonts.font()`，不要写 `font.weight`；另一个字体（如播放页的歌词字体）用 `Fonts.fontOf(family, weight, size)`。
 - 中西文混排时检查基线和行高；播放页歌词以中文为主，字体选择要以中文效果优先。
 
 ### 4.3 形状、状态层与高度

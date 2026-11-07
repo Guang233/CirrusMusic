@@ -167,7 +167,7 @@
 - **反馈后的修改（2026-11-04）**：
   - 修正：左侧索引原来被整页的 Flickable 盖住，点击没有反应，现在加了 `z` 放到上层。
   - 索引项前面加了分组图标（`SettingsGroup.glyph`），圆底颜色由 `SettingsGroup.hue` 指定，取自 `Theme.staticPalette`（依据：AOSP Settings android16-qpr2 的 `res/values/colors.xml` 中 homepage_* 颜色，色值来自 Material 的 `md.ref.palette` 静态色板）。新分组要选一个色相，相关分组共用。
-  - 自定义字体改成 `FontPickerDialog`：搜索，↓ 进入列表，Enter 或双击使用；也可以从文件添加。
+  - 自定义字体改成 `FontPickerDialog`：搜索，↓ 进入列表，Enter 或双击使用；也可以从文件添加。它不直接写设置：`current` 给出正在用的字体，选定后发出 `picked(family)`，界面字体和歌词字体（播放页分组）共用。
   - 说明文字都缩短成一句。
   - 新增符号 `desktop_windows`、`database`、`font_download`。
 - **验证**：构建、qmllint、clang-format。离屏截图检查了：

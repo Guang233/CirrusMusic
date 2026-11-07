@@ -141,6 +141,30 @@ SettingsGroup {
         onMoved: value => App.settings.lyricWeight = value
     }
     ChoiceSetting {
+        text: qsTr("歌词字体")
+        // No bundled choice in builds without MiSans.
+        options: [{
+                value: 0,
+                text: qsTr("跟随界面")
+            }, {
+                value: 1,
+                text: "MiSans"
+            }, {
+                value: 2,
+                text: qsTr("自定义")
+            }].filter(option => option.value !== 1 || Fonts.bundledAvailable)
+        value: App.settings.lyricFontSource
+        onChosen: value => App.settings.lyricFontSource = value
+    }
+    ActionSetting {
+        shown: App.settings.lyricFontSource === 2
+        text: qsTr("自定义字体")
+        supportingText: App.settings.lyricFontFamily !== "" && Fonts.families().includes(
+                            App.settings.lyricFontFamily) ? App.settings.lyricFontFamily : qsTr("未选择")
+        actionText: qsTr("选择…")
+        onTriggered: lyricFontPicker.open()
+    }
+    ChoiceSetting {
         text: qsTr("歌词对齐")
         options: [{
                 value: 0,
@@ -188,5 +212,11 @@ SettingsGroup {
         text: qsTr("长音光晕")
         value: App.settings.lyricGlow
         onSwitched: value => App.settings.lyricGlow = value
+    }
+
+    FontPickerDialog {
+        id: lyricFontPicker
+        current: App.settings.lyricFontFamily
+        onPicked: family => App.settings.lyricFontFamily = family
     }
 }

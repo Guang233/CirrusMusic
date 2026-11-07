@@ -130,11 +130,15 @@ void Fonts::update()
     emit sansChanged();
 }
 
-QFont Fonts::font(qreal weight, qreal pixelSize) const
+QFont Fonts::font(qreal weight, qreal pixelSize) const { return fontOf(m_sans, weight, pixelSize); }
+
+QFont Fonts::fontOf(const QString& family, qreal weight, qreal pixelSize) const
 {
-    QFont font(m_sans);
+    const bool usable = !family.isEmpty() && (family == m_sans || family == m_bundled ||
+                                              QFontDatabase::hasFamily(family));
+    QFont font(usable ? family : m_sans);
     font.setPixelSize(qRound(pixelSize));
-    if (!m_bundled.isEmpty() && m_sans == m_bundled) {
+    if (!m_bundled.isEmpty() && font.family() == m_bundled) {
         // Normal keeps Qt from faking bold on top of the axis.
         font.setWeight(QFont::Normal);
         font.setVariableAxis(kWeightAxis, float(misansWeight(weight)));

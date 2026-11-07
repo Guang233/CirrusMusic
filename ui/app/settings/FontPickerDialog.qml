@@ -5,13 +5,17 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// Picks the custom text font: a search over the families (each previewed in itself,
-// hundreds of them, so a list rather than a menu), or a font file that is not
-// installed. "使用" applies the selection.
+// Picks a custom font (the UI's or the lyrics'): a search over the families (each
+// previewed in itself, hundreds of them, so a list rather than a menu), or a font file
+// that is not installed. "使用" applies the selection.
+//   FontPickerDialog { current: App.settings.customFontFamily
+//                      onPicked: family => App.settings.customFontFamily = family }
 Dialog {
     id: dialog
 
-    // The family selected in the list; starts at the one in use.
+    // The family in use, selected when the dialog opens.
+    property string current
+    // The family selected in the list.
     property string selected
     property var families: []
     readonly property var shown: {
@@ -20,8 +24,10 @@ Dialog {
                             : families.filter(family => family.toLowerCase().includes(query));
     }
 
+    signal picked(string family)
+
     function choose(family: string): void {
-        App.settings.customFontFamily = family;
+        dialog.picked(family);
         dialog.close();
     }
 
@@ -34,12 +40,12 @@ Dialog {
     initialFocusItem: search
     onAboutToShow: {
         families = Fonts.families();
-        selected = App.settings.customFontFamily;
+        selected = current;
         search.text = "";
         Qt.callLater(() => list.positionViewAtIndex(Math.max(0, shown.indexOf(selected)),
                                                     ListView.Center));
     }
-    onAccepted: App.settings.customFontFamily = selected
+    onAccepted: picked(selected)
 
     buttons: Button {
         variant: Md.Text

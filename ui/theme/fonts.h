@@ -36,6 +36,8 @@ class Fonts : public QObject
     // False when the build has no bundled text font (prepare_fonts.py not run).
     Q_PROPERTY(bool bundledAvailable READ bundledAvailable CONSTANT)
     Q_PROPERTY(QString systemFamily READ systemFamily CONSTANT)
+    // The bundled family; "" in builds without it.
+    Q_PROPERTY(QString bundled READ bundled CONSTANT)
     // Font files the user picked (fonts not installed in the system), loaded for this
     // run: their families join families() and can be the custom family.
     Q_PROPERTY(QStringList fontFiles READ fontFiles WRITE setFontFiles NOTIFY fontFilesChanged)
@@ -57,12 +59,16 @@ class Fonts : public QObject
     [[nodiscard]] QString symbols() const { return m_symbols; }
     [[nodiscard]] bool bundledAvailable() const { return !m_bundled.isEmpty(); }
     [[nodiscard]] QString systemFamily() const { return m_system; }
+    [[nodiscard]] QString bundled() const { return m_bundled; }
     [[nodiscard]] QStringList fontFiles() const { return m_fontFiles; }
     void setFontFiles(const QStringList& files);
 
     // Text font at a CSS weight (100–900, fractional allowed) and pixel size, in the
     // family in use.
     Q_INVOKABLE QFont font(qreal weight, qreal pixelSize) const;
+    // The same in another family (the lyrics may have their own); "" or a family that
+    // isn't installed gives font(). Bindings re-run on `sans` and `fontFiles` changes.
+    Q_INVOKABLE QFont fontOf(const QString& family, qreal weight, qreal pixelSize) const;
     // `font` with tabular (fixed-width) digits, for columns of numbers: MiSans's digits
     // are proportional by default.
     Q_INVOKABLE static QFont tabular(QFont font);
