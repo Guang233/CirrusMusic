@@ -126,6 +126,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 | `order`、`repeat`、`canNext`、`canPrevious` | 播放顺序（顺序／随机）、循环（关／列表／单曲） |
 | `playPause()`、`next()`、`previous()`、`seek(ms)`、`setVolume(v)`、`setOrder(o)`、`setRepeat(r)` | 意图 |
 | `playSongs(keys, index)`、`playNext(keys)`、`append(keys)`、`startFm()` | 替换队列并播放、插到下一首、追加、开始私人 FM |
+| `removeAt(index)`、`moveQueue(from, to)` | 编辑队列（只在 `Queue` 模式）：行立即变化，播放源随后跟上；删除正在播放的歌曲时接着播下一首 |
 | `queue`、`queueIndex`、`playAt(index)`、`ensureQueueLoaded(first, last)` | 按实际播放顺序（随机时为打乱后的顺序）排列的队列（`SongListModel`，详情按视图需要分批取），当前歌曲在其中的位置，播放其中一首（不改队列和顺序），为可见行取详情。同一首歌可能出现两次，当前行看 `queueIndex` 而不是 `current` 角色 |
 
 播放位置：C++ 只在后端快照到达时更新基准值，不每帧发信号。需要平滑位置的地方（进度条、逐字歌词）用 QML 辅助元素 `PlaybackClock`（基于 `FrameAnimation`）按 `positionMs + (now - positionAt) × rate` 逐帧计算；只显示文字时间的地方可以每 250 ms 刷新一次。
@@ -316,7 +317,7 @@ public:
 
 | 已实现 | 说明 |
 | --- | --- |
-| `PlaybackSource` | `sources.h`：`snapshot()` 返回完整的 `PlaybackSnapshot`（`playback.h`），变化后经 `setChangedHandler` 的回调通知（不在命令调用里同步回调）；命令 `playSongs`、`playPause`、`next`、`previous`（播放超过 3 秒时回到开头）、`seek`、`playAt`、`setVolume`、`setOrder`、`setRepeat`；快照里的 `queue`、`queueIndex` 是按播放顺序的歌曲 key 和当前位置。`playNext`、`append`、`startFm` 随阶段 4 的队列面板加 |
+| `PlaybackSource` | `sources.h`：`snapshot()` 返回完整的 `PlaybackSnapshot`（`playback.h`），变化后经 `setChangedHandler` 的回调通知（不在命令调用里同步回调）；命令 `playSongs`、`playPause`、`next`、`previous`（播放超过 3 秒时回到开头）、`seek`、`playAt`、`removeAt`、`move`、`setVolume`、`setOrder`、`setRepeat`；快照里的 `queue`、`queueIndex` 是按播放顺序的歌曲 key 和当前位置。`playNext`、`append`、`startFm` 随阶段 4 的队列面板加 |
 | `App.player`（`Player`） | §5.1 的成员，枚举在 QML 中为 `Playback.Playing`、`Playback.Shuffle`、`Playback.RepeatOne`；`current` 是 `songItem` 值类型（与 `SongListModel` 角色同名）；`now()` 给出 `positionAt` 所用的单调时钟（毫秒） |
 | `PlaybackClock`（`Cirrus.Components`） | `positionMs` 逐帧外推，只在播放中且 `active` 时运行 |
 | `SongListModel.current` | 跟随 `App.player.current`，只更新受影响的行 |

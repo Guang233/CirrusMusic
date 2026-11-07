@@ -99,6 +99,28 @@ void Player::playAt(int index)
         m_source->playAt(index);
 }
 
+void Player::removeAt(int index)
+{
+    if (!m_source || m_snapshot.mode != playback::Queue || index < 0 ||
+        index >= m_snapshot.queue.size())
+        return;
+    // The rows change now; the snapshot that follows then matches them (no reset).
+    m_queue->removeAt(index);
+    m_snapshot.queue.removeAt(index);
+    m_source->removeAt(index);
+}
+
+void Player::moveQueue(int from, int to)
+{
+    const int count = int(m_snapshot.queue.size());
+    if (!m_source || m_snapshot.mode != playback::Queue || from < 0 || from >= count || to < 0 ||
+        to >= count || from == to)
+        return;
+    m_queue->moveRow(from, to);
+    m_snapshot.queue.move(from, to);
+    m_source->move(from, to);
+}
+
 void Player::ensureQueueLoaded(int first, int last)
 {
     const int count = m_queue->rowCount();

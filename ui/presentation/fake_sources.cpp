@@ -1898,6 +1898,63 @@ class FakePlayback : public QObject, public PlaybackSource
         start();
     }
 
+    void removeAt(int index) override
+    {
+        if (m_state.mode != playback::Queue || index < 0 || index >= m_sequence.size())
+            return;
+        const int entry = m_sequence.at(index);
+        m_queue.removeAt(entry);
+        m_sequence.removeAt(index);
+        for (int& other : m_sequence)
+            if (other > entry)
+                --other;
+        if (m_sequence.isEmpty()) {
+            m_end.stop();
+            m_load.stop();
+            m_pos = 0;
+            m_state = PlaybackSnapshot{
+                .volume = m_state.volume, .order = m_state.order, .repeat = m_state.repeat};
+            notify();
+            return;
+        }
+        if (index < m_pos) {
+            --m_pos;
+        } else if (index == m_pos) {
+            // The next one, or the first when the playing song was the last.
+            if (m_pos >= m_sequence.size())
+                m_pos = 0;
+            start();
+            return;
+        }
+        updateNavigation();
+        notify();
+    }
+
+    void move(int from, int to) override
+    {
+        if (m_state.mode != playback::Queue || from < 0 || from >= m_sequence.size() || to < 0 ||
+            to >= m_sequence.size() || from == to)
+            return;
+        m_sequence.move(from, to);
+        if (from == m_pos)
+            m_pos = to;
+        else if (from < m_pos && to >= m_pos)
+            --m_pos;
+        else if (from > m_pos && to <= m_pos)
+            ++m_pos;
+        // In order, the queue itself is the play order: keep them the same, so turning
+        // shuffle off later doesn't undo the move.
+        if (m_state.order == playback::Sequential) {
+            QStringList queue;
+            for (int entry : std::as_const(m_sequence))
+                queue << m_queue.at(entry);
+            m_queue = queue;
+            std::iota(m_sequence.begin(), m_sequence.end(), 0);
+        }
+        updateNavigation();
+        notify();
+    }
+
     void setVolume(double volume) override
     {
         m_state.volume = volume;

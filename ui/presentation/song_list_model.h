@@ -53,6 +53,9 @@ class SongListModel : public QAbstractListModel
     // More loaded songs at the end (paged lists).
     void append(const QList<SongInfo>& songs);
     void remove(const QStringList& keys);
+    // One row out, or moved to `to` (where it ends up), by place (keys may repeat).
+    void removeAt(int row);
+    void moveRow(int from, int to);
     // Moves `rows` (in their current order) into the gap before row `gap` (rowCount()
     // for the end).
     void moveRows(QList<int> rows, int gap);

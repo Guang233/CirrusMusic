@@ -81,6 +81,9 @@ class Player : public QObject
     Q_INVOKABLE void seek(qint64 positionMs);
     // Plays row `index` of `queue`.
     Q_INVOKABLE void playAt(int index);
+    // Edits the queue (mode Queue): the rows change at once, the source follows.
+    Q_INVOKABLE void removeAt(int index);
+    Q_INVOKABLE void moveQueue(int from, int to);
     // Details for queue rows [first, last] (clamped), e.g. the rows on screen.
     Q_INVOKABLE void ensureQueueLoaded(int first, int last);
     Q_INVOKABLE void setVolume(double volume);

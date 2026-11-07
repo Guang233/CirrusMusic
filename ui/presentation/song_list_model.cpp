@@ -107,6 +107,27 @@ void SongListModel::remove(const QStringList& keys)
     updateContainsCurrent();
 }
 
+void SongListModel::removeAt(int row)
+{
+    if (row < 0 || row >= rowCount())
+        return;
+    beginRemoveRows({}, row, row);
+    m_rows.removeAt(row);
+    endRemoveRows();
+    emit countChanged();
+    updateContainsCurrent();
+}
+
+void SongListModel::moveRow(int from, int to)
+{
+    if (from < 0 || from >= rowCount() || to < 0 || to >= rowCount() || from == to)
+        return;
+    // beginMoveRows takes the gap before which the row goes, in the old numbering.
+    beginMoveRows({}, from, from, {}, to > from ? to + 1 : to);
+    m_rows.move(from, to);
+    endMoveRows();
+}
+
 void SongListModel::applyOrder(QList<Row> rows)
 {
     emit layoutAboutToBeChanged({}, QAbstractItemModel::VerticalSortHint);

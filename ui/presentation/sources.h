@@ -234,6 +234,10 @@ class PlaybackSource
     virtual void seek(qint64 positionMs) = 0;
     // Plays the entry `index` of the snapshot's queue, keeping the queue and its order.
     virtual void playAt(int index) = 0;
+    // Edits the queue by places in the snapshot's queue (Queue mode only): removing the
+    // playing song goes on with the next one; moving puts the entry at `to`.
+    virtual void removeAt(int index) = 0;
+    virtual void move(int from, int to) = 0;
     virtual void setVolume(double volume) = 0;
     virtual void setOrder(playback::Order order) = 0;
     virtual void setRepeat(playback::Repeat repeat) = 0;
