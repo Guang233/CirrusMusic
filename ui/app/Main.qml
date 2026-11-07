@@ -79,7 +79,7 @@ AppWindow {
         anchors.fill: parent
         searchField: topBar.searchField
         covered: player.opened
-        miniCoverHidden: player.flying
+        miniFlying: player.flying
         // Hidden once the player page covers it (docs/ui/motion-choreography.md §2.2).
         opacity: 1 - Theme.motion.segment(player.progress, 0.5, 0.6)
         visible: !player.covering
@@ -95,6 +95,9 @@ AppWindow {
         appWindow: window
         miniBar: shell.miniBar
         miniCover: shell.miniCover
+        miniTitle: shell.miniTitle
+        miniControls: shell.miniControls
+        miniSeek: shell.miniSeek
         settingsContent: Component {
             PlayerPanelSettings {}
         }

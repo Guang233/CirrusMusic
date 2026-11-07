@@ -21,6 +21,11 @@ FocusScope {
     // the page slides up instead.
     property Item miniBar
     property Item miniCover
+    // The mini player's title, buttons and seek bar: they fly to the page's title,
+    // transport buttons and progress bar, cross-fading with them.
+    property Item miniTitle
+    property Item miniControls
+    property Item miniSeek
     // The display settings panel's content (the app's PlayerPanelSettings); without
     // it there is no settings button.
     property Component settingsContent
@@ -145,14 +150,88 @@ FocusScope {
     property rect miniBarRect: Qt.rect(0, height, width, 0)
     property rect miniCoverRect
     property rect coverRect
+    property rect miniTitleRect
+    property rect miniControlsRect
+    property rect miniSeekRect
     function captureRects(): void {
+        const rectOf = item => item ? item.mapToItem(page, 0, 0, item.width, item.height)
+                                    : Qt.rect(0, 0, 0, 0);
         if (miniBar)
-            miniBarRect = miniBar.mapToItem(page, 0, 0, miniBar.width, miniBar.height);
+            miniBarRect = rectOf(miniBar);
         if (miniCover)
-            miniCoverRect = miniCover.mapToItem(page, 0, 0, miniCover.width, miniCover.height);
+            miniCoverRect = rectOf(miniCover);
+        miniTitleRect = rectOf(miniTitle);
+        miniControlsRect = rectOf(miniControls);
+        miniSeekRect = rectOf(miniSeek);
         const art = cover.art;
         coverRect = art.mapToItem(page, 0, 0, art.width, art.height);
     }
+
+    // The other shared elements (docs/ui/pages/player.md §2.1). Each pair moves along
+    // one path from the mini player's element (`from`, page coordinates) to the page's
+    // (`to`); `source` is the rect being placed, the mini element's or the page's,
+    // scaled with the path. Mode 0 keeps the left edge and the aspect (title), 1 the
+    // center and the aspect (buttons), 2 fills the rect (bars).
+    function placed(from: rect, to: rect, source: rect, mode: int, t: real): rect {
+        const lerp = Theme.motion.lerp;
+        const w = lerp(from.width, to.width, t), h = lerp(from.height, to.height, t);
+        const x = lerp(from.x, to.x, t), y = lerp(from.y, to.y, t);
+        if (mode === 2)
+            return Qt.rect(x, y, w, h);
+        const s = source.height > 0 ? h / source.height : 1;
+        const sw = source.width * s, sh = source.height * s;
+        return mode === 0 ? Qt.rect(x, y + (h - sh) / 2, sw, sh)
+                          : Qt.rect(x + (w - sw) / 2, y + (h - sh) / 2, sw, sh);
+    }
+    // The transform that puts the part `local` of a page element, whose own place is
+    // `at`, on `place`: {sx, sy, tx, ty} for a Scale (origin 0, 0) then a Translate.
+    function moveOf(local: rect, at: point, place: rect): var {
+        const sx = local.width > 0 ? place.width / local.width : 1;
+        const sy = local.height > 0 ? place.height / local.height : 1;
+        return {
+            sx: sx,
+            sy: sy,
+            tx: place.x - at.x - local.x * sx,
+            ty: place.y - at.y - local.y * sy
+        };
+    }
+    readonly property bool sharing: miniBar !== null && !reduced
+    // The page's elements fade in early on the way, the mini player's copies fade out.
+    readonly property real handIn: sharing ? Theme.motion.segment(p, 0.1, 0.5) : late
+    readonly property real handOut: 1 - Theme.motion.segment(p, 0.15, 0.55)
+    // What has no counterpart in the mini player fades in late and rises a little.
+    readonly property real late: Theme.motion.segment(p, 0.55, 1)
+    // The page's parts that pair up with the mini player's, in their elements, and
+    // where those parts end up.
+    readonly property rect titleLocal: Qt.rect(header.textItem.x, header.textItem.y,
+                                               header.textItem.width, header.textItem.height)
+    readonly property rect controlsLocal: controls.transportRect
+    readonly property rect progressLocal: Qt.rect(progress.barItem.x, progress.barItem.y,
+                                                  progress.barItem.width, progress.barItem.height)
+    readonly property rect titleTo: Qt.rect(layout.header.x + titleLocal.x,
+                                            layout.header.y + titleLocal.y,
+                                            titleLocal.width, titleLocal.height)
+    readonly property rect controlsTo: Qt.rect(layout.controls.x + controlsLocal.x,
+                                               layout.controls.y + controlsLocal.y,
+                                               controlsLocal.width, controlsLocal.height)
+    readonly property rect progressTo: Qt.rect(layout.progress.x + progressLocal.x,
+                                               layout.progress.y + progressLocal.y,
+                                               progressLocal.width, progressLocal.height)
+    // Identity once open (and without a mini player).
+    readonly property var titleMove: flying && miniTitle
+                                     ? moveOf(titleLocal, Qt.point(layout.header.x, layout.header.y),
+                                              placed(miniTitleRect, titleTo, titleLocal, 0, p))
+                                     : ({ sx: 1, sy: 1, tx: 0, ty: 0 })
+    readonly property var controlsMove: flying && miniControls
+                                        ? moveOf(controlsLocal,
+                                                 Qt.point(layout.controls.x, layout.controls.y),
+                                                 placed(miniControlsRect, controlsTo, controlsLocal, 1, p))
+                                        : ({ sx: 1, sy: 1, tx: 0, ty: 0 })
+    readonly property var progressMove: flying && miniSeek
+                                        ? moveOf(progressLocal,
+                                                 Qt.point(layout.progress.x, layout.progress.y),
+                                                 placed(miniSeekRect, progressTo, progressLocal, 2, p))
+                                        : ({ sx: 1, sy: 1, tx: 0, ty: 0 })
     onWidthChanged: if (opened || grow.value > 0) Qt.callLater(captureRects)
     onHeightChanged: if (opened || grow.value > 0) Qt.callLater(captureRects)
 
@@ -528,21 +607,33 @@ FocusScope {
                 }
             }
 
-            // Header, progress and controls: they fade in late and rise a little.
+            // Header, progress and controls. With the mini player they fly from its
+            // title, buttons and seek bar; the rest (and all without it) fades in late
+            // and rises a little.
             Item {
                 id: chrome
                 anchors.fill: parent
-                opacity: Theme.motion.segment(page.p, 0.55, 1)
                 transform: Translate {
-                    y: 16 * (1 - Theme.motion.segment(page.p, 0.55, 1))
+                    y: page.sharing ? 0 : 16 * (1 - page.late)
                 }
 
                 Glide {
                     to: page.layout.header
                     animate: page.animateLayout
+                    opacity: page.handIn
                     SongHeader {
                         id: header
                         anchors.fill: parent
+                        transform: [
+                            Scale {
+                                xScale: page.titleMove.sx
+                                yScale: page.titleMove.sy
+                            },
+                            Translate {
+                                x: page.titleMove.tx
+                                y: page.titleMove.ty
+                            }
+                        ]
                         colors: colors
                         compact: (!page.wide && page.view > 0) || page.headerAtBottom
                         moreAfterText: page.headerAtBottom
@@ -574,9 +665,20 @@ FocusScope {
                     Glide {
                         to: page.layout.progress
                         animate: page.animateLayout
+                        opacity: page.handIn
                         PlayerProgress {
                             id: progress
                             anchors.fill: parent
+                            transform: [
+                                Scale {
+                                    xScale: page.progressMove.sx
+                                    yScale: page.progressMove.sy
+                                },
+                                Translate {
+                                    x: page.progressMove.tx
+                                    y: page.progressMove.ty
+                                }
+                            ]
                             colors: colors
                             positionMs: clock.positionMs
                             timesBeside: page.controlsAtBottom
@@ -588,9 +690,20 @@ FocusScope {
                     Glide {
                         to: page.layout.controls
                         animate: page.animateLayout
+                        opacity: page.handIn
                         PlayerControls {
                             id: controls
                             anchors.fill: parent
+                            transform: [
+                                Scale {
+                                    xScale: page.controlsMove.sx
+                                    yScale: page.controlsMove.sy
+                                },
+                                Translate {
+                                    x: page.controlsMove.tx
+                                    y: page.controlsMove.ty
+                                }
+                            ]
                             colors: colors
                             compact: page.controlsAtBottom
                             onLoginRequested: page.loginRequested()
@@ -603,6 +716,7 @@ FocusScope {
                     // The bottom row: volume, lyrics, the queue and the display settings.
                     Row {
                         id: viewButtons
+                        opacity: page.late
                         anchors.right: parent.right
                         anchors.rightMargin: page.sideMargin - 10
                         y: rowY.value - height / 2
@@ -656,6 +770,7 @@ FocusScope {
                     // The top row: close, full screen and the window buttons; moves the
                     // window like the shell's title bar row.
                     TitleBar {
+                        opacity: page.late
                         anchors.left: parent.left
                         anchors.right: parent.right
                         height: page.topHeight
@@ -789,6 +904,42 @@ FocusScope {
             id: snackbar
             anchors.bottom: parent.bottom
         }
+    }
+
+    // The mini player's title, buttons and seek bar on their way, fading out over the
+    // page's (the originals are hidden meanwhile); under the flying cover, which the
+    // title passes.
+    component FlyingCopy: ShaderEffectSource {
+        property rect from
+        property rect to
+        property int mode
+        readonly property rect at: page.placed(from, to, from, mode, page.p)
+        x: at.x
+        y: at.y
+        width: at.width
+        height: at.height
+        visible: page.flying && sourceItem !== null
+        hideSource: page.flying
+        opacity: page.handOut
+        smooth: true
+    }
+    FlyingCopy {
+        sourceItem: page.miniTitle
+        from: page.miniTitleRect
+        to: page.titleTo
+        mode: 0
+    }
+    FlyingCopy {
+        sourceItem: page.miniControls
+        from: page.miniControlsRect
+        to: page.controlsTo
+        mode: 1
+    }
+    FlyingCopy {
+        sourceItem: page.miniSeek
+        from: page.miniSeekRect
+        to: page.progressTo
+        mode: 2
     }
 
     // The flying cover.

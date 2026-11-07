@@ -25,6 +25,8 @@ Item {
     // The times on either side of the bar, on its line (the bottom layout).
     property bool timesBeside: false
     readonly property real timeWidth: timesBeside ? 52 : 0
+    // The bar itself, for the flight from the mini player's seek bar.
+    readonly property Item barItem: bar
 
     function seekBy(deltaMs: real): void {
         if (!seekable)

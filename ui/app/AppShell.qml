@@ -40,10 +40,14 @@ Item {
     readonly property LibraryPageModel library: myLibrary
     // The player page covers the shell: its own keys (search, back, the rail) pause.
     property bool covered: false
-    // For the player page's shared element (MiniPlayer.bar, coverItem, coverHidden).
+    // For the player page's shared elements (MiniPlayer.bar, coverItem, titleItem,
+    // controlsItem, seekItem, flying).
     readonly property Item miniBar: miniPlayer.bar
     readonly property Item miniCover: miniPlayer.coverItem
-    property alias miniCoverHidden: miniPlayer.coverHidden
+    readonly property Item miniTitle: miniPlayer.titleItem
+    readonly property Item miniControls: miniPlayer.controlsItem
+    readonly property Item miniSeek: miniPlayer.seekItem
+    property alias miniFlying: miniPlayer.flying
 
     // The mini player asks for the player page.
     signal playerRequested

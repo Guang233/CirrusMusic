@@ -27,6 +27,8 @@ Item {
 
     readonly property var song: App.player.current
     readonly property bool menuOpen: menu.opened
+    // The title and artist, for the flight from the mini player.
+    readonly property Item textItem: texts
 
     implicitHeight: Math.max(texts.implicitHeight, more.implicitHeight)
 

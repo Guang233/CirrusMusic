@@ -99,11 +99,11 @@
 
 ## 6. Slider
 
-MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外圆角全圆、内侧圆角 2；把手为 4×44 的竖条，与两侧轨道各留 6 px 间隙，按下或聚焦时变为 2 px 宽；未激活轨道末端有 4 px 停止点。拖动时把手上方显示数值气泡（InverseSurface）。
+MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外圆角全圆、内侧圆角 2；把手为 4×44 的竖条，与两侧轨道各留 6 px 间隙，按下或聚焦时变为 2 px 宽；未激活轨道末端有 4 px 停止点。拖动时把手上方显示数值气泡（InverseSurface）。`handleHeight` 可调（默认 44）。`wavy`：把手左侧的已激活部分画成 MD3E 水波（与 ProgressBar 共用 `WaveLine`），`waving` 控制流动与抚平；配合细轨道和短把手（`trackHeight: 4; handleHeight: 16`）就是迷你播放条的进度条。
 
 ## 7. 进度
 
-- **ProgressBar**（线性）：4 px 粗、轨道与指示之间 4 px 间隙、末端 4 px 停止点（确定进度时）；不确定进度为两段交替滑动。`wavy`（MD3E 水波，确定进度）：已完成的部分画成正弦波（振幅 3 px、波长 32 px、每秒前进一个波长，圆头），控件高度留出波的位置（4 + 2×3 = 10 px），轨道仍是直线；`waving` 为 false 时振幅用 `slowEffects` 弹簧降到 0，变回直线，再打开时重新起伏。波形是着色器（`shaders/wave.frag`，按到曲线的近似距离抗锯齿），软件渲染下是直线；减少动态效果时不流动。
+- **ProgressBar**（线性）：4 px 粗、轨道与指示之间 4 px 间隙、末端 4 px 停止点（确定进度时）；不确定进度为两段交替滑动。`wavy`（MD3E 水波，确定进度）：已完成的部分画成正弦波（振幅 3 px、波长 32 px、每秒前进一个波长，圆头），控件高度留出波的位置（4 + 2×3 = 10 px），轨道仍是直线；`waving` 为 false 时振幅用 `slowEffects` 弹簧降到 0，变回直线，再打开时重新起伏。波形由 `WaveLine` 画（ProgressBar 与 Slider 共用）：着色器 `shaders/wave.frag`，按到曲线的近似距离抗锯齿，软件渲染下是直线；减少动态效果时不流动。
 - **CircularProgress**：40×40、4 px、带间隙；不确定进度为旋转并伸缩的圆弧。
 - **LoadingIndicator**：48 容器、38 指示形状，按 SoftBurst → Cookie9Sided → Pentagon → Pill → Sunny → Cookie4Sided → Oval 循环变形，每 650 ms 一次（弹簧 ζ 0.6、k 200），每次额外旋转 90°，并叠加 4666 ms 一圈的匀速旋转。`contained` 时加 PrimaryContainer 圆形容器。减少动态效果时只保留缓慢旋转。
 - 波浪形（wavy）进度暂不做，播放器设计时再定。
@@ -149,7 +149,7 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 ## 10. 已知限制与待办
 
 - 只做了水平 Slider；离散滑块的刻度点、范围滑块（RangeSlider）未做。
-- 波浪形进度、Slider 的 MD3E 其余尺寸档（把手高度随轨道变化）未做。
+- Slider 的 MD3E 其余尺寸档（把手高度随轨道自动变化）未做，`handleHeight` 手动设；不确定进度的水波未做。
 - 连接按钮组未处理从右到左布局（RTL）下的首末端圆角。
 - `ToolTip` 只有纯文本样式；富提示（rich tooltip）未做。
 - TextField 未做字符计数和前后缀；Outlined 标签缺口用 `gapColor` 填色，放在非 surface 背景上时要手动指定。

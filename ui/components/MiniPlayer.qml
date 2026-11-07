@@ -18,11 +18,15 @@ Item {
     property real bottomMargin: 4
     readonly property real reservedHeight: (implicitHeight + bottomMargin) * reveal.value
     readonly property bool wide: width >= 560
-    // For the player page's shared element: the card it grows from and the cover that
-    // flies; the cover is hidden while its copy is in flight.
+    // For the player page's shared elements: the card it grows from, and the cover,
+    // title, buttons and seek bar that fly to their places on the page. While `flying`
+    // the cover and the times are hidden (the page draws copies of the rest).
     readonly property Item bar: card
     readonly property Item coverItem: cover
-    property bool coverHidden: false
+    readonly property Item titleItem: texts
+    readonly property Item controlsItem: controls
+    readonly property Item seekItem: seek
+    property bool flying: false
 
     // Opens the player page (UI phase 4).
     signal openRequested
@@ -75,7 +79,7 @@ Item {
             width: 48
             height: 48
             coverKey: App.player.current.coverKey
-            opacity: root.coverHidden ? 0 : 1
+            opacity: root.flying ? 0 : 1
         }
 
         Column {
@@ -169,6 +173,7 @@ Item {
                 anchors.left: parent.left
                 anchors.verticalCenter: seek.verticalCenter
                 visible: root.wide
+                opacity: root.flying ? 0 : 1
                 text: App.format.duration(seek.shownMs)
                 color: ColorScope.scheme.onSurfaceVariant
                 font: Fonts.tabular(Theme.type.labelSmall.font)
@@ -230,6 +235,7 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: seek.verticalCenter
                 visible: root.wide
+                opacity: root.flying ? 0 : 1
                 horizontalAlignment: Text.AlignRight
                 text: App.player.durationMs <= 0 ? "--:--"
                       : App.settings.playerTimeRight === 1 ? App.format.duration(App.player.durationMs)

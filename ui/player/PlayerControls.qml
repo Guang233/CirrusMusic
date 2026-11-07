@@ -11,6 +11,9 @@ Item {
 
     required property PlayerPalette colors
     readonly property Item playButton: play
+    // Previous, play and next, for the flight from the mini player's buttons.
+    readonly property rect transportRect: Qt.rect(previous.x, play.y,
+                                                  next.x + next.width - previous.x, play.height)
     // Smaller, for the bottom bar.
     property bool compact: false
 
@@ -56,6 +59,7 @@ Item {
     }
 
     PlayerButton {
+        id: previous
         anchors.right: play.left
         anchors.rightMargin: Math.min(root.compact ? 12 : 24, root.width / 16)
         anchors.verticalCenter: parent.verticalCenter
@@ -81,6 +85,7 @@ Item {
     }
 
     PlayerButton {
+        id: next
         anchors.left: play.right
         anchors.leftMargin: Math.min(root.compact ? 12 : 24, root.width / 16)
         anchors.verticalCenter: parent.verticalCenter
