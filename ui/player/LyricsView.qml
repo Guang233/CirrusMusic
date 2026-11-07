@@ -28,10 +28,13 @@ FocusScope {
     readonly property int current: App.lyrics.current
 
     // Settings (§9.2).
-    readonly property real fontSize: Math.max(26, Math.min(56, width / 17))
-                                     * Math.max(0.5, App.settings.lyricScale / 100)
+    readonly property real fontSize: Math.max(16, Math.min(96, App.settings.lyricSize))
     readonly property int weight: Math.max(100, Math.min(900, App.settings.lyricWeight))
-    readonly property bool centered: App.settings.lyricAlign === 1
+    // 0 left, 1 centered, 2 right.
+    readonly property int align: Math.max(0, Math.min(2, App.settings.lyricAlign))
+    readonly property int textAlign: [Text.AlignLeft, Text.AlignHCenter, Text.AlignRight][align]
+    // How far the hover layer reaches past the text on each side.
+    readonly property real hoverInset: 20
     readonly property bool wordFill: App.settings.lyricWordFill
                                      && App.lyrics.timing === Lyrics.Words
     readonly property bool rubyOn: App.settings.lyricRuby && App.settings.showRomanization
@@ -46,7 +49,7 @@ FocusScope {
     readonly property font rubyFont: Fonts.font(weight, fontSize * 0.42)
     readonly property real rubyRoom: rubyOn && App.lyrics.hasRuby ? fontSize * 0.42 * 1.35 : 0
     readonly property real spaceWidth: space.advanceWidth
-    readonly property real lineGap: fontSize * 0.9
+    readonly property real lineGap: fontSize * Math.max(0, App.settings.lyricSpacing) / 10
 
     // --- Layout ------------------------------------------------------------------------
 
@@ -81,6 +84,7 @@ FocusScope {
     }
     onWidthChanged: snapNextLayout()
     onFontSizeChanged: snapNextLayout()
+    onLineGapChanged: snapNextLayout()
     Connections {
         target: App.lyrics.lines
         function onModelReset() {
@@ -105,6 +109,14 @@ FocusScope {
                                                                   : active.length > 0 ? active[0]
                                                                                       : Math.max(0, current)
     property int frozenAnchor: 0
+    // A jump over many lines: the lines slide in as a block (LyricLine) and the track
+    // fades in, covering the lines that leave at once.
+    property int lastAnchor: 0
+    onAnchorIndexChanged: {
+        if (!instant && Math.abs(anchorIndex - lastAnchor) > 2 && !Theme.motion.reduced)
+            jumpIn.restart();
+        lastAnchor = anchorIndex;
+    }
     readonly property int anchorIndex: plain ? 0 : browsing ? frozenAnchor : liveAnchor
     readonly property real anchorY: {
         if (plain)
@@ -230,7 +242,10 @@ FocusScope {
 
     Item {
         id: viewport
+        // Wider than the column by the hover layer's reach, which the clip would cut.
         anchors.fill: parent
+        anchors.leftMargin: -root.hoverInset
+        anchors.rightMargin: -root.hoverInset
         clip: true
         visible: root.ready
         // Lines fade out at the edges rather than being cut.
@@ -242,11 +257,17 @@ FocusScope {
             fragmentShader: Qt.resolvedUrl("shaders/edgefade.frag.qsb")
         }
 
-        WheelHandler {
-            target: null
-            onWheel: event => root.scrollBy(event.pixelDelta.y !== 0 ? event.pixelDelta.y
-                                                                     : event.angleDelta.y / 120
-                                                                       * root.fontSize * 2.5)
+        // The wheel browses (a MouseArea over the lines that takes nothing else: the
+        // lines keep their hover and clicks). Touchpads scroll by pixels, wheels by
+        // notches of about two lines.
+        MouseArea {
+            anchors.fill: parent
+            z: 1
+            acceptedButtons: Qt.NoButton
+            onWheel: wheel => {
+                const pixels = wheel.pixelDelta.y !== 0 && wheel.phase !== Qt.NoScrollPhase;
+                root.scrollBy(pixels ? wheel.pixelDelta.y : wheel.angleDelta.y / 120 * root.fontSize * 2.5);
+            }
         }
         DragHandler {
             id: drag
@@ -265,8 +286,19 @@ FocusScope {
 
         Item {
             id: track
-            width: parent.width
+            x: root.hoverInset
+            width: root.width
             y: root.scrollY
+
+            NumberAnimation {
+                id: jumpIn
+                target: track
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.motion.defaultEffects.duration
+                easing.type: Easing.OutCubic
+            }
 
             Repeater {
                 id: lines
@@ -288,7 +320,7 @@ FocusScope {
         visible: root.ready && root.plain
         height: visible ? implicitHeight : 0
         text: qsTr("歌词没有时间信息")
-        horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
+        horizontalAlignment: root.textAlign
         color: root.colors.contentVariant
         font: Fonts.font(500, 14)
     }
@@ -305,7 +337,7 @@ FocusScope {
             model: [0.7, 0.5, 0.62]
             Rectangle {
                 required property real modelData
-                x: root.centered ? (parent.width - width) / 2 : 0
+                x: (parent.width - width) * [0, 0.5, 1][root.align]
                 width: parent.width * modelData
                 height: root.fontSize * 0.8
                 radius: height / 2
@@ -323,14 +355,14 @@ FocusScope {
         Text {
             width: parent.width
             wrapMode: Text.Wrap
-            horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
+            horizontalAlignment: root.textAlign
             color: root.colors.contentVariant
             font: root.lineFont
             text: root.status === Lyrics.Instrumental ? qsTr("纯音乐，请欣赏")
                 : root.status === Lyrics.Failed ? qsTr("歌词加载失败") : qsTr("暂无歌词")
         }
         Button {
-            x: root.centered ? (parent.width - width) / 2 : 0
+            x: (parent.width - width) * [0, 0.5, 1][root.align]
             visible: root.status === Lyrics.Failed
             variant: Md.Tonal
             glyph: Symbols.refresh

@@ -93,12 +93,20 @@ SettingsGroup {
     }
     SliderSetting {
         text: qsTr("歌词字号")
-        from: 75
-        to: 150
-        stepSize: 5
-        format: value => Math.round(value) + "%"
-        value: App.settings.lyricScale
-        onMoved: value => App.settings.lyricScale = value
+        from: 16
+        to: 96
+        stepSize: 1
+        value: App.settings.lyricSize
+        onMoved: value => App.settings.lyricSize = value
+    }
+    SliderSetting {
+        text: qsTr("歌词行距")
+        from: 2
+        to: 30
+        stepSize: 1
+        format: value => (value / 10).toFixed(1)
+        value: App.settings.lyricSpacing
+        onMoved: value => App.settings.lyricSpacing = value
     }
     SliderSetting {
         text: qsTr("歌词字重")
@@ -116,6 +124,9 @@ SettingsGroup {
             }, {
                 value: 1,
                 text: qsTr("居中")
+            }, {
+                value: 2,
+                text: qsTr("靠右")
             }]
         value: App.settings.lyricAlign
         onChosen: value => App.settings.lyricAlign = value

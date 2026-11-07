@@ -5,8 +5,9 @@ import Cirrus.Theme
 
 // One piece of a lyric line laid out on its own (docs/ui/pages/player.md §5.3, §6.1):
 // a word, or a unit of base text with its romaji ruby centered above. On the line
-// being sung it fills from left to right (shaders/fill.frag), rises a little once
-// reached, and a long note slowly grows with a soft glow.
+// being sung it fills from left to right (shaders/fill.frag), floats up along an
+// ease-in-out curve over its own time, starting a little early so that each word
+// lifts the next ones with it (a wave); a long note slowly grows with a soft glow.
 Item {
     id: root
 
@@ -39,11 +40,13 @@ Item {
                                             : endMs <= startMs ? (timeMs >= startMs ? 1 : 0)
                                                                : Math.max(0, Math.min(1, (timeMs - startMs)
                                                                                       / (endMs - startMs)))
-    // Eased in over 350 ms once reached.
+    // 0 to 1 over the piece's time, from 300 ms before it starts.
     readonly property real rise: {
         const at = timed ? timeMs : heldMs;
-        const t = Math.max(0, Math.min(1, (at - startMs) / 350));
-        return 1 - Math.pow(1 - t, 3);
+        const lead = 300;
+        const span = Math.max(endMs - startMs, 250) + lead;
+        const t = Math.max(0, Math.min(1, (at - startMs + lead) / span));
+        return 0.5 - 0.5 * Math.cos(Math.PI * t);
     }
     // A long note: grows over the note, settles in 600 ms after it.
     readonly property real grow: {
@@ -60,7 +63,7 @@ Item {
     implicitHeight: rubyRoom + base.implicitHeight
 
     transform: Translate {
-        y: -0.04 * root.fontSize * root.rise * root.lift
+        y: -0.05 * root.fontSize * root.rise * root.lift
     }
 
     // The glow: a blurred copy behind, in the content color.
@@ -76,6 +79,7 @@ Item {
             transformOrigin: Item.Bottom
             opacity: root.grow * (root.colors.dark ? 0.7 : 0.35)
             layer.enabled: true
+            layer.smooth: true
             layer.effect: MultiEffect {
                 blurEnabled: true
                 blur: 1
@@ -92,6 +96,7 @@ Item {
         transformOrigin: Item.Bottom
         // Partly sung: the soft edge needs the shader; otherwise plain opacity.
         layer.enabled: root.shaders && root.progress > 0 && root.progress < 1
+        layer.smooth: true
         layer.effect: ShaderEffect {
             property var source
             readonly property real progress: root.progress

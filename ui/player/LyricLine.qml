@@ -52,7 +52,8 @@ Item {
     y: glide.value
     opacity: Theme.motion.lerp(line.view.dimLevel, 1, emphasis.value)
     scale: 0.96 + 0.04 * emphasis.value
-    transformOrigin: line.view.centered ? Item.Top : Item.TopLeft
+    transformOrigin: [Item.TopLeft, Item.Top, Item.TopRight][line.view.align]
+    readonly property int textAlign: [Text.AlignLeft, Text.AlignHCenter, Text.AlignRight][line.view.align]
 
     onImplicitHeightChanged: line.view.scheduleLayout()
     onHighlightedChanged: if (!highlighted)
@@ -62,9 +63,17 @@ Item {
                                            && targetY + line.view.scrollY < line.view.height)) {
             delay.stop();
             glide.snapTo(targetY);
+        } else if (seenAnchor >= 0 && Math.abs(line.view.anchorIndex - seenAnchor) > 2) {
+            // A jump over many lines (a seek): every line moves by the same distance,
+            // so the whole track slides as one block, at most 60% of the height.
+            delay.stop();
+            const from = glide.value - targetY;
+            const limit = line.view.height * 0.6;
+            glide.snapTo(targetY + Math.max(-limit, Math.min(limit, from)));
+            glide.target = targetY;
         } else if (seenAnchor !== line.view.anchorIndex) {
             // The waterfall: from the current line down, each starts 35 ms later.
-            delay.interval = Math.max(0, index - line.view.anchorIndex) * 35;
+            delay.interval = Math.min(8, Math.max(0, index - line.view.anchorIndex)) * 35;
             delay.restart();
         } else if (glide.running || delay.running) {
             if (!delay.running)
@@ -108,6 +117,7 @@ Item {
     }
 
     layer.enabled: line.view.shaders && onScreen && blurAmount.value > 0.1
+    layer.smooth: true
     layer.effect: MultiEffect {
         blurEnabled: true
         blurMax: 8
@@ -169,7 +179,7 @@ Item {
         let x = 0, y = 0, rowHeight = 0;
         let row = [];
         const finish = () => {
-            const shift = line.view.centered ? Math.max(0, (avail - x) / 2) : 0;
+            const shift = Math.max(0, avail - x) * [0, 0.5, 1][line.view.align];
             for (const item of row) {
                 item.x += shift;
                 item.y = y;
@@ -199,6 +209,7 @@ Item {
     }
     onWidthChanged: scheduleLayout()
     onPiecesChanged: scheduleLayout()
+    onTextAlignChanged: scheduleLayout()
 
     // Hover and click: jump to the line.
     HoverHandler {
@@ -207,22 +218,33 @@ Item {
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
+        id: tap
         enabled: line.view.seekable
+        onPressedChanged: if (pressed) {
+                              const at = point.position;
+                              stateLayer.pressX = at.x - stateLayer.x;
+                              stateLayer.pressY = at.y - stateLayer.y;
+                          }
         onTapped: line.view.seekToLine(line.index)
     }
-    Rectangle {
-        x: -12
-        y: -8
-        width: parent.width + 24
-        height: parent.height + 16
-        radius: Theme.shape.medium
-        color: Qt.alpha(line.colors.content, 0.08)
-        opacity: hover.hovered || line.view.keyIndex === line.index && line.view.keyboardBrowsing ? 1 : 0
-        visible: opacity > 0
+    // The hover and press layer reaches past the text on both sides (LyricsView keeps
+    // room for it).
+    StateLayer {
+        id: stateLayer
+        x: -line.view.hoverInset
+        y: -line.fontSize * 0.25
+        width: parent.width + 2 * line.view.hoverInset
+        height: parent.height + line.fontSize * 0.5
+        radius: Theme.shape.large
+        color: line.colors.content
+        hovered: hover.hovered
+        pressed: tap.pressed
+        focused: line.view.keyboardBrowsing && line.view.keyIndex === line.index
 
         FocusRing {
-            shown: line.view.keyboardBrowsing && line.view.keyIndex === line.index
-            containerRadius: parent.radius
+            shown: stateLayer.focused
+            offset: -2
+            containerRadius: stateLayer.radius
             border.color: line.colors.content
         }
     }
@@ -246,10 +268,10 @@ Item {
             }
             InterludeDots {
                 id: dots
-                x: line.view.centered ? (parent.width - width) / 2 : 0
+                x: (parent.width - width) * [0, 0.5, 1][line.view.align]
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: line.fontSize * 0.25
-                transformOrigin: line.view.centered ? Item.Center : Item.Left
+                transformOrigin: [Item.Left, Item.Center, Item.Right][line.view.align]
                 colors: line.colors
                 fontSize: line.fontSize
                 running: line.interlude
@@ -302,7 +324,7 @@ Item {
             visible: line.pieces.length === 0
             text: line.text
             wrapMode: Text.Wrap
-            horizontalAlignment: line.view.centered ? Text.AlignHCenter : Text.AlignLeft
+            horizontalAlignment: line.textAlign
             color: line.colors.content
             font: line.view.lineFont
         }
@@ -311,7 +333,7 @@ Item {
             visible: line.view.showRomanization && line.romanization !== "" && !line.showRuby
             text: line.romanization
             wrapMode: Text.Wrap
-            horizontalAlignment: line.view.centered ? Text.AlignHCenter : Text.AlignLeft
+            horizontalAlignment: line.textAlign
             color: line.colors.contentVariant
             font: line.view.smallFont
         }
@@ -320,7 +342,7 @@ Item {
             visible: line.view.showTranslation && line.translation !== ""
             text: line.translation
             wrapMode: Text.Wrap
-            horizontalAlignment: line.view.centered ? Text.AlignHCenter : Text.AlignLeft
+            horizontalAlignment: line.textAlign
             color: line.colors.contentVariant
             font: line.view.smallFont
         }

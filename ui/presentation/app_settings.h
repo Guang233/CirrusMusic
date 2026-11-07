@@ -96,10 +96,12 @@ class AppSettings : public QObject
     CIRRUS_SETTING(int, playerFlowSpeed, setPlayerFlowSpeed, "player/flowSpeed", 1)
     // The cover tilts toward the pointer.
     CIRRUS_SETTING(bool, playerTilt, setPlayerTilt, "player/tilt", true)
-    // Lyrics on the player page (player.md §5, §9.2): size in percent, weight 100-900,
-    // 0 left / 1 centered, the current line 0 upper / 1 centered, romaji as ruby over
-    // Japanese, word-by-word fill, the other lines blurred, the long-note glow.
-    CIRRUS_SETTING(int, lyricScale, setLyricScale, "lyrics/scale", 100)
+    // Lyrics on the player page (player.md §5, §9.2): size in px (16-96), the gap
+    // between lines in tenths of the size, weight 100-900, 0 left / 1 centered /
+    // 2 right, the current line 0 upper / 1 centered, romaji as ruby over Japanese,
+    // word-by-word fill, the other lines blurred, the long-note glow.
+    CIRRUS_SETTING(int, lyricSize, setLyricSize, "lyrics/size", 40)
+    CIRRUS_SETTING(int, lyricSpacing, setLyricSpacing, "lyrics/spacing", 9)
     CIRRUS_SETTING(int, lyricWeight, setLyricWeight, "lyrics/weight", 700)
     CIRRUS_SETTING(int, lyricAlign, setLyricAlign, "lyrics/align", 0)
     CIRRUS_SETTING(int, lyricAnchor, setLyricAnchor, "lyrics/anchor", 0)
