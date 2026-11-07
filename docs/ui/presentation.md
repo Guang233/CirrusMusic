@@ -271,6 +271,8 @@ public:
 
 ## 8. 真实实现（阶段 5）
 
+具体的接入计划、逐个接口的对照与缺口见 [integration.md](integration.md)。
+
 | 展示层 | 后端 |
 | --- | --- |
 | `SessionSource` | `BackendFacade`：`start`、`restore`、`beginLogin`、`poll`、`cancel`、`signOut`；`sessionChanged`、`challengeReady`、`statusChanged`、`signedIn`、`failed` |
