@@ -168,9 +168,11 @@ void CoverFetcher::finish(quint64 id, CacheError error)
                                   .value(0)
                                   .trimmed()
                                   .toLower();
+            // The image hosts send JPEG covers as the nonstandard "image/jpg"; the
+            // bytes' real format is checked in normalize().
             if (reply->error() != QNetworkReply::NoError ||
                 reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 200 ||
-                (type != "image/jpeg" && type != "image/png"))
+                (type != "image/jpeg" && type != "image/jpg" && type != "image/png"))
                 error = CacheError::Network;
             else {
                 png = normalize(std::move(pending->bytes), pending->job.coverSize);

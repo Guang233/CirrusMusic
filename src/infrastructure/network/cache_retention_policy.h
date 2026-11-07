@@ -46,7 +46,11 @@ inline domain::CacheRetention cacheRetention(const QNetworkReply& reply, qint64 
     const auto date = [](const QByteArray& value) -> std::optional<qint64> {
         if (value.isEmpty() || value.size() > 128)
             return std::nullopt;
-        const auto parsed = QDateTime::fromString(QString::fromLatin1(value), Qt::RFC2822Date);
+        // HTTP dates end in "GMT" (RFC 9110), which Qt's RFC 2822 parser rejects.
+        QString text = QString::fromLatin1(value).trimmed();
+        if (text.endsWith(QLatin1String(" GMT")))
+            text = text.chopped(3) + QLatin1String("+0000");
+        const auto parsed = QDateTime::fromString(text, Qt::RFC2822Date);
         if (!parsed.isValid() || parsed.toMSecsSinceEpoch() <= 0 ||
             parsed.toMSecsSinceEpoch() > 253402300799999LL)
             return std::nullopt;
@@ -92,7 +96,9 @@ inline domain::CacheRetention cacheRetention(const QNetworkReply& reply, qint64 
             return {};
         age = std::max(age, *declaredAge);
     }
-    const auto remaining = std::max<qint64>(0, std::min(Cap, *lifetime) - age - elapsedMs);
+    // Still fresh for (lifetime - age), kept at most Cap: a CDN object older than Cap
+    // (covers often are) is not thereby stale.
+    const auto remaining = std::clamp<qint64>(*lifetime - age - elapsedMs, 0, Cap);
     return {QDeadlineTimer(remaining, Qt::PreciseTimer)};
 }
 } // namespace cirrus::network
