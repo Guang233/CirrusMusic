@@ -145,7 +145,32 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 - 结果是 Rejected／Unknown 时不重试（后端也不重试）。
 - StartPlay：官方客户端的做法未知，先不发；要发的话每次加载开始时一次，等来源字段核实时一起确认。
 
-**来源（待定）**：展示层要记住每个队列条目从哪里来（`playSongs` 加来源参数；“下一首播放”“加入队列”的条目各自带来源），这部分无论怎样都要做。歌单来源可以直接报；其他来源见对话里的讨论，结论定了再补到这里。
+**来源**：展示层要记住每个队列条目从哪里来（`playSongs` 加来源参数；“下一首播放”“加入队列”的条目各自带来源），这部分无论怎样都要做。
+
+**证据：网页版的做法**（2026-11-07 读取 music.163.com 公开下发的前端代码，只读，没有发送任何上报；`core_d6d4797f….js` SHA-256 前缀 `b79d32317e06a476`，`pt_frame_index_f8fa6836….js` 前缀 `4ccc6cb5d58085e4`）：
+
+- 切歌时（换到下一首、用户点了别的歌、单曲循环重新开始），**旧歌播放超过 3 秒**才发 `play`，然后给新歌发 `startplay`。
+- `play` 的内容：`{type:"song", wifi:0, download:0, id, time, end, source, sourceId, alg?}`。`time` 是秒数（网页版取的是当前播放位置，我们用真实累计时长）；`end` 是 `ui`（用户操作）／`playend`（播完）／`interrupt`（中断，默认）／`exception`（出错）；`alg` 是推荐算法标记，每日推荐等推荐歌曲带上。
+- `startplay` 的内容：`{id, type:"song", content:<当前页面地址的查询串，如 "id=123">}`。
+- `source` 与 `sourceId`（网页版按点击位置的来源编号换算）：
+
+  | 来源 | `source` | `sourceId` |
+  | --- | --- | --- |
+  | 歌单 | `list` | 歌单 ID |
+  | 专辑 | `album` | 专辑 ID |
+  | 歌手页 | `artist` | 歌手 ID |
+  | 排行榜 | `toplist` | 榜单 ID |
+  | 每日推荐 | `dailySongRecommend` | （网页版生成链接时不用它，值待核实） |
+  | 搜索（单曲／歌词） | `search` | **搜索关键词**（字符串，不是数字 ID） |
+  | 单曲页 | `song` | 歌曲 ID |
+  | 听歌排行 | `user` | `用户ID|类别` |
+  | 播客节目 | `dj`（`type:"dj"`） | 节目 ID |
+
+- 网页版没有私人 FM，FM 的来源名没有证据。
+
+**和后端现在的差别**：后端固定 `source:"list"`，`sourceId` 只接受数字 ID（搜索的关键词放不进去）；`end` 固定 `playend`（网页版按切歌原因填）；没有 `alg`。后端发的是 PC 端的 eapi 格式（多了 `mainsite` 等字段），PC 端的来源取值是否和网页版完全一样还没有直接证据。
+
+**下一步**：等第 3 步（登录）接好后，用维护者的账号做验证：按上表各来源上报几次，再用后端的“最近播放”读取确认记录出现；确认后给后端的上报请求加上来源类型和字符串形式的 `sourceId`、`end` 原因、`alg`（后端改动，按后端约定做并更新 `docs/api/explicit-listening-reports.md`）。FM 先不报，直到有证据。
 
 ## 7. 风险
 
