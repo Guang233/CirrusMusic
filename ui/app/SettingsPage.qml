@@ -151,6 +151,7 @@ PageScaffold {
             }
             PlaybackSettings {}
             LyricsSettings {}
+            PlayerSettings {}
             AppearanceSettings {}
             WindowSettings {}
             StorageSettings {

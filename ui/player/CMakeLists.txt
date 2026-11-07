@@ -25,6 +25,7 @@ qt_add_qml_module(cirrus_ui_player
         LyricLine.qml
         LyricSegment.qml
         InterludeDots.qml
+        PlayerQueue.qml
 )
 
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)

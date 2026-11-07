@@ -21,6 +21,10 @@ FocusScope {
     // the page slides up instead.
     property Item miniBar
     property Item miniCover
+    // The display settings panel's content (the app's PlayerPanelSettings); without
+    // it there is no settings button.
+    property Component settingsContent
+    property bool settingsOpen: false
 
     property bool opened: false
     readonly property bool reduced: Theme.motion.reduced
@@ -47,7 +51,7 @@ FocusScope {
                                     && App.player.status === Playback.Playing
                                     && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
-                                    && !lyricsView.handBrowsing
+                                    && !lyricsView.handBrowsing && !settingsOpen
     // Someone is working the hiding controls with the keyboard: one of them has the
     // focus, reached by keyboard (the play button focused on opening does not count).
     readonly property bool controlsFocused: {
@@ -89,6 +93,7 @@ FocusScope {
     function close(): void {
         if (!opened)
             return;
+        settingsOpen = false;
         if (fullScreenByPlayer)
             toggleFullScreen();
         captureRects();
@@ -180,6 +185,13 @@ FocusScope {
             if (!InputMode.keyboard)
                 page.forceActiveFocus();
         }
+    }
+    onSettingsOpenChanged: {
+        if (settingsOpen) {
+            settingsPanel.used = true;
+            settingsClose.forceActiveFocus(Qt.OtherFocusReason);
+        } else if (settingsScope.activeFocus || settingsClose.activeFocus)
+            settingsButton.forceActiveFocus(Qt.OtherFocusReason);
     }
     onCanHideChanged: if (canHide)
                           hideTimer.restart()
@@ -387,13 +399,13 @@ FocusScope {
                     positionMs: clock.positionMs
                     visible: page.view === 1
                 }
-                Text {
-                    anchors.left: parent.left
-                    y: parent.height * 0.3
+                PlayerQueue {
+                    anchors.fill: parent
+                    colors: colors
                     visible: page.view === 2
-                    text: qsTr("播放队列稍后加入")
-                    color: colors.contentVariant
-                    font: Fonts.font(700, 28)
+                    onArtistRequested: key => page.artistRequested(key)
+                    onAlbumRequested: key => page.albumRequested(key)
+                    onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key, title)
                 }
             }
 
@@ -551,6 +563,16 @@ FocusScope {
                             text: qsTr("播放队列")
                             onClicked: page.setView(page.view === 2 ? 0 : 2)
                         }
+                        PlayerButton {
+                            id: settingsButton
+                            visible: page.settingsContent !== null
+                            checkable: true
+                            checked: page.settingsOpen
+                            color: colors.content
+                            glyph: Symbols.tune
+                            text: qsTr("显示设置")
+                            onClicked: page.settingsOpen = !page.settingsOpen
+                        }
                     }
 
                     // The top row: close, full screen and the window buttons; moves the
@@ -590,6 +612,106 @@ FocusScope {
                             text: page.appWindow.visibility === Window.FullScreen ? qsTr("退出全屏")
                                                                                   : qsTr("全屏")
                             onClicked: page.toggleFullScreen()
+                        }
+                    }
+                }
+            }
+
+            // The display settings panel (§9.1): slides in from the right over the
+            // lyrics or queue; see-through, so changes show behind it. A click beside it
+            // or Esc closes it, and the focus goes back to the button.
+            MouseArea {
+                anchors.fill: parent
+                visible: page.settingsOpen
+                onPressed: page.settingsOpen = false
+            }
+            Rectangle {
+                id: settingsPanel
+                readonly property real panelWidth: Math.min(440, page.width - 2 * page.sideMargin)
+                width: panelWidth
+                y: page.contentTop
+                height: page.height - page.bottomRowHeight - 8 - y
+                x: page.width - page.sideMargin / 2 - panelWidth * slide.value
+                   + (1 - slide.value) * page.sideMargin
+                // Visible at once on opening: the focus moves into it.
+                visible: page.settingsOpen || slide.value > 0.001
+                opacity: Math.min(1, slide.value * 2)
+                // Loaded on first opening, then kept.
+                property bool used: false
+                radius: Theme.shape.extraLarge
+                color: Qt.alpha(colors.scheme.surface, 0.8)
+                // Takes the clicks over it.
+                MouseArea {
+                    anchors.fill: parent
+                }
+
+                Spring {
+                    id: slide
+                    target: page.settingsOpen ? 1 : 0
+                    spec: page.reduced ? Theme.motion.defaultEffects : Theme.motion.defaultSpatial
+                }
+
+                Text {
+                    id: settingsTitle
+                    x: 24
+                    y: 20
+                    text: qsTr("显示设置")
+                    color: colors.scheme.onSurface
+                    font: Theme.type.titleLarge.font
+                    Accessible.role: Accessible.Heading
+                }
+                IconButton {
+                    id: settingsClose
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: settingsTitle.verticalCenter
+                    glyph: Symbols.close
+                    text: qsTr("关闭")
+                    onClicked: page.settingsOpen = false
+                }
+                Flickable {
+                    id: settingsFlick
+                    anchors.fill: parent
+                    anchors.topMargin: 64
+                    anchors.bottomMargin: 12
+                    clip: true
+                    contentHeight: settingsLoader.height + 12
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {}
+
+                    // Tabbing to a row out of view scrolls it in.
+                    Connections {
+                        target: page.appWindow
+                        enabled: page.settingsOpen
+                        function onActiveFocusItemChanged() {
+                            const item = page.appWindow.activeFocusItem;
+                            let inside = false;
+                            for (let it = item; it && !inside; it = it.parent)
+                                inside = it === settingsScope;
+                            if (!inside)
+                                return;
+                            const r = item.mapToItem(settingsFlick.contentItem, 0, 0, item.width,
+                                                     item.height);
+                            const flick = settingsFlick;
+                            if (r.y < flick.contentY)
+                                flick.contentY = Math.max(0, r.y - 16);
+                            else if (r.y + r.height > flick.contentY + flick.height)
+                                flick.contentY = Math.min(flick.contentHeight - flick.height,
+                                                          r.y + r.height + 16 - flick.height);
+                        }
+                    }
+
+                    FocusScope {
+                        id: settingsScope
+                        x: 16
+                        width: settingsFlick.width - 32
+                        height: settingsLoader.height
+                        Loader {
+                            id: settingsLoader
+                            width: parent.width
+                            active: settingsPanel.used
+                            sourceComponent: page.settingsContent
+                            onLoaded: item.width = Qt.binding(() => width)
                         }
                     }
                 }
@@ -642,7 +764,9 @@ FocusScope {
             App.player.playPause();
             break;
         case Qt.Key_Escape:
-            if (lyricsView.handBrowsing)
+            if (page.settingsOpen)
+                page.settingsOpen = false;
+            else if (lyricsView.handBrowsing)
                 lyricsView.stopBrowsing(true);
             else if (page.fullScreenByPlayer || page.appWindow.visibility === Window.FullScreen)
                 page.toggleFullScreen();

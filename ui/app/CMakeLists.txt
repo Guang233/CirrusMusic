@@ -40,11 +40,14 @@ qt_add_qml_module(appCirrusMusic
         settings/ChoiceSetting.qml
         settings/MenuSetting.qml
         settings/ActionSetting.qml
+        settings/SliderSetting.qml
         settings/SeedSwatches.qml
         settings/FontPickerDialog.qml
         settings/AccountSettings.qml
         settings/PlaybackSettings.qml
         settings/LyricsSettings.qml
+        settings/PlayerSettings.qml
+        settings/PlayerPanelSettings.qml
         settings/AppearanceSettings.qml
         settings/WindowSettings.qml
         settings/StorageSettings.qml

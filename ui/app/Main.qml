@@ -94,6 +94,9 @@ AppWindow {
         appWindow: window
         miniBar: shell.miniBar
         miniCover: shell.miniCover
+        settingsContent: Component {
+            PlayerPanelSettings {}
+        }
         onCommentsRequested: {
             close();
             const song = App.player.current;
