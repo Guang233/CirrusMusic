@@ -23,6 +23,7 @@ Item {
     signal artistRequested(string key)
     signal albumRequested(string key)
     signal addToPlaylistRequested(string key, string title)
+    signal copyRequested
 
     readonly property var song: App.player.current
     readonly property bool menuOpen: menu.opened
@@ -112,6 +113,11 @@ Item {
             glyph: Symbols.playlist_add
             enabled: !root.song.voice
             onTriggered: root.addToPlaylistRequested(root.song.key, root.song.title)
+        }
+        MenuItem {
+            text: qsTr("复制歌曲信息")
+            glyph: Symbols.content_copy
+            onTriggered: root.copyRequested()
         }
     }
 }

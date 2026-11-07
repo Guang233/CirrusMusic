@@ -127,6 +127,9 @@ class CurrentLyrics : public QObject
     [[nodiscard]] QList<int> activeLines() const { return m_active; }
 
     Q_INVOKABLE void setOffset(qint64 offsetMs);
+    // The lines as plain text, one per line, each followed by its romanization and
+    // translation when asked (for copying).
+    Q_INVOKABLE QString plainText(bool romanization, bool translation) const;
     Q_INVOKABLE void retry();
 
     // Builds the shown lines from the provider's tracks (public for checking).

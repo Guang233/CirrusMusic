@@ -62,7 +62,7 @@ FocusScope {
                                     && App.player.status === Playback.Playing
                                     && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
-                                    && !lyricsView.handBrowsing && sheet === 0
+                                    && !lyricsView.handBrowsing && sheet === 0 && !songInfo.opened
     // Someone is working the hiding controls with the keyboard: one of them has the
     // focus, reached by keyboard (the play button focused on opening does not count).
     readonly property bool controlsFocused: {
@@ -469,6 +469,7 @@ FocusScope {
                     colors: colors
                     positionMs: clock.positionMs
                     visible: page.view === 1
+                    onCopyRequested: songInfo.open()
                 }
             }
 
@@ -551,6 +552,7 @@ FocusScope {
                         onAlbumRequested: key => page.albumRequested(key)
                         onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key,
                                                                                               title)
+                        onCopyRequested: songInfo.open()
                     }
                 }
 
@@ -801,6 +803,10 @@ FocusScope {
         coverKey: App.player.current.coverKey
         // The page cover's decode (cached), not a new one every frame of the flight.
         sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
+    }
+
+    SongInfoDialog {
+        id: songInfo
     }
 
     PlaybackClock {

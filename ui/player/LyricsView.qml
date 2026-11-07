@@ -16,6 +16,14 @@ FocusScope {
     // The smooth playback position (PlaybackClock).
     property real positionMs
 
+    // The copy dialog, from the line menu.
+    signal copyRequested
+
+    function openLineMenu(index: int, text: string, item: Item, at: point): void {
+        lineMenu.text = text;
+        lineMenu.popup(item, at.x, at.y);
+    }
+
     readonly property int status: App.lyrics.status
     readonly property bool ready: status === Lyrics.Ready
     readonly property bool plain: App.lyrics.timing === Lyrics.PlainText
@@ -231,6 +239,21 @@ FocusScope {
     }
     onActiveFocusChanged: if (!activeFocus)
                               keyIndex = -1
+
+    Menu {
+        id: lineMenu
+        property string text
+        MenuItem {
+            text: qsTr("复制这一行")
+            glyph: Symbols.content_copy
+            onTriggered: App.copyText(lineMenu.text)
+        }
+        MenuItem {
+            text: qsTr("复制歌曲信息")
+            glyph: Symbols.lyrics
+            onTriggered: root.copyRequested()
+        }
+    }
 
     TextMetrics {
         id: space

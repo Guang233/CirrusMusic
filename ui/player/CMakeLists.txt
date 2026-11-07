@@ -27,6 +27,7 @@ qt_add_qml_module(cirrus_ui_player
         InterludeDots.qml
         PlayerQueue.qml
         PlayerSheet.qml
+        SongInfoDialog.qml
 )
 
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)

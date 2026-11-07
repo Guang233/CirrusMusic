@@ -174,6 +174,19 @@ CurrentLyrics::CurrentLyrics(LyricsSource* source, Player* player, QObject* pare
 
 qint64 CurrentLyrics::offsetMs() const { return m_offsets.value(m_key, 0); }
 
+QString CurrentLyrics::plainText(bool romanization, bool translation) const
+{
+    QStringList out;
+    for (const ShownLine& line : m_lines->lines()) {
+        out << line.text;
+        if (romanization && !line.romanization.isEmpty())
+            out << line.romanization;
+        if (translation && !line.translation.isEmpty())
+            out << line.translation;
+    }
+    return out.join(QLatin1Char('\n'));
+}
+
 void CurrentLyrics::setOffset(qint64 offsetMs)
 {
     if (m_key.isEmpty() || offsetMs == this->offsetMs())

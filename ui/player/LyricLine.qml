@@ -210,6 +210,12 @@ Item {
         enabled: line.view.seekable
         cursorShape: Qt.PointingHandCursor
     }
+    // Right-click: copy this line, or open the copy dialog.
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: eventPoint => line.view.openLineMenu(line.index, line.text, line,
+                                                       eventPoint.position)
+    }
     TapHandler {
         id: tap
         enabled: line.view.seekable
