@@ -23,3 +23,8 @@ endif()
 
 # QML modules, the product entry (appCirrusMusic) and the gallery; see docs/ui/README.md.
 add_subdirectory(ui)
+
+option(CIRRUS_BUILD_AUDIO_POC "Build the audio engine PoC (tools/audio-poc, needs FFmpeg)" OFF)
+if(CIRRUS_BUILD_AUDIO_POC)
+    add_subdirectory(tools/audio-poc)
+endif()
