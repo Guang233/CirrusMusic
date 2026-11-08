@@ -187,7 +187,11 @@ BackendPlayback::BackendPlayback(runtime::BackendRuntime& runtime, CatalogSource
     connect(m_session, &ListeningSession::playbackChanged, this, changed);
     connect(m_session, &ListeningSession::fmChanged, this, changed);
     // A session change retires the queue and playback.
-    connect(&runtime.facade(), &application::BackendFacade::sessionChanged, this, changed);
+    connect(&runtime.facade(), &application::BackendFacade::sessionChanged, this,
+            [this](const domain::SessionSnapshot&) {
+                applyVolume(); // set before the backend could take it (startup)
+                update();
+            });
     connect(&runtime.facade(), &application::BackendFacade::stateChanged, this, changed);
     // A sign-in goes through several session changes in a row: resume once it has
     // settled for a moment, not at a Guest phase between them.
@@ -274,8 +278,13 @@ void BackendPlayback::update()
     next.seekable = play.seekable;
     next.previewStartMs = play.preview ? play.preview->startMs : -1;
     next.volume = m_volume.value_or(play.volumeLinear.value_or(m_state.volume));
-    if (newLoad && m_volume && play.volumeLinear && std::abs(*play.volumeLinear - *m_volume) > 1e-3)
-        m_session->setVolume(float(*m_volume)); // set while nothing played
+    // The player's reported volume isn't the user's (it was set before the backend could
+    // take it): set it again, once per load.
+    if (m_volume && play.volumeLinear && std::abs(*play.volumeLinear - *m_volume) > 1e-3 &&
+        !(m_volumeFixed == play.token)) {
+        m_volumeFixed = play.token;
+        applyVolume();
+    }
 
     // The clock: the session's base when it moved, else where ours is now.
     next.rate = next.status == playback::Playing ? 1 : 0;
@@ -817,6 +826,14 @@ void BackendPlayback::move(int from, int to)
     }
     if (const QUuid entry = entryAt(from); !entry.isNull())
         m_session->move(entry, to);
+}
+
+void BackendPlayback::applyVolume()
+{
+    // Straight to the facade: the session would count it as a user's command, and a
+    // queue restored after one is refused.
+    if (m_volume && m_facade && settled())
+        static_cast<void>(m_facade->setPlaybackVolume(float(*m_volume)));
 }
 
 void BackendPlayback::setVolume(double volume)

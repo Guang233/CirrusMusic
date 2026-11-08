@@ -112,6 +112,7 @@ class BackendPlayback : public QObject, public PlaybackSource
         bool resume = false;       // playing when a session change stopped it
         QList<PlayOrigin> origins; // per key
     };
+    void applyVolume();
     void startQueue(const QStringList& keys, int index, const QList<PlayOrigin>& origins);
     void loadOrigins();
     void saveOrigins() const;
@@ -133,7 +134,8 @@ class BackendPlayback : public QObject, public PlaybackSource
     QString m_detailsKey; // asked for
     Request m_detailsRequest;
     bool m_detailsArrived = false;
-    std::optional<double> m_volume; // the user's, once set
+    std::optional<double> m_volume;  // the user's, once set
+    domain::LoadToken m_volumeFixed; // the load whose volume was set again
     bool m_notifyPending = false;
     bool m_live = false;       // something loaded (or Personal FM waiting)
     bool m_removing = false;   // in removeAt(): a stop now is the user's
