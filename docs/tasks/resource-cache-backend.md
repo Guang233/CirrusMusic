@@ -54,7 +54,7 @@ SQL索引记录scope/kind/key、written/expires/touched、payload bytes/SHA256�
 - 仅HTTPS且无userinfo/fragment/query、无非443端口、无IP字面量；首版精确allowlist `p1.music.126.net` 至 `p4.music.126.net`，不是任意后缀匹配；其他host在service接纳前返回0拒绝，不切代理／DNS／IP、不自动HTTP升级，不扩大下载音乐权限。
 - 独立无凭据manager，不复用API Cookie／Referer／Authorization，不自动Cookie保存／加载或HTTP认证；禁止重定向，不处理Set-Cookie，不自动重试。
 - response只接受200，头部有界，原body≤4MiB，总deadline15s／无进展期限；TLS错误直接失败，压缩编码拒绝，不调用ignoreSslErrors。
-- 仅JPEG/PNG（Content-Type接受image/jpeg、image/png，以及图片主机实际发送的非标准image/jpg，2026-11-07 UI接入实测），验证实际格式、非多帧、原尺寸≤2048×2048且总像素≤4M，再缩到128/256/512/1024之一（请求时带 `?param=<尺寸>y<尺寸>`，让图片主机先缩好；只加在网络请求上，缓存键和 `validCoverUrl` 仍是不带查询的网址。原图常超过2048像素／4 MiB，歌手头像尤甚，不带参数时被拒为 Unsupported／Capacity，2026-11-08 UI接入实测）；用新图像重绘／重新编码PNG以去掉EXIF／文本等原metadata，不保存任意响应原字节或SVG。未知／越界／插件失败明确拒绝；这些是输入限制，不声称图像解码器无漏洞。
+- 仅JPEG/PNG/单帧WebP（Content-Type接受image/jpeg、image/png、image/webp，以及图片主机实际发送的非标准image/jpg，2026-11-07 UI接入实测；部分播客封面上传的就是WebP、仍标image/jpg，维护者2026-11-08同意放开。WebP要Qt Image Formats的插件，没装时CMake警告、这类封面照旧拒为Unsupported），验证实际格式、非多帧、原尺寸≤2048×2048且总像素≤4M，再缩到128/256/512/1024之一（请求时带 `?param=<尺寸>y<尺寸>`，让图片主机先缩好；只加在网络请求上，缓存键和 `validCoverUrl` 仍是不带查询的网址。原图常超过2048像素／4 MiB，歌手头像尤甚，不带参数时被拒为 Unsupported／Capacity，2026-11-08 UI接入实测）；用新图像重绘／重新编码PNG以去掉EXIF／文本等原metadata，不保存任意响应原字节或SVG。未知／越界／插件失败明确拒绝；这些是输入限制，不声称图像解码器无漏洞。
 - 封面ttl≤7d且尊重Cache-Control/Age/Date/Expires，扣除保守网络耗时；剩余新鲜度＝min(7d, lifetime−age−耗时)（2026-11-07修正：原先先把lifetime截到7d再减age，CDN上age超过7d的封面——实测多数——永远不落盘；同日修正Date／Expires解析：HTTP日期以GMT结尾，Qt的RFC2822Date不接受，原先所有真实响应都解析失败而不落盘；两处与API响应共用`cacheRetention`）；no-store/no-cache、Vary/Pragma或策略解析不确定时仅返回本次网络结果，不落盘。重编码hash为内容fingerprint，不以ETag当完整性证明。
 
 allowlist为安全接纳范围，不是这四个host都已实测可用的承诺；普通fetch失败保留，不绕过。

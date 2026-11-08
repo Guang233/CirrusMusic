@@ -1,6 +1,12 @@
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(ZLIB REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Network Sql Multimedia Gui)
+# Some covers are WebP (the image hosts still label them image/jpg); decoding them needs
+# the WebP image plugin from Qt Image Formats. Without it those covers are refused.
+if(NOT EXISTS "${Qt6Gui_DIR}/Qt6QWebpPluginConfig.cmake")
+    message(WARNING "Qt Image Formats (WebP plugin) is not installed: WebP covers show the "
+                    "placeholder. Install it with the Qt Maintenance Tool.")
+endif()
 
 add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
