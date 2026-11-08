@@ -15,7 +15,7 @@
 | 官方 API | Qt Network；内置 NetEaseGateway 与协议签名适配器 | 客户端直连官方接口，用户无 API 配置；见 ADR-0003 |
 | 密码学 | 已引入 OpenSSL 3.x `libcrypto`，本机验证 3.6.4 | 使用 EVP；协议离线向量及少量公开weapi/eapi/XEAPI调用已通过，真实账号仍待验证，不启动外部脚本 |
 | 压缩响应 | 已引入 zlib，当前本机 1.3.2 | gzip 流式解压／CRC／输出限额；系统开发包，发布时锁定版本与许可，未 vendoring 源码 |
-| 音频 | **Qt Multimedia / QMediaPlayer + QAudioOutput**，封装可替换接口 | 首版适配成本低；gapless/DSP/复杂鉴权必须先做 PoC；见 ADR-0004 |
+| 音频 | **自研引擎：FFmpeg 解码＋Qt `QAudioSink` 回调输出**，实现 `IPlaybackBackend` | 无缝、音效、落盘缓存是硬需求；见 ADR-0008（替代 ADR-0004） |
 | 持久化 | Qt SQL + SQLite；QSettings 保存非敏感偏好 | 可迁移、可事务、可测试；见 ADR-0006 |
 | 凭据 | QtKeychain 封装系统密钥环 | 访问 Secret Service/KWallet 等实际后端；不可用时仅内存会话，不回退明文 |
 | Linux IPC | Qt DBus | MPRIS、portal 能力探测和桌面集成 |

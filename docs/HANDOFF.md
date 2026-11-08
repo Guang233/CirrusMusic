@@ -2,7 +2,7 @@
 
 **维护者最新约定**：本助手只负责后端，不做UI；听歌统计／dashboard留到最后，先补上线所需后端。允许本地commit，只禁止push；此前“不提交”仅是各历史检查点状态，不是用户限制。测试按需要加：维护者 2026-11-08 说明“不新增测试”原是为了制止不必要的测试，确有必要时可以加（例如音频引擎的衔接、时钟、范围缓存）。维护者暂无Windows/macOS设备，后续Linux优先，两端原生源码保持default off／未验证，不把其环境门禁作为其他Linux后端开发的前置阻塞；不据此宣称跨平台完成。
 
-**音频引擎（设计待评审，2026-11-08）**：维护者把播放质量定为第一优先，触发 ADR-0004 复议。[音频引擎与音频缓存](tasks/audio-engine.md) 提议 FFmpeg 解码＋`QAudioSink` 回调输出的自研引擎、范围下载落盘缓存、预载与无缝；评审和 PoC 通过前不改产品代码。
+**音频引擎（2026-11-08）**：维护者把播放质量定为第一优先，[ADR-0008](adr/0008-own-audio-engine.md) 取代 ADR-0004：FFmpeg 解码＋`QAudioSink` 回调输出的自研引擎、范围下载落盘缓存、预载与无缝（[设计与进度](tasks/audio-engine.md)）。阶段 A PoC（`tools/audio-poc/`）已过，下一步阶段 B 音频存储。
 
 **最新封面请求（UI 接入时，2026-11-08）**：`CoverFetcher` 请求封面时带 `?param=<尺寸>y<尺寸>`，图片主机返回已缩好的图；只加在网络请求上，缓存键与网址校验不变（[资源缓存](tasks/resource-cache-backend.md)）。原先歌手头像等原图超过 2048 像素或 4 MiB，被拒为 Unsupported／Capacity。同日维护者同意接受单帧 WebP 封面（部分播客封面上传即 WebP，图片主机仍标 `image/jpg`），解码要 Qt Image Formats 插件，没装时 CMake 警告。
 
