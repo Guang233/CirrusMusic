@@ -70,6 +70,7 @@ class CacheQueue : public QObject
     quint64 m_nextTicket = 0;
     QTimer m_retry;
     bool m_pumpScheduled = false;
+    bool m_busy = false; // the cache turned a job away (Busy)
 };
 
 } // namespace cirrus::ui

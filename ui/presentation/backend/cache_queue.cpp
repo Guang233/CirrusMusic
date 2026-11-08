@@ -100,6 +100,9 @@ void CacheQueue::pump()
             job.fail(failure::Unknown);
         return;
     }
+    if (m_busy && m_retry.isActive())
+        return; // turned away a moment ago: wait for the retry
+    m_busy = false;
     while (!m_waiting.empty() && m_running.size() < kRunning && open()) {
         Job& job = m_waiting.front();
         const quint64 id = job.submit(*m_cache);
@@ -125,6 +128,13 @@ void CacheQueue::completed(const domain::CacheResult& result)
     if (result.error == domain::CacheError::StaleContext ||
         result.error == domain::CacheError::Canceled) {
         m_waiting.push_front(std::move(job));
+        return;
+    }
+    // The cache downloads two covers at a time and turns the rest away: a moment later.
+    if (result.error == domain::CacheError::Busy) {
+        m_waiting.push_back(std::move(job));
+        m_busy = true;
+        m_retry.start();
         return;
     }
     job.done(result);
