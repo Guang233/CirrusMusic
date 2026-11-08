@@ -24,6 +24,14 @@ using domain::PlaybackState;
 constexpr qint64 kDriftMs = 150;
 // Details kept of songs that played.
 constexpr qsizetype kDetailsKept = 256;
+// Previous goes back to the start of the song past this (as the session does).
+constexpr qint64 kRestartAfterMs = 3000;
+
+// Whether previous() restarts the song rather than going back one.
+bool restarts(const domain::PlaybackSnapshot& play)
+{
+    return play.state != PlaybackState::Empty && play.seekable && play.positionMs > kRestartAfterMs;
+}
 
 domain::AudioQuality quality()
 {
@@ -235,7 +243,12 @@ void BackendPlayback::update()
     if (newLoad && m_volume && play.volumeLinear && std::abs(*play.volumeLinear - *m_volume) > 1e-3)
         m_session->setVolume(float(*m_volume)); // set while nothing played
     next.canNext = session.canGoNext();
-    next.canPrevious = session.canGoPrevious();
+    // Previous goes by play order (previous()), not the session's history.
+    next.canPrevious = next.mode == playback::PersonalFm
+                           ? session.canGoPrevious()
+                           : restarts(play) || next.queueIndex > 0 ||
+                                 (next.queueIndex == 0 && next.repeat != playback::RepeatOff &&
+                                  next.queue.size() > 1);
 
     // The clock: the session's base when it moved, else where ours is now.
     next.rate = next.status == playback::Playing ? 1 : 0;
@@ -353,8 +366,20 @@ void BackendPlayback::next()
 
 void BackendPlayback::previous()
 {
-    if (m_session)
-        m_session->previous();
+    if (!m_session)
+        return;
+    ListeningSession& session = *m_session;
+    if (session.mode() == domain::ListeningMode::PersonalFm || restarts(session.playback())) {
+        session.previous(); // the start of the song
+        return;
+    }
+    // The one before in play order, as the queue shows it. The session's own previous
+    // goes back through what played, which after starting mid-list is nothing.
+    int row = m_state.queueIndex - 1;
+    if (row < 0 && m_state.repeat != playback::RepeatOff)
+        row = int(m_entries.size()) - 1;
+    if (const QUuid entry = entryAt(row); !entry.isNull() && row != m_state.queueIndex)
+        session.select(entry);
 }
 
 void BackendPlayback::seek(qint64 positionMs)
