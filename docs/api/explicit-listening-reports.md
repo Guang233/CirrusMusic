@@ -79,6 +79,14 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 19个变更C++文件active LSP无诊断，format／diff检查通过；变更文档232个本地链接无断链，13个application编译单元无基础设施／Network／Multimedia／Sql／Quick／Qml／Gui／JSON依赖穿透；main.cpp／Main.qml无改动。本包登记29个CTest套件，不是29套全量通过；没有自动重复全量认证／Release／真实声卡／keyring矩阵。忽略日志 `build/workspace-checks/report-*.log`，最终为final-build、final-focused、final-thread。开发期修正了QList append测试fixture歧义；新test的clangd在编译数据库刷新前误用旧Qt头，刷新数据库并重新解析后active检查恢复，不删除必要include。
 
+## 4a. 来源、结束原因与自动上报（2026-11-08，D5）
+
+维护者决定接上自动上报（[UI 接入 §6.1](../ui/integration.md)），离线实现，**还没有用真实账号发过**：
+
+- `ListeningReport` 的 `playlist` 换成 `sourceId`（字符串）加 `source`（`ListeningReportSource`：list／album／artist／toplist／dailySongRecommend／search／song，取值照网页版前端，见 UI 接入 §6.1 的表）和 `end`（`ListeningReportEnd`：playend／ui／interrupt／exception）。`validSourceId`：搜索是关键词（可打印、≤256 字符），每日推荐可以为空，其余是规范数字 ID。payload 照填 `source`、`sourceId`、`end`；startplay 的 `content` 只在 sourceId 是数字 ID 时写 `id=…`，否则为空。PC 端的取值是否与网页版相同待真实验证。
+- `application::ListeningReporter`（`src/application/playback/listening_reporter.*`）：看 `ListeningSession` 的听歌记录，每次加载结算时至多发一次 Play，秒数取真实累计（`playedMs / 1000`）。结算：播完 playend、换歌 ui、失败 exception、停止／会话变化／退出 interrupt；暂停超过 5 分钟按 interrupt 报，之后继续播放这次加载不再报。不到 3 秒、游客、私人 FM（没有来源证据）、记录的账号不是当前账号都不报。来源由调用方按队列条目给（界面记住每个条目从哪里点开）；不知道时报为 `song`，sourceId 是歌曲自己。结果不重试。`flush()` 在关闭前结算正在播的这首，最多等 2 秒。
+- 由界面层的 `BackendHost` 创建（不进 `BackendRuntime`，后端测试不会多出请求）。测试 `tst_listening_reporter`（6 项）；`tst_listening_report` 改为覆盖来源、结束原因与搜索关键词。
+
 ## 5. 未决事项
 
 自动时机、最低有效收听阈值、试听资格、来源扩展、自然End／手动切歌／失败／关闭的终止字段、跨设备行为及结果对账都未在本包决定。后续[最近听过／听歌排行读取](cloud-history-reads.md)已另包离线接入，不证明本报告已进入云端记录；详细本地历史持久化／分析按维护者后续需求。UI仍最后，不以接口接通宣称用户的播放已进入云端记录。
