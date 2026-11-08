@@ -4,6 +4,8 @@
 #include "types.h"
 
 #include <QObject>
+#include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 namespace cirrus::ui
@@ -21,6 +23,8 @@ class SongItem
     Q_PROPERTY(QString artistText MEMBER artistText CONSTANT)
     // Keys of the artists with one, in order (the player's "go to artist").
     Q_PROPERTY(QStringList artistKeys MEMBER artistKeys CONSTANT)
+    // Every artist, in order: {key (may be empty), name}.
+    Q_PROPERTY(QVariantList artists MEMBER artists CONSTANT)
     Q_PROPERTY(QString albumKey MEMBER albumKey CONSTANT)
     Q_PROPERTY(QString albumTitle MEMBER albumTitle CONSTANT)
     Q_PROPERTY(QString coverKey MEMBER coverKey CONSTANT)
@@ -34,9 +38,9 @@ class SongItem
     explicit SongItem(const SongInfo& song)
         : key(song.key), title(song.title), secondaryTitle(song.secondaryTitle),
           artistText(Formatter::artists(song.artists)), artistKeys(keysOf(song.artists)),
-          albumKey(song.albumKey), albumTitle(song.albumTitle), coverKey(song.coverKey),
-          durationMs(song.durationMs), unavailable(song.unavailable), reason(song.reason),
-          voice(song.voice)
+          artists(listOf(song.artists)), albumKey(song.albumKey), albumTitle(song.albumTitle),
+          coverKey(song.coverKey), durationMs(song.durationMs), unavailable(song.unavailable),
+          reason(song.reason), voice(song.voice)
     {
     }
 
@@ -45,6 +49,7 @@ class SongItem
     QString secondaryTitle;
     QString artistText;
     QStringList artistKeys;
+    QVariantList artists;
     QString albumKey;
     QString albumTitle;
     QString coverKey;
@@ -55,6 +60,17 @@ class SongItem
     friend bool operator==(const SongItem&, const SongItem&) = default;
 
   private:
+    static QVariantList listOf(const QList<ArtistRef>& artists)
+    {
+        QVariantList list;
+        for (const ArtistRef& artist : artists) {
+            QVariantMap item;
+            item.insert(QStringLiteral("key"), artist.key);
+            item.insert(QStringLiteral("name"), artist.name);
+            list.append(item);
+        }
+        return list;
+    }
     static QStringList keysOf(const QList<ArtistRef>& artists)
     {
         QStringList keys;

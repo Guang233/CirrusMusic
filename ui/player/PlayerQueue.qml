@@ -315,11 +315,19 @@ FocusScope {
             enabled: root.editable
             onTriggered: App.player.removeAt(menu.song.index)
         }
-        MenuItem {
-            text: qsTr("查看歌手")
-            glyph: Symbols.person
-            enabled: (menu.song.artists?.length ?? 0) > 0 && menu.song.artists[0].key !== ""
-            onTriggered: root.artistRequested(menu.song.artists[0].key)
+        Instantiator {
+            model: menu.song.artists ?? []
+            delegate: MenuItem {
+                required property var modelData
+                enabled: modelData.key !== ""
+                glyph: Symbols.person
+                text: (menu.song.artists?.length ?? 0) > 1
+                      ? qsTr("查看歌手：%1").arg(modelData.name) : qsTr("查看歌手")
+                onTriggered: root.artistRequested(modelData.key)
+            }
+            // After 播放 and 从队列中删除.
+            onObjectAdded: (index, object) => menu.insertItem(index + 2, object as MenuItem)
+            onObjectRemoved: (index, object) => menu.removeItem(object as MenuItem)
         }
         MenuItem {
             text: qsTr("查看专辑")

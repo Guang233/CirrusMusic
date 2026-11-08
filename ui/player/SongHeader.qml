@@ -64,9 +64,15 @@ Item {
                 enabled: root.song.artistKeys.length > 0
                 cursorShape: Qt.PointingHandCursor
             }
+            // One artist: there; several: a menu of them.
             TapHandler {
                 enabled: root.song.artistKeys.length > 0
-                onTapped: root.artistRequested(root.song.artistKeys[0])
+                onTapped: {
+                    if (root.song.artistKeys.length === 1)
+                        root.artistRequested(root.song.artistKeys[0]);
+                    else
+                        artistMenu.popup(artist, 0, artist.height + 4);
+                }
             }
             Rectangle {
                 anchors.left: parent.left
@@ -98,11 +104,19 @@ Item {
             enabled: !root.song.voice
             onTriggered: root.commentsRequested()
         }
-        MenuItem {
-            text: qsTr("查看歌手")
-            glyph: Symbols.person
-            enabled: root.song.artistKeys.length > 0
-            onTriggered: root.artistRequested(root.song.artistKeys[0])
+        Instantiator {
+            model: root.song.artists
+            delegate: MenuItem {
+                required property var modelData
+                enabled: modelData.key !== ""
+                glyph: Symbols.person
+                text: root.song.artists.length > 1 ? qsTr("查看歌手：%1").arg(modelData.name)
+                                                   : qsTr("查看歌手")
+                onTriggered: root.artistRequested(modelData.key)
+            }
+            // After 评论.
+            onObjectAdded: (index, object) => menu.insertItem(index + 1, object as MenuItem)
+            onObjectRemoved: (index, object) => menu.removeItem(object as MenuItem)
         }
         MenuItem {
             text: qsTr("查看专辑")
@@ -120,6 +134,23 @@ Item {
             text: qsTr("复制歌曲信息")
             glyph: Symbols.content_copy
             onTriggered: root.copyRequested()
+        }
+    }
+
+    // The artists, when the artist line is clicked and there are several.
+    Menu {
+        id: artistMenu
+        Instantiator {
+            model: root.song.artists
+            delegate: MenuItem {
+                required property var modelData
+                enabled: modelData.key !== ""
+                glyph: Symbols.person
+                text: modelData.name
+                onTriggered: root.artistRequested(modelData.key)
+            }
+            onObjectAdded: (index, object) => artistMenu.insertItem(index, object as MenuItem)
+            onObjectRemoved: (index, object) => artistMenu.removeItem(object as MenuItem)
         }
     }
 }
