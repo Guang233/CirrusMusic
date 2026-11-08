@@ -323,7 +323,7 @@ public:
 
 | 已实现 | 说明 |
 | --- | --- |
-| `PlaybackSource` | `sources.h`：`snapshot()` 返回完整的 `PlaybackSnapshot`（`playback.h`），变化后经 `setChangedHandler` 的回调通知（不在命令调用里同步回调）；命令 `playSongs`、`playPause`、`next`、`previous`（播放超过 3 秒时回到开头）、`seek`、`playAt`、`removeAt`、`move`、`setVolume`、`setOrder`、`setRepeat`；快照里的 `queue`、`queueIndex` 是按播放顺序的歌曲 key 和当前位置。`playNext`、`append`、`startFm` 随阶段 4 的队列面板加 |
+| `PlaybackSource` | `sources.h`：`snapshot()` 返回完整的 `PlaybackSnapshot`（`playback.h`），变化后经 `setChangedHandler` 的回调通知（不在命令调用里同步回调）；命令 `playSongs`、`playPause`、`next`、`previous`（按播放顺序的前一首，列表循环时从第一首到最后一首；私人 FM 回到开头）、`seek`、`playAt`、`removeAt`、`move`、`setVolume`、`setOrder`、`setRepeat`；快照里的 `queue`、`queueIndex` 是按播放顺序的歌曲 key 和当前位置。`playNext`、`append`、`startFm` 随阶段 4 的队列面板加 |
 | `App.player`（`Player`） | §5.1 的成员，枚举在 QML 中为 `Playback.Playing`、`Playback.Shuffle`、`Playback.RepeatOne`；`current` 是 `songItem` 值类型（与 `SongListModel` 角色同名）；`now()` 给出 `positionAt` 所用的单调时钟（毫秒） |
 | `PlaybackClock`（`Cirrus.Components`） | `positionMs` 逐帧外推，只在播放中且 `active` 时运行 |
 | `SongListModel.current` | 跟随 `App.player.current`，只更新受影响的行 |
