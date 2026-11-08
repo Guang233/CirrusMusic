@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QPointer>
 #include <QTimer>
+#include <QUrl>
 #include <algorithm>
 
 namespace cirrus::cache
@@ -78,7 +79,12 @@ void CoverFetcher::request(CacheJob job)
     pending->job = std::move(job);
     const auto id = pending->job.id;
     pending->elapsed.start();
-    QNetworkRequest request(pending->job.coverUrl);
+    // The image hosts scale on request: ask for the kept size rather than the original
+    // (artist portraits run past normalize()'s 2048 px / 4 MiB limits). Only the request
+    // carries the query; the cache key stays the bare URL.
+    QUrl url = pending->job.coverUrl;
+    url.setQuery(QStringLiteral("param=%1y%1").arg(pending->job.coverSize));
+    QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::ManualRedirectPolicy);
     request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
