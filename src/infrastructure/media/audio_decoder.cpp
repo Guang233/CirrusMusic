@@ -5,10 +5,12 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/error.h>
+#include <libavutil/log.h>
 #include <libavutil/mem.h>
 #include <libswresample/swresample.h>
 }
 #include <algorithm>
+#include <mutex>
 
 namespace cirrus::media
 {
@@ -86,6 +88,10 @@ int64_t AudioDecoder::seekStream(void* opaque, int64_t offset, int whence)
 
 bool AudioDecoder::open(std::shared_ptr<AudioStream> stream, const QString& format)
 {
+    // FFmpeg logs to stderr; its warnings are routine here (the MP3 gapless trim says
+    // "Could not update timestamps for skipped samples" on every file).
+    static std::once_flag quiet;
+    std::call_once(quiet, [] { av_log_set_level(AV_LOG_ERROR); });
     m_stream = std::move(stream);
     const AVInputFormat* input = nullptr;
     const char* codecs = nullptr;
