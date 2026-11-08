@@ -37,6 +37,13 @@ QString positionKey(const QString& account)
            (account.isEmpty() ? QStringLiteral("guest") : account);
 }
 
+// Where the account's queue entries came from (BackendPlayback::originOf).
+QString originsKey(const QString& account)
+{
+    return QStringLiteral("playback/origins/") +
+           (account.isEmpty() ? QStringLiteral("guest") : account);
+}
+
 domain::AudioQuality quality()
 {
     const int value = AppSettings().audioQuality();
@@ -337,6 +344,9 @@ void BackendPlayback::keep(qint64 now)
     if (!m_removing) {
         kept.keys = m_state.queue;
         kept.index = m_state.queueIndex;
+        for (qsizetype i = 0; i < kept.keys.size(); ++i)
+            kept.origins.append(i < m_entries.size() ? m_origins.value(m_entries.at(i))
+                                                     : PlayOrigin{});
         const bool returning = !m_seekKey.isEmpty() && m_seekKey == kept.current.key;
         kept.songPositionMs =
             returning ? m_seekSongMs // stopped again before getting back there
@@ -461,7 +471,7 @@ void BackendPlayback::replay(int index)
         return;
     const Kept& kept = *m_kept;
     if (kept.keys.isEmpty()) {
-        playSongs({kept.current.key}, 0);
+        startQueue({kept.current.key}, 0, {});
         return;
     }
     index = std::clamp(index, 0, int(kept.keys.size()) - 1);
@@ -470,7 +480,7 @@ void BackendPlayback::replay(int index)
         m_seekKey = kept.keys.at(index);
         m_seekSongMs = kept.songPositionMs;
     }
-    playSongs(kept.keys, index);
+    startQueue(kept.keys, index, kept.origins);
 }
 
 void BackendPlayback::seekWhereKept(const domain::PlaybackSnapshot& play)
@@ -539,11 +549,18 @@ QUuid BackendPlayback::entryAt(int index) const
     return index >= 0 && index < m_entries.size() ? m_entries.at(index) : QUuid();
 }
 
-void BackendPlayback::playSongs(const QStringList& keys, int index)
+void BackendPlayback::playSongs(const QStringList& keys, int index, const PlayOrigin& origin)
+{
+    startQueue(keys, index, QList<PlayOrigin>(keys.size(), origin));
+}
+
+void BackendPlayback::startQueue(const QStringList& keys, int index,
+                                 const QList<PlayOrigin>& origins)
 {
     if (!m_session || index < 0 || index >= keys.size())
         return;
     QList<domain::SongId> ids;
+    QList<PlayOrigin> idOrigins;
     qsizetype start = -1;
     for (qsizetype i = 0; i < keys.size(); ++i) {
         if (!domain::validMusicId(keys.at(i)))
@@ -551,6 +568,7 @@ void BackendPlayback::playSongs(const QStringList& keys, int index)
         if (i == index)
             start = ids.size();
         ids.append(domain::SongId{keys.at(i)});
+        idOrigins.append(origins.value(i));
     }
     if (start < 0)
         return;
@@ -559,9 +577,71 @@ void BackendPlayback::playSongs(const QStringList& keys, int index)
     if (ids.size() > most) {
         const qsizetype from = std::clamp<qsizetype>(start - most / 2, 0, ids.size() - most);
         ids = ids.mid(from, most);
+        idOrigins = idOrigins.mid(from, most);
         start -= from;
     }
-    m_session->replaceQueue(ids, start, quality());
+    loadOrigins(); // this account's, before replacing them
+    if (!m_session->replaceQueue(ids, start, quality()) || !m_session)
+        return;
+    // The new entries, in the order given.
+    const auto entries = m_session->queue().entries;
+    m_origins.clear();
+    for (qsizetype i = 0; i < entries.size() && i < idOrigins.size(); ++i)
+        if (idOrigins.at(i).kind != playback::NoOrigin)
+            m_origins.insert(entries.at(i).id, idOrigins.at(i));
+    saveOrigins();
+}
+
+PlayOrigin BackendPlayback::originOf(QUuid entry)
+{
+    loadOrigins();
+    return m_origins.value(entry);
+}
+
+void BackendPlayback::loadOrigins()
+{
+    const QString account = m_facade ? m_facade->snapshot().accountId : QString();
+    if (m_originsLoaded && account == m_originsAccount)
+        return;
+    m_originsLoaded = true;
+    m_originsAccount = account;
+    m_origins.clear();
+    const QVariantList groups = QSettings().value(originsKey(account)).toList();
+    for (const QVariant& value : groups) {
+        const QVariantMap group = value.toMap();
+        const PlayOrigin origin{group.value(QStringLiteral("o")).toInt(),
+                                group.value(QStringLiteral("i")).toString()};
+        if (origin.kind <= playback::NoOrigin || origin.kind > playback::FromSong)
+            continue;
+        for (const QString& entry : group.value(QStringLiteral("e")).toStringList())
+            if (const QUuid id(entry); !id.isNull())
+                m_origins.insert(id, origin);
+    }
+}
+
+void BackendPlayback::saveOrigins() const
+{
+    // Grouped by origin: a queue usually has one.
+    QList<std::pair<PlayOrigin, QStringList>> groups;
+    for (auto it = m_origins.cbegin(); it != m_origins.cend(); ++it) {
+        auto group = std::find_if(groups.begin(), groups.end(),
+                                  [&](const auto& g) { return g.first == it.value(); });
+        if (group == groups.end()) {
+            groups.append({it.value(), {}});
+            group = groups.end() - 1;
+        }
+        group->second.append(it.key().toString(QUuid::WithoutBraces));
+    }
+    QVariantList list;
+    for (const auto& [origin, entries] : groups)
+        list.append(QVariantMap{{QStringLiteral("o"), origin.kind},
+                                {QStringLiteral("i"), origin.id},
+                                {QStringLiteral("e"), entries}});
+    QSettings settings;
+    if (list.isEmpty())
+        settings.remove(originsKey(m_originsAccount));
+    else
+        settings.setValue(originsKey(m_originsAccount), list);
 }
 
 void BackendPlayback::playPause()

@@ -189,7 +189,7 @@ Rectangle {
                     if (card.active)
                         App.player.playPause();
                     else
-                        App.player.playSongs(card.daily.songs.keys(), 0);
+                        App.player.playSongs(card.daily.songs.keys(), 0, Playback.FromDaily);
                 }
             }
             Button {

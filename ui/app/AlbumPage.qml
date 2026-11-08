@@ -11,6 +11,8 @@ import Cirrus.Presentation
 // cover and album columns.
 SongCollectionPage {
     id: page
+    origin: Playback.FromAlbum
+    originId: pageModel.albumKey
 
     property alias albumKey: pageModel.albumKey
 

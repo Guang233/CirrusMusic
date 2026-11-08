@@ -16,6 +16,9 @@ ListView {
     property bool showCovers: true
     property bool showAlbum: true
     property bool playsOnActivate: true
+    // Where these songs come from (Playback.Origin and its id), for the listening reports.
+    property int origin: Playback.NoOrigin
+    property string originId
     property real sideMargin: 24
     // Off on the album's own page.
     property bool showAlbumAction: true
@@ -57,7 +60,7 @@ ListView {
 
     onActivated: index => {
         if (playsOnActivate && songs)
-            App.player.playSongs(songs.keys(), index);
+            App.player.playSongs(songs.keys(), index, list.origin, list.originId);
     }
 
     delegate: ListItem {

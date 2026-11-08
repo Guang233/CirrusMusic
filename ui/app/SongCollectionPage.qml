@@ -23,6 +23,9 @@ Item {
     required property LoadableModel model
     required property SongListModel songs
     property string title
+    // Where the songs come from (Playback.Origin and its id), for the listening reports.
+    property int origin: Playback.NoOrigin
+    property string originId
     property string coverKey
     property string coverGlyph: Symbols.queue_music
     // Drawn instead of the cover art (fills the size it gets: 200, 140 or 32).
@@ -124,7 +127,7 @@ Item {
         if (playsVoices)
             App.player.playVoices(keys, 0);
         else
-            App.player.playSongs(keys, 0);
+            App.player.playSongs(keys, 0, page.origin, page.originId);
     }
 
     clip: true
@@ -260,6 +263,8 @@ Item {
 
     SongTable {
         id: songTable
+        origin: page.origin
+        originId: page.originId
         anchors.fill: parent
         opacity: state_.contentOpacity
         visible: opacity > 0

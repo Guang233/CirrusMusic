@@ -239,8 +239,9 @@ class PlaybackSource
     // Called after the snapshot changed, never synchronously from a command.
     virtual void setChangedHandler(std::function<void()> changed) = 0;
 
-    // Replaces the queue with `keys` and plays the one at `index`.
-    virtual void playSongs(const QStringList& keys, int index) = 0;
+    // Replaces the queue with `keys` and plays the one at `index`; `origin` is where
+    // they come from (the listening reports).
+    virtual void playSongs(const QStringList& keys, int index, const PlayOrigin& origin = {}) = 0;
     // The same for podcast voices, when canPlayVoices().
     virtual void playVoices(const QStringList& keys, int index) = 0;
     [[nodiscard]] virtual bool canPlayVoices() const = 0;

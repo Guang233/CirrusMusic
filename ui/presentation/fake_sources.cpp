@@ -1850,7 +1850,7 @@ class FakePlayback : public QObject, public PlaybackSource
         m_changed = std::move(changed);
     }
 
-    void playSongs(const QStringList& keys, int index) override
+    void playSongs(const QStringList& keys, int index, const PlayOrigin& = {}) override
     {
         if (index < 0 || index >= keys.size())
             return;

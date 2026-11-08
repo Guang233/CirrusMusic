@@ -133,10 +133,10 @@ QString Player::failureMessage() const
     }
 }
 
-void Player::playSongs(const QStringList& keys, int index)
+void Player::playSongs(const QStringList& keys, int index, int origin, const QString& originId)
 {
     if (m_source && index >= 0 && index < keys.size())
-        m_source->playSongs(keys, index);
+        m_source->playSongs(keys, index, PlayOrigin{origin, originId});
 }
 
 void Player::playVoices(const QStringList& keys, int index)

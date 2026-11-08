@@ -51,6 +51,9 @@ Item {
     property bool voices: false
     // Numbers are ranks: the first three in primary (the listening ranking).
     property bool ranked: false
+    // Where these songs come from (Playback.Origin and its id), for the listening reports.
+    property int origin: Playback.NoOrigin
+    property string originId
     // Voices can't play until the backend can (search.md §3.4).
     readonly property bool playable: !voices || App.player.canPlayVoices
     readonly property ListView view: list
@@ -134,7 +137,7 @@ Item {
         if (voices)
             App.player.playVoices(keys, keys.indexOf(key));
         else
-            App.player.playSongs(keys, keys.indexOf(key));
+            App.player.playSongs(keys, keys.indexOf(key), table.origin, table.originId);
     }
     function isMissing(row: int): bool {
         return songs.data(songs.index(row, 0), SongListModel.MissingRole) === true;
@@ -914,7 +917,7 @@ Item {
                 else if (table.voices)
                     App.player.playVoices(songMenu.keys, 0);
                 else
-                    App.player.playSongs(songMenu.keys, 0);
+                    App.player.playSongs(songMenu.keys, 0, table.origin, table.originId);
             }
         }
         MenuSeparator {

@@ -48,7 +48,10 @@ class BackendPlayback : public QObject, public PlaybackSource
         m_changed = std::move(changed);
     }
 
-    void playSongs(const QStringList& keys, int index) override;
+    void playSongs(const QStringList& keys, int index, const PlayOrigin& origin = {}) override;
+    // Where a queue entry's song came from (the listening reports); remembered per
+    // account with the queue, so a restored queue keeps it.
+    [[nodiscard]] PlayOrigin originOf(QUuid entry);
     // The backend doesn't play podcast voices yet (integration.md §4).
     void playVoices(const QStringList&, int) override {}
     [[nodiscard]] bool canPlayVoices() const override { return false; }
@@ -106,12 +109,19 @@ class BackendPlayback : public QObject, public PlaybackSource
         qint64 songPositionMs = 0; // on the song's clock (a preview's start added)
         qint64 durationMs = -1;
         qint64 previewStartMs = -1;
-        bool resume = false; // playing when a session change stopped it
+        bool resume = false;       // playing when a session change stopped it
+        QList<PlayOrigin> origins; // per key
     };
+    void startQueue(const QStringList& keys, int index, const QList<PlayOrigin>& origins);
+    void loadOrigins();
+    void saveOrigins() const;
 
     QPointer<application::ListeningSession> m_session;
     QPointer<application::BackendFacade> m_facade;
     CatalogSource& m_catalog;
+    QHash<QUuid, PlayOrigin> m_origins;
+    QString m_originsAccount; // whose m_origins are
+    bool m_originsLoaded = false;
     std::function<void()> m_changed;
     PlaybackSnapshot m_state;
     QList<QUuid> m_entries; // the snapshot's queue as entry ids (Queue mode)

@@ -81,7 +81,10 @@ class Player : public QObject
     // The clock of `positionAt`, in ms.
     Q_INVOKABLE static double now() { return double(playback::now()); }
 
-    Q_INVOKABLE void playSongs(const QStringList& keys, int index);
+    // `origin` (Playback.Origin) and `originId`: where the songs come from, e.g.
+    // playSongs(keys, 0, Playback.FromAlbum, albumKey).
+    Q_INVOKABLE void playSongs(const QStringList& keys, int index, int origin = 0,
+                               const QString& originId = QString());
     Q_INVOKABLE void playVoices(const QStringList& keys, int index);
     [[nodiscard]] bool canPlayVoices() const;
     Q_INVOKABLE void playPause();

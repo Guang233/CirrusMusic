@@ -7,6 +7,10 @@
 #include <memory>
 #include <optional>
 
+namespace cirrus::application
+{
+class ListeningReporter;
+}
 namespace cirrus::runtime
 {
 class BackendRuntime;
@@ -40,6 +44,8 @@ class BackendHost : public QObject
     ~BackendHost() override;
 
     [[nodiscard]] runtime::BackendRuntime& runtime() const { return *m_runtime; }
+    // Reports what was listened to (integration.md §6.1); settled before closing.
+    [[nodiscard]] application::ListeningReporter& reporter() const { return *m_reporter; }
 
     void start();
     // Closes the backend (it never signs out); `done` runs once it has stopped, or
@@ -51,6 +57,7 @@ class BackendHost : public QObject
     void finish();
 
     std::unique_ptr<runtime::BackendRuntime> m_runtime;
+    std::unique_ptr<application::ListeningReporter> m_reporter;
     std::function<void()> m_done;
     bool m_shuttingDown = false;
 };

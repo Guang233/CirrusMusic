@@ -10,6 +10,8 @@ import Cirrus.Presentation
 // edit (the account's own: info, song order, delete); the songs sort by column.
 SongCollectionPage {
     id: page
+    origin: Playback.FromPlaylist
+    originId: pageModel.playlistKey
 
     property alias playlistKey: pageModel.playlistKey
 

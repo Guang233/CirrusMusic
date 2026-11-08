@@ -23,6 +23,20 @@ enum Repeat { RepeatOff, RepeatAll, RepeatOne };
 Q_ENUM_NS(Repeat)
 enum Mode { Queue, PersonalFm };
 Q_ENUM_NS(Mode)
+// Where songs were played from, for the listening reports (integration.md §6.1): the
+// page's playlist, album, artist, chart, the daily recommendations, a search (the id is
+// the keywords) or a song's own page. NoOrigin: none of these.
+enum Origin {
+    NoOrigin,
+    FromPlaylist,
+    FromAlbum,
+    FromArtist,
+    FromChart,
+    FromDaily,
+    FromSearch,
+    FromSong
+};
+Q_ENUM_NS(Origin)
 
 // Milliseconds on the monotonic clock that `positionAt` refers to.
 [[nodiscard]] inline qint64 now()
@@ -34,6 +48,13 @@ Q_ENUM_NS(Mode)
 
 namespace cirrus::ui
 {
+
+// playback::Origin and its id (a playlist's key, the search's keywords…).
+struct PlayOrigin {
+    int kind = playback::NoOrigin;
+    QString id;
+    friend bool operator==(const PlayOrigin&, const PlayOrigin&) = default;
+};
 
 // The whole playback state; sources replace it as a unit. The position is a base
 // value: at `positionAt` (playback::now()) it was `positionMs`, and it advances by

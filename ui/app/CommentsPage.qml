@@ -400,7 +400,8 @@ Item {
                     glyph: Symbols.play_arrow
                     iconFill: 1
                     text: qsTr("播放%1").arg(page.title)
-                    onClicked: App.player.playSongs([page.targetKey], 0)
+                    onClicked: App.player.playSongs([page.targetKey], 0, Playback.FromSong,
+                                                     page.targetKey)
                 }
             }
 

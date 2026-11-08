@@ -11,6 +11,7 @@ import Cirrus.Presentation
 // opens it as a new page, from a past day switches the day in place.
 SongCollectionPage {
     id: page
+    origin: Playback.FromDaily
 
     property alias date: pageModel.date
     readonly property bool history: date !== ""

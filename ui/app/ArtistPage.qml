@@ -12,6 +12,8 @@ import Cirrus.Presentation
 // loads when first shown. No in-page find (AR3); Ctrl+PageUp/PageDown switch tabs.
 SongCollectionPage {
     id: page
+    origin: Playback.FromArtist
+    originId: pageModel.artistKey
 
     property alias artistKey: pageModel.artistKey
     // 0 songs, 1 albums, 2 introduction, 3 similar artists.

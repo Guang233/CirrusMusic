@@ -56,7 +56,7 @@ Item {
         if (voices)
             App.player.playVoices(keys, 0);
         else
-            App.player.playSongs(keys, 0);
+            App.player.playSongs(keys, 0, Playback.FromSearch, search.query);
     }
 
     // With the tabs pinned, a new tab starts at its top, under them.
@@ -249,6 +249,8 @@ Item {
     }
 
     SongTable {
+        origin: Playback.FromSearch
+        originId: page.search.query
         id: table
         anchors.fill: parent
         visible: page.query !== ""
