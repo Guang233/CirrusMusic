@@ -115,13 +115,35 @@ if(CIRRUS_UI_TRAY)
     target_link_libraries(appCirrusMusic PRIVATE Qt6::Widgets)
 endif()
 
-# MPRIS on the session bus (docs/ui/pages/shell.md §7): media keys and the desktop's
-# media controls. Linux only; Windows SMTC / macOS Now Playing come later.
+# The system's media controls and media keys (docs/ui/pages/shell.md §7): MPRIS on
+# Linux, SMTC on Windows, Now Playing on macOS. All read App.player (media_state.h).
+# SMTC and Now Playing are not yet verified on their systems.
+target_sources(appCirrusMusic PRIVATE media_state.h)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Qt6 REQUIRED COMPONENTS DBus)
     target_sources(appCirrusMusic PRIVATE mpris.h mpris.cpp)
     target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_MPRIS)
     target_link_libraries(appCirrusMusic PRIVATE Qt6::DBus)
+elseif(WIN32)
+    # C++/WinRT from the Windows SDK (MSVC).
+    option(CIRRUS_UI_SMTC "Windows media controls (SMTC); needs MSVC and the Windows SDK" ON)
+    if(CIRRUS_UI_SMTC)
+        target_sources(appCirrusMusic PRIVATE smtc.h smtc.cpp)
+        set_source_files_properties(smtc.cpp PROPERTIES
+            COMPILE_DEFINITIONS "NOMINMAX;WIN32_LEAN_AND_MEAN")
+        target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_SMTC)
+        target_link_libraries(appCirrusMusic PRIVATE windowsapp runtimeobject)
+    endif()
+elseif(APPLE)
+    option(CIRRUS_UI_NOW_PLAYING "macOS Now Playing (MediaPlayer framework)" ON)
+    if(CIRRUS_UI_NOW_PLAYING)
+        enable_language(OBJCXX)
+        target_sources(appCirrusMusic PRIVATE now_playing.h now_playing.mm)
+        set_source_files_properties(now_playing.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+        set_target_properties(appCirrusMusic PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED ON)
+        target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_NOW_PLAYING)
+        target_link_libraries(appCirrusMusic PRIVATE "-framework AppKit" "-framework MediaPlayer")
+    endif()
 endif()
 
 install(TARGETS appCirrusMusic

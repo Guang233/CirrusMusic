@@ -1,12 +1,12 @@
 #include "mpris.h"
 
 #include "desktop.h"
+#include "media_state.h"
 #include "player.h"
 
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QGuiApplication>
-#include <QUrl>
 
 namespace cirrus::ui
 {
@@ -17,18 +17,6 @@ const QString kService = QStringLiteral("org.mpris.MediaPlayer2.cirrus");
 const QString kPlayerInterface = QStringLiteral("org.mpris.MediaPlayer2.Player");
 // A position that moved more than this against the clock was a seek.
 constexpr qint64 kSeekedMs = 1000;
-
-// The cover at a size desktop controls show, from the image host; empty for the fakes'
-// sample covers (not URLs).
-QString artUrl(const QString& coverKey)
-{
-    QUrl url(coverKey);
-    if (url.scheme() != u"http" && url.scheme() != u"https")
-        return {};
-    url.setScheme(QStringLiteral("https"));
-    url.setQuery(QStringLiteral("param=512y512"));
-    return url.toString();
-}
 
 QString loopOf(int repeat)
 {
@@ -84,14 +72,7 @@ QString Mpris::trackId() const
     return QStringLiteral("/com/guang233/Cirrus/track/s") + part;
 }
 
-qint64 Mpris::positionUs() const
-{
-    qint64 ms = m_player->positionMs() +
-                qint64((Player::now() - double(m_player->positionAt())) * m_player->rate());
-    if (m_player->durationMs() >= 0)
-        ms = std::min(ms, m_player->durationMs());
-    return std::max<qint64>(ms, 0) * 1000;
-}
+qint64 Mpris::positionUs() const { return media::positionNow(*m_player) * 1000; }
 
 QVariantMap Mpris::playerProperties() const
 {
@@ -218,7 +199,7 @@ QVariantMap MprisPlayer::metadata() const
         values.insert(QStringLiteral("xesam:artist"), QStringList{song.artistText});
     if (!song.albumTitle.isEmpty())
         values.insert(QStringLiteral("xesam:album"), song.albumTitle);
-    if (const QString art = artUrl(song.coverKey); !art.isEmpty())
+    if (const QString art = media::coverUrl(song.coverKey, 512); !art.isEmpty())
         values.insert(QStringLiteral("mpris:artUrl"), art);
     return values;
 }
@@ -246,23 +227,13 @@ void MprisPlayer::Next() { m_owner->player()->next(); }
 
 void MprisPlayer::Previous() { m_owner->player()->previous(); }
 
-void MprisPlayer::Pause()
-{
-    const int status = m_owner->player()->status();
-    if (status == playback::Playing || status == playback::Loading)
-        m_owner->player()->playPause();
-}
+void MprisPlayer::Pause() { media::pause(*m_owner->player()); }
 
 void MprisPlayer::PlayPause() { m_owner->player()->playPause(); }
 
 void MprisPlayer::Stop() { Pause(); }
 
-void MprisPlayer::Play()
-{
-    const int status = m_owner->player()->status();
-    if (status != playback::Playing && status != playback::Loading)
-        m_owner->player()->playPause();
-}
+void MprisPlayer::Play() { media::play(*m_owner->player()); }
 
 void MprisPlayer::Seek(qlonglong offset)
 {

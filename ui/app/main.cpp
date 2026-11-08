@@ -8,6 +8,12 @@
 #ifdef CIRRUS_UI_MPRIS
 #include "mpris.h"
 #endif
+#ifdef CIRRUS_UI_NOW_PLAYING
+#include "now_playing.h"
+#endif
+#ifdef CIRRUS_UI_SMTC
+#include "smtc.h"
+#endif
 #include "single_instance.h"
 #include "title_bar_mode.h"
 
@@ -25,6 +31,8 @@ using Application = QApplication;
 using Application = QGuiApplication;
 #endif
 #include <QtQml/QQmlExtensionPlugin>
+
+#include <memory>
 
 Q_IMPORT_QML_PLUGIN(Cirrus_ThemePlugin)
 Q_IMPORT_QML_PLUGIN(Cirrus_ControlsPlugin)
@@ -95,6 +103,9 @@ int main(int argc, char* argv[])
     // Media keys and the desktop's media controls (docs/ui/pages/shell.md §7).
     cirrus::ui::Mpris mpris(presentation->player(), &desktop);
 #endif
+#ifdef CIRRUS_UI_NOW_PLAYING
+    cirrus::ui::NowPlaying nowPlaying(presentation->player());
+#endif
 
     // --titlebar, then CIRRUS_TITLEBAR, then the user's setting, then the desktop default.
     namespace titlebar = cirrus::ui::titlebar;
@@ -110,12 +121,19 @@ int main(int argc, char* argv[])
     engine.addImageProvider(QStringLiteral("qr"), presentation->makeQrProvider());
     engine.setInitialProperties({{QStringLiteral("titleBar"), int(titleBar)}});
     engine.loadFromModule("CirrusMusic", "Main");
+#ifdef CIRRUS_UI_SMTC
+    // Bound to the main window; gone before it is (declared after the engine).
+    std::unique_ptr<cirrus::ui::Smtc> smtc;
+#endif
 
     // Hidden in the tray, the window gives back its GPU device and scene graph, so a
     // discrete GPU can power down during hours of background playback.
     if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0))) {
         window->setPersistentGraphics(false);
         window->setPersistentSceneGraph(false);
+#ifdef CIRRUS_UI_SMTC
+        smtc = std::make_unique<cirrus::ui::Smtc>(presentation->player(), window);
+#endif
     }
 
     return QGuiApplication::exec();
