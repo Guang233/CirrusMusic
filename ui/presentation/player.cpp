@@ -13,6 +13,10 @@ Player::Player(PlaybackSource* source, QObject* parent)
     : QObject(parent), m_source(source), m_queue(new SongListModel(this)),
       m_queueDetails(new SongDetailLoader(m_queue, this))
 {
+    connect(m_queueDetails, &SongDetailLoader::filled, this, [this] {
+        updateCurrent();
+        updateUpcoming();
+    });
     if (!m_source)
         return;
     m_source->setChangedHandler([this]() { update(); });
@@ -21,19 +25,76 @@ Player::Player(PlaybackSource* source, QObject* parent)
 
 void Player::update()
 {
-    const bool queueChanged = m_source->snapshot().queue != m_snapshot.queue;
-    m_snapshot = m_source->snapshot();
+    const PlaybackSnapshot& next = m_source->snapshot();
+    const bool queueChanged = next.queue != m_snapshot.queue;
+    const bool moved = queueChanged || next.queueIndex != m_snapshot.queueIndex;
+    m_snapshot = next;
+    const SongInfo& current = m_snapshot.current;
+    const bool detailed = !current.key.isEmpty() && !current.title.isEmpty();
     if (queueChanged) {
-        // Details come as views ask; the current song's are known already.
+        // Details come as views ask; those known already stay (a reorder keeps them).
+        QList<SongInfo> known = m_queue->loadedSongs();
+        if (detailed)
+            known.append(current);
         m_queueDetails->clear();
-        m_queue->reset(m_snapshot.queue, {m_snapshot.current});
+        m_queue->reset(m_snapshot.queue, known);
+    } else if (detailed && !m_queue->songAt(m_snapshot.queueIndex)) {
+        m_queue->fill({current.key}, {current});
     }
-    SongItem current(m_snapshot.current);
+    // The songs either side, ahead of a switch: their titles and covers show at once.
+    if (moved && m_snapshot.queueIndex >= 0)
+        ensureQueueLoaded(m_snapshot.queueIndex - 1, m_snapshot.queueIndex + 1);
+    updateCurrent();
+    emit changed();
+    updateUpcoming();
+    noticePreview();
+}
+
+void Player::updateCurrent()
+{
+    SongInfo info = m_snapshot.current;
+    if (!info.key.isEmpty() && info.title.isEmpty()) {
+        // The source is still getting its details; the queue may have them.
+        if (const auto row = m_queue->songAt(m_snapshot.queueIndex); row && row->key == info.key)
+            info = *row;
+    }
+    SongItem current(info);
     if (current != m_current) {
         m_current = std::move(current);
         emit currentChanged();
     }
-    emit changed();
+}
+
+void Player::updateUpcoming()
+{
+    const int count = int(m_snapshot.queue.size());
+    int row = m_snapshot.queueIndex + 1;
+    if (row >= count && m_snapshot.repeat == playback::RepeatAll)
+        row = 0;
+    QString key;
+    if (m_snapshot.queueIndex >= 0 && row != m_snapshot.queueIndex)
+        if (const auto song = m_queue->songAt(row))
+            key = song->coverKey;
+    if (key != m_upcomingCoverKey) {
+        m_upcomingCoverKey = key;
+        emit upcomingChanged();
+    }
+}
+
+void Player::noticePreview()
+{
+    // Whether it is a preview is known once it plays. Said once for a run of previews,
+    // not for every song of a queue a guest plays.
+    const QString& key = m_snapshot.current.key;
+    if (key.isEmpty() || key == m_previewKnownKey ||
+        (m_snapshot.status != playback::Playing && m_snapshot.status != playback::Paused))
+        return;
+    const bool preview = m_snapshot.previewStartMs >= 0;
+    const bool before = m_previewKnown;
+    m_previewKnownKey = key;
+    m_previewKnown = preview;
+    if (preview && !before)
+        emit notice(tr("这首歌只能试听片段"));
 }
 
 QString Player::failureMessage() const

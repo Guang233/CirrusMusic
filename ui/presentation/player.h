@@ -48,6 +48,8 @@ class Player : public QObject
     // A song can be in it twice: the current row is `queueIndex`, not the current role.
     Q_PROPERTY(cirrus::ui::SongListModel* queue READ queue CONSTANT)
     Q_PROPERTY(int queueIndex READ queueIndex NOTIFY changed)
+    // The cover of the song after this one, when known: views fetch it ahead.
+    Q_PROPERTY(QString upcomingCoverKey READ upcomingCoverKey NOTIFY upcomingChanged)
 
   public:
     // Without a source (no playback in this build) the player stays Empty.
@@ -71,6 +73,7 @@ class Player : public QObject
     [[nodiscard]] bool fmWaiting() const { return m_snapshot.fmWaiting; }
     [[nodiscard]] SongListModel* queue() const { return m_queue; }
     [[nodiscard]] int queueIndex() const { return m_snapshot.queueIndex; }
+    [[nodiscard]] QString upcomingCoverKey() const { return m_upcomingCoverKey; }
 
     // The clock of `positionAt`, in ms.
     Q_INVOKABLE static double now() { return double(playback::now()); }
@@ -97,13 +100,24 @@ class Player : public QObject
   signals:
     void currentChanged();
     void changed();
+    void upcomingChanged();
+    // A short message for a snackbar (only a preview clip plays).
+    void notice(const QString& message);
 
   private:
     void update();
+    // The current song's details: the source's, else its queue row's.
+    void updateCurrent();
+    void updateUpcoming();
+    void noticePreview();
 
     PlaybackSource* m_source;
     PlaybackSnapshot m_snapshot;
     SongItem m_current;
+    QString m_upcomingCoverKey;
+    // The last song whose playing showed whether it is a preview, and whether it was.
+    QString m_previewKnownKey;
+    bool m_previewKnown = false;
     SongListModel* m_queue;
     SongDetailLoader* m_queueDetails;
 };

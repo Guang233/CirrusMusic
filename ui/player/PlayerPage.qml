@@ -956,6 +956,21 @@ FocusScope {
         sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
     }
 
+    // The next song's cover, fetched and decoded ahead at the page's and the
+    // background's sizes, so switching to it shows it at once.
+    Repeater {
+        model: [cover.decodeSize, 64]
+
+        Image {
+            required property int modelData
+            visible: false
+            asynchronous: true
+            source: App.player.upcomingCoverKey !== ""
+                    ? "image://cover/" + encodeURIComponent(App.player.upcomingCoverKey) : ""
+            sourceSize: Qt.size(modelData, modelData)
+        }
+    }
+
     SongInfoDialog {
         id: songInfo
     }

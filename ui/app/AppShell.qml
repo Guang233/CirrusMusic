@@ -592,6 +592,14 @@ Item {
         library: myLibrary
     }
 
+    // What App.player has to say (a song only plays as a preview).
+    Connections {
+        target: App.player
+        function onNotice(message: string) {
+            shell.notify(message);
+        }
+    }
+
     // What App.library has to say (liked, added to a playlist, failures).
     Connections {
         target: App.library

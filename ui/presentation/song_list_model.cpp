@@ -242,6 +242,13 @@ QList<SongInfo> SongListModel::loadedSongs() const
     return songs;
 }
 
+std::optional<SongInfo> SongListModel::songAt(int row) const
+{
+    if (row < 0 || row >= m_rows.size() || !m_rows.at(row).loaded)
+        return std::nullopt;
+    return m_rows.at(row).song;
+}
+
 QStringList SongListModel::keys() const
 {
     QStringList keys;

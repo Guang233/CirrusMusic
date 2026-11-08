@@ -72,6 +72,8 @@ class SongListModel : public QAbstractListModel
     [[nodiscard]] bool allLoaded() const;
     // The rows with details, e.g. to put the list back after a failed change.
     [[nodiscard]] QList<SongInfo> loadedSongs() const;
+    // The row's song when it has details.
+    [[nodiscard]] std::optional<SongInfo> songAt(int row) const;
 
     // Every key, e.g. for "play all".
     Q_INVOKABLE QStringList keys() const;
