@@ -116,6 +116,12 @@ void MusicRequests::pump()
             m_retry.start(); // full with others' reads; a moment later
             return;
         }
+        if (id == Refused || id == NeedsSignIn) {
+            Job refused = std::move(job);
+            m_waiting.pop_front();
+            refused.fail(id == Refused ? failure::Invalid : failure::SignedOut, std::nullopt);
+            continue;
+        }
         m_running.insert(id, std::move(job));
         m_waiting.pop_front();
     }

@@ -10,6 +10,10 @@ namespace cirrus::application
 {
 class BackendFacade;
 }
+namespace cirrus::domain
+{
+struct DailyHistoryDates;
+}
 namespace cirrus::runtime
 {
 class BackendRuntime;
@@ -21,8 +25,8 @@ namespace cirrus::ui
 class MusicRequests;
 
 // The read-only catalog from the backend (docs/ui/integration.md §4 CatalogSource),
-// one group per step: search now (step 4); what is not connected yet goes to
-// `fallback` (the fakes).
+// one group per step: search (step 4) and details with the daily songs (step 5); what
+// is not connected yet goes to `fallback` (the fakes).
 class BackendCatalog : public QObject, public CatalogSource
 {
   public:
@@ -40,65 +44,28 @@ class BackendCatalog : public QObject, public CatalogSource
     Request searchVoices(const QString& text, PageRequest page,
                          Reply<ResultPage<SongInfo>> reply) override;
 
-    // Not connected yet: the fallback's.
-    Request playlist(const QString& key, Reply<PlaylistPage> reply) override
-    {
-        return m_fallback->playlist(key, std::move(reply));
-    }
-    Request songDetails(const QStringList& keys, Reply<QList<SongInfo>> reply) override
-    {
-        return m_fallback->songDetails(keys, std::move(reply));
-    }
-    Request album(const QString& key, Reply<AlbumPage> reply) override
-    {
-        return m_fallback->album(key, std::move(reply));
-    }
-    Request artist(const QString& key, Reply<ArtistPage> reply) override
-    {
-        return m_fallback->artist(key, std::move(reply));
-    }
+    // Step 5: details.
+    Request playlist(const QString& key, Reply<PlaylistPage> reply) override;
+    Request songDetails(const QStringList& keys, Reply<QList<SongInfo>> reply) override;
+    Request album(const QString& key, Reply<AlbumPage> reply) override;
+    Request artist(const QString& key, Reply<ArtistPage> reply) override;
     Request artistSongs(const QString& key, bool byTime, PageRequest page,
-                        Reply<ResultPage<SongInfo>> reply) override
-    {
-        return m_fallback->artistSongs(key, byTime, page, std::move(reply));
-    }
+                        Reply<ResultPage<SongInfo>> reply) override;
     Request artistAlbums(const QString& key, PageRequest page,
-                         Reply<ResultPage<CollectionItem>> reply) override
-    {
-        return m_fallback->artistAlbums(key, page, std::move(reply));
-    }
-    Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) override
-    {
-        return m_fallback->artistIntroduction(key, std::move(reply));
-    }
-    Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) override
-    {
-        return m_fallback->similarArtists(key, std::move(reply));
-    }
-    Request podcast(const QString& key, Reply<PodcastInfo> reply) override
-    {
-        return m_fallback->podcast(key, std::move(reply));
-    }
+                         Reply<ResultPage<CollectionItem>> reply) override;
+    Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) override;
+    Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) override;
+    Request podcast(const QString& key, Reply<PodcastInfo> reply) override;
     Request podcastVoices(const QString& key, bool oldestFirst, PageRequest page,
-                          Reply<ResultPage<SongInfo>> reply) override
-    {
-        return m_fallback->podcastVoices(key, oldestFirst, page, std::move(reply));
-    }
+                          Reply<ResultPage<SongInfo>> reply) override;
+    Request dailySongs(Reply<QList<SongInfo>> reply) override;
+    Request dailyHistoryDates(Reply<QStringList> reply) override;
+    Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) override;
+
+    // Not connected yet: the fallback's.
     Request feed(Feed which, Reply<QList<FeedSection>> reply) override
     {
         return m_fallback->feed(which, std::move(reply));
-    }
-    Request dailySongs(Reply<QList<SongInfo>> reply) override
-    {
-        return m_fallback->dailySongs(std::move(reply));
-    }
-    Request dailyHistoryDates(Reply<QStringList> reply) override
-    {
-        return m_fallback->dailyHistoryDates(std::move(reply));
-    }
-    Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) override
-    {
-        return m_fallback->dailyHistorySongs(date, std::move(reply));
     }
     Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) override
     {
@@ -139,6 +106,11 @@ class BackendCatalog : public QObject, public CatalogSource
   private:
     std::unique_ptr<CatalogSource> m_fallback;
     MusicRequests* m_requests;
+    // The signed-in account's key (a playlist of its own), empty for guests.
+    std::function<QString()> m_session;
+    // The last list of past recommendation days: a day's songs are read only for a day
+    // the service listed (domain::DailyHistorySongsQuery).
+    std::shared_ptr<std::shared_ptr<const domain::DailyHistoryDates>> m_historyDates;
 };
 
 } // namespace cirrus::ui

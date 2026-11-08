@@ -28,8 +28,13 @@ namespace cirrus::ui
 class MusicRequests : public QObject
 {
   public:
-    // Sends the read; the facade's command id, 0 when it didn't take it.
+    // Sends the read; the facade's command id, 0 when it didn't take it (tried again
+    // later: the facade says 0 when full too, so a read it will never take must not
+    // say 0, or it holds up all the others), `Refused` when it can't be sent at all
+    // (fails as Invalid), `NeedsSignIn` for a signed-in-only read from a guest.
     using Send = std::function<quint64(application::BackendFacade&)>;
+    static constexpr quint64 Refused = ~quint64(0);
+    static constexpr quint64 NeedsSignIn = ~quint64(0) - 1;
     using Done = std::function<void(const application::MusicResult&)>;
     using Fail = std::function<void(failure::Kind, std::optional<qint64> retryAfterMs)>;
 
