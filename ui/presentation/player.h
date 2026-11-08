@@ -33,6 +33,8 @@ class Player : public QObject
     Q_PROPERTY(double rate READ rate NOTIFY changed)
     Q_PROPERTY(qint64 durationMs READ durationMs NOTIFY changed) // -1 when unknown
     Q_PROPERTY(bool seekable READ seekable NOTIFY changed)
+    // Only a preview clip plays, starting this far into the song; -1 for the whole song.
+    Q_PROPERTY(qint64 previewStartMs READ previewStartMs NOTIFY changed)
     Q_PROPERTY(double volume READ volume NOTIFY changed)
     Q_PROPERTY(int order READ order NOTIFY changed)   // Playback.Order
     Q_PROPERTY(int repeat READ repeat NOTIFY changed) // Playback.Repeat
@@ -59,6 +61,7 @@ class Player : public QObject
     [[nodiscard]] double rate() const { return m_snapshot.rate; }
     [[nodiscard]] qint64 durationMs() const { return m_snapshot.durationMs; }
     [[nodiscard]] bool seekable() const { return m_snapshot.seekable; }
+    [[nodiscard]] qint64 previewStartMs() const { return m_snapshot.previewStartMs; }
     [[nodiscard]] double volume() const { return m_snapshot.volume; }
     [[nodiscard]] int order() const { return m_snapshot.order; }
     [[nodiscard]] int repeat() const { return m_snapshot.repeat; }

@@ -47,6 +47,10 @@ struct PlaybackSnapshot {
     qint64 positionAt = 0;
     double rate = 0;
     qint64 durationMs = -1; // -1 when unknown
+    // A preview clip of the song (all the service plays without a membership): where
+    // it starts in the song, -1 for the whole song. Positions and the duration are the
+    // clip's; lyrics are on the song's clock.
+    qint64 previewStartMs = -1;
     bool seekable = false;
     double volume = 1;
     playback::Order order = playback::Sequential;

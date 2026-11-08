@@ -89,7 +89,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 | `next`、`previous`、`playPause`、`seek`、`setVolume`、`setOrder`／`setRepeat`、`startFm` | 同名或 `pause`／`resume`、`setModes`、`startFm` | ✅ |
 | `move`（队列拖动排序） | — | ❌ `ListeningSession` 没有移动条目（§6 D3） |
 | `playVoices`、`canPlayVoices` | — | ❌ 后端只做了播客媒体接缝的第一阶段，没有声音播放；`canPlayVoices` 返回 false，页面已经按这个隐藏声音的播放按钮 |
-| 试听片段 | `PlaybackSnapshot.preview` | ⚠️ 新：非会员歌曲只能试听时，迷你播放条和播放页标出“试听”，进度条只到片段长度 |
+| 试听片段 | `PlaybackSnapshot.preview` | ✅ 展示层快照加了 `previewStartMs`：进度条只到片段长度，歌词按整首歌的时间对齐；⚠️ 迷你播放条和播放页的“试听”标记待定（要设计） |
 
 **LyricsSource**：`lyrics(songKey)` → `resourceQueries()` 的歌词读取（先缓存后网络）；播放中的歌曲用 `ListeningSession` 自带的歌词和游标。✅
 
@@ -217,3 +217,14 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 离屏验证：歌单页（标题、创建者、更新日期、简介、计数、封面）、歌手页（头像、别名、单曲／专辑数、简介、热门歌曲和封面）、歌手的专辑和相似歌手页签、专辑页（类型、发行日期、公司、首数与总时长、简介、歌曲）、播客页（节目、期号、最新／最早）都是真实数据。每日推荐和历史日推需要登录，离屏没测（游客态按 SignedOut 失败已确认不再堵队列）。
   - 少数播客封面上传的原图就是 WebP（图片主机仍标成 `image/jpg`）。维护者同意放开（2026-11-08）：缓存接受单帧 WebP，需要安装 Qt Image Formats（没装时 CMake 警告，这些封面显示占位图）。
   - **观察**：`cloudsearch` 也会限流，几分钟内搜五六次就开始 HTTP/2 协议错误，十分钟后恢复；正常使用的频率碰不到。
+- **第 6 步（播放）第一部分完成（2026-11-08）**：播放先接了自己的音频引擎（[audio-engine.md](../tasks/audio-engine.md) 阶段 B、C）。
+  - `BackendPlayback`（`backend_playback.{h,cpp}`）：包装 `ListeningSession`，由它的 `queueChanged`／`playbackChanged`／`fmChanged` 和 Facade 的会话、状态变化合成快照。队列按播放顺序（后端加了只读的 `playOrder()`；`queue()` 仍是插入顺序），展示层的位置换成条目 UUID。当前歌曲的详情向 `BackendCatalog` 的歌曲详情取（每首只取一次，失败不重试）。音质每次播放时读设置 `playback/audioQuality`。
+  - 状态：Resolving／Loading 显示为 Loading；Ready 在意图为播放时仍是 Loading，否则是 Paused。播放失败的原因按 Network／Timeout／RateLimited／Rejected 等映射，无输出设备、存储错误显示通用的“播放失败”。
+  - 位置：后端位置修订变了才换基准（基准时刻用会话记下的到达时间），否则在新快照里沿用当前时钟。只有状态变化或位置偏离外推超过 150 ms 才通知，播放中不会每 100 ms 刷一次界面。
+  - 播放／暂停：已结束或失败时重新播放当前条目（`select(active)`），其余按会话的意图切换。音量先记在适配层，后端还没有播放时设的音量在下一次加载时补上。
+  - `BackendLyrics`：正在播放的歌直接用会话已取的歌词，会话还在取时等它，不再发第二个请求（并发请求时偶发网络错误）；会话失败或换歌后、以及别的歌，走资源缓存再走网络。
+  - 试听片段：快照加了 `previewStartMs`，`App.lyrics.shiftMs` 扣掉它，歌词按整首歌的时间对齐。
+  - 还没做：拖动排序（D3）、启动恢复队列和自动播放（D7）、听歌上报（D5）、“试听”标记的设计。`playVoices` 仍不支持（`canPlayVoices` 为 false）。
+  - 离屏验证（游客，音量 0）：富士山下（试听 30 秒）播放、拖到 20 秒、暂停与继续、下一首（晴天游客不可播，显示“这首歌暂时无法播放”）、`playAt`、单曲／列表循环、随机（当前歌曲排到第一位）、删掉正在播放的歌接着播下一首；迷你播放条显示真实封面和进度；播放页歌词（含粤拼）正常。私人 FM 需要登录，没测。
+  - **观察**：`previous` 按后端的播放历史走，不按列表顺序：从列表最后一首开始播时，前 3 秒“上一首”不可用。
+  - FFmpeg 的警告不再输出（MP3 无缝裁剪每首都报一次 “Could not update timestamps for skipped samples”），只留错误。

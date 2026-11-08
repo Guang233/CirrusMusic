@@ -124,6 +124,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 | `failureMessage` | 失败时的已翻译文案，否则为空；能否跳过看 `canNext` |
 | `positionMs`、`positionAt`、`rate` | 播放位置的**基准值**：基准位置、对应的单调时钟时刻、速率（播放中为 1，否则为 0）。见下方“播放位置” |
 | `durationMs`、`seekable`、`volume` | 时长未知时为 -1 |
+| `previewStartMs` | 只能播试听片段时，片段在整首歌里的起点；整首播放时为 -1。位置和时长都是片段的，歌词按整首歌的时间对齐（`App.lyrics.shiftMs` 已扣掉这个起点） |
 | `mode` | `Queue`／`PersonalFm`；`fmWaiting` 表示 FM 正在取下一首 |
 | `order`、`repeat`、`canNext`、`canPrevious` | 播放顺序（顺序／随机）、循环（关／列表／单曲） |
 | `playPause()`、`next()`、`previous()`、`seek(ms)`、`setVolume(v)`、`setOrder(o)`、`setRepeat(r)` | 意图 |
@@ -145,7 +146,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 - `timing`：`PlainText`／`Lines`／`Words`。逐字时间不可用时自动退回逐行。
 - `lines`（列表模型）：每行有 `startMs`、`endMs`、`text`、`translation`、`romanization`、`words`（`[{startMs, durationMs, text}]`）。原文为主轨，有增强版（逐字）时优先用增强版；翻译、音译按时间对齐到原文行，对齐规则在阶段 4 用示例歌词确定，写进 [pages/player.md](pages/player.md) §5.6。
 - `positionMs`：QML 把 `PlaybackClock` 的平滑位置逐帧写进来；`current`（最后一个已开始的行，间奏期间保持，开头前为 -1）与 `activeLines`（正在唱的行，可能多行重叠，间奏期间为空）只在跨行时变化。不依赖后端的歌词游标，行内的逐字进度由 QML 计算。
-- `hasTranslation`、`hasRomanization`、`japanese`（出现假名）、`hasRuby`（至少一行对齐成注音）、`offsetMs`、`setOffset(ms)`（本次运行内按歌曲记住，不存盘）、`shiftMs`（用户偏移加文件自带的偏移；行和字的时间 = 播放位置 − `shiftMs`）、`plainText(romanization, translation)`（整首歌词的纯文本，用于复制）、`retry()`。是否显示翻译、音译属于用户设置（`App.settings`）。
+- `hasTranslation`、`hasRomanization`、`japanese`（出现假名）、`hasRuby`（至少一行对齐成注音）、`offsetMs`、`setOffset(ms)`（本次运行内按歌曲记住，不存盘）、`shiftMs`（用户偏移加文件自带的偏移，减去试听片段的起点；行和字的时间 = 播放位置 − `shiftMs`）、`plainText(romanization, translation)`（整首歌词的纯文本，用于复制）、`retry()`。是否显示翻译、音译属于用户设置（`App.settings`）。
 - 数据源 `LyricsSource::lyrics(songKey)` 交出 `SongLyrics`：三种语言各有 standard、enhanced 两轨，原样保留（`types.h`）；选轨、对齐、注音都在 `CurrentLyrics` 里做（[pages/player.md](pages/player.md) §5.6、§6.3）。
 
 **`App.library`：喜欢与收藏状态**

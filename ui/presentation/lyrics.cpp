@@ -169,6 +169,13 @@ CurrentLyrics::CurrentLyrics(LyricsSource* source, Player* player, QObject* pare
         if (m_player->current().key != m_key)
             load();
     });
+    connect(m_player, &Player::changed, this, [this] {
+        if (m_player->previewStartMs() == m_previewStartMs)
+            return;
+        m_previewStartMs = m_player->previewStartMs();
+        emit shiftChanged();
+        updateCurrent();
+    });
     load();
 }
 

@@ -9,6 +9,8 @@
 #include <QObject>
 #include <QtQml/qqmlregistration.h>
 
+#include <algorithm>
+
 namespace cirrus::ui
 {
 
@@ -101,7 +103,8 @@ class CurrentLyrics : public QObject
     // User offset for this song in ms; positive shows the lyrics later.
     Q_PROPERTY(qint64 offsetMs READ offsetMs NOTIFY offsetChanged)
     // Line and word times are this much behind the playback position (the user offset
-    // plus the file's own): line time = positionMs - shiftMs.
+    // plus the file's own, less where a preview clip starts): line time = positionMs -
+    // shiftMs.
     Q_PROPERTY(qint64 shiftMs READ shiftMs NOTIFY shiftChanged)
     Q_PROPERTY(qint64 positionMs READ positionMs WRITE setPositionMs NOTIFY positionChanged)
     // The last line that has started (-1 before the first); stays through a gap.
@@ -120,7 +123,10 @@ class CurrentLyrics : public QObject
     [[nodiscard]] bool hasRuby() const { return m_hasRuby; }
     [[nodiscard]] LyricLinesModel* lines() const { return m_lines; }
     [[nodiscard]] qint64 offsetMs() const;
-    [[nodiscard]] qint64 shiftMs() const { return offsetMs() + m_trackOffsetMs; }
+    [[nodiscard]] qint64 shiftMs() const
+    {
+        return offsetMs() + m_trackOffsetMs - std::max<qint64>(m_previewStartMs, 0);
+    }
     [[nodiscard]] qint64 positionMs() const { return m_positionMs; }
     void setPositionMs(qint64 positionMs);
     [[nodiscard]] int current() const { return m_current; }
@@ -161,6 +167,7 @@ class CurrentLyrics : public QObject
     bool m_japanese = false;
     bool m_hasRuby = false;
     qint64 m_trackOffsetMs = 0;
+    qint64 m_previewStartMs = -1;     // the player's
     QHash<QString, qint64> m_offsets; // by song key, for this run
     qint64 m_positionMs = 0;
     int m_current = -1;
