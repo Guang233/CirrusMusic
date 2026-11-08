@@ -230,7 +230,7 @@ void Theme::requestProviderImage(quint64 generation, const QUrl& url)
     }
     constexpr int kEdge = 128;
     QQuickImageResponse* response =
-        provider->requestImageResponse(url.path().mid(1), QSize(kEdge, kEdge));
+        provider->requestImageResponse(url.path(QUrl::FullyEncoded).mid(1), QSize(kEdge, kEdge));
     m_response = response;
     connect(response, &QQuickImageResponse::finished, this, [this, response, generation] {
         if (m_response == response)

@@ -40,7 +40,7 @@ AppWindow {
     Binding {
         target: Theme
         property: "cover"
-        value: App.player.current.coverKey !== "" ? "image://cover/" + App.player.current.coverKey
+        value: App.player.current.coverKey !== "" ? "image://cover/" + encodeURIComponent(App.player.current.coverKey)
                                                   : ""
     }
     Binding {

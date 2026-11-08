@@ -150,7 +150,7 @@ Item {
             readonly property real side: Math.hypot(width, height) * 1.1
             readonly property string source: root.shaders && root.style === 1
                                              && App.player.current.coverKey !== ""
-                                             ? "image://cover/" + App.player.current.coverKey : ""
+                                             ? "image://cover/" + encodeURIComponent(App.player.current.coverKey) : ""
 
             // Two copies, the second smaller and offset, turning the other way.
             Image {

@@ -25,7 +25,7 @@ Item {
     property Image base: first
 
     function show(): void {
-        const url = coverKey !== "" ? "image://cover/" + coverKey : "";
+        const url = coverKey !== "" ? "image://cover/" + encodeURIComponent(coverKey) : "";
         if (fade.running) {
             fade.stop();
             if (second.opacity > first.opacity)
