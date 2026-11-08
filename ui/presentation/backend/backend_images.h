@@ -50,8 +50,14 @@ class BackendCache : public QObject, public CacheSource
 
     Request usage(Reply<CacheUsage> reply) override;
     Request clear(Reply<bool> reply) override;
+    Request audioUsage(Reply<qint64> reply) override;
+    Request clearAudio(Reply<qint64> reply) override;
+    void setAudioCapacity(qint64 bytes) override;
 
   private:
+    Request audio(bool clear, Reply<qint64> reply);
+
+    runtime::BackendRuntime& m_runtime;
     CacheQueue* m_queue;
 };
 

@@ -139,6 +139,10 @@ class AppSettings : public QObject
 
     // Recent searches, newest first (docs/ui/pages/search.md §2); only on this machine.
     CIRRUS_SETTING(QStringList, searchHistory, setSearchHistory, "search/history", QStringList())
+    // The song cache's limit in bytes, every account together (Settings › Storage);
+    // 0.5–50 GiB, default 2 GiB (docs/tasks/audio-engine.md §7 Q2).
+    CIRRUS_SETTING(qint64, audioCacheLimit, setAudioCacheLimit, "storage/audioCacheLimit",
+                   qint64(2) << 30)
 
   public:
     explicit AppSettings(QObject* parent = nullptr);

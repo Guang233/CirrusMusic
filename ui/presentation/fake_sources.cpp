@@ -2537,9 +2537,28 @@ class FakeCache : public QObject, public CacheSource
         });
     }
 
+    Request audioUsage(Reply<qint64> reply) override
+    {
+        return replyLater<qint64>(
+            this, m_controls, std::move(reply),
+            [this]() { return Outcome<qint64>{std::min(m_audioBytes, m_audioCapacity)}; }, false);
+    }
+
+    Request clearAudio(Reply<qint64> reply) override
+    {
+        return replyLater<qint64>(this, m_controls, std::move(reply), [this]() {
+            m_audioBytes = 0;
+            return Outcome<qint64>{qint64(0)};
+        });
+    }
+
+    void setAudioCapacity(qint64 bytes) override { m_audioCapacity = bytes; }
+
   private:
     FakeControls* m_controls;
-    qint64 m_bytes = 193'462'272; // 184.5 MiB
+    qint64 m_bytes = 193'462'272;        // 184.5 MiB
+    qint64 m_audioBytes = 1'395'864'371; // 1.3 GiB
+    qint64 m_audioCapacity = qint64(2) << 30;
 };
 
 // Sample lyrics (ui/samples/lyrics/<song>.json) split into the provider's tracks:

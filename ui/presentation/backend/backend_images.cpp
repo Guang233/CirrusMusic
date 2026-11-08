@@ -152,7 +152,8 @@ void BackendImages::finish(const QString& id, Outcome<QByteArray> outcome)
 }
 
 BackendCache::BackendCache(runtime::BackendRuntime& runtime, QObject* parent)
-    : QObject(parent), m_queue(new CacheQueue(runtime.facade(), runtime.resourceCache(), this))
+    : QObject(parent), m_runtime(runtime),
+      m_queue(new CacheQueue(runtime.facade(), runtime.resourceCache(), this))
 {
 }
 
@@ -203,5 +204,34 @@ Request BackendCache::clear(Reply<bool> reply)
             queue->cancel(ticket);
     });
 }
+
+Request BackendCache::audioUsage(Reply<qint64> reply) { return audio(false, std::move(reply)); }
+
+Request BackendCache::clearAudio(Reply<qint64> reply) { return audio(true, std::move(reply)); }
+
+Request BackendCache::audio(bool clear, Reply<qint64> reply)
+{
+    // The runtime always answers (-1 when the backend isn't running); canceling or
+    // destroying us only drops the answer.
+    auto live = std::make_shared<bool>(true);
+    auto answer = [live, self = QPointer<BackendCache>(this),
+                   reply = std::move(reply)](qint64 bytes) {
+        if (!*live || !self)
+            return;
+        Outcome<qint64> outcome;
+        if (bytes >= 0)
+            outcome.value = bytes;
+        else
+            outcome.failure = Failure{failure::Unknown, std::nullopt};
+        reply(std::move(outcome));
+    };
+    if (clear)
+        m_runtime.clearAudioCache(std::move(answer));
+    else
+        m_runtime.audioCacheUsage(std::move(answer));
+    return Request([live] { *live = false; });
+}
+
+void BackendCache::setAudioCapacity(qint64 bytes) { m_runtime.setAudioCacheCapacity(bytes); }
 
 } // namespace cirrus::ui

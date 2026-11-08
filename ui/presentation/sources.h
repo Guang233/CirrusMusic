@@ -167,14 +167,21 @@ class CommentSource
                                   Reply<bool> reply) = 0;
 };
 
-// The resource cache: covers, song details and lyrics kept on disk. Clearing it never
-// touches the session, the library or the listening history.
+// The resource cache (covers, song details and lyrics) and the song cache (songs
+// heard), kept on disk. Clearing them never touches the session, the library or the
+// listening history.
 class CacheSource
 {
   public:
     virtual ~CacheSource() = default;
     virtual Request usage(Reply<CacheUsage> reply) = 0;
     virtual Request clear(Reply<bool> reply) = 0;
+    // The song cache: bytes on disk for every account; clearing replies with the usage
+    // after it (a song being played goes once it stops).
+    virtual Request audioUsage(Reply<qint64> reply) = 0;
+    virtual Request clearAudio(Reply<qint64> reply) = 0;
+    // Its limit; lowering it removes the songs heard longest ago now.
+    virtual void setAudioCapacity(qint64 bytes) = 0;
 };
 
 // A song's lyrics, all languages and versions.
