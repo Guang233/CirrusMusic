@@ -179,19 +179,19 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::DailyHistorySongs:
         return ApiOperationContract{QStringLiteral("/api/discovery/recommend/songs/history/detail"),
-                                    Protocol::Weapi, ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::DailyRecommendedPlaylists:
         return ApiOperationContract{QStringLiteral("/api/v1/discovery/recommend/resource"),
                                     Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::RecommendedPlaylists:
         return ApiOperationContract{QStringLiteral("/api/personalized/playlist"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PlaylistList:
         return ApiOperationContract{QStringLiteral("/api/playlist/list"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PremiumPlaylists:
         return ApiOperationContract{QStringLiteral("/api/playlist/highquality/list"),
-                                    Protocol::Weapi, ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PlaylistCatalogue:
         return ApiOperationContract{QStringLiteral("/api/playlist/catalogue"), Protocol::Eapi,
                                     ResponseEncoding::Json, 1024 * 1024};
@@ -203,61 +203,61 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
     case ApiOperation::Charts:
         return ApiOperationContract{QStringLiteral("/api/toplist"), Protocol::Eapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::ChartsWithPreviews:
         return ApiOperationContract{QStringLiteral("/api/toplist/detail"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PodcastDetails:
         return ApiOperationContract{QStringLiteral("/api/djradio/v2/get"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::PodcastPrograms:
         return ApiOperationContract{QStringLiteral("/api/dj/program/byradio"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::ProgramDetails:
         return ApiOperationContract{QStringLiteral("/api/dj/program/detail"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::RecentPlaylists:
         return ApiOperationContract{QStringLiteral("/api/play-record/playlist/list"),
-                                    Protocol::Weapi, ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentAlbums:
         return ApiOperationContract{QStringLiteral("/api/play-record/album/list"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentPodcasts:
         return ApiOperationContract{QStringLiteral("/api/play-record/djradio/list"),
-                                    Protocol::Weapi, ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentVoices:
         return ApiOperationContract{QStringLiteral("/api/play-record/voice/list"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::RecentSongs:
         return ApiOperationContract{QStringLiteral("/api/play-record/song/list"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::ListeningRanking:
         return ApiOperationContract{QStringLiteral("/api/v1/play/record"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::MyPlaylists:
         return ApiOperationContract{QStringLiteral("/api/user/playlist"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::LikedSongIds:
         return ApiOperationContract{QStringLiteral("/api/song/like/get"), Protocol::Eapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SavedAlbums:
         return ApiOperationContract{QStringLiteral("/api/album/sublist"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SubscribedPodcasts:
         return ApiOperationContract{QStringLiteral("/api/djradio/get/subed"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::CloudSongs:
         return ApiOperationContract{QStringLiteral("/api/v1/cloud/get"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::CloudSongDetails:
         return ApiOperationContract{QStringLiteral("/api/v1/cloud/get/byids"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SavedArtists:
         return ApiOperationContract{QStringLiteral("/api/artist/sublist"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::DailyRecommendations:
         return ApiOperationContract{QStringLiteral("/api/v3/discovery/recommend/songs"),
-                                    Protocol::Weapi, ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    Protocol::Weapi, ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PersonalFm:
         return ApiOperationContract{QStringLiteral("/api/v1/radio/get"), Protocol::Weapi,
                                     ResponseEncoding::Json, 1024 * 1024};
@@ -275,7 +275,7 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
     case ApiOperation::ArtistSongs:
         return ApiOperationContract{QStringLiteral("/api/v1/artist/songs"), Protocol::Eapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::PlaylistDetails:
         return ApiOperationContract{QStringLiteral("/api/v6/playlist/detail"), Protocol::Eapi,
                                     ResponseEncoding::Json, 16 * 1024 * 1024};
@@ -311,10 +311,10 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     ResponseEncoding::EapiAutoJson, 2 * 1024 * 1024};
     case ApiOperation::SongDetails:
         return ApiOperationContract{QStringLiteral("/api/v3/song/detail"), Protocol::Weapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SongLyrics:
         return ApiOperationContract{QStringLiteral("/api/song/lyric/v1"), Protocol::Eapi,
-                                    ResponseEncoding::Json, 2 * 1024 * 1024};
+                                    ResponseEncoding::Json, 4 * 1024 * 1024};
     case ApiOperation::SongStream:
         return ApiOperationContract{QStringLiteral("/api/song/enhance/player/url/v1"),
                                     Protocol::Xeapi, ResponseEncoding::EapiAutoJson};
