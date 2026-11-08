@@ -1,7 +1,7 @@
 # 音频引擎与音频缓存（设计，待评审）
 
 - 日期：2026-11-08
-- 状态：**设计已评审（2026-11-08，§7 全部按推荐）**；阶段 A 通过（§6.1，维护者已确认听感与设备切换），[ADR-0008](../adr/0008-own-audio-engine.md) 已取代 ADR-0004；阶段 B 完成（§6.2），下一步阶段 C。
+- 状态：**设计已评审（2026-11-08，§7 全部按推荐）**；阶段 A 通过（§6.1，维护者已确认听感与设备切换），[ADR-0008](../adr/0008-own-audio-engine.md) 已取代 ADR-0004；阶段 B、C 完成（§6.2、§6.3），下一步阶段 D（预载与无缝），UI 第 6 步可以开始。
 - 起因：维护者 2026-11-08 决定"音频播放是最重要的功能，必须做好"：边下边播、预取下一首、持久音频缓存要做，无缝等音质能力是硬需求。这触发了 [ADR-0004](../adr/0004-playback-backend.md) 的复议条件（"gapless/DSP 被提升为硬需求"）。
 
 ## 1. 结论
@@ -165,6 +165,19 @@ PoC 在 `tools/audio-poc/`（CMake 选项 `CIRRUS_BUILD_AUDIO_POC`，默认关�
 - 容量默认 2 GB，按最后使用时间淘汰，正在用的不删；`clear()` 清当前分区或全部，正在用的文件关闭后删除；换分区时正在播放的流按 StaleContext 失败。
 - 目录规则同资源缓存（0700、上级不可被组／其他人写、文件 0600、不跟随符号链接），只在 Linux 上启用；其他平台或检查不过时一律走临时文件。
 - 测试 `tst_audio_store`（16 项，假 CDN `tests/support/fake_range_http.h`）：边下边读、二次播放不联网、拖动先下目标位置再补齐、服务器忽略 Range、错误的 Content-Range、过期后刷新地址与超时、重试与放弃、md5 不对不保留、淘汰、分区隔离与清除、取消唤醒阻塞的读取、预取开头被复用、没有 md5 不保留、拒绝不安全或过大的来源。
+
+## 6.3 阶段 C 结果（2026-11-08）
+
+`media::AudioEngine` 实现 `IPlaybackBackend`，运行时默认用它（`BackendWorker` 建 `AudioStore` 和引擎；测试注入的播放工厂不受影响）。`BackendConfig::audioCacheRoot` 由 `BackendHost` 设为 `~/.cache/Cirrus/audio`；会话的账号变化时切换缓存分区（游客共用 `guest` 分区，令牌刷新不切）。
+
+- 组成：`AudioDecoder`（FFmpeg 自定义 IO 读 `AudioStream`；按回包的格式只放行 mp3 或 flac 的解封装器和解码器，`codec_whitelist`/`format_whitelist`，不让 FFmpeg 探测其他格式；损坏的帧跳过）、`AudioResampler`、`AudioOutput`（`QAudioSink` 回调、0.5 秒环形缓冲、8 ms 渐变、音量平滑、默认设备变化时发信号）、`AudioEngine`（生产线程解码进环形缓冲；所有者线程每 100 ms 由已播放的帧算位置、发播放统计、判断播完）。
+- 事件与旧后端一致：打开后依次 Duration、Seekable、Volume、Ready；play/pause 排队发 State；Position；拖动生效时发 SeekConfirmed（值为目标位置）；试听片段到片段长度即 Ended；失败延后一轮发 Failure；`stop()` 同步收回，之后不再有任何事件。音量仍是线性幅度（与 `QAudioOutput` 相同）。
+- 拖动和停止会打断正在等下载的读取（`AudioStream::interrupt()`，挂起式标记：在打断之后才开始的读取也会返回；解码器被打断后读取回调立即失败直到 `resume()`）。这修掉了一个死锁：停止时所有者线程等生产线程结束，而生产线程在等下载，下载又跑在所有者线程上。
+- 暂停 300 ms 后挂起设备，播放时恢复。设备变化：从当前位置在新设备上重开（采样率不同就重建重采样）；没有设备时等下一次变化。
+- 真实后端实测（音量 0，游客《富士山下》试听）：加载→就绪→播放，位置每约 100 ms 前进；拖到 20 秒后接着走；29.4 秒正常结束；第一次播放下载并通过 md5 校验落盘，第二次直接用缓存文件。
+- 测试：`tst_audio_decoder`（8 项，不需要声卡：MP3/FLAC 帧数精确到 22050、拖动逐采样准确、声明格式不符拒绝、下载失败报下载的原因）；`tst_audio_engine`（7 项，真实输出、音量 0、无设备时跳过：事件顺序、播放到结束、拖动确认、`stop()` 后无事件、格式错误失败、新加载替换旧加载）；`tst_audio_store` 加了 `interrupt()` 一项（17 项）。合成样本在 `tests/fixtures/audio/`。
+
+还没做：旧的 `QtPlaybackBackend` 和 `MediaBuffer` 已不再组装，阶段 D 改接口时删掉；下载跟不上时没有"缓冲中"状态（位置停住、歌词跟着停）；存储设置里的音频缓存占用和清除随 UI 第 6 步接入。
 
 ## 7. 维护者的决定（2026-11-08）
 
