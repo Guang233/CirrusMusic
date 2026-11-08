@@ -59,7 +59,14 @@ class StreamTest : public QObject
         QCOMPARE(source.preview->startMs, 30500);
         QCOMPARE(source.preview->endMs, 60500);
         QVERIFY(source.validUntil.remainingTime() <= 1200000);
+        QVERIFY(source.md5.isEmpty()); // none given: nothing to key a cache on
         auto r = row();
+        r["md5"] = "8BE6391A4A129BE0AD9FEF58192DF3CC";
+        QCOMPARE(std::get<StreamSource>(map(r)).md5,
+                 QByteArray("8be6391a4a129be0ad9fef58192df3cc"));
+        r["md5"] = "not-a-digest"; // dropped, not a failure
+        QVERIFY(std::get<StreamSource>(map(r)).md5.isEmpty());
+        r = row();
         r["freeTrialInfo"] = QJsonValue::Null;
         result = map(r);
         QVERIFY(std::holds_alternative<StreamSource>(result));

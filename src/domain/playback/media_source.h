@@ -19,5 +19,8 @@ struct MediaSource {
     qint64 size = 0;
     QDeadlineTimer validUntil;
     std::optional<PreviewRange> preview;
+    // The provider's content digest (32 lowercase hex), empty when it gave none. Physical
+    // like the rest: it keys the audio cache and checks a finished file, nothing more.
+    QByteArray md5;
 };
 } // namespace cirrus::domain

@@ -115,6 +115,11 @@ target_link_libraries(tst_media PRIVATE cirrus_media Qt6::Test)
 add_test(NAME media COMMAND tst_media)
 set_tests_properties(media PROPERTIES TIMEOUT 30)
 
+qt_add_executable(tst_audio_store unit/audio_store_test.cpp)
+target_link_libraries(tst_audio_store PRIVATE cirrus_media Qt6::Test)
+add_test(NAME audio_store COMMAND tst_audio_store)
+set_tests_properties(audio_store PROPERTIES TIMEOUT 60)
+
 qt_add_executable(tst_listening unit/listening_test.cpp)
 target_link_libraries(tst_listening PRIVATE cirrus_application Qt6::Test)
 add_test(NAME listening COMMAND tst_listening)

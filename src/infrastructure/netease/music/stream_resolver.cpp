@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QThread>
 #include <QVariant>
+#include <algorithm>
 #include <cmath>
 
 namespace cirrus::netease
@@ -82,6 +83,12 @@ StreamResult mapStreamResponse(const StreamQuery& query, const QJsonObject& obje
         return PlaybackFailure{PlaybackError::UnsupportedFormat};
     StreamSource source{query.song, *url,  quality,
                         format,     *size, QDeadlineTimer(*ttl * 1000 - elapsed)};
+    // Optional; a malformed digest is dropped (no cache), not a failure.
+    const auto md5 = row.value(QStringLiteral("md5")).toString().toLower().toLatin1();
+    if (md5.size() == 32 && std::all_of(md5.begin(), md5.end(), [](char c) {
+            return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+        }))
+        source.md5 = md5;
     const auto preview = row.value(QStringLiteral("freeTrialInfo"));
     if (!preview.isUndefined() && !preview.isNull()) {
         if (!preview.isObject())
