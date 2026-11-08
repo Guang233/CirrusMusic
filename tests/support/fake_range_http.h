@@ -19,10 +19,12 @@ struct RangeServer {
     bool honorRange = true;
     qsizetype blockBytes = 64 * 1024;
     int intervalMs = 0;
-    QList<int> statuses;      // forced status for the next requests (consumed in order)
-    QByteArray contentRange;  // non-empty: sent instead of the right one
-    QList<QByteArray> ranges; // the Range header of every request
+    QList<int> statuses;         // forced status for the next requests (consumed in order)
+    QList<QByteArray> locations; // Location of the next forced 3xx statuses (in order)
+    QByteArray contentRange;     // non-empty: sent instead of the right one
+    QList<QByteArray> ranges;    // the Range header of every request
     QList<QUrl> urls;
+    QList<QNetworkRequest> requests;
 };
 
 class RangeReply : public QNetworkReply
@@ -37,6 +39,7 @@ class RangeReply : public QNetworkReply
         const auto range = request.rawHeader("Range");
         server.ranges.append(range);
         server.urls.append(request.url());
+        server.requests.append(request);
         int status = server.statuses.isEmpty() ? 0 : server.statuses.takeFirst();
         qint64 start = 0, end = server.body.size() - 1;
         if (range.startsWith("bytes=")) {
@@ -61,6 +64,8 @@ class RangeReply : public QNetworkReply
         }
         if (status == 200 || status == 206)
             headers.append("Content-Length", QByteArray::number(m_data.size()));
+        if (status >= 300 && status < 400 && !server.locations.isEmpty())
+            headers.append("Location", server.locations.takeFirst());
         m_status = status;
         m_headers = headers;
         m_block = server.blockBytes;

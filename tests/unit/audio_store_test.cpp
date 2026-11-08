@@ -349,6 +349,68 @@ class AudioStoreTest : public QObject
         QCOMPARE(s->usage(), 0);
     }
 
+    // The download rules (docs/tasks/audio-engine.md §5): no cookies or account headers,
+    // redirects handled by us and kept on the CDN over HTTPS.
+    void requestsCarryNoCredentials()
+    {
+        test::RangeServer server{noise(Chunk * 2, 21)};
+        auto s = store(server);
+        auto read = readAsync(s->open(source(server.body)));
+        QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+        QCOMPARE(read.get(), server.body);
+        QVERIFY(!server.requests.isEmpty());
+        for (const auto& request : std::as_const(server.requests)) {
+            QVERIFY(!request.hasRawHeader("Cookie"));
+            QVERIFY(!request.hasRawHeader("Authorization"));
+            QCOMPARE(request.attribute(QNetworkRequest::CookieLoadControlAttribute).toInt(),
+                     int(QNetworkRequest::Manual));
+            QCOMPARE(request.attribute(QNetworkRequest::CookieSaveControlAttribute).toInt(),
+                     int(QNetworkRequest::Manual));
+            QCOMPARE(request.attribute(QNetworkRequest::RedirectPolicyAttribute).toInt(),
+                     int(QNetworkRequest::ManualRedirectPolicy));
+        }
+    }
+
+    void redirectsStayOnTheCdn()
+    {
+        test::RangeServer server{noise(Chunk * 2, 22)};
+        server.statuses = {302};
+        server.locations = {"https://m802.music.126.net/next.mp3"};
+        auto s = store(server);
+        auto read = readAsync(s->open(source(server.body)));
+        QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+        QCOMPARE(read.get(), server.body);
+        QCOMPARE(server.urls.value(1), QUrl(QStringLiteral("https://m802.music.126.net/next.mp3")));
+        // A redirect to plain HTTP (a downgrade) or off the CDN is refused.
+        for (const QByteArray location : {QByteArray("http://m802.music.126.net/next.mp3"),
+                                          QByteArray("https://example.com/next.mp3")}) {
+            test::RangeServer other{noise(Chunk, 23)};
+            other.statuses = {302};
+            other.locations = {location};
+            auto refused = store(other);
+            auto stream = refused->open(source(other.body, true, "b.mp3"));
+            auto failed = readAsync(stream);
+            QTRY_VERIFY_WITH_TIMEOUT(ready(failed), 5000);
+            QCOMPARE(failed.get(), QByteArray("FAILED"));
+            QCOMPARE(stream->failure(), std::optional(PlaybackError::UnsafeSource));
+            QCOMPARE(other.urls.size(), 1);
+        }
+    }
+
+    void redirectLoopIsBounded()
+    {
+        test::RangeServer server{noise(Chunk, 24)};
+        server.statuses = {302, 302, 302, 302, 302};
+        server.locations = {"/loop", "/loop", "/loop", "/loop", "/loop"};
+        auto s = store(server);
+        auto stream = s->open(source(server.body));
+        auto read = readAsync(stream);
+        QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+        QCOMPARE(read.get(), QByteArray("FAILED"));
+        QCOMPARE(stream->failure(), std::optional(PlaybackError::UnsafeSource));
+        QCOMPARE(server.urls.size(), 4); // the first request and three redirects
+    }
+
     void refusesUnsafeOrHugeSources()
     {
         test::RangeServer server{noise(1024, 15)};

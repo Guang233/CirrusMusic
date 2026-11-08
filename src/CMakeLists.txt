@@ -384,12 +384,8 @@ target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_nete
 
 add_library(cirrus_media STATIC
     infrastructure/media/media_source_policy.h
-    infrastructure/media/media_buffer.h
-    infrastructure/media/media_buffer.cpp
     infrastructure/media/audio_store.h
     infrastructure/media/audio_store.cpp
-    infrastructure/media/qt_playback_backend.h
-    infrastructure/media/qt_playback_backend.cpp
     infrastructure/media/audio_decoder.h
     infrastructure/media/audio_decoder.cpp
     infrastructure/media/audio_output.h
