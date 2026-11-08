@@ -7,7 +7,7 @@
 
 把应用从假数据换成真实后端：`main.cpp` 组装 `BackendRuntime`，展示层的每个数据源接口（`ui/presentation/sources.h`）有一个包装后端的实现。页面、ViewModel、QML 不改或只做小改；Gallery 继续只用假数据。
 
-不在本阶段：后端新功能（§6 列出的缺口除外，且要先经你决定）、听歌统计面板、Windows／macOS 验证。MPRIS 已在界面层接上（2026-11-08，pages/shell.md §7）。
+不在本阶段：后端新功能（§6 列出的缺口除外，且要先经你决定）、听歌统计面板、Windows／macOS 验证。MPRIS 已在界面层接上，Windows SMTC 和 macOS Now Playing 已写未验证（2026-11-08，pages/shell.md §7）。
 
 ## 2. 结构
 
@@ -247,3 +247,4 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 测试脚本现在也把 `XDG_CONFIG_HOME` 指到 `build/linux-dev-local/xdg/config`（之前没设，测试时的搜索会写进维护者自己的设置）。
 - **记住所有选择（2026-11-08，维护者要求）**：音量、播放顺序和循环改成全局设置（`App.settings.volume`／`playOrder`／`playRepeat`），`Player` 启动时交给播放源；播放源的顺序或循环和设置不一样时（例如恢复出来的旧队列）改回设置的。另外记住歌词偏移、窗口大小和最大化、导航栏展开、音乐库和发现页的标签（pages/settings.md §1 末尾）。离屏验证：改音量、顺序、循环、歌词偏移后重启都还在。
   - FFmpeg 的警告不再输出（MP3 无缝裁剪每首都报一次 “Could not update timestamps for skipped samples”），只留错误。
+- **系统媒体控件（2026-11-08）**：MPRIS（Linux）由 `App.player` 驱动，已用 `playerctl` 验证；Windows SMTC、macOS Now Playing 按维护者要求先写上，没有在对应系统上编译过，等维护者找设备验证（pages/shell.md §7）。

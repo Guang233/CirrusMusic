@@ -144,8 +144,11 @@
   - 根接口：Identity「Cirrus」、DesktopEntry `com.guang233.Cirrus`、CanRaise（Raise 显示并激活窗口，同托盘）、CanQuit（Quit 走正常退出流程）。
   - 播放器接口：状态（加载中算 Playing，失败算 Paused，没有歌或已结束算 Stopped）、元数据（标题、歌手、专辑、时长、`mpris:artUrl` 为图片主机的 512 像素封面）、音量、随机、循环（None／Track／Playlist）都可读写；Play／Pause／PlayPause／Stop（等同暂停）／Next／Previous／Seek（超过结尾就下一首）／SetPosition（只认当前歌曲的 trackid）。属性变化发 `PropertiesChanged`（Position 不发，由客户端外推），位置跳变超过 1 秒发 `Seeked`。
   - 离屏验证（真实会话总线，`playerctl`）：元数据和封面网址、暂停／播放、跳到 20 秒、随机、下一首／上一首、音量、`Seeked`；启动恢复的队列显示为暂停，`playerctl play` 接着播。GNOME／KDE 上的媒体键和面板显示待维护者在桌面上看。
-  - Windows SMTC、macOS Now Playing 同样要由 `App.player` 驱动，等有对应机器时做。
+  - **Windows SMTC、macOS Now Playing（2026-11-08，已写未验证）**：维护者决定先写上，最后找设备测。和 MPRIS 一样由 `App.player` 驱动；三者共用 `ui/app/media_state.h`（状态映射、封面网址、当前位置、播放／暂停／跳转命令，以及把系统线程上的命令转回 Qt 线程的 `Mailbox`）。
+    - SMTC：`ui/app/smtc.{h,cpp}`，CMake 选项 `CIRRUS_UI_SMTC`（Windows 默认开，需要 MSVC 和带 C++/WinRT 的 Windows SDK，链接 `windowsapp`、`runtimeobject`）。窗口创建后用 `ISystemMediaTransportControlsInterop::GetForWindow` 绑定主窗口。显示标题、歌手、专辑和 300 像素封面（`CreateFromUri`，系统自己下载）；状态（没有歌为 Closed）、播放／暂停／上一首／下一首、时间轴（可跳转时 MaxSeekTime 为时长，播放中每 5 秒刷新一次位置）、随机、循环（None／Track／List）；Stop 按暂停处理。
+    - Now Playing：`ui/app/now_playing.{h,mm}`，CMake 选项 `CIRRUS_UI_NOW_PLAYING`（macOS 默认开，Objective-C++ 加 ARC，链接 AppKit、MediaPlayer）。`MPNowPlayingInfoCenter` 显示标题、歌手、专辑、时长、已播时间和速率（系统据此走时），封面用 512 像素图自己下载成 `MPMediaItemArtwork`（换歌时先去掉旧封面）；`MPRemoteCommandCenter` 接播放、暂停、切换、停止（暂停）、上一首、下一首、跳转、随机、循环，按能否操作启用。
+    - 两边都只在 Linux 上做过格式检查，没有编译过；到对应机器上先编译，再按 MPRIS 的清单看媒体键、系统面板和锁屏。
 
-代码：`ui/app/desktop.*`（QML 单例 `Desktop`）、`tray.*`、`single_instance.*`、`gpu_preference.*`、`app_icon.h`、`CloseDialog.qml`；`Main.qml` 的 `onClosing`；`AppSettings` 加 `closeAction`、`preferDiscreteGpu`。
+代码：`ui/app/desktop.*`（QML 单例 `Desktop`）、`tray.*`、`mpris.*`、`smtc.*`、`now_playing.*`、`media_state.h`、`single_instance.*`、`gpu_preference.*`、`app_icon.h`、`CloseDialog.qml`；`Main.qml` 的 `onClosing`；`AppSettings` 加 `closeAction`、`preferDiscreteGpu`。
 
 未验证：真实托盘（离屏平台没有托盘）、Wayland 激活令牌、独显实际是否用上和休眠（可看 `/sys/bus/pci/devices/0000:01:00.0/power/runtime_status`，`nvidia-smi` 里应有本进程）、Windows／macOS。
