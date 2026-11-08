@@ -2,6 +2,8 @@
 
 #include "application/backend/backend_facade.h"
 
+#include <QHash>
+
 #include <functional>
 #include <memory>
 
@@ -76,8 +78,23 @@ class BackendRuntime final : public QObject
     {
         return m_resourceQueries;
     }
+    // The song cache (media::AudioStore, on the backend thread): bytes on disk for every
+    // account. Replies come later on this object's thread; -1 while the backend isn't
+    // running. Clearing replies with the usage after it (files being played go when they
+    // close).
+    void audioCacheUsage(std::function<void(qint64 bytes)> reply);
+    void clearAudioCache(std::function<void(qint64 bytes)> reply);
+    // Applies now, and to the store the backend creates when it starts.
+    void setAudioCacheCapacity(qint64 bytes);
+
+  signals:
+    // Internal: carries the calls above to the backend thread.
+    void audioCacheRequested(quint64 id, int action, qint64 value);
 
   private:
+    void audioCacheDelivered(quint64 id, qint64 bytes);
+    QHash<quint64, std::function<void(qint64)>> m_audioReplies;
+    quint64 m_audioRequest = 0;
     application::BackendFacade* m_facade = nullptr;
     application::PersonalFmSource* m_fm = nullptr;
     application::ListeningSession* m_listening = nullptr;

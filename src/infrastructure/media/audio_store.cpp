@@ -923,6 +923,13 @@ void AudioStore::enforceCapacity()
     }
 }
 
+void AudioStore::setCapacity(qint64 bytes)
+{
+    m_options.capacityBytes = std::max<qint64>(bytes, 0);
+    if (m_rootUsable)
+        enforceCapacity();
+}
+
 qint64 AudioStore::usage() const
 {
     qint64 total = 0;

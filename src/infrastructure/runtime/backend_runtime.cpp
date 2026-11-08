@@ -108,6 +108,19 @@ class BackendWorker final : public QObject
             emit cacheDelivered(result);
         }
     }
+    // BackendRuntime::audioCache*: 0 usage, 1 clear, 2 set the capacity.
+    void audioCache(quint64 id, int action, qint64 value)
+    {
+        if (action == 2) {
+            m_audioCapacity = value;
+            if (m_audioStore)
+                m_audioStore->setCapacity(value);
+            return;
+        }
+        if (action == 1 && m_audioStore && !m_closing)
+            m_audioStore->clear(true); // every account's: one thing to clear on this computer
+        emit audioCacheDelivered(id, m_audioStore && !m_closing ? m_audioStore->usage() : -1);
+    }
     void cancelCache(quint64 id)
     {
         if (m_cache)
@@ -378,6 +391,7 @@ class BackendWorker final : public QObject
     void collectionDelivered(cirrus::application::CollectionDelivery delivery);
     void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
     void togetherDelivered(cirrus::application::TogetherDelivery delivery);
+    void audioCacheDelivered(quint64 id, qint64 bytes);
     void listeningStateDelivered(cirrus::storage::ListeningStateResult result);
     void cacheDelivered(cirrus::domain::CacheResult result);
 
@@ -524,6 +538,8 @@ class BackendWorker final : public QObject
         } else {
             media::AudioStore::Options audio;
             audio.root = m_config.audioCacheRoot;
+            if (m_audioCapacity > 0)
+                audio.capacityBytes = m_audioCapacity;
             m_audioStore = std::make_unique<media::AudioStore>(audio);
             m_player = std::make_unique<media::AudioEngine>(*m_audioStore);
         }
@@ -686,6 +702,7 @@ class BackendWorker final : public QObject
     QHash<quint64, TogetherCommand> m_togetherRequests;
     std::unique_ptr<media::AudioStore> m_audioStore; // before m_player: outlives the engine
     QString m_audioPartition;
+    qint64 m_audioCapacity = 0; // 0: the store's default
     std::unique_ptr<IPlaybackBackend> m_player;
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;
@@ -777,6 +794,10 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             &BackendFacade::deliverCollection, Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::playbackRequested, worker, &BackendWorker::playback,
             Qt::QueuedConnection);
+    connect(this, &BackendRuntime::audioCacheRequested, worker, &BackendWorker::audioCache,
+            Qt::QueuedConnection);
+    connect(worker, &BackendWorker::audioCacheDelivered, this, &BackendRuntime::audioCacheDelivered,
+            Qt::QueuedConnection);
     connect(worker, &BackendWorker::playbackDelivered, m_facade, &BackendFacade::deliverPlayback,
             Qt::QueuedConnection);
     connect(
@@ -793,6 +814,28 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
         Qt::QueuedConnection);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start(); // idle event loop only; no IO until explicit facade.start()
+}
+
+void BackendRuntime::audioCacheUsage(std::function<void(qint64)> reply)
+{
+    const auto id = ++m_audioRequest;
+    m_audioReplies.insert(id, std::move(reply));
+    emit audioCacheRequested(id, 0, 0);
+}
+
+void BackendRuntime::clearAudioCache(std::function<void(qint64)> reply)
+{
+    const auto id = ++m_audioRequest;
+    m_audioReplies.insert(id, std::move(reply));
+    emit audioCacheRequested(id, 1, 0);
+}
+
+void BackendRuntime::setAudioCacheCapacity(qint64 bytes) { emit audioCacheRequested(0, 2, bytes); }
+
+void BackendRuntime::audioCacheDelivered(quint64 id, qint64 bytes)
+{
+    if (auto reply = m_audioReplies.take(id))
+        reply(bytes);
 }
 
 BackendRuntime::~BackendRuntime()

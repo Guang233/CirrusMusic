@@ -255,6 +255,31 @@ class AudioStoreTest : public QObject
         QVERIFY(server.ranges.size() > requests);
     }
 
+    void loweringTheCapacityEvictsNowButKeepsOpenFiles()
+    {
+        test::RangeServer server{noise(Chunk * 4, 30)};
+        auto s = store(server);
+        std::shared_ptr<AudioStream> open;
+        for (int i = 0; i < 3; ++i) {
+            server.body = noise(Chunk * 4, 31 + i);
+            auto stream = s->open(source(server.body, true,
+                                         i == 0   ? "1.mp3"
+                                         : i == 1 ? "2.mp3"
+                                                  : "3.mp3"));
+            auto read = readAsync(stream);
+            QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+            QTRY_VERIFY_WITH_TIMEOUT(stream->complete(), 5000);
+            if (i == 0)
+                open = stream; // the oldest, still playing
+            QTest::qWait(20);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(s->usage(), Chunk * 12, 5000);
+        // (The last one's download is let go a moment after its stream closes.)
+        QTRY_COMPARE_WITH_TIMEOUT((s->setCapacity(Chunk * 4), s->usage()), Chunk * 4, 5000);
+        QCOMPARE(s->capacity(), Chunk * 4); // only the open one is left
+        QVERIFY(open->complete());
+    }
+
     void partitionsAreSeparate()
     {
         test::RangeServer server{noise(Chunk * 2, 11)};

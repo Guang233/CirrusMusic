@@ -104,7 +104,11 @@ class AudioStore : public QObject
     // A new signed address for the stream that asked for one (urlNeeded).
     void refresh(quint64 stream, QUrl url, QDeadlineTimer validUntil);
 
-    [[nodiscard]] qint64 usage() const;     // bytes on disk, all partitions
+    [[nodiscard]] qint64 usage() const; // bytes on disk, all partitions
+    // The limit for all partitions together; lowering it evicts the least recently
+    // used files now (open ones stay).
+    void setCapacity(qint64 bytes);
+    [[nodiscard]] qint64 capacity() const { return m_options.capacityBytes; }
     void clear(bool allPartitions = false); // open streams' files go when they close
 
   signals:
