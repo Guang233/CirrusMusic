@@ -10,7 +10,7 @@
 
 | 原生operation | 固定逻辑路径／协议 | 输入及边界 |
 | --- | --- | --- |
-| SearchSongs | `/api/search/get`，eapi | 固定type=1，只查歌曲；关键词1～256 UTF-16单元且非空白，limit 1～100，offset 0～10000；响应≤2 MiB |
+| SearchSongs | `/api/cloudsearch/pc`，eapi（2026-11-08 起改用 PC 客户端的 `/api/cloudsearch/pc`，参考 cloudsearch.js，加 `total:true`；返回键相同，单曲直接带专辑封面） | 固定type=1、total:true，只查歌曲；关键词1～256 UTF-16单元且非空白，limit 1～100，offset 0～10000；响应≤2 MiB |
 | SongDetails | `/api/v3/song/detail`，weapi | 1～100个不重复正整数ID；规范十进制字符串，最大signed-64-bit；响应≤4 MiB |
 | SongLyrics | `/api/song/lyric/v1`，eapi | 一个歌曲ID；cp=false，tv/lv/rv/kv/yv/ytv/yrv均为0；响应≤4 MiB |
 

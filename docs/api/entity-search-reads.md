@@ -24,9 +24,11 @@ quint64 BackendFacade::searchVoices(SearchPage query);
 
 | operation | 网易云逻辑路径 | 业务payload／编码 |
 | --- | --- | --- |
-| SearchAlbums | `/api/search/get` | s、type:10、limit、offset；eapi／JSON |
-| SearchArtists | `/api/search/get` | s、type:100、limit、offset；eapi／JSON |
-| SearchPlaylists | `/api/search/get` | s、type:1000、limit、offset；eapi／JSON |
+| SearchAlbums | `/api/cloudsearch/pc` | s、type:10、limit、offset、total:true；eapi／JSON |
+| SearchArtists | `/api/cloudsearch/pc` | s、type:100、limit、offset、total:true；eapi／JSON |
+| SearchPlaylists | `/api/cloudsearch/pc` | s、type:1000、limit、offset、total:true；eapi／JSON |
+
+专辑／歌手／歌单三种（和单曲）2026-11-08 从 `/api/search/get` 改为 PC 客户端用的 `/api/cloudsearch/pc`（维护者同意；参考 cloudsearch.js）：参数只多 `total:true`，返回的 `result.albums/albumCount`、`artists/artistCount`、`playlists/playlistCount`、`songs/songCount` 与原映射一致，响应上限仍 2 MiB。单曲是新格式（ar/al/dt），已有映射兼容，直接带专辑封面。
 | SearchPodcasts | `/api/search/voicelist/get` | keyword、scene:normal、limit、offset、e_r:true；eapi／EapiAutoJson |
 | SearchVoices | `/api/search/voice/get` | keyword、scene:normal、limit、offset；eapi／JSON |
 

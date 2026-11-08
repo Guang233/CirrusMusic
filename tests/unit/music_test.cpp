@@ -232,7 +232,7 @@ void MusicTest::nativeQueryChain()
     QVERIFY(service.request(token, SongSearch{QStringLiteral("fixture"), 2, 0}) != 0);
     QTRY_COMPARE(done.size(), 1);
     QVERIFY(std::holds_alternative<SongSearchPage>(resultAt(done)));
-    QCOMPARE(http->requests.first().url().path(), QStringLiteral("/eapi/search/get"));
+    QCOMPARE(http->requests.first().url().path(), QStringLiteral("/eapi/cloudsearch/pc"));
     QVERIFY(service.request(token, DetailQuery{{{QStringLiteral("1")}}}) != 0);
     QTRY_COMPARE(done.size(), 2);
     QVERIFY(std::holds_alternative<SongDetails>(resultAt(done, 1)));

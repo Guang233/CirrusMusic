@@ -126,7 +126,7 @@ class EntitySearchTest : public QObject
     }
     void payloadsAndClosedProfiles()
     {
-        const QStringList paths{"/api/search/get", "/api/search/get", "/api/search/get",
+        const QStringList paths{"/api/cloudsearch/pc", "/api/cloudsearch/pc", "/api/cloudsearch/pc",
                                 "/api/search/voicelist/get", "/api/search/voice/get"};
         for (int i = 0; i < 5; ++i) {
             const auto q = queries()[i];

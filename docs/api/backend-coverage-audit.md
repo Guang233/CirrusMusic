@@ -126,7 +126,7 @@
 | 日推dislike | recommend_songs_dislike=Weapi resId/resType4/sceneType1 | 原日期/批次成员来源、原token与四结果另设计，不默认自动刷新、伪历史来源 |
 | 评论history/举报 | user_comment_history/comment_report | 未接；账号history消耗/隐私和举报明确写合同，不顺带通知、hug或社交 |
 | 未接登录/权益分支 | refresh/server logout、VIP等 | QR/restore/local signOut已有；手机验证码／手机密码／邮箱密码登录与发送验证码已按维护者要求接入（[credential-login.md](credential-login.md)，2026-11-07）；不补refresh/remote logout或将Cookie=auth |
-| 搜索替代分支 | cloudsearch/search_default/search_match/search_suggest_pc；scoped playlist未证 | 原封闭search/suggestion已有；mobile/PC/default/multi-match目前不自动扩入，scoped仍待补证 |
+| 搜索替代分支 | search_default/search_match/search_suggest_pc；scoped playlist未证 | 单曲／专辑／歌手／歌单搜索已改用cloudsearch/pc（2026-11-08，维护者同意）；mobile/PC/default/multi-match目前不自动扩入，scoped仍待补证 |
 | lyrics/url/availability旧分支 | lyric旧版、song_url、check_music、download相关6模块 | 已有新lyrics/XEAPI实际source；不legacy downgrade/资格探测/forwarding/unlocking或假版权 |
 | playlist包装/组合 | playlist_track_all、track_add/delete/tracks、合并update/playcount | playlistSongs与多型mutation已有组合/显式动作；不能把loaded page当全量或伪上报来源/atomic |
 | whole playlist/cloud/spoken/Together full | v2 token；cloud写/track；消费binding；IM等 | **P/G原暂停继续**，不因此恢复SDK/host fallback/API或补假入口 |
@@ -210,7 +210,7 @@ complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类�
 
 | Operation | 协议 | logical path模板 |
 | --- | --- | --- |
-| `SearchSongs` | E | `/api/search/get` |
+| `SearchSongs` | E | `/api/cloudsearch/pc`（原 `/api/search/get`，2026-11-08） |
 | `SongDetails` | W | `/api/v3/song/detail` |
 | `SongLyrics` | E | `/api/song/lyric/v1` |
 | `SongStream` | X | `/api/song/enhance/player/url/v1` |
@@ -277,9 +277,9 @@ complexWiki仅data.blocks6/rnData前2块key/type观察，原Song绑定／块类�
 
 | Operation | 协议 | logical path模板 |
 | --- | --- | --- |
-| `SearchAlbums` | E | `/api/search/get` |
-| `SearchArtists` | E | `/api/search/get` |
-| `SearchPlaylists` | E | `/api/search/get` |
+| `SearchAlbums` | E | `/api/cloudsearch/pc`（原 `/api/search/get`，2026-11-08） |
+| `SearchArtists` | E | `/api/cloudsearch/pc`（原 `/api/search/get`，2026-11-08） |
+| `SearchPlaylists` | E | `/api/cloudsearch/pc`（原 `/api/search/get`，2026-11-08） |
 | `SearchPodcasts` | E | `/api/search/voicelist/get` |
 | `SearchVoices` | E | `/api/search/voice/get` |
 
