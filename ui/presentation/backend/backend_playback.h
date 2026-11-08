@@ -7,12 +7,14 @@
 #include <QHash>
 #include <QObject>
 #include <QPointer>
+#include <QTimer>
 #include <QUuid>
 
 namespace cirrus::application
 {
+class BackendFacade;
 class ListeningSession;
-}
+} // namespace cirrus::application
 namespace cirrus::cache
 {
 class CachedMusicQueryService;
@@ -56,8 +58,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     void seek(qint64 positionMs) override;
     void playAt(int index) override;
     void removeAt(int index) override;
-    // Not in the backend yet (integration.md §6 D3).
-    void move(int, int) override {}
+    void move(int from, int to) override;
     void setVolume(double volume) override;
     void setOrder(playback::Order order) override;
     void setRepeat(playback::Repeat repeat) override;
@@ -70,8 +71,35 @@ class BackendPlayback : public QObject, public PlaybackSource
     // The entry id at `index` of the snapshot's queue, null outside it.
     [[nodiscard]] QUuid entryAt(int index) const;
     void fetchDetails(const QString& key);
+    // The song's details when known (asked for when not), else just its key.
+    SongInfo songInfo(const QString& key);
+    // What played last, while nothing plays (keep(), showKept()); replay() plays it again.
+    void keep(qint64 now);
+    void showKept(PlaybackSnapshot& next, qint64 now) const;
+    [[nodiscard]] bool showingKept() const;
+    void replay(int index);
+    // After replay(): to where it was, once the song can seek.
+    void seekWhereKept(const domain::PlaybackSnapshot& play);
+    // Signed in or a guest, not in the middle of a change.
+    [[nodiscard]] bool settled() const;
+    [[nodiscard]] bool canResume() const;
+    [[nodiscard]] int stepped(int step) const;
+
+    // What played last, so the mini player never goes away once something played: a
+    // session change (signing in or out) retires the backend's queue and stops it, and
+    // the queue can be emptied.
+    struct Kept {
+        QStringList keys; // play order; empty when the queue was emptied
+        int index = -1;
+        SongInfo current;
+        qint64 songPositionMs = 0; // on the song's clock (a preview's start added)
+        qint64 durationMs = -1;
+        qint64 previewStartMs = -1;
+        bool resume = false; // playing when a session change stopped it
+    };
 
     QPointer<application::ListeningSession> m_session;
+    QPointer<application::BackendFacade> m_facade;
     CatalogSource& m_catalog;
     std::function<void()> m_changed;
     PlaybackSnapshot m_state;
@@ -86,6 +114,12 @@ class BackendPlayback : public QObject, public PlaybackSource
     bool m_detailsArrived = false;
     std::optional<double> m_volume; // the user's, once set
     bool m_notifyPending = false;
+    bool m_live = false;     // something loaded (or Personal FM waiting)
+    bool m_removing = false; // in removeAt(): a stop now is the user's
+    QTimer m_resume;
+    std::optional<Kept> m_kept;
+    QString m_seekKey; // replay()'s song and where on its clock
+    qint64 m_seekSongMs = 0;
 };
 
 // Lyrics: the playing song's from the session, which fetches them anyway (waiting

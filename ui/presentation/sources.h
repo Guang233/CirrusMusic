@@ -239,7 +239,8 @@ class PlaybackSource
     [[nodiscard]] virtual bool canPlayVoices() const = 0;
     virtual void playPause() = 0;
     virtual void next() = 0;
-    // Back to the start of the song when past its first seconds, else the previous one.
+    // The song before in play order (wrapping with repeat all); Personal FM: back to the
+    // start of the song.
     virtual void previous() = 0;
     virtual void seek(qint64 positionMs) = 0;
     // Plays the entry `index` of the snapshot's queue, keeping the queue and its order.

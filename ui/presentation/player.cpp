@@ -168,7 +168,10 @@ void Player::removeAt(int index)
     // The rows change now; the snapshot that follows then matches them (no reset).
     m_queue->removeAt(index);
     m_snapshot.queue.removeAt(index);
+    if (index < m_snapshot.queueIndex)
+        --m_snapshot.queueIndex;
     m_source->removeAt(index);
+    emit changed();
 }
 
 void Player::moveQueue(int from, int to)
@@ -179,7 +182,16 @@ void Player::moveQueue(int from, int to)
         return;
     m_queue->moveRow(from, to);
     m_snapshot.queue.move(from, to);
+    // The current song moves with its row.
+    int& current = m_snapshot.queueIndex;
+    if (from == current)
+        current = to;
+    else if (from < current && to >= current)
+        --current;
+    else if (from > current && to <= current)
+        ++current;
     m_source->move(from, to);
+    emit changed();
 }
 
 void Player::ensureQueueLoaded(int first, int last)

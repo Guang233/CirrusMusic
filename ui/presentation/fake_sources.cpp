@@ -1919,16 +1919,12 @@ class FakePlayback : public QObject, public PlaybackSource
     {
         if (m_sequence.isEmpty() || m_state.mode == playback::PersonalFm)
             return;
-        const bool started =
-            m_state.status == playback::Playing || m_state.status == playback::Paused;
-        if (started && position() > kRestartWithinMs) {
-            seek(0);
-            return;
-        }
         if (m_pos > 0)
             --m_pos;
-        else if (m_state.repeat != playback::RepeatOff)
+        else if (m_state.repeat != playback::RepeatOff && m_sequence.size() > 1)
             m_pos = int(m_sequence.size()) - 1;
+        else
+            return;
         start();
     }
 
@@ -2032,7 +2028,6 @@ class FakePlayback : public QObject, public PlaybackSource
 
   private:
     static constexpr qint64 kUnknownLengthMs = 200'000;
-    static constexpr qint64 kRestartWithinMs = 3'000;
 
     // Play order over the queue, starting at the queue entry `index`: in queue order,
     // or `index` followed by the rest shuffled.
@@ -2148,7 +2143,8 @@ class FakePlayback : public QObject, public PlaybackSource
         }
         m_state.canNext = m_pos + 1 < m_sequence.size() ||
                           (!m_sequence.isEmpty() && m_state.repeat != playback::RepeatOff);
-        m_state.canPrevious = !m_sequence.isEmpty();
+        m_state.canPrevious =
+            m_pos > 0 || (m_sequence.size() > 1 && m_state.repeat != playback::RepeatOff);
     }
 
     // Personal FM: makes sure a song waits at m_pos, picked at random from the
