@@ -454,6 +454,16 @@ bool ListeningSession::setVolume(float linear)
     recordControlIntent();
     return true;
 }
+bool ListeningSession::move(QUuid entry, qsizetype to)
+{
+    if (m_mode == ListeningMode::PersonalFm || (m_queueContext.isValid() && !queueContextMatches()))
+        return false;
+    if (!m_queue.move(entry, to))
+        return false;
+    recordControlIntent();
+    emit queueChanged(m_queue.snapshot());
+    return true;
+}
 bool ListeningSession::setModes(QueueOrder order, QueueRepeat repeat)
 {
     if (m_mode == ListeningMode::PersonalFm || (m_queueContext.isValid() && !queueContextMatches()))

@@ -1,4 +1,5 @@
 #include "playback_queue.h"
+#include <QHash>
 #include <QRandomGenerator>
 #include <algorithm>
 
@@ -191,6 +192,27 @@ bool PlaybackQueue::remove(QUuid id)
         m_state.active = {};
     if (m_insertTail == id)
         m_insertTail = {};
+    return true;
+}
+bool PlaybackQueue::move(QUuid id, qsizetype to)
+{
+    const auto from = m_order.indexOf(id);
+    if (from < 0 || to < 0 || to >= m_order.size())
+        return false;
+    m_order.move(from, to);
+    if (m_state.order == QueueOrder::Sequential) {
+        // In order the entries are the play order: keep them so, or switching shuffle on and
+        // off would undo the move.
+        QHash<QUuid, QueueEntry> byId;
+        for (const auto& entry : std::as_const(m_state.entries))
+            byId.insert(entry.id, entry);
+        QList<QueueEntry> entries;
+        entries.reserve(m_order.size());
+        for (const auto& entryId : std::as_const(m_order))
+            entries.append(byId.value(entryId));
+        m_state.entries = std::move(entries);
+    }
+    m_insertTail = {};
     return true;
 }
 std::optional<QueueEntry> PlaybackQueue::current() const

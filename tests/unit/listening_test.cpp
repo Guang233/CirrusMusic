@@ -210,6 +210,31 @@ class ListeningTest : public QObject
         QVERIFY(q.next(false));
         QVERIFY(q.current()->id != current);
     }
+    void moveFollowsPlayOrder()
+    {
+        PlaybackQueue q([](quint32) { return 0; });
+        QVERIFY(q.replace({{"1"}, {"2"}, {"3"}, {"4"}}));
+        const auto s = q.snapshot();
+        QVERIFY(q.select(s.entries[1].id));
+        QVERIFY(q.move(s.entries[3].id, 0));
+        QCOMPARE(q.playOrder(), (QList<QUuid>{s.entries[3].id, s.entries[0].id, s.entries[1].id,
+                                              s.entries[2].id}));
+        QCOMPARE(q.snapshot().entries[0].id, s.entries[3].id); // in order, entries follow
+        QCOMPARE(q.current()->id, s.entries[1].id);
+        QVERIFY(q.next());
+        QCOMPARE(q.current()->song.value, "3");
+        QVERIFY(!q.move(s.entries[0].id, 4));
+        QVERIFY(!q.move(QUuid::createUuid(), 0));
+        // Shuffled, only the play order changes.
+        QVERIFY(q.setModes(QueueOrder::Shuffle, QueueRepeat::Off));
+        const auto entries = q.snapshot().entries;
+        const auto order = q.playOrder();
+        QVERIFY(q.move(order.last(), 1));
+        QCOMPARE(q.playOrder().at(1), order.last());
+        QCOMPARE(q.snapshot().entries.size(), entries.size());
+        for (qsizetype i = 0; i < entries.size(); ++i)
+            QCOMPARE(q.snapshot().entries[i].id, entries[i].id);
+    }
     void queueRemovalAndLimits()
     {
         PlaybackQueue q;

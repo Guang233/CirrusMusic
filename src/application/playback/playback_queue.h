@@ -20,6 +20,8 @@ class PlaybackQueue
     [[nodiscard]] bool canNext() const;
     [[nodiscard]] bool canPrevious() const { return m_historyCursor > 0; }
     bool remove(QUuid id);
+    // Puts the entry at place `to` of the play order (where it ends up).
+    bool move(QUuid id, qsizetype to);
     void clear();
     bool setModes(domain::QueueOrder order, domain::QueueRepeat repeat);
     [[nodiscard]] std::optional<domain::QueueEntry> current() const;

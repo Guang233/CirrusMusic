@@ -40,6 +40,8 @@ class ListeningSession final : public QObject
     bool append(const QList<domain::SongId>& songs, bool playNext = false);
     bool select(QUuid entry);
     bool remove(QUuid entry);
+    // Moves an entry to place `to` of playOrder(); playback goes on.
+    bool move(QUuid entry, qsizetype to);
     bool clear();
     bool next();
     bool previous();
