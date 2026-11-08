@@ -25,6 +25,9 @@ class PlaybackQueue
     [[nodiscard]] std::optional<domain::QueueEntry> current() const;
     [[nodiscard]] QUuid successor() const;
     [[nodiscard]] domain::QueueSnapshot snapshot() const { return m_state; }
+    // Entry ids in play order (the shuffled order while shuffling); snapshot() keeps
+    // insertion order.
+    [[nodiscard]] QList<QUuid> playOrder() const { return m_order; }
     static constexpr qsizetype MaximumEntries = domain::MaximumSavedQueueEntries;
 
   private:

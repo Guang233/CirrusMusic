@@ -82,6 +82,14 @@ class ListeningSession final : public QObject
                    ? m_queue.snapshot()
                    : domain::QueueSnapshot{};
     }
+    // queue()'s entry ids in play order; read on queueChanged. Empty when queue() is.
+    [[nodiscard]] QList<QUuid> playOrder() const
+    {
+        return m_mode == domain::ListeningMode::Queue &&
+                       (!m_queueContext.isValid() || queueContextMatches())
+                   ? m_queue.playOrder()
+                   : QList<QUuid>{};
+    }
     [[nodiscard]] domain::PlaybackSnapshot playback() const
     {
         return current() ? m_playback : domain::PlaybackSnapshot{};
