@@ -148,6 +148,76 @@ class AudioEngineTest : public QObject
         QVERIFY(!has(Kind::Ready));
     }
 
+    // The preloaded track follows without Ended: Advanced, then its Duration and Seekable.
+    void aPreloadedTrackPlaysOn()
+    {
+        const auto first = token(7), second = token(8);
+        load(QStringLiteral("tone.flac"), QStringLiteral("flac"), first);
+        m_engine->preload(source(m_server.body, QStringLiteral("flac")), second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 5000);
+        const auto advanced =
+            std::find_if(m_events.begin(), m_events.end(),
+                         [](const PlaybackEvent& e) { return e.kind == Kind::Advanced; });
+        QVERIFY(advanced != m_events.end());
+        QCOMPARE(advanced->token, second);
+        for (auto it = m_events.begin(); it != advanced; ++it) {
+            QCOMPARE(it->token, first);
+            QVERIFY(it->kind != Kind::Ended);
+        }
+        QCOMPARE((advanced + 1)->kind, Kind::Duration);
+        QVERIFY(std::abs((advanced + 1)->value - 500) <= 30);
+        QCOMPARE((advanced + 2)->kind, Kind::Seekable);
+        qint64 last = -1;
+        for (auto it = advanced; it != m_events.end(); ++it) {
+            QCOMPARE(it->token, second);
+            if (it->kind == Kind::Position) {
+                QVERIFY(it->value > last && it->value <= 500); // its own clock, from 0
+                last = it->value;
+            }
+        }
+        QCOMPARE(m_events.last().kind, Kind::Ended);
+    }
+
+    // The producer is on the next track long before playback (0.5 s files); a seek in the
+    // current one decodes it again.
+    void aSeekBeforeTheJointStaysOnTheTrack()
+    {
+        const auto first = token(9), second = token(10);
+        load(QStringLiteral("tone.mp3"), QStringLiteral("mp3"), first);
+        m_engine->preload(source(m_server.body, QStringLiteral("mp3")), second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->pause();
+        QTest::qWait(300);
+        m_engine->seek(200);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::SeekConfirmed), 5000);
+        const auto confirmed =
+            std::find_if(m_events.begin(), m_events.end(),
+                         [](const PlaybackEvent& e) { return e.kind == Kind::SeekConfirmed; });
+        QCOMPARE(confirmed->token, first);
+        QCOMPARE(confirmed->value, 200);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 5000);
+        QVERIFY(has(Kind::Advanced));
+        QCOMPARE(m_events.last().token, second);
+    }
+
+    void aDroppedPreloadEndsNormally()
+    {
+        const auto first = token(11), second = token(12);
+        load(QStringLiteral("tone.flac"), QStringLiteral("flac"), first);
+        m_engine->preload(source(m_server.body, QStringLiteral("flac")), second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        QTest::qWait(300);
+        m_engine->preload({}, {});
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 5000);
+        QVERIFY(!has(Kind::Advanced));
+        for (const auto& e : std::as_const(m_events))
+            QCOMPARE(e.token, first);
+    }
+
     void aNewLoadReplacesTheOld()
     {
         load(QStringLiteral("tone.flac"), QStringLiteral("flac"), token(5));

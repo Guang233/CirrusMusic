@@ -13,9 +13,11 @@ class AudioStream;
 
 // The playback engine (ADR-0008): AudioStore streams the file, FFmpeg decodes it on a
 // producer thread into a ring, QAudioSink's callback plays it. Owner-thread object (the
-// backend thread); events keep QtPlaybackBackend's contract: Duration, Seekable, Volume
+// backend thread); events: Duration, Seekable, Volume
 // and Ready once the file opens, State on play/pause, Position about every 100 ms,
-// SeekConfirmed when a seek has taken effect, Observation, Ended, Failure.
+// SeekConfirmed when a seek has taken effect, Observation, Ended, Failure. A preloaded
+// load is decoded straight after the current one (gapless) and becomes current with
+// Advanced, then its Duration and Seekable; SourceExpired asks for a fresh address.
 class AudioEngine : public application::IPlaybackBackend
 {
     Q_OBJECT
@@ -28,9 +30,21 @@ class AudioEngine : public application::IPlaybackBackend
     void stop() override;
     void seek(qint64 positionMs) override;
     void setVolume(float linear) override;
+    void preload(domain::MediaSource source, domain::LoadToken next) override;
+    void refresh(domain::LoadToken token, domain::MediaSource source) override;
 
   private:
     struct Producer;
+    struct Next {
+        domain::MediaSource source;
+        domain::LoadToken token;
+        std::shared_ptr<AudioStream> stream; // opened shortly before it is needed
+    };
+    void advance(qint64 durationMs, quint64 boundary);
+    void openNext();
+    void dropNext();
+    void urlNeeded(quint64 stream);
+    [[nodiscard]] qint64 playedFrames() const;
     void opened(domain::LoadToken token, qint64 durationMs);
     void tick();
     void fail(domain::LoadToken token, domain::PlaybackError error);
@@ -38,7 +52,7 @@ class AudioEngine : public application::IPlaybackBackend
     void send(application::PlaybackEvent event);
     void sendLater(application::PlaybackEvent event);
     void deviceChanged();
-    void startProducer(qint64 positionMs);
+    void startProducer(qint64 positionMs, bool seek = false);
     void stopProducer();
     [[nodiscard]] qint64 position() const;
     [[nodiscard]] qint64 clipLength() const;
@@ -49,6 +63,7 @@ class AudioEngine : public application::IPlaybackBackend
     std::shared_ptr<AudioStream> m_stream;
     domain::MediaSource m_source;
     domain::LoadToken m_token;
+    std::optional<Next> m_next;
     QTimer m_ticker;
     QTimer m_openDeadline;
     QTimer m_idle; // suspends the device a moment after a pause

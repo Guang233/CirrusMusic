@@ -21,6 +21,10 @@ constexpr qsizetype kDecodeFrames = 2048;
 constexpr int kTickMs = 100;
 constexpr int kOpenTimeoutMs = 30000;
 constexpr int kSuspendAfterMs = 300; // past the fade-out
+// The next track: its first bytes are fetched as soon as it is known, the rest from
+// this long before the current one ends (or once the current file is all here).
+constexpr qint64 kPrefetchBytes = 1024 * 1024;
+constexpr qint64 kOpenNextBeforeMs = 30000;
 } // namespace
 
 // The decoder thread and what it shares with the owner.
@@ -29,8 +33,18 @@ struct AudioEngine::Producer {
     std::condition_variable wake;
     bool quit = false;
     std::optional<qint64> seekTo;
-    qint64 baseMs = 0;                // the position output frame 0 stands for (lock)
-    quint64 seekSerial = 0;           // bumped when a seek took effect (lock)
+    qint64 baseMs = 0;      // the position output frame `startFrame` stands for (lock)
+    quint64 startFrame = 0; // output frame (since the flush) the track starts at (lock)
+    quint64 seekSerial = 0; // bumped when a seek took effect (lock)
+    // The next track (gapless), all under the lock: the owner hands it over; at the end of
+    // the current track the producer goes straight on into it (`crossed`, its audio starts
+    // at output frame `boundary`); the owner takes it over when playback gets there.
+    std::shared_ptr<AudioStream> nextStream;
+    QString nextFormat;
+    bool crossed = false;
+    bool nextFailed = false; // it wouldn't open: the current track just ends
+    quint64 boundary = 0;
+    qint64 nextDurationMs = 0;
     std::atomic<quint64> produced{0}; // frames into the ring since the last flush
     std::atomic<bool> eof{false};
     AudioOutput* output = nullptr; // outlives the thread: the owner joins first
@@ -45,7 +59,50 @@ struct AudioEngine::Producer {
         return quit;
     }
     void run(AudioEngine* engine, LoadToken token, bool reopening);
+    bool crossNext(std::unique_ptr<AudioDecoder>& decoder,
+                   std::unique_ptr<AudioResampler>& resampler, std::vector<float>& out);
 };
+
+// At the end of the current track: opens the next one and decodes on into it. False
+// when there is none (or it won't open, or a seek or stop came in meanwhile).
+bool AudioEngine::Producer::crossNext(std::unique_ptr<AudioDecoder>& decoder,
+                                      std::unique_ptr<AudioResampler>& resampler,
+                                      std::vector<float>& out)
+{
+    std::shared_ptr<AudioStream> next;
+    QString nextFormat;
+    {
+        std::lock_guard guard(lock);
+        if (crossed || !nextStream || seekTo || quit)
+            return false;
+        next = nextStream;
+        nextFormat = this->nextFormat;
+    }
+    auto opened = std::make_unique<AudioDecoder>();
+    if (!opened->open(next, nextFormat)) {
+        std::lock_guard guard(lock);
+        if (!quit && !seekTo && nextStream == next) {
+            nextFailed = true;
+            nextStream.reset();
+        }
+        return false;
+    }
+    // The same rate keeps the resampler running, so the joint stays continuous.
+    if (opened->sampleRate() != resampler->inRate()) {
+        resampler->flush(out);
+        resampler = std::make_unique<AudioResampler>(opened->sampleRate(), outRate);
+    }
+    {
+        std::lock_guard guard(lock);
+        if (quit || seekTo || nextStream != next)
+            return false; // the seek restarts the resampler for the current track
+        crossed = true;
+        boundary = produced + quint64(out.size() / 2);
+        nextDurationMs = opened->durationMs();
+    }
+    decoder = std::move(opened);
+    return true;
+}
 
 void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reopening)
 {
@@ -55,18 +112,18 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
         QMetaObject::invokeMethod(
             engine, [engine, token, error] { engine->fail(token, error); }, Qt::QueuedConnection);
     };
-    AudioDecoder decoder;
-    if (!decoder.open(stream, format)) {
-        failed(decoder.error().value_or(PlaybackError::Decode));
+    auto decoder = std::make_unique<AudioDecoder>();
+    if (!decoder->open(stream, format)) {
+        failed(decoder->error().value_or(PlaybackError::Decode));
         return;
     }
     if (!reopening) {
-        const qint64 duration = decoder.durationMs();
+        const qint64 duration = decoder->durationMs();
         QMetaObject::invokeMethod(
             engine, [engine, token, duration] { engine->opened(token, duration); },
             Qt::QueuedConnection);
     }
-    auto resampler = std::make_unique<AudioResampler>(decoder.sampleRate(), outRate);
+    auto resampler = std::make_unique<AudioResampler>(decoder->sampleRate(), outRate);
     AudioRing& ring = *output->ring();
     std::vector<float> chunk, out;
     size_t written = 0;   // of `out`
@@ -85,22 +142,23 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
             flushing = true;
             out.clear();
             written = 0;
-            if (!decoder.seek(*seek)) {
-                if (decoder.interrupted())
+            if (!decoder->seek(*seek)) {
+                if (decoder->interrupted())
                     continue; // a newer seek or stop came in
-                failed(decoder.error().value_or(PlaybackError::Decode));
+                failed(decoder->error().value_or(PlaybackError::Decode));
                 return;
             }
-            resampler = std::make_unique<AudioResampler>(decoder.sampleRate(), outRate);
+            resampler = std::make_unique<AudioResampler>(decoder->sampleRate(), outRate);
             produced = 0;
             eof = false;
             std::lock_guard guard(lock);
             baseMs = *seek;
+            startFrame = 0;
             ++seekSerial;
             continue;
         }
-        if (decoder.interrupted())
-            decoder.resume(); // interrupted for a seek or stop that isn't (or no longer) here
+        if (decoder->interrupted())
+            decoder->resume(); // interrupted for a seek or stop that isn't (or no longer) here
         if (written < out.size()) {
             const auto frames =
                 ring.write(out.data() + written, qsizetype(out.size() - written) / 2);
@@ -120,22 +178,38 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
         out.clear();
         written = 0;
         if (eof) {
+            // The next track came after this one's end was decoded (a short track): it
+            // still follows, with a fresh resampler (the old one was flushed).
+            bool late;
+            {
+                std::lock_guard guard(lock);
+                late = !crossed && nextStream && !seekTo && !quit;
+            }
+            if (late) {
+                resampler = std::make_unique<AudioResampler>(decoder->sampleRate(), outRate);
+                if (crossNext(decoder, resampler, out)) {
+                    eof = false;
+                    continue;
+                }
+            }
             std::unique_lock guard(lock);
             wake.wait_for(guard, std::chrono::milliseconds(20),
                           [this] { return quit || seekTo.has_value(); });
             continue;
         }
         chunk.clear();
-        if (decoder.read(chunk, kDecodeFrames)) {
+        if (decoder->read(chunk, kDecodeFrames)) {
             resampler->process(chunk, out);
             continue;
         }
-        if (decoder.error()) {
-            failed(*decoder.error());
+        if (decoder->error()) {
+            failed(*decoder->error());
             return;
         }
-        if (decoder.interrupted())
+        if (decoder->interrupted())
             continue; // a seek or stop is waiting
+        if (crossNext(decoder, resampler, out))
+            continue; // on into the next track, no gap
         resampler->flush(out);
         eof = true;
         if (out.empty() && flushing) {
@@ -162,6 +236,7 @@ AudioEngine::AudioEngine(AudioStore& store, QObject* parent)
             m_output->suspend();
     });
     connect(m_output.get(), &AudioOutput::deviceChanged, this, &AudioEngine::deviceChanged);
+    connect(&m_store, &AudioStore::urlNeeded, this, &AudioEngine::urlNeeded);
 }
 
 AudioEngine::~AudioEngine() { stop(); }
@@ -202,7 +277,7 @@ void AudioEngine::load(MediaSource source, LoadToken token)
     startProducer(0);
 }
 
-void AudioEngine::startProducer(qint64 positionMs)
+void AudioEngine::startProducer(qint64 positionMs, bool seek)
 {
     auto producer = std::make_shared<Producer>();
     producer->output = m_output.get();
@@ -210,8 +285,13 @@ void AudioEngine::startProducer(qint64 positionMs)
     producer->stream = m_stream;
     producer->format = m_source.format.toLower();
     producer->baseMs = positionMs;
-    if (positionMs > 0)
+    if (positionMs > 0 || seek)
         producer->seekTo = positionMs;
+    if (m_next && m_next->stream) {
+        m_next->stream->clearInterrupt();
+        producer->nextStream = m_next->stream;
+        producer->nextFormat = m_next->source.format.toLower();
+    }
     m_output->beginFlush();     // nothing old plays; the producer ends it with new audio
     m_stream->clearInterrupt(); // left over from stopping the previous producer
     const bool reopening = m_ready;
@@ -233,6 +313,8 @@ void AudioEngine::stopProducer()
     m_producer->wake.notify_all();
     if (m_stream)
         m_stream->interrupt(); // a read waiting for the download returns
+    if (m_next && m_next->stream)
+        m_next->stream->interrupt(); // or it may be reading the next track
     if (m_producer->thread.joinable())
         m_producer->thread.join();
     m_producer.reset();
@@ -253,6 +335,7 @@ void AudioEngine::stop()
     m_meter.reset();
     m_published.reset();
     stopProducer();
+    m_next.reset();
     if (m_stream) {
         m_stream->cancel();
         m_stream.reset(); // releasing it stops its download; what came stays cached
@@ -268,24 +351,27 @@ qint64 AudioEngine::clipLength() const
     return m_durationMs;
 }
 
+qint64 AudioEngine::playedFrames() const
+{
+    return std::max<qint64>(0, qint64(m_output->consumed()) - m_output->latencyFrames());
+}
+
 qint64 AudioEngine::position() const
 {
     if (!m_producer || m_output->sampleRate() <= 0)
         return 0;
     qint64 base;
-    quint64 serial;
+    quint64 start;
     std::optional<qint64> pending;
     {
         std::lock_guard guard(m_producer->lock);
         base = m_producer->baseMs;
-        serial = m_producer->seekSerial;
+        start = m_producer->startFrame;
         pending = m_producer->seekTo;
     }
     if (pending)
         return *pending; // the seek hasn't taken effect yet
-    Q_UNUSED(serial);
-    const qint64 played =
-        std::max<qint64>(0, qint64(m_output->consumed()) - m_output->latencyFrames());
+    const qint64 played = std::max<qint64>(0, playedFrames() - qint64(start));
     return std::min(clipLength(), base + played * 1000 / m_output->sampleRate());
 }
 
@@ -314,6 +400,8 @@ void AudioEngine::opened(LoadToken token, qint64 durationMs)
     if (!m_active || token != m_token)
         return;
     send({token, Kind::Ready});
+    if (m_active && token == m_token)
+        openNext();
 }
 
 void AudioEngine::tick()
@@ -323,12 +411,18 @@ void AudioEngine::tick()
     const auto token = m_token;
     qint64 base;
     quint64 serial;
-    bool seeking;
+    bool seeking, crossed, nextFailed;
+    quint64 boundary;
+    qint64 nextDuration;
     {
         std::lock_guard guard(m_producer->lock);
         base = m_producer->baseMs;
         serial = m_producer->seekSerial;
         seeking = m_producer->seekTo.has_value();
+        crossed = m_producer->crossed;
+        boundary = m_producer->boundary;
+        nextDuration = m_producer->nextDurationMs;
+        nextFailed = std::exchange(m_producer->nextFailed, false);
     }
     if (serial != m_seekSerial) {
         m_seekSerial = serial;
@@ -338,6 +432,13 @@ void AudioEngine::tick()
         if (!m_active || token != m_token)
             return;
     }
+    if (nextFailed)
+        m_next.reset(); // this track just ends; the next is loaded the usual way
+    if (crossed && !seeking && quint64(playedFrames()) >= boundary) {
+        advance(nextDuration, boundary);
+        return;
+    }
+    openNext();
     const qint64 now = position();
     const bool drained = m_producer->eof && m_output->consumed() >= m_producer->produced;
     if ((m_source.preview && now >= clipLength()) || drained) {
@@ -390,6 +491,113 @@ void AudioEngine::fail(LoadToken token, PlaybackError error)
     });
 }
 
+void AudioEngine::preload(MediaSource source, LoadToken next)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_active)
+        return;
+    dropNext();
+    if (!next.generation)
+        return;
+    m_next = Next{std::move(source), next, {}};
+    m_store.prefetch(m_next->source, kPrefetchBytes);
+    openNext();
+}
+
+void AudioEngine::openNext()
+{
+    if (!m_next || m_next->stream || !m_ready || m_ended || !m_producer || m_source.preview)
+        return; // a preview ends at its clip, not its file: the next loads the usual way
+    const bool soon = m_durationMs > 0 && m_durationMs - position() < kOpenNextBeforeMs;
+    if (!soon && !(m_stream && m_stream->complete()))
+        return;
+    PlaybackError error{};
+    m_next->stream = m_store.open(m_next->source, &error);
+    if (!m_next->stream) {
+        m_next.reset();
+        return;
+    }
+    std::lock_guard guard(m_producer->lock);
+    m_producer->nextStream = m_next->stream;
+    m_producer->nextFormat = m_next->source.format.toLower();
+}
+
+void AudioEngine::dropNext()
+{
+    if (!m_next)
+        return;
+    bool crossed = false;
+    if (m_producer) {
+        std::lock_guard guard(m_producer->lock);
+        crossed = m_producer->crossed;
+        if (!crossed)
+            m_producer->nextStream.reset();
+    }
+    if (crossed) {
+        // Already decoding it: decode this track again from where it plays.
+        const qint64 at = position();
+        stopProducer();
+        m_next.reset();
+        startProducer(at, true);
+        return;
+    }
+    if (m_next->stream)
+        m_next->stream->interrupt(); // the producer may be opening it
+    m_next.reset();
+}
+
+void AudioEngine::advance(qint64 durationMs, quint64 boundary)
+{
+    // Playback has reached the next track: it is the current one now.
+    {
+        std::lock_guard guard(m_producer->lock);
+        m_producer->crossed = false;
+        m_producer->nextStream.reset();
+        m_producer->startFrame = boundary;
+        m_producer->baseMs = 0;
+    }
+    m_stream = std::move(m_next->stream); // the old one's download stops; it stays cached
+    m_source = std::move(m_next->source);
+    m_token = m_next->token;
+    m_next.reset();
+    m_durationMs = durationMs;
+    m_lastPosition = -1;
+    m_meter.reset();
+    m_published.reset();
+    const auto token = m_token;
+    send({token, Kind::Advanced});
+    if (!m_active || token != m_token)
+        return;
+    send({token, Kind::Duration, {}, durationMs});
+    if (!m_active || token != m_token)
+        return;
+    send({token, Kind::Seekable, {}, 1});
+}
+
+void AudioEngine::refresh(LoadToken token, MediaSource source)
+{
+    std::shared_ptr<AudioStream> stream;
+    if (m_active && token == m_token)
+        stream = m_stream;
+    else if (m_active && m_next && token == m_next->token) {
+        m_next->source.url = source.url;
+        m_next->source.validUntil = source.validUntil;
+        stream = m_next->stream;
+    }
+    if (stream)
+        m_store.refresh(stream->id(), source.url, source.validUntil);
+}
+
+void AudioEngine::urlNeeded(quint64 stream)
+{
+    if (!m_active)
+        return;
+    if (m_stream && m_stream->id() == stream)
+        send({m_token, Kind::SourceExpired});
+    else if (m_next && m_next->stream && m_next->stream->id() == stream)
+        emit event({m_next->token, Kind::SourceExpired});
+}
+
 void AudioEngine::play()
 {
     if (!m_active || !m_ready || m_ended)
@@ -420,9 +628,18 @@ void AudioEngine::seek(qint64 positionMs)
         return;
     const auto target = std::clamp<qint64>(positionMs, 0, std::max<qint64>(0, clipLength() - 1));
     m_meter.breakInterval();
+    bool crossed;
     {
         std::lock_guard guard(m_producer->lock);
-        m_producer->seekTo = target;
+        crossed = m_producer->crossed;
+        if (!crossed)
+            m_producer->seekTo = target;
+    }
+    if (crossed) {
+        // The producer is on the next track already: decode this one again from there.
+        stopProducer();
+        startProducer(target, true);
+        return;
     }
     m_producer->wake.notify_all();
     if (m_stream)
@@ -457,6 +674,6 @@ void AudioEngine::deviceChanged()
         return; // no device now; the next change (one appears) picks it up from here
     m_output->setGain(m_volume);
     m_output->setPlaying(m_playing);
-    startProducer(std::max<qint64>(at, 1));
+    startProducer(at, true);
 }
 } // namespace cirrus::media

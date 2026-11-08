@@ -735,6 +735,7 @@ void BackendFacade::deliverTogether(TogetherDelivery d)
 void BackendFacade::invalidatePlayback()
 {
     m_playbackGeneration = ++m_nextId;
+    m_preloadGeneration = 0;
     m_playback = {};
     // Deferred: account intent invalidation must not reenter submit before its command is emitted.
     const auto generation = m_playbackGeneration;
@@ -750,6 +751,13 @@ quint64 BackendFacade::playSong(domain::SongId song, domain::AudioQuality qualit
     command.action = PlaybackAction::Play;
     command.query = {std::move(song), quality};
     command.intent = intent;
+    return submitPlayback(command);
+}
+quint64 BackendFacade::preloadSong(domain::SongId song, domain::AudioQuality quality)
+{
+    PlaybackCommand command;
+    command.action = PlaybackAction::Preload;
+    command.query = {std::move(song), quality};
     return submitPlayback(command);
 }
 quint64 BackendFacade::pausePlayback()
@@ -797,6 +805,10 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
          (command.intent != domain::TransportIntent::Play &&
           command.intent != domain::TransportIntent::Pause)))
         return 0;
+    if (command.action == PlaybackAction::Preload &&
+        ((!command.query.song.value.isEmpty() && !domain::validMusicId(command.query.song.value)) ||
+         domain::qualityName(command.query.quality).isEmpty() || !m_playbackGeneration))
+        return 0;
     if (command.action == PlaybackAction::Seek &&
         (command.positionMs < 0 || command.positionMs > 7LL * 24 * 60 * 60 * 1000))
         return 0;
@@ -808,6 +820,12 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
     m_pending.insert(command.id);
     const bool replacing =
         command.action == PlaybackAction::Play || command.action == PlaybackAction::Stop;
+    if (replacing || command.action == PlaybackAction::Preload)
+        m_preloadGeneration = 0;
+    if (command.action == PlaybackAction::Preload && !command.query.song.value.isEmpty()) {
+        m_preloadGeneration = command.id;
+        command.next = {m_snapshot.token, command.id};
+    }
     if (replacing) {
         m_playbackGeneration = command.id;
         m_playback = {};
@@ -828,8 +846,12 @@ void BackendFacade::deliverPlayback(PlaybackDelivery delivery)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_state != BackendState::Ready || delivery.generation != m_generation ||
-        delivery.snapshot.token.session != m_snapshot.token ||
-        delivery.snapshot.token.generation != m_playbackGeneration)
+        delivery.snapshot.token.session != m_snapshot.token)
+        return;
+    const auto generation = delivery.snapshot.token.generation;
+    if (generation && generation == m_preloadGeneration) {
+        m_playbackGeneration = std::exchange(m_preloadGeneration, 0); // played on into it
+    } else if (generation != m_playbackGeneration)
         return;
     m_playback = std::move(delivery.snapshot);
     emit playbackChanged(m_playback);

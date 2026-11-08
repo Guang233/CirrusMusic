@@ -29,7 +29,9 @@ struct PlaybackEvent {
         Failure,
         Observation,
         SeekConfirmed,
-        Volume
+        Volume,
+        Advanced,     // token: the preloaded load, now playing (gapless); its Duration follows
+        SourceExpired // token: the load whose address must be refreshed (refresh())
     };
     domain::LoadToken token;
     Kind kind{};
@@ -51,6 +53,20 @@ class IPlaybackBackend : public QObject
     virtual void stop() = 0; // synchronous retirement of callbacks, no completion event
     virtual void seek(qint64 positionMs) = 0; // clip-local, not original-song coordinates
     virtual void setVolume(float linear) = 0;
+    // The load to play right after the current one, without a gap (docs/tasks/audio-engine.md
+    // §4.5); an empty token cancels. It becomes current with Advanced{next}; a new load,
+    // stop or preload drops it.
+    virtual void preload(domain::MediaSource source, domain::LoadToken next)
+    {
+        Q_UNUSED(source);
+        Q_UNUSED(next);
+    }
+    // A fresh address for a load that reported SourceExpired (the current or the preloaded).
+    virtual void refresh(domain::LoadToken token, domain::MediaSource source)
+    {
+        Q_UNUSED(token);
+        Q_UNUSED(source);
+    }
   signals:
     void event(cirrus::application::PlaybackEvent event);
 };

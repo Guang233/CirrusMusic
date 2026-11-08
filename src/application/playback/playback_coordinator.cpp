@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <utility>
+#include <variant>
 
 namespace cirrus::application
 {
@@ -24,38 +25,7 @@ PlaybackCoordinator::PlaybackCoordinator(SessionCoordinator& session, IStreamRes
         if (m_snapshot.token.session != value.token)
             stop();
     });
-    connect(&resolver, &IStreamResolver::completed, this,
-            [this](quint64 id, SessionToken context, StreamResult result) {
-                if (id != m_request || !m_request)
-                    return;
-                const auto token = m_snapshot.token;
-                m_request = 0;
-                if (!current(token) || context != token.session) {
-                    fail({PlaybackError::StaleContext});
-                    return;
-                }
-                if (const auto* failure = std::get_if<PlaybackFailure>(&result)) {
-                    fail(*failure);
-                    return;
-                }
-                auto source = std::get<StreamSource>(std::move(result));
-                if (source.song != m_snapshot.song) {
-                    fail({PlaybackError::InvalidResponse});
-                    return;
-                }
-                if (source.validUntil.isForever() || source.validUntil.hasExpired()) {
-                    fail({PlaybackError::Expired});
-                    return;
-                }
-                m_snapshot.actualQuality = source.actualQuality;
-                m_snapshot.preview = source.preview;
-                m_snapshot.state = PlaybackState::Loading;
-                emit changed(m_snapshot);
-                if (current(token)) {
-                    MediaSource physical = std::move(source); // retire the song envelope here
-                    m_backend.load(std::move(physical), token);
-                }
-            });
+    connect(&resolver, &IStreamResolver::completed, this, &PlaybackCoordinator::resolved);
     connect(&backend, &IPlaybackBackend::event, this, &PlaybackCoordinator::receive);
 }
 PlaybackCoordinator::~PlaybackCoordinator()
@@ -64,6 +34,169 @@ PlaybackCoordinator::~PlaybackCoordinator()
     disconnect(&m_resolver, nullptr, this, nullptr);
     retire();
 }
+namespace
+{
+// The source when `result` is a usable address for `song`, else why not.
+std::variant<StreamSource, PlaybackFailure> usable(StreamResult result, const SongId& song)
+{
+    if (const auto* failure = std::get_if<PlaybackFailure>(&result))
+        return *failure;
+    auto source = std::get<StreamSource>(std::move(result));
+    if (source.song != song)
+        return PlaybackFailure{PlaybackError::InvalidResponse};
+    if (source.validUntil.isForever() || source.validUntil.hasExpired())
+        return PlaybackFailure{PlaybackError::Expired};
+    return source;
+}
+} // namespace
+
+void PlaybackCoordinator::resolved(quint64 id, SessionToken context, StreamResult result)
+{
+    if (!id)
+        return;
+    if (m_next && id == m_next->request) {
+        m_next->request = 0;
+        if (context != m_next->token.session || !current(m_snapshot.token))
+            dropNext();
+        else
+            preloaded(std::move(result));
+        return;
+    }
+    for (qsizetype i = 0; i < m_refreshes.size(); ++i) {
+        if (m_refreshes[i].request != id)
+            continue;
+        const auto refresh = m_refreshes.takeAt(i);
+        if (context != refresh.token.session || !current(m_snapshot.token))
+            return;
+        const bool forCurrent = refresh.token == m_snapshot.token;
+        const bool forNext = m_next && m_next->loaded && refresh.token == m_next->token;
+        if (!forCurrent && !forNext)
+            return;
+        auto source = usable(std::move(result), refresh.query.song);
+        if (auto* fresh = std::get_if<StreamSource>(&source)) {
+            MediaSource physical = std::move(*fresh);
+            m_backend.refresh(refresh.token, std::move(physical));
+        }
+        return; // no address: the backend fails the load as Expired in its own time
+    }
+    if (id != m_request)
+        return;
+    const auto token = m_snapshot.token;
+    m_request = 0;
+    if (!current(token) || context != token.session) {
+        fail({PlaybackError::StaleContext});
+        return;
+    }
+    auto checked = usable(std::move(result), m_snapshot.song);
+    if (const auto* failure = std::get_if<PlaybackFailure>(&checked)) {
+        fail(*failure);
+        return;
+    }
+    auto& source = std::get<StreamSource>(checked);
+    m_snapshot.actualQuality = source.actualQuality;
+    m_snapshot.preview = source.preview;
+    m_snapshot.state = PlaybackState::Loading;
+    emit changed(m_snapshot);
+    if (current(token)) {
+        MediaSource physical = std::move(source); // retire the song envelope here
+        m_backend.load(std::move(physical), token);
+    }
+}
+
+bool PlaybackCoordinator::preload(LoadToken currentToken, LoadToken next,
+                                  std::optional<StreamQuery> query)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (currentToken != m_snapshot.token || !current(currentToken))
+        return false;
+    if (!query) {
+        dropNext();
+        return true;
+    }
+    if (next.session != currentToken.session || next.generation <= m_lastGeneration ||
+        !validMusicId(query->song.value) || qualityName(query->quality).isEmpty())
+        return false;
+    dropNext();
+    m_lastGeneration = next.generation;
+    m_next = Next{next, *query};
+    const auto request = m_resolver.resolve(next.session, *query);
+    if (!request) {
+        m_next.reset(); // the song is loaded the usual way when this one ends
+        return true;
+    }
+    if (m_next && m_next->token == next)
+        m_next->request = request;
+    return true;
+}
+
+void PlaybackCoordinator::preloaded(StreamResult result)
+{
+    auto checked = usable(std::move(result), m_next->query.song);
+    if (!std::holds_alternative<StreamSource>(checked)) {
+        m_next.reset(); // loaded the usual way later, where a failure shows
+        return;
+    }
+    auto& source = std::get<StreamSource>(checked);
+    m_next->actualQuality = source.actualQuality;
+    m_next->preview = source.preview;
+    m_next->loaded = true;
+    MediaSource physical = std::move(source);
+    m_backend.preload(std::move(physical), m_next->token);
+}
+
+void PlaybackCoordinator::dropNext()
+{
+    if (!m_next)
+        return;
+    const auto next = *std::exchange(m_next, std::nullopt);
+    if (next.request)
+        m_resolver.cancel(next.request);
+    if (next.loaded)
+        m_backend.preload({}, {});
+}
+
+void PlaybackCoordinator::advance()
+{
+    // The backend went on into the preloaded load: it is the current one now.
+    const auto next = *std::exchange(m_next, std::nullopt);
+    for (const auto& refresh : std::exchange(m_refreshes, {}))
+        if (refresh.token == next.token)
+            m_refreshes.append(refresh);
+        else
+            m_resolver.cancel(refresh.request);
+    PlaybackSnapshot snapshot;
+    snapshot.token = next.token;
+    snapshot.song = next.query.song;
+    snapshot.intent = m_snapshot.intent;
+    snapshot.state =
+        m_snapshot.intent == TransportIntent::Play ? PlaybackState::Playing : PlaybackState::Paused;
+    snapshot.actualQuality = next.actualQuality;
+    snapshot.preview = next.preview;
+    snapshot.volumeLinear = m_snapshot.volumeLinear;
+    m_snapshot = std::move(snapshot);
+    m_query = next.query;
+    m_ready = true;
+    m_seek.reset();
+    m_deadline.stop();
+}
+
+void PlaybackCoordinator::expired(LoadToken token)
+{
+    StreamQuery query;
+    if (token == m_snapshot.token)
+        query = m_query;
+    else if (m_next && m_next->loaded && token == m_next->token)
+        query = m_next->query;
+    else
+        return;
+    for (const auto& refresh : m_refreshes)
+        if (refresh.token == token)
+            return; // already asking
+    const auto request = m_resolver.resolve(token.session, query);
+    if (request)
+        m_refreshes.append({token, std::move(query), request});
+}
+
 bool PlaybackCoordinator::current(LoadToken token) const
 {
     return token == m_snapshot.token && token.generation && m_session.accepts(token.session) &&
@@ -78,7 +211,12 @@ void PlaybackCoordinator::retire()
     const auto id = std::exchange(m_request, 0);
     if (id)
         m_resolver.cancel(id);
-    m_backend.stop();
+    if (m_next && m_next->request)
+        m_resolver.cancel(m_next->request);
+    m_next.reset();
+    for (const auto& refresh : std::exchange(m_refreshes, {}))
+        m_resolver.cancel(refresh.request);
+    m_backend.stop(); // drops the preloaded load too
 }
 void PlaybackCoordinator::stop(LoadToken token)
 {
@@ -105,6 +243,7 @@ bool PlaybackCoordinator::start(LoadToken token, StreamQuery query, TransportInt
     m_snapshot.song = query.song;
     m_snapshot.state = PlaybackState::Resolving;
     m_snapshot.intent = intent;
+    m_query = query;
     emit changed(m_snapshot);
     if (!current(token))
         return true;
@@ -174,9 +313,22 @@ void PlaybackCoordinator::applyIntent()
 void PlaybackCoordinator::setVolume(float linear) { m_backend.setVolume(linear); }
 void PlaybackCoordinator::receive(PlaybackEvent event)
 {
+    using Kind = PlaybackEvent::Kind;
+    if (event.kind == Kind::Advanced) {
+        if (!m_next || !m_next->loaded || event.token != m_next->token ||
+            !current(m_snapshot.token) || !m_session.accepts(event.token.session))
+            return;
+        advance();
+        emit changed(m_snapshot);
+        return;
+    }
+    if (event.kind == Kind::SourceExpired) {
+        if (current(m_snapshot.token) && m_session.accepts(event.token.session))
+            expired(event.token);
+        return;
+    }
     if (!current(event.token))
         return;
-    using Kind = PlaybackEvent::Kind;
     switch (event.kind) {
     case Kind::Failure:
         fail(event.failure);
@@ -244,6 +396,9 @@ void PlaybackCoordinator::receive(PlaybackEvent event)
     case Kind::Seekable:
         m_snapshot.seekable = event.value != 0;
         break;
+    case Kind::Advanced:
+    case Kind::SourceExpired:
+        return; // handled above
     case Kind::Ended:
         m_snapshot.state = PlaybackState::Ended;
         m_snapshot.seekable = false;

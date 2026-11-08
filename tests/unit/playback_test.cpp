@@ -109,6 +109,66 @@ class PlaybackTest : public QObject
         QCOMPARE(player.snapshot().state, PlaybackState::Empty);
         QVERIFY(!player.start({token.session, 3}, {{"3"}}));
     }
+    void preloadedSongTakesOverWhenTheBackendAdvances()
+    {
+        application::SessionCoordinator session;
+        test::FakeStreamResolver resolver;
+        test::FakePlaybackBackend backend;
+        application::PlaybackCoordinator player(session, resolver, backend);
+        const auto context = session.snapshot().token;
+        const LoadToken first{context, 1}, second{context, 2};
+        QVERIFY(player.start(first, {{"1"}}));
+        resolver.finish(0, source("1"));
+        emit backend.event({first, Kind::Ready});
+        QVERIFY(!player.preload({context, 9}, second, StreamQuery{{"2"}})); // not the current
+        QVERIFY(player.preload(first, second, StreamQuery{{"2"}}));
+        QCOMPARE(resolver.requests.size(), 2);
+        QVERIFY(backend.preloads.isEmpty()); // only once resolved
+        auto next = source("2");
+        next.actualQuality = "exhigh";
+        resolver.finish(1, next);
+        QCOMPARE(backend.preloads, QList<LoadToken>{second});
+        QCOMPARE(player.snapshot().token, first); // still the first until the backend gets there
+        emit backend.event({second, Kind::Advanced});
+        QCOMPARE(player.snapshot().token, second);
+        QCOMPARE(player.snapshot().song.value, "2");
+        QCOMPARE(player.snapshot().state, PlaybackState::Playing);
+        QCOMPARE(player.snapshot().actualQuality, "exhigh");
+        emit backend.event({second, Kind::Duration, {}, 4000});
+        QCOMPARE(player.snapshot().durationMs, std::optional<qint64>(4000));
+        emit backend.event({first, Kind::Position, {}, 10}); // the old load is gone
+        QCOMPARE(player.snapshot().positionMs, 0);
+        QVERIFY(!player.start({context, 2}, {{"3"}})); // its generation is used
+        // A new preload replaces the old; a new start drops it.
+        QVERIFY(player.preload(second, {context, 3}, StreamQuery{{"3"}}));
+        QVERIFY(player.preload(second, {context, 4}, StreamQuery{{"4"}}));
+        QCOMPARE(resolver.canceled.last(), resolver.requests[2].id);
+        QVERIFY(player.start({context, 5}, {{"5"}}));
+        QCOMPARE(resolver.canceled.last(), resolver.requests[3].id);
+        emit backend.event({{context, 4}, Kind::Advanced});
+        QCOMPARE(player.snapshot().token, (LoadToken{context, 5}));
+    }
+    void expiredAddressIsResolvedAgain()
+    {
+        application::SessionCoordinator session;
+        test::FakeStreamResolver resolver;
+        test::FakePlaybackBackend backend;
+        application::PlaybackCoordinator player(session, resolver, backend);
+        const LoadToken token{session.snapshot().token, 1};
+        QVERIFY(player.start(token, {{"1"}}));
+        resolver.finish(0, source("1"));
+        emit backend.event({token, Kind::Ready});
+        emit backend.event({token, Kind::SourceExpired});
+        emit backend.event({token, Kind::SourceExpired}); // already asking
+        QCOMPARE(resolver.requests.size(), 2);
+        QCOMPARE(resolver.requests[1].query.song.value, "1");
+        resolver.finish(1, source("1"));
+        QCOMPARE(backend.refreshes, QList<LoadToken>{token});
+        QCOMPARE(player.snapshot().state, PlaybackState::Ready); // playback goes on
+        emit backend.event({token, Kind::SourceExpired});
+        resolver.finish(2, PlaybackFailure{PlaybackError::Unavailable});
+        QCOMPARE(backend.refreshes.size(), 1); // the backend fails it as Expired itself
+    }
     void permissionExpiryAndErrorAreBounded()
     {
         application::SessionCoordinator session;

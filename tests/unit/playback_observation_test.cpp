@@ -438,14 +438,14 @@ class PlaybackObservationTest final : public QObject
             QVERIFY(h.bridge.submit(a.binding, c));
         QVERIFY(!h.bridge.submit(a.binding, c));
         QTRY_COMPARE(finished.size(), 8);
-        QCOMPARE(h.commands.size(), 9);
+        QCOMPARE(h.commands.size(), 10); // play, preload song 2 once it plays, 8 volumes
         QVERIFY(!h.publisher.snapshot().volumeLinear); // accepted commands are not feedback
         QVERIFY(h.bridge.submit(a.binding, c));
         QVERIFY(h.owner.next());
         QTRY_COMPARE(finished.size(), 9);
         QVERIFY(!finished.last()[1].toBool());
         QVERIFY(!h.bridge.submit(a.binding, c));
-        QCOMPARE(h.commands.size(), 10);
+        QCOMPARE(h.commands.size(), 11);
         c.action = SystemMediaAction::Seek;
         c.positionMs = -1;
         QVERIFY(!h.bridge.submit(h.publisher.snapshot().binding, c));

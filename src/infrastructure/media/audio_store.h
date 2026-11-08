@@ -48,6 +48,8 @@ class AudioStream final
     AudioStream& operator=(const AudioStream&) = delete;
 
     [[nodiscard]] qint64 size() const;
+    // The download's id (AudioStore::urlNeeded, refresh()).
+    [[nodiscard]] quint64 id() const { return m_id; }
     // Up to `maximum` bytes at `position`: > 0 read, 0 at the end, -1 failed or canceled.
     qint64 read(qint64 position, char* out, qint64 maximum);
     // Wakes a blocked read (it returns -1); later reads fail too.

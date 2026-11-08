@@ -96,7 +96,7 @@ struct CollectionDelivery {
     domain::CollectionResult result;
 };
 
-enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume };
+enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume, Preload };
 struct PlaybackCommand {
     quint64 id = 0;
     quint64 generation = 0; // account intent barrier
@@ -106,6 +106,7 @@ struct PlaybackCommand {
     qint64 positionMs = 0;
     float volume = 0.5f;
     domain::TransportIntent intent = domain::TransportIntent::Play;
+    domain::LoadToken next; // Preload: the generation it plays under; empty song cancels
 };
 struct PlaybackDelivery {
     quint64 generation = 0;
@@ -237,6 +238,11 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 playSong(domain::SongId song,
                                    domain::AudioQuality quality = domain::AudioQuality::Standard,
                                    domain::TransportIntent intent = domain::TransportIntent::Play);
+    // The song to follow the current one without a gap; it plays under the returned
+    // generation (playback().token changes to it when it starts). A new play, stop or
+    // preload replaces it; an empty song cancels.
+    [[nodiscard]] quint64
+    preloadSong(domain::SongId song, domain::AudioQuality quality = domain::AudioQuality::Standard);
     [[nodiscard]] quint64 pausePlayback();
     [[nodiscard]] quint64 resumePlayback();
     [[nodiscard]] quint64 stopPlayback();
@@ -328,6 +334,7 @@ class BackendFacade final : public QObject
     void invalidatePlayback();
     domain::PlaybackSnapshot m_playback;
     quint64 m_playbackGeneration = 0;
+    quint64 m_preloadGeneration = 0; // the preloaded song's, adopted when it starts
     void invalidateMusic(MusicError error);
     void cancelMusicWith(quint64 id, MusicError error);
     BackendState m_state = BackendState::Dormant;

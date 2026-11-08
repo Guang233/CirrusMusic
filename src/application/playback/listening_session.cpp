@@ -107,6 +107,8 @@ void ListeningSession::reset()
     m_auto = false;
     m_autoVisited.clear();
     m_terminalHandled = false;
+    m_preload.reset();
+    m_preloadChecked = false;
     cancelLyrics();
     if (revision != m_revision)
         return;
@@ -145,6 +147,16 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     m_starting = false;
     if (!acceptLoadCommand(id, revision))
         return false;
+    commit(std::move(candidate), intent, quality, automatic, fm, sourceSession, revision);
+    return true;
+}
+void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, AudioQuality quality,
+                              bool automatic, bool fm, SessionSnapshot sourceSession,
+                              quint64 revision)
+{
+    const auto entry = candidate.current();
+    m_preload.reset();
+    m_preloadChecked = false;
     const auto oldLyricRequest = std::exchange(m_lyricRequest, 0);
     m_lyrics.reset();
     m_timeline.clear();
@@ -184,32 +196,32 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     if (oldLyricRequest)
         m_backend.cancelMusic(oldLyricRequest);
     if (revision != m_revision)
-        return true;
+        return;
     const auto lyricRequest = m_backend.lyrics(entry->song);
     if (revision != m_revision) {
         if (lyricRequest)
             m_backend.cancelMusic(lyricRequest);
-        return true;
+        return;
     }
     m_lyricRequest = lyricRequest;
     m_lyricsState = m_lyricRequest ? LyricsState::Loading : LyricsState::Failed;
     if (!notifyHistory())
-        return true;
+        return;
     if (revision != m_revision)
-        return true;
+        return;
     emit fmChanged();
     if (revision != m_revision)
-        return true;
+        return;
     emit queueChanged(queue());
     if (revision != m_revision)
-        return true;
+        return;
     emit playbackChanged(m_playback);
     if (revision != m_revision)
-        return true;
+        return;
     emit lyricsChanged(m_lyricsState);
     if (revision == m_revision)
         refreshCursors();
-    return true;
+    return;
 }
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
                                     AudioQuality quality)
@@ -254,6 +266,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
         return false;
     m_queueContext = m_backend.snapshot().token;
     m_sourceSession = m_backend.snapshot();
+    refreshPreload();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -332,6 +345,7 @@ bool ListeningSession::remove(QUuid entry)
             return true; // a later observer intent wins
     }
     m_queue = std::move(candidate);
+    refreshPreload();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -461,6 +475,7 @@ bool ListeningSession::move(QUuid entry, qsizetype to)
     if (!m_queue.move(entry, to))
         return false;
     recordControlIntent();
+    refreshPreload();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -471,6 +486,7 @@ bool ListeningSession::setModes(QueueOrder order, QueueRepeat repeat)
     if (!m_queue.setModes(order, repeat))
         return false;
     recordControlIntent();
+    refreshPreload();
     emit queueChanged(m_queue.snapshot());
     return true;
 }
@@ -548,6 +564,12 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
         return;
     if (!m_token.generation)
         return;
+    if (m_preload && snapshot.token.generation == m_preload->generation &&
+        snapshot.token.session == m_token.session && m_backend.playback().token == snapshot.token &&
+        m_backend.state() == BackendState::Ready && m_backend.snapshot().token == m_token.session) {
+        adoptAdvance(); // played on into the preloaded song
+        return;
+    }
     if (!current()) {
         reset();
         return;
@@ -572,6 +594,12 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
     if (revision != m_revision)
         return;
     refreshCursors();
+    if (revision != m_revision)
+        return;
+    if (!m_preloadChecked && snapshot.state == PlaybackState::Playing) {
+        m_preloadChecked = true; // once playing, so it doesn't compete with this one's start
+        refreshPreload();
+    }
     if (revision != m_revision || m_terminalHandled)
         return;
     const bool end = snapshot.state == PlaybackState::Ended;
@@ -592,6 +620,46 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
                 advance(end);
         }
     });
+}
+void ListeningSession::refreshPreload()
+{
+    if (!m_preloadChecked || m_mode != ListeningMode::Queue || !current() || !queueContextMatches())
+        return;
+    const auto state = m_playback.state;
+    if (state != PlaybackState::Playing && state != PlaybackState::Paused &&
+        state != PlaybackState::Ready)
+        return;
+    // What advance() would play at the natural end.
+    auto candidate = m_queue;
+    std::optional<QueueEntry> entry;
+    if (candidate.next(true))
+        entry = candidate.current();
+    if (!entry) {
+        if (m_preload) {
+            m_preload.reset();
+            static_cast<void>(m_backend.preloadSong({}, m_quality));
+        }
+        return;
+    }
+    if (m_preload && m_preload->entry == entry->id && m_preload->song == entry->song) {
+        m_preload->queue = std::move(candidate); // same song; the rest of the queue changed
+        return;
+    }
+    const auto id = m_backend.preloadSong(entry->song, m_quality);
+    if (!id) {
+        m_preload.reset();
+        return;
+    }
+    m_preload = Preload{id, entry->id, entry->song, std::move(candidate)};
+}
+void ListeningSession::adoptAdvance()
+{
+    auto preload = *std::exchange(m_preload, std::nullopt);
+    const auto revision = ++m_revision;
+    m_history.finish(ListeningEnd::Ended); // the last song played to its end
+    m_autoVisited.clear();                 // as advance() after a natural end
+    commit(std::move(preload.queue), m_intent, m_quality, true, false, m_backend.snapshot(),
+           revision);
 }
 void ListeningSession::advance(bool naturalEnd)
 {

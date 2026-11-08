@@ -42,6 +42,7 @@ class Gate : public QObject
   signals:
     void release();
     void endPlayback();
+    void advancePlayback(); // gapless: on into the preloaded load
     void observedPlayback(qint64 playedMs);
 };
 
@@ -270,6 +271,7 @@ class BackendRuntimeTest : public QObject
     void togetherHttpThroughThread();
     void playbackThroughThread_data();
     void playbackThroughThread();
+    void gaplessAdvanceThroughThread();
     void closeDuringRead();
     void closeDuringAnonymousWrite();
     void anonymousPersistenceFailureIsReported();
@@ -375,6 +377,8 @@ void BackendRuntimeTest::playbackThroughThread()
     }
     plans.append(QList<Plan>{
         {*response, 200, 10}, lyric, {*response2, 200, 10}, lyric, {"", 200, -1}, {"", 200, -1}});
+    if (!fm)
+        plans.append(Plan{"", 200, -1}); // song 3 is preloaded once song 2 plays
     auto f = factories(state, gate, plans);
     f.playback = [state, &gate] { return std::make_unique<Player>(state, gate); };
     BackendRuntime runtime(config, std::move(f));
@@ -435,7 +439,7 @@ void BackendRuntimeTest::playbackThroughThread()
              fm ? domain::ListeningMode::PersonalFm : domain::ListeningMode::Queue);
     QCOMPARE(listening.history().first().accountId, fm ? QString("101") : QString{});
     QVERIFY(listening.next());
-    QTRY_COMPARE(state->requests.load(), fm ? 11 : 6);
+    QTRY_COMPARE(state->requests.load(), fm ? 11 : 7); // queue: + preloading song 3
     facade.close();
     QTRY_COMPARE(stopped.size(), 1);
     QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
@@ -446,6 +450,110 @@ void BackendRuntimeTest::playbackThroughThread()
     QVERIFY(!runtime.fm().snapshot().active);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
+}
+
+// The next song is preloaded once one plays; when the backend plays on into it, the
+// session, facade and worker all follow without a new load.
+void BackendRuntimeTest::gaplessAdvanceThroughThread()
+{
+    class Player final : public IPlaybackBackend
+    {
+      public:
+        domain::LoadToken token, next;
+        QList<domain::LoadToken> loads;
+        explicit Player(Gate& gate)
+        {
+            connect(
+                &gate, &Gate::advancePlayback, this,
+                [this] {
+                    if (!next.generation)
+                        return;
+                    token = std::exchange(next, {});
+                    emit event({token, PlaybackEvent::Kind::Advanced});
+                    emit event({token, PlaybackEvent::Kind::Duration, {}, 4000});
+                    emit event({token, PlaybackEvent::Kind::Seekable, {}, 1});
+                },
+                Qt::QueuedConnection);
+            connect(
+                &gate, &Gate::observedPlayback, this,
+                [this](qint64 played) {
+                    PlaybackEvent observation{token, PlaybackEvent::Kind::Observation};
+                    observation.observed = domain::ObservedPlayback{played};
+                    emit event(observation);
+                },
+                Qt::QueuedConnection);
+        }
+        void load(domain::MediaSource, domain::LoadToken t) override
+        {
+            token = t;
+            next = {};
+            QTimer::singleShot(0, this, [this, t] {
+                emit event({t, PlaybackEvent::Kind::Duration, {}, 3000});
+                emit event({t, PlaybackEvent::Kind::Seekable, {}, 1});
+                emit event({t, PlaybackEvent::Kind::Ready});
+            });
+        }
+        void preload(domain::MediaSource, domain::LoadToken t) override { next = t; }
+        void play() override
+        {
+            emit event({token, PlaybackEvent::Kind::State, domain::PlaybackState::Playing});
+        }
+        void pause() override {}
+        void stop() override { next = {}; }
+        void seek(qint64) override {}
+        void setVolume(float) override {}
+    };
+    QTemporaryDir directory;
+    auto state = std::make_shared<SharedState>();
+    Gate gate;
+    const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
+    seed(config.databasePath, *state);
+    const auto stream = [](int id) {
+        return *netease::detail::aes(
+            QStringLiteral(
+                R"({"code":200,"data":[{"id":%1,"code":200,"url":"https://m802.music.126.net/synthetic.mp3","level":"standard","type":"mp3","expi":1200,"size":8,"freeTrialInfo":null}]})")
+                .arg(id)
+                .toUtf8(),
+            "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
+    };
+    const Plan lyric{R"({"code":200,"lrc":{"lyric":"[00:00]a\n[00:01]b"}})"};
+    // Song 1 and its lyrics, song 2 preloaded, its lyrics once it plays, song 3 preloaded.
+    const QList<Plan> plans{
+        {stream(1), 200, 10}, lyric, {stream(2), 200, 10}, lyric, {"", 200, -1}};
+    auto f = factories(state, gate, plans);
+    f.playback = [&gate] { return std::make_unique<Player>(gate); };
+    BackendRuntime runtime(config, std::move(f));
+    auto& facade = runtime.facade();
+    QSignalSpy started(&facade, &BackendFacade::started), stopped(&facade, &BackendFacade::stopped);
+    facade.start();
+    QTRY_COMPARE(started.size(), 1);
+    QTRY_VERIFY(facade.snapshot().token.isValid());
+    auto& listening = runtime.listening();
+    QVERIFY(listening.replaceQueue({{"1"}, {"2"}, {"3"}}));
+    QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
+    const auto first = facade.playback().token;
+    QTRY_COMPARE(state->requests.load(), 3); // song 2 is being preloaded
+    QTest::qWait(100);                       // its address arrives at the player
+    emit gate.observedPlayback(500);
+    QTRY_COMPARE(listening.history().size(), 1);
+    emit gate.advancePlayback();
+    QTRY_COMPARE(facade.playback().song.value, "2");
+    QVERIFY(facade.playback().token != first);
+    QCOMPARE(listening.playback().token, facade.playback().token);
+    QCOMPARE(listening.playback().state, domain::PlaybackState::Playing);
+    QTRY_COMPARE(listening.playback().durationMs, std::optional<qint64>(4000));
+    const auto queue = listening.queue();
+    QCOMPARE(queue.active, queue.entries[1].id);
+    QCOMPARE(listening.history().first().song.value, "1");
+    QCOMPARE(listening.history().first().end, domain::ListeningEnd::Ended);
+    QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
+    QCOMPARE(listening.lyrics()->song.value, "2");
+    QTRY_COMPARE(state->requests.load(), 5); // and song 3 is preloaded in turn
+    QVERIFY(listening.pause());              // commands follow the new load
+    QVERIFY(listening.next());
+    QTRY_COMPARE(facade.playback().song.value, "3");
+    facade.close();
+    QTRY_COMPARE(stopped.size(), 1);
 }
 
 void BackendRuntimeTest::musicQueriesThroughThread()

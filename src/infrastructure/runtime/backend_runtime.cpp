@@ -288,14 +288,27 @@ class BackendWorker final : public QObject
             if (command.action == PlaybackAction::Play || command.action == PlaybackAction::Stop) {
                 m_playbackToken = command.token;
                 m_playbackParentGeneration = command.generation;
+                m_preloadToken = {};
+                m_advancedFrom = {};
                 if (command.action == PlaybackAction::Play)
                     accepted = m_playback->start(command.token, command.query, command.intent);
                 else
                     m_playback->stop(command.token);
             } else if (command.action == PlaybackAction::Volume)
                 m_playback->setVolume(command.volume);
-            else if (command.token != m_playbackToken)
-                accepted = false;
+            else if (command.action == PlaybackAction::Preload) {
+                std::optional<domain::StreamQuery> query;
+                if (!command.query.song.value.isEmpty())
+                    query = command.query;
+                accepted = command.token == m_playbackToken &&
+                           m_playback->preload(command.token, command.next, query);
+                if (accepted)
+                    m_preloadToken = query ? command.next : domain::LoadToken{};
+            } else if (command.token != m_playbackToken &&
+                       !(command.token == m_advancedFrom && m_advancedFrom.generation &&
+                         (command.action == PlaybackAction::Pause ||
+                          command.action == PlaybackAction::Resume)))
+                accepted = false; // (a pause sent just before a gapless advance still counts)
             else if (command.action == PlaybackAction::Pause)
                 accepted = m_playback->pause();
             else if (command.action == PlaybackAction::Resume)
@@ -523,6 +536,10 @@ class BackendWorker final : public QObject
             std::make_unique<PlaybackCoordinator>(*m_session, *m_streamResolver, *m_player);
         connect(m_playback.get(), &PlaybackCoordinator::changed, this,
                 [this](domain::PlaybackSnapshot snapshot) {
+                    if (m_preloadToken.generation && snapshot.token == m_preloadToken) {
+                        m_advancedFrom = std::exchange(m_playbackToken, snapshot.token);
+                        m_preloadToken = {};
+                    }
                     if (snapshot.token == m_playbackToken)
                         emit playbackDelivered({m_playbackParentGeneration, std::move(snapshot)});
                 });
@@ -673,6 +690,8 @@ class BackendWorker final : public QObject
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;
     domain::LoadToken m_playbackToken;
+    domain::LoadToken m_preloadToken; // becomes m_playbackToken when playback gets there
+    domain::LoadToken m_advancedFrom; // the load before a gapless advance
     quint64 m_playbackParentGeneration = 0;
 };
 

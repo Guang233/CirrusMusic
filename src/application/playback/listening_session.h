@@ -127,6 +127,14 @@ class ListeningSession final : public QObject
   private:
     bool begin(PlaybackQueue candidate, domain::TransportIntent intent,
                domain::AudioQuality quality, bool automatic, bool fm = false);
+    // Takes `candidate` as the queue playing m_backend.playback() (accepted load).
+    void commit(PlaybackQueue candidate, domain::TransportIntent intent,
+                domain::AudioQuality quality, bool automatic, bool fm,
+                domain::SessionSnapshot sourceSession, quint64 revision);
+    // The next song is handed to the backend ahead of time so it follows without a gap
+    // (docs/tasks/audio-engine.md §4.5); redone when the queue changes.
+    void refreshPreload();
+    void adoptAdvance();
     bool enterFmWait(bool automatic, bool stopMedia);
     void scheduleFm();
     void consumeFm();
@@ -170,6 +178,14 @@ class ListeningSession final : public QObject
     quint64 m_lyricRequest = 0, m_revision = 0, m_controlRevision = 0;
     quint64 m_historyClearEpoch = 0;
     QSet<QUuid> m_autoVisited;
+    struct Preload {
+        quint64 generation = 0; // the load it plays under
+        QUuid entry;
+        domain::SongId song;
+        PlaybackQueue queue; // the queue once it plays
+    };
+    std::optional<Preload> m_preload;
+    bool m_preloadChecked = false; // refreshPreload() ran for this load
     bool m_starting = false, m_auto = false, m_terminalHandled = false;
 };
 } // namespace cirrus::application
