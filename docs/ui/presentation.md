@@ -130,6 +130,7 @@ engine.loadFromModule("CirrusMusic", "Main");
 | `playPause()`、`next()`、`previous()`、`seek(ms)`、`setVolume(v)`、`setOrder(o)`、`setRepeat(r)` | 意图 |
 | `playSongs(keys, index)`、`playNext(keys)`、`append(keys)`、`startFm()` | 替换队列并播放、插到下一首、追加、开始私人 FM |
 | `removeAt(index)`、`moveQueue(from, to)` | 编辑队列（只在 `Queue` 模式）：行立即变化，播放源随后跟上；删除正在播放的歌曲时接着播下一首 |
+| `upcomingCoverKey`、`notice(message)` | 下一首的封面（知道时），视图据此提前取；需要 snackbar 的提示（开始播放试听片段时） |
 | `queue`、`queueIndex`、`playAt(index)`、`ensureQueueLoaded(first, last)` | 按实际播放顺序（随机时为打乱后的顺序）排列的队列（`SongListModel`，详情按视图需要分批取），当前歌曲在其中的位置，播放其中一首（不改队列和顺序），为可见行取详情。同一首歌可能出现两次，当前行看 `queueIndex` 而不是 `current` 角色 |
 
 播放位置：C++ 只在后端快照到达时更新基准值，不每帧发信号。需要平滑位置的地方（进度条、逐字歌词）用 QML 辅助元素 `PlaybackClock`（基于 `FrameAnimation`）按 `positionMs + (now - positionAt) × rate` 逐帧计算；只显示文字时间的地方可以每 250 ms 刷新一次。

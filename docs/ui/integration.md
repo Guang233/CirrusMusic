@@ -89,7 +89,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 | `next`、`previous`、`playPause`、`seek`、`setVolume`、`setOrder`／`setRepeat`、`startFm` | 同名或 `pause`／`resume`、`setModes`、`startFm` | ✅ |
 | `move`（队列拖动排序） | — | ❌ `ListeningSession` 没有移动条目（§6 D3） |
 | `playVoices`、`canPlayVoices` | — | ❌ 后端只做了播客媒体接缝的第一阶段，没有声音播放；`canPlayVoices` 返回 false，页面已经按这个隐藏声音的播放按钮 |
-| 试听片段 | `PlaybackSnapshot.preview` | ✅ 展示层快照加了 `previewStartMs`：进度条只到片段长度，歌词按整首歌的时间对齐；⚠️ 迷你播放条和播放页的“试听”标记待定（要设计） |
+| 试听片段 | `PlaybackSnapshot.preview` | ✅ 展示层快照加了 `previewStartMs`：进度条只到片段长度，歌词按整首歌的时间对齐。不加“试听”标记（维护者 2026-11-08）：开始播放试听片段时弹一次 snackbar“这首歌只能试听片段”，连续的试听歌曲只提示第一首 |
 
 **LyricsSource**：`lyrics(songKey)` → `resourceQueries()` 的歌词读取（先缓存后网络）；播放中的歌曲用 `ListeningSession` 自带的歌词和游标。✅
 
@@ -224,7 +224,10 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 播放／暂停：已结束或失败时重新播放当前条目（`select(active)`），其余按会话的意图切换。音量先记在适配层，后端还没有播放时设的音量在下一次加载时补上。
   - `BackendLyrics`：正在播放的歌直接用会话已取的歌词，会话还在取时等它，不再发第二个请求（并发请求时偶发网络错误）；会话失败或换歌后、以及别的歌，走资源缓存再走网络。
   - 试听片段：快照加了 `previewStartMs`，`App.lyrics.shiftMs` 扣掉它，歌词按整首歌的时间对齐。
-  - 还没做：拖动排序（D3）、启动恢复队列和自动播放（D7）、听歌上报（D5）、“试听”标记的设计。`playVoices` 仍不支持（`canPlayVoices` 为 false）。
+  - 还没做：拖动排序（D3）、启动恢复队列和自动播放（D7）、听歌上报（D5）。`playVoices` 仍不支持（`canPlayVoices` 为 false）。
   - 离屏验证（游客，音量 0）：富士山下（试听 30 秒）播放、拖到 20 秒、暂停与继续、下一首（晴天游客不可播，显示“这首歌暂时无法播放”）、`playAt`、单曲／列表循环、随机（当前歌曲排到第一位）、删掉正在播放的歌接着播下一首；迷你播放条显示真实封面和进度；播放页歌词（含粤拼）正常。私人 FM 需要登录，没测。
-  - **观察**：`previous` 按后端的播放历史走，不按列表顺序：从列表最后一首开始播时，前 3 秒“上一首”不可用。
+  - **维护者实测后的修正（2026-11-08）**：
+    - 上一首改按播放顺序（队列里显示的顺序）：前 3 秒内回到前一首（列表循环时第一首回到最后一首），之后回到本曲开头；不再用后端按播放历史走的 `previous`（从列表中间开始播时它没有上一首）。私人 FM 仍用后端的。
+    - 播放队列里正在播的那首没有信息：队列重置时把只有 key 的当前歌曲当成“已有详情”放进去了。现在只放有详情的，详情晚到时补进那一行；队列重排时保留已取到的详情。
+    - 切歌后封面要等一会儿：新歌的详情要现取，封面再现下。现在 `Player` 预先取当前歌曲前后各一首的详情，切歌时先用队列里的详情显示；`upcomingCoverKey` 给出下一首的封面，播放页按页面和背景两种尺寸提前取好、解码好。离屏验证：下一首 0.7 秒内封面、标题、歌词都已换好。
   - FFmpeg 的警告不再输出（MP3 无缝裁剪每首都报一次 “Could not update timestamps for skipped samples”），只留错误。
