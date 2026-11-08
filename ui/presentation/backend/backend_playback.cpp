@@ -7,7 +7,9 @@
 #include "application/playback/listening_session.h"
 #include "infrastructure/cache/cached_music_query_service.h"
 #include "infrastructure/runtime/backend_runtime.h"
+#include "infrastructure/storage/listening_state_service.h"
 
+#include <QSettings>
 #include <QTimer>
 
 #include <algorithm>
@@ -24,6 +26,16 @@ using domain::PlaybackState;
 constexpr qint64 kDriftMs = 150;
 // Details kept of songs that played.
 constexpr qsizetype kDetailsKept = 256;
+// While playing, where it is gets saved this often (and on pause, a new song, a stop).
+constexpr qint64 kSavePositionMs = 5000;
+
+// Where the account's queue was, for when it comes back at the next start: the backend
+// saves the queue but not the position (integration.md §6 D7).
+QString positionKey(const QString& account)
+{
+    return QStringLiteral("playback/position/") +
+           (account.isEmpty() ? QStringLiteral("guest") : account);
+}
 
 domain::AudioQuality quality()
 {
@@ -180,6 +192,20 @@ BackendPlayback::BackendPlayback(runtime::BackendRuntime& runtime, CatalogSource
         m_kept->resume = false;
         replay(m_kept->index);
     });
+    // The last queue comes back at startup; played on when the user wants that.
+    if (auto* state = runtime.listeningState())
+        connect(state, &storage::ListeningStateService::queueRestored, this, [this](bool applied) {
+            const bool first = !m_started;
+            m_started = true;
+            if (applied && first && AppSettings().resumeOnStart())
+                QMetaObject::invokeMethod(
+                    this,
+                    [this] {
+                        if (!m_live && !m_kept)
+                            playPause();
+                    },
+                    Qt::QueuedConnection);
+        });
 }
 
 BackendPlayback::~BackendPlayback() = default;
@@ -198,6 +224,7 @@ void BackendPlayback::update()
     m_live = live;
     if (live) {
         m_kept.reset();
+        m_started = true;
     }
 
     PlaybackSnapshot next;
@@ -257,6 +284,8 @@ void BackendPlayback::update()
 
     if (!live && m_kept)
         showKept(next, now);
+    else if (!live && next.mode == playback::Queue && next.queueIndex >= 0)
+        showRestored(next, now);
     if (next.mode == playback::PersonalFm) {
         next.canNext = session.canGoNext();
         next.canPrevious = session.canGoPrevious();
@@ -269,9 +298,10 @@ void BackendPlayback::update()
         next.canPrevious = next.queueIndex > 0 || (next.queueIndex == 0 && wraps);
     }
 
-    if (live)
+    if (live) {
         seekWhereKept(play);
-    else if (canResume() && !m_resume.isActive())
+        savePosition(next, now, false);
+    } else if (canResume() && !m_resume.isActive())
         m_resume.start();
 
     const bool changed = m_detailsArrived || !sameState(m_state, next) ||
@@ -316,11 +346,84 @@ void BackendPlayback::keep(qint64 now)
     }
     if (!kept.current.key.isEmpty())
         m_kept = std::move(kept);
+    savePosition(m_state, now, true);
 }
 
-void BackendPlayback::showKept(PlaybackSnapshot& next, qint64 now) const
+void BackendPlayback::savePosition(const PlaybackSnapshot& state, qint64 now, bool stopped)
 {
-    const Kept& kept = *m_kept;
+    // Stopped by a session change, the session is already another one's.
+    if (!stopped && settled())
+        m_positionAccount = m_facade->snapshot().accountId;
+    const QString& key = state.current.key;
+    if (key.isEmpty() || state.mode != playback::Queue || (!stopped && !settled()))
+        return;
+    const bool due = stopped || key != m_savedKey || state.status != m_savedStatus ||
+                     now - m_savedAt >= kSavePositionMs;
+    if (!due || state.status == playback::Loading)
+        return;
+    const qint64 songMs = state.status == playback::Ended
+                              ? 0
+                              : positionAt(state, now) + std::max<qint64>(state.previewStartMs, 0);
+    m_savedKey = key;
+    m_savedStatus = state.status;
+    m_savedAt = now;
+    QSettings().setValue(positionKey(m_positionAccount),
+                         QVariantMap{{QStringLiteral("song"), key},
+                                     {QStringLiteral("positionMs"), songMs},
+                                     {QStringLiteral("durationMs"), state.durationMs},
+                                     {QStringLiteral("previewStartMs"), state.previewStartMs}});
+}
+
+std::optional<BackendPlayback::Saved> BackendPlayback::saved(const QString& songKey) const
+{
+    if (!m_facade)
+        return std::nullopt;
+    const QVariantMap map = QSettings().value(positionKey(m_facade->snapshot().accountId)).toMap();
+    if (map.value(QStringLiteral("song")).toString() != songKey)
+        return std::nullopt;
+    return Saved{std::max<qint64>(map.value(QStringLiteral("positionMs")).toLongLong(), 0),
+                 map.value(QStringLiteral("durationMs"), -1).toLongLong(),
+                 map.value(QStringLiteral("previewStartMs"), -1).toLongLong()};
+}
+
+void BackendPlayback::showRestored(PlaybackSnapshot& next, qint64 now)
+{
+    // The queue came back at startup (the backend never plays it by itself): the song it
+    // was on, paused where it was, as long as it was then (a preview's).
+    next.current = songInfo(next.queue.at(next.queueIndex));
+    next.status = playback::Paused;
+    next.failure.reset();
+    const auto last = saved(next.current.key);
+    next.durationMs = last && last->durationMs > 0 ? last->durationMs : next.current.durationMs;
+    next.previewStartMs = last ? last->previewStartMs : -1;
+    next.seekable = next.durationMs > 0;
+    next.positionMs =
+        last ? std::max<qint64>(last->songMs - std::max<qint64>(next.previewStartMs, 0), 0) : 0;
+    if (next.durationMs > 0)
+        next.positionMs = std::min(next.positionMs, next.durationMs);
+    next.positionAt = now;
+    next.rate = 0;
+}
+
+void BackendPlayback::playRestored()
+{
+    const QUuid active = m_session ? m_session->queue().active : QUuid();
+    if (active.isNull())
+        return;
+    const QString key = m_state.current.key;
+    m_seekKey.clear();
+    if (const auto last = saved(key); last && last->songMs > 0) {
+        m_seekKey = key;
+        m_seekSongMs = last->songMs;
+    }
+    m_session->select(active);
+}
+
+void BackendPlayback::showKept(PlaybackSnapshot& next, qint64 now)
+{
+    Kept& kept = *m_kept;
+    if (kept.current.title.isEmpty()) // its details may have come since
+        kept.current = songInfo(kept.current.key);
     next.status = kept.songPositionMs > 0 || kept.resume ? playback::Paused : playback::Ended;
     next.failure.reset();
     next.current = kept.current;
@@ -331,7 +434,9 @@ void BackendPlayback::showKept(PlaybackSnapshot& next, qint64 now) const
         std::max<qint64>(kept.songPositionMs - std::max<qint64>(kept.previewStartMs, 0), 0);
     next.positionAt = now;
     next.rate = 0;
-    if (next.mode == playback::Queue && next.queue.isEmpty()) {
+    // Over a queue the backend restored for the account signed in to meanwhile: what
+    // was just playing stays.
+    if (next.mode == playback::Queue) {
         next.queue = kept.keys;
         next.queueIndex = kept.index;
     }
@@ -339,8 +444,7 @@ void BackendPlayback::showKept(PlaybackSnapshot& next, qint64 now) const
 
 bool BackendPlayback::canResume() const
 {
-    return !m_live && m_kept && m_kept->resume && settled() && m_session &&
-           m_session->queue().entries.isEmpty();
+    return !m_live && m_kept && m_kept->resume && settled() && m_session;
 }
 
 bool BackendPlayback::settled() const
@@ -473,8 +577,10 @@ void BackendPlayback::playPause()
         // Again from the start (a failed one tries again), or on from where it was kept.
         if (session.mode() == domain::ListeningMode::PersonalFm && session.waitingForFm())
             session.resume();
-        else if (m_kept && m_entries.isEmpty())
+        else if (m_kept)
             replay(m_kept->index);
+        else if (play.state == PlaybackState::Empty && !session.queue().active.isNull())
+            playRestored();
         else if (const QUuid active = session.queue().active; !active.isNull())
             session.select(active);
         else if (!m_entries.isEmpty())
@@ -490,7 +596,7 @@ void BackendPlayback::playPause()
 
 bool BackendPlayback::showingKept() const
 {
-    return m_kept && m_entries.isEmpty() && m_state.mode == playback::Queue;
+    return m_kept && !m_live && m_state.mode == playback::Queue;
 }
 
 // The song `step` places from the current one in play order, wrapping with repeat.
@@ -545,6 +651,17 @@ void BackendPlayback::seek(qint64 positionMs)
     positionMs = std::max<qint64>(positionMs, 0);
     if (m_kept && !m_live) {
         m_kept->songPositionMs = positionMs + std::max<qint64>(m_kept->previewStartMs, 0);
+        update();
+        return;
+    }
+    if (!m_live && !m_state.current.key.isEmpty()) {
+        // The restored queue: where play starts.
+        PlaybackSnapshot at = m_state;
+        at.positionMs = positionMs;
+        at.positionAt = playback::now();
+        at.rate = 0;
+        m_savedKey.clear(); // due now
+        savePosition(at, at.positionAt, false);
         update();
         return;
     }

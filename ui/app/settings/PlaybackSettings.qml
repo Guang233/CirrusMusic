@@ -2,8 +2,7 @@ import QtQuick
 import Cirrus.Theme
 import Cirrus.Presentation
 
-// Playback. Output device and restoring the queue at startup come with the backend
-// (docs/ui/pages/settings.md §1).
+// Playback. The output device comes with the backend (docs/ui/pages/settings.md §1).
 SettingsGroup {
     title: qsTr("播放")
     glyph: Symbols.graphic_eq
@@ -32,5 +31,11 @@ SettingsGroup {
             }]
         value: App.settings.audioQuality
         onChosen: value => App.settings.audioQuality = value
+    }
+    SwitchSetting {
+        text: qsTr("启动时继续播放")
+        supportingText: qsTr("打开应用后接着播上次的歌")
+        value: App.settings.resumeOnStart
+        onSwitched: value => App.settings.resumeOnStart = value
     }
 }

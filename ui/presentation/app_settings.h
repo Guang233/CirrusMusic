@@ -76,6 +76,9 @@ class AppSettings : public QObject
     // Requested stream quality, the backend's AudioQuality: Standard (0), Exhigh (1,
     // default), Lossless, HiRes. The service answers with the best it has up to that.
     CIRRUS_SETTING(int, audioQuality, setAudioQuality, "playback/audioQuality", 1)
+    // The last queue always comes back at startup (docs/ui/integration.md §6 D7); this
+    // also plays it on.
+    CIRRUS_SETTING(bool, resumeOnStart, setResumeOnStart, "playback/resumeOnStart", false)
 
     // Lyrics.
     CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)

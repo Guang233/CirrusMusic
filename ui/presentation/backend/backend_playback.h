@@ -75,7 +75,18 @@ class BackendPlayback : public QObject, public PlaybackSource
     SongInfo songInfo(const QString& key);
     // What played last, while nothing plays (keep(), showKept()); replay() plays it again.
     void keep(qint64 now);
-    void showKept(PlaybackSnapshot& next, qint64 now) const;
+    void showKept(PlaybackSnapshot& next, qint64 now);
+    // The queue restored at startup, before anything played; playRestored() plays it on.
+    void showRestored(PlaybackSnapshot& next, qint64 now);
+    void playRestored();
+    // Where the queue is, per account, for the next start (`stopped`: now, not throttled).
+    void savePosition(const PlaybackSnapshot& state, qint64 now, bool stopped);
+    struct Saved {
+        qint64 songMs = 0; // on the song's clock
+        qint64 durationMs = -1;
+        qint64 previewStartMs = -1;
+    };
+    [[nodiscard]] std::optional<Saved> saved(const QString& songKey) const;
     [[nodiscard]] bool showingKept() const;
     void replay(int index);
     // After replay(): to where it was, once the song can seek.
@@ -114,8 +125,13 @@ class BackendPlayback : public QObject, public PlaybackSource
     bool m_detailsArrived = false;
     std::optional<double> m_volume; // the user's, once set
     bool m_notifyPending = false;
-    bool m_live = false;     // something loaded (or Personal FM waiting)
-    bool m_removing = false; // in removeAt(): a stop now is the user's
+    bool m_live = false;       // something loaded (or Personal FM waiting)
+    bool m_removing = false;   // in removeAt(): a stop now is the user's
+    bool m_started = false;    // something played or a queue came back (startup is over)
+    QString m_positionAccount; // whose position savePosition() writes
+    QString m_savedKey;
+    playback::Status m_savedStatus = playback::Empty;
+    qint64 m_savedAt = 0;
     QTimer m_resume;
     std::optional<Kept> m_kept;
     QString m_seekKey; // replay()'s song and where on its clock

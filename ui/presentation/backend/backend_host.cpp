@@ -54,7 +54,7 @@ BackendHost::BackendHost(const Paths& paths, QObject* parent)
     : QObject(parent), m_runtime(std::make_unique<runtime::BackendRuntime>(runtime::BackendConfig{
                            .databasePath = paths.database,
                            .keychainService = paths.keychainService,
-                           .persistListeningState = false,
+                           .persistListeningState = true,
                            .resourceCacheRoot = paths.cache,
                            .audioCacheRoot = paths.audioCache,
                        }))
