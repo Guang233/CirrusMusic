@@ -245,4 +245,5 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 登录时保留的内容优先于该账号恢复出来的队列（刚才在听的不被换掉）。
   - 离屏验证：播放到 20 秒退出，重启后显示同一首、暂停在 20 秒，按播放从 20 秒继续；打开设置项后重启直接从上次的位置播放；试听歌曲恢复后显示 30 秒的长度。
   - 测试脚本现在也把 `XDG_CONFIG_HOME` 指到 `build/linux-dev-local/xdg/config`（之前没设，测试时的搜索会写进维护者自己的设置）。
+- **记住所有选择（2026-11-08，维护者要求）**：音量、播放顺序和循环改成全局设置（`App.settings.volume`／`playOrder`／`playRepeat`），`Player` 启动时交给播放源；播放源的顺序或循环和设置不一样时（例如恢复出来的旧队列）改回设置的。另外记住歌词偏移、窗口大小和最大化、导航栏展开、音乐库和发现页的标签（pages/settings.md §1 末尾）。离屏验证：改音量、顺序、循环、歌词偏移后重启都还在。
   - FFmpeg 的警告不再输出（MP3 无缝裁剪每首都报一次 “Could not update timestamps for skipped samples”），只留错误。

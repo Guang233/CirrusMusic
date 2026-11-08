@@ -10,10 +10,36 @@ import Cirrus.Player
 AppWindow {
     id: window
 
-    width: 1200
-    height: 800
+    // As the user left it (App.settings), within the screen.
+    width: Math.max(minimumWidth, Math.min(App.settings.windowWidth, Screen.desktopAvailableWidth))
+    height: Math.max(minimumHeight,
+                     Math.min(App.settings.windowHeight, Screen.desktopAvailableHeight))
     visible: true
     title: qsTr("Cirrus")
+
+    Component.onCompleted: {
+        if (App.settings.windowMaximized)
+            window.showMaximized();
+    }
+    onVisibilityChanged: {
+        if (visibility === Window.Maximized)
+            App.settings.windowMaximized = true;
+        else if (visibility === Window.Windowed)
+            App.settings.windowMaximized = false;
+    }
+    onWidthChanged: saveSize.restart()
+    onHeightChanged: saveSize.restart()
+    Timer {
+        id: saveSize
+        interval: 500
+        onTriggered: {
+            // The size to come back to, not a maximized or full-screen one.
+            if (window.visibility !== Window.Windowed)
+                return;
+            App.settings.windowWidth = window.width;
+            App.settings.windowHeight = window.height;
+        }
+    }
 
     // Appearance follows the user's settings.
     Binding {

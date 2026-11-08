@@ -1,5 +1,6 @@
 #include "player.h"
 
+#include "app_settings.h"
 #include "song_detail_loader.h"
 #include "song_list_model.h"
 #include "sources.h"
@@ -9,8 +10,8 @@
 namespace cirrus::ui
 {
 
-Player::Player(PlaybackSource* source, QObject* parent)
-    : QObject(parent), m_source(source), m_queue(new SongListModel(this)),
+Player::Player(PlaybackSource* source, AppSettings* settings, QObject* parent)
+    : QObject(parent), m_source(source), m_settings(settings), m_queue(new SongListModel(this)),
       m_queueDetails(new SongDetailLoader(m_queue, this))
 {
     connect(m_queueDetails, &SongDetailLoader::filled, this, [this] {
@@ -20,7 +21,22 @@ Player::Player(PlaybackSource* source, QObject* parent)
     if (!m_source)
         return;
     m_source->setChangedHandler([this]() { update(); });
+    if (m_settings)
+        m_source->setVolume(std::clamp(m_settings->volume(), 0.0, 1.0));
     update();
+}
+
+void Player::applyModes()
+{
+    if (!m_settings || m_snapshot.mode != playback::Queue)
+        return;
+    const int order = m_settings->playOrder();
+    const int repeat = m_settings->playRepeat();
+    if (m_snapshot.order != order && (order == playback::Sequential || order == playback::Shuffle))
+        m_source->setOrder(playback::Order(order));
+    if (m_snapshot.repeat != repeat && repeat >= playback::RepeatOff &&
+        repeat <= playback::RepeatOne)
+        m_source->setRepeat(playback::Repeat(repeat));
 }
 
 void Player::update()
@@ -48,6 +64,7 @@ void Player::update()
     emit changed();
     updateUpcoming();
     noticePreview();
+    applyModes();
 }
 
 void Player::updateCurrent()
@@ -204,19 +221,30 @@ void Player::ensureQueueLoaded(int first, int last)
 
 void Player::setVolume(double volume)
 {
+    volume = std::clamp(volume, 0.0, 1.0);
+    if (m_settings)
+        m_settings->setVolume(volume);
     if (m_source)
-        m_source->setVolume(std::clamp(volume, 0.0, 1.0));
+        m_source->setVolume(volume);
 }
 
 void Player::setOrder(int order)
 {
-    if (m_source && (order == playback::Sequential || order == playback::Shuffle))
+    if (order != playback::Sequential && order != playback::Shuffle)
+        return;
+    if (m_settings)
+        m_settings->setPlayOrder(order);
+    if (m_source)
         m_source->setOrder(playback::Order(order));
 }
 
 void Player::setRepeat(int repeat)
 {
-    if (m_source && repeat >= playback::RepeatOff && repeat <= playback::RepeatOne)
+    if (repeat < playback::RepeatOff || repeat > playback::RepeatOne)
+        return;
+    if (m_settings)
+        m_settings->setPlayRepeat(repeat);
+    if (m_source)
         m_source->setRepeat(playback::Repeat(repeat));
 }
 

@@ -11,6 +11,7 @@ Q_MOC_INCLUDE("song_list_model.h")
 namespace cirrus::ui
 {
 
+class AppSettings;
 class PlaybackSource;
 class SongDetailLoader;
 class SongListModel;
@@ -52,8 +53,10 @@ class Player : public QObject
     Q_PROPERTY(QString upcomingCoverKey READ upcomingCoverKey NOTIFY upcomingChanged)
 
   public:
-    // Without a source (no playback in this build) the player stays Empty.
-    explicit Player(PlaybackSource* source, QObject* parent = nullptr);
+    // Without a source (no playback in this build) the player stays Empty. `settings`
+    // (may be null) keeps the volume, order and repeat, applied at once.
+    explicit Player(PlaybackSource* source, AppSettings* settings = nullptr,
+                    QObject* parent = nullptr);
 
     [[nodiscard]] SongItem current() const { return m_current; }
     [[nodiscard]] int status() const { return m_snapshot.status; }
@@ -111,7 +114,11 @@ class Player : public QObject
     void updateUpcoming();
     void noticePreview();
 
+    // The source's order and repeat back to the settings' (a restored queue has its own).
+    void applyModes();
+
     PlaybackSource* m_source;
+    AppSettings* m_settings;
     PlaybackSnapshot m_snapshot;
     SongItem m_current;
     QString m_upcomingCoverKey;

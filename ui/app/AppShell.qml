@@ -32,10 +32,12 @@ Item {
     // ({component, properties, section}) until something new is opened.
     property var sections: []
     property var forwardEntries: []
-    // The library page's collection tab (library.md §2), kept while the app runs.
-    property int libraryTab: 0
-    // The discover page's tab (discover.md §2), likewise.
-    property int discoverTab: 0
+    // The library page's collection tab (library.md §2) and the discover page's
+    // (discover.md §2), kept in App.settings.
+    property int libraryTab: App.settings.libraryTab
+    property int discoverTab: App.settings.discoverTab
+    onLibraryTabChanged: App.settings.libraryTab = libraryTab
+    onDiscoverTabChanged: App.settings.discoverTab = discoverTab
     // The account's playlists (the rail's, and the add-to-playlist dialog's).
     readonly property LibraryPageModel library: myLibrary
     // The player page covers the shell: its own keys (search, back, the rail) pause.
@@ -73,6 +75,9 @@ Item {
 
     function toggleRail() {
         rail.expanded = !rail.expanded;
+        // Large windows remember it; a narrow window's rail only opens over the panel.
+        if (large)
+            App.settings.railExpanded = rail.expanded;
     }
 
     // A new page on top, in the current section; forward history ends here.
@@ -312,13 +317,13 @@ Item {
     }
 
     Component.onCompleted: {
-        rail.snap(large);
+        rail.snap(large && App.settings.railExpanded);
         sections = [0];
         stack.replaceAll(homePage, {
             shell: shell
         });
     }
-    onLargeChanged: rail.snap(large)
+    onLargeChanged: rail.snap(large && App.settings.railExpanded)
 
     Component {
         id: homePage

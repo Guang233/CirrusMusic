@@ -167,8 +167,12 @@ class CurrentLyrics : public QObject
     bool m_japanese = false;
     bool m_hasRuby = false;
     qint64 m_trackOffsetMs = 0;
-    qint64 m_previewStartMs = -1;     // the player's
-    QHash<QString, qint64> m_offsets; // by song key, for this run
+    qint64 m_previewStartMs = -1; // the player's
+    // User offsets by song key, kept across runs (the latest kOffsetsKept songs).
+    void loadOffsets();
+    void saveOffsets();
+    QHash<QString, qint64> m_offsets;
+    QStringList m_offsetOrder; // their keys, least recently set first
     qint64 m_positionMs = 0;
     int m_current = -1;
     QList<int> m_active;

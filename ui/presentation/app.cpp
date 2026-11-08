@@ -33,7 +33,8 @@ Sources::~Sources() = default;
 App::App(Sources sources)
     : m_sources(std::move(sources)), m_settings(new AppSettings(this)),
       m_cache(new CacheStatus(m_sources.cache.get(), this)), m_format(new Formatter(this)),
-      m_network(new NetworkStatus(this)), m_player(new Player(m_sources.playback.get(), this)),
+      m_network(new NetworkStatus(this)),
+      m_player(new Player(m_sources.playback.get(), m_settings, this)),
       m_session(new Session(m_sources.session.get(), this)),
       m_library(new Library(m_sources.library.get(), m_session, this)),
       m_lyrics(new CurrentLyrics(m_sources.lyrics.get(), m_player, this))

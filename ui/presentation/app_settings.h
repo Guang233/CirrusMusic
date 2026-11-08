@@ -71,6 +71,16 @@ class AppSettings : public QObject
     // startup, before the window exists (ui/app/gpu_preference.h).
     CIRRUS_SETTING(bool, preferDiscreteGpu, setPreferDiscreteGpu, "graphics/preferDiscreteGpu",
                    true)
+    // The window as it was left: its size when not maximized, and whether it was. The
+    // position is not kept (Wayland doesn't let apps place windows).
+    CIRRUS_SETTING(int, windowWidth, setWindowWidth, "window/width", 1200)
+    CIRRUS_SETTING(int, windowHeight, setWindowHeight, "window/height", 800)
+    CIRRUS_SETTING(bool, windowMaximized, setWindowMaximized, "window/maximized", false)
+    // The rail expanded in large windows (narrow ones always start collapsed).
+    CIRRUS_SETTING(bool, railExpanded, setRailExpanded, "window/railExpanded", true)
+    // The library and discover pages' tabs.
+    CIRRUS_SETTING(int, libraryTab, setLibraryTab, "library/tab", 0)
+    CIRRUS_SETTING(int, discoverTab, setDiscoverTab, "discover/tab", 0)
 
     // Playback.
     // Requested stream quality, the backend's AudioQuality: Standard (0), Exhigh (1,
@@ -79,6 +89,11 @@ class AppSettings : public QObject
     // The last queue always comes back at startup (docs/ui/integration.md §6 D7); this
     // also plays it on.
     CIRRUS_SETTING(bool, resumeOnStart, setResumeOnStart, "playback/resumeOnStart", false)
+    // The player's state, applied at startup by App.player: volume (0–1, linear),
+    // Playback.Order and Playback.Repeat (the same for every queue and account).
+    CIRRUS_SETTING(double, volume, setVolume, "playback/volume", 1.0)
+    CIRRUS_SETTING(int, playOrder, setPlayOrder, "playback/order", 0)
+    CIRRUS_SETTING(int, playRepeat, setPlayRepeat, "playback/repeat", 0)
 
     // Lyrics.
     CIRRUS_SETTING(bool, showTranslation, setShowTranslation, "lyrics/showTranslation", true)

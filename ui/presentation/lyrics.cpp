@@ -3,6 +3,8 @@
 #include "player.h"
 #include "sources.h"
 
+#include <QSettings>
+
 #include <algorithm>
 #include <limits>
 
@@ -163,6 +165,7 @@ void LyricLinesModel::reset(QList<ShownLine> lines)
 CurrentLyrics::CurrentLyrics(LyricsSource* source, Player* player, QObject* parent)
     : QObject(parent), m_source(source), m_player(player), m_lines(new LyricLinesModel(this))
 {
+    loadOffsets();
     connect(this, &CurrentLyrics::changed, this, &CurrentLyrics::shiftChanged);
     connect(this, &CurrentLyrics::offsetChanged, this, &CurrentLyrics::shiftChanged);
     connect(m_player, &Player::currentChanged, this, [this] {
@@ -180,6 +183,40 @@ CurrentLyrics::CurrentLyrics(LyricsSource* source, Player* player, QObject* pare
 }
 
 qint64 CurrentLyrics::offsetMs() const { return m_offsets.value(m_key, 0); }
+
+namespace
+{
+constexpr auto kOffsetsKey = "lyrics/offsets";
+constexpr qsizetype kOffsetsKept = 500;
+} // namespace
+
+void CurrentLyrics::loadOffsets()
+{
+    // "key=ms", oldest first.
+    const QStringList saved = QSettings().value(QLatin1StringView(kOffsetsKey)).toStringList();
+    for (const QString& entry : saved) {
+        const QString key = entry.section(QLatin1Char('='), 0, 0);
+        const qint64 ms = entry.section(QLatin1Char('='), 1).toLongLong();
+        if (!key.isEmpty() && ms != 0 && !m_offsets.contains(key)) {
+            m_offsets.insert(key, ms);
+            m_offsetOrder.append(key);
+        }
+    }
+}
+
+void CurrentLyrics::saveOffsets()
+{
+    m_offsetOrder.removeAll(m_key);
+    if (m_offsets.contains(m_key))
+        m_offsetOrder.append(m_key);
+    while (m_offsetOrder.size() > kOffsetsKept)
+        m_offsets.remove(m_offsetOrder.takeFirst());
+    QStringList saved;
+    saved.reserve(m_offsetOrder.size());
+    for (const QString& key : std::as_const(m_offsetOrder))
+        saved.append(key + QLatin1Char('=') + QString::number(m_offsets.value(key)));
+    QSettings().setValue(QLatin1StringView(kOffsetsKey), saved);
+}
 
 QString CurrentLyrics::plainText(bool romanization, bool translation) const
 {
@@ -202,6 +239,7 @@ void CurrentLyrics::setOffset(qint64 offsetMs)
         m_offsets.remove(m_key);
     else
         m_offsets.insert(m_key, offsetMs);
+    saveOffsets();
     emit offsetChanged();
     updateCurrent();
 }
