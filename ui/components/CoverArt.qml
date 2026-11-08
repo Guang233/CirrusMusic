@@ -23,8 +23,12 @@ Item {
                                    && GraphicsInfo.api !== GraphicsInfo.Unknown
     // Layer showing the current cover, the other one fades in over it.
     property Image base: first
+    // The layer loading a new cover, revealed once it is done. Only it: the other layer
+    // also reports status changes (a resize reloads it, or re-reports an empty one).
+    property Image pending: null
 
     function show(): void {
+        pending = null;
         const url = coverKey !== "" ? "image://cover/" + encodeURIComponent(coverKey) : "";
         if (fade.running) {
             fade.stop();
@@ -39,8 +43,12 @@ Item {
         incoming.z = 2;
         incoming.opacity = 0;
         incoming.source = url;
-        if (incoming.status !== Image.Loading)
+        // An Image not complete yet (a delegate being created) starts loading later and
+        // is still Null here: its status change reveals it.
+        if (incoming.status !== Image.Loading && (url === "" || incoming.status !== Image.Null))
             reveal(incoming);
+        else
+            pending = incoming;
     }
 
     // Called once the incoming layer has loaded or failed: fades it in, or fades the
@@ -78,9 +86,10 @@ Item {
         retainWhileLoading: true
         opacity: 0
         onStatusChanged: {
-            // Only the incoming layer fades in; the shown one may just be resizing.
-            if (this !== root.base && status !== Image.Loading)
+            if (this === root.pending && status !== Image.Loading) {
+                root.pending = null;
                 root.reveal(this);
+            }
         }
     }
 
