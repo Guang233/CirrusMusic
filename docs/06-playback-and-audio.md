@@ -17,11 +17,11 @@
 | 组件 | 职责 |
 | --- | --- |
 | ListeningSession | 已实现：调用方Core-only唯一队列意图入口，通过异步Facade驱动单曲协调器与歌词查询 |
-| PlaybackCoordinator | 已实现：后台单曲来源／目标意图／状态机／generation，恢复能力仍有限 |
+| PlaybackCoordinator | 已实现：后台单曲来源／目标意图／状态机／generation，外加预载的下一首（`preload`，`Advanced` 时接管）和地址过期后重新解析（`SourceExpired`→`refresh`），见 [音频引擎 §6.4](tasks/audio-engine.md) |
 | PlaybackQueue | 已实现：独立队列值模型、随机／循环与真实历史；不直接操作解码器 |
 | IStreamResolver | 根据 TrackKey、账号和音质获得本次可播放来源 |
-| IPlaybackBackend | 已实现load(MediaSource,LoadToken)、play/pause/stop/seek/volume／event，无identity、不调用官方API；设备与完整能力仍提案 |
-| QtPlaybackBackend | QMediaPlayer/QAudioOutput 实现；把 Qt 状态映射为统一后端事件 |
+| IPlaybackBackend | 已实现load(MediaSource,LoadToken)、play/pause/stop/seek/volume／event、preload／refresh（事件Advanced、SourceExpired），无identity、不调用官方API；capabilities仍提案 |
+| AudioEngine | 自研引擎（[ADR-0008](adr/0008-own-audio-engine.md)）：AudioStore 范围下载与缓存、FFmpeg 解码、`QAudioSink` 回调输出、无缝衔接预载的下一首；原 QtPlaybackBackend／MediaBuffer 已于 2026-11-08 删除 |
 | LyricTimeline | 已实现：独立六轨时间索引；ListeningSession用媒体位置及试听起点定位，不建立独立音频时钟 |
 | PlayerViewModel | 对 QML 发布脱敏快照及窄命令接口 |
 | PlaybackObservationPublisher（O1已实现） | Core-only coherent投影，原绑定／same-token隐私屏障；同线程历史值，未来跨线程consumer仍须单latest与消费时复验 |

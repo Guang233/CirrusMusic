@@ -248,3 +248,4 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 - **记住所有选择（2026-11-08，维护者要求）**：音量、播放顺序和循环改成全局设置（`App.settings.volume`／`playOrder`／`playRepeat`），`Player` 启动时交给播放源；播放源的顺序或循环和设置不一样时（例如恢复出来的旧队列）改回设置的。另外记住歌词偏移、窗口大小和最大化、导航栏展开、音乐库和发现页的标签（pages/settings.md §1 末尾）。离屏验证：改音量、顺序、循环、歌词偏移后重启都还在。
   - FFmpeg 的警告不再输出（MP3 无缝裁剪每首都报一次 “Could not update timestamps for skipped samples”），只留错误。
 - **系统媒体控件（2026-11-08）**：MPRIS（Linux）由 `App.player` 驱动，已用 `playerctl` 验证；Windows SMTC、macOS Now Playing 按维护者要求先写上，没有在对应系统上编译过，等维护者找设备验证（pages/shell.md §7）。
+- **无缝播放（2026-11-08，引擎阶段 D）**：后端现在提前预载下一首，播到结尾直接接上，不再重新加载（[音频引擎 §6.4](../tasks/audio-engine.md)）。界面层不用改：`BackendPlayback` 按令牌判断换歌，前进后令牌变了，照常更新当前歌、队列位置和时钟，上一首的位置照常保存。

@@ -61,7 +61,7 @@ src/
   infrastructure/
     netease/           # endpoint registry、DTO、mapper、protocol signer
     network/           # HTTP transport、重试、限流、域名策略
-    audio/             # QtPlaybackBackend
+    media/             # AudioStore、AudioDecoder、AudioOutput、AudioEngine（ADR-0008）
     persistence/       # SQLite repositories、migrations
     files/             # 下载、扫描、缓存
   platform/linux/      # DBus、portal、托盘
