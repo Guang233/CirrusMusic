@@ -5,6 +5,9 @@
 #include "backend_sources.h"
 #include "desktop.h"
 #include "gpu_preference.h"
+#ifdef CIRRUS_UI_MPRIS
+#include "mpris.h"
+#endif
 #include "single_instance.h"
 #include "title_bar_mode.h"
 
@@ -88,6 +91,10 @@ int main(int argc, char* argv[])
     desktop.setShutdown(
         [&backend](std::function<void()> done) { backend.shutdown(std::move(done)); });
     backend.start();
+#ifdef CIRRUS_UI_MPRIS
+    // Media keys and the desktop's media controls (docs/ui/pages/shell.md §7).
+    cirrus::ui::Mpris mpris(presentation->player(), &desktop);
+#endif
 
     // --titlebar, then CIRRUS_TITLEBAR, then the user's setting, then the desktop default.
     namespace titlebar = cirrus::ui::titlebar;

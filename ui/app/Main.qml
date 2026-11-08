@@ -22,9 +22,9 @@ AppWindow {
             window.showMaximized();
     }
     onVisibilityChanged: {
-        if (visibility === Window.Maximized)
+        if (window.visibility === Window.Maximized)
             App.settings.windowMaximized = true;
-        else if (visibility === Window.Windowed)
+        else if (window.visibility === Window.Windowed)
             App.settings.windowMaximized = false;
     }
     onWidthChanged: saveSize.restart()
