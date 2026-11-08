@@ -115,6 +115,15 @@ if(CIRRUS_UI_TRAY)
     target_link_libraries(appCirrusMusic PRIVATE Qt6::Widgets)
 endif()
 
+# MPRIS on the session bus (docs/ui/pages/shell.md §7): media keys and the desktop's
+# media controls. Linux only; Windows SMTC / macOS Now Playing come later.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+    target_sources(appCirrusMusic PRIVATE mpris.h mpris.cpp)
+    target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_MPRIS)
+    target_link_libraries(appCirrusMusic PRIVATE Qt6::DBus)
+endif()
+
 install(TARGETS appCirrusMusic
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -7,7 +7,7 @@
 
 把应用从假数据换成真实后端：`main.cpp` 组装 `BackendRuntime`，展示层的每个数据源接口（`ui/presentation/sources.h`）有一个包装后端的实现。页面、ViewModel、QML 不改或只做小改；Gallery 继续只用假数据。
 
-不在本阶段：后端新功能（§6 列出的缺口除外，且要先经你决定）、听歌统计面板、Windows／macOS 验证、MPRIS（后端默认不编译）。
+不在本阶段：后端新功能（§6 列出的缺口除外，且要先经你决定）、听歌统计面板、Windows／macOS 验证。MPRIS 已在界面层接上（2026-11-08，pages/shell.md §7）。
 
 ## 2. 结构
 

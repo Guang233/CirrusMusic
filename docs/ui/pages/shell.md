@@ -140,7 +140,11 @@
 - **单实例**：`QLockFile` + `QLocalServer`，放在 `$XDG_RUNTIME_DIR/CirrusMusic/`（0700）。再次启动只发一行 `activate [令牌]`（≤ 512 字节，令牌按字符白名单校验），已运行的实例显示并激活窗口后，新进程退出。Wayland 下转交启动器给的 `XDG_ACTIVATION_TOKEN`，显示窗口时由 Qt 使用。锁的持有进程已不在时视为过期锁；持有者不应答时照常启动，不会卡住。
 - **隐藏时释放显卡**：窗口 `persistentGraphics`、`persistentSceneGraph` 设为 false，隐藏到托盘时释放图形设备和场景图，后台长时间播放时独显可以休眠；显示时重建。
 - **独立显卡（Linux）**：混合显卡（核显接屏幕、另有 nvidia／nouveau／amdgpu／radeon 驱动的显卡且不是 `boot_vga`）时默认用独显：NVIDIA 专有驱动设 prime-run 的三个变量（`__NV_PRIME_RENDER_OFFLOAD`、`__GLX_VENDOR_LIBRARY_NAME`、`__VK_LAYER_NV_optimus`），Mesa 设 `DRI_PRIME=pci-…`。用户已设其中任一变量，或 `CIRRUS_GPU=default` 时不动。设置 › 窗口 › "使用独立显卡"（只在混合显卡机器上显示），重启后生效。Windows 用系统的按应用图形设置，macOS 由系统选择，都不处理。
-- 媒体键、MPRIS、系统媒体控件属于后端 B-031，不在 UI 实现。
+- **MPRIS（2026-11-08，维护者决定改为界面层实现）**：`ui/app/mpris.{h,cpp}`，只在 Linux 编译（Qt DBus）。和窗口一样由 `App.player` 驱动，所以媒体键、桌面的播放控件、锁屏控件的行为和界面一致：上一首按播放顺序，启动恢复的队列和登录时保留的歌显示为暂停、按播放就接着播。后端 B-031 的 MPRIS 直接控制播放会话、看不到这些界面状态，不接入（代码保留）。
+  - 根接口：Identity「Cirrus」、DesktopEntry `com.guang233.Cirrus`、CanRaise（Raise 显示并激活窗口，同托盘）、CanQuit（Quit 走正常退出流程）。
+  - 播放器接口：状态（加载中算 Playing，失败算 Paused，没有歌或已结束算 Stopped）、元数据（标题、歌手、专辑、时长、`mpris:artUrl` 为图片主机的 512 像素封面）、音量、随机、循环（None／Track／Playlist）都可读写；Play／Pause／PlayPause／Stop（等同暂停）／Next／Previous／Seek（超过结尾就下一首）／SetPosition（只认当前歌曲的 trackid）。属性变化发 `PropertiesChanged`（Position 不发，由客户端外推），位置跳变超过 1 秒发 `Seeked`。
+  - 离屏验证（真实会话总线，`playerctl`）：元数据和封面网址、暂停／播放、跳到 20 秒、随机、下一首／上一首、音量、`Seeked`；启动恢复的队列显示为暂停，`playerctl play` 接着播。GNOME／KDE 上的媒体键和面板显示待维护者在桌面上看。
+  - Windows SMTC、macOS Now Playing 同样要由 `App.player` 驱动，等有对应机器时做。
 
 代码：`ui/app/desktop.*`（QML 单例 `Desktop`）、`tray.*`、`single_instance.*`、`gpu_preference.*`、`app_icon.h`、`CloseDialog.qml`；`Main.qml` 的 `onClosing`；`AppSettings` 加 `closeAction`、`preferDiscreteGpu`。
 

@@ -2,7 +2,9 @@
 
 > 状态：提案。Linux 不是单一桌面；Wayland、X11、GNOME、KDE 与沙箱环境分别验证，不能靠开发机“看起来正常”外推。
 
-最新MPRIS代码：[B-031 §9.8](tasks/B-031-playback-observation.md)可选Qt DBus target默认关闭，显式private runtimeRoot/bus，不采用环境地址／autolaunch／TCP；独立I/O线程从原观测投影发布，控制经唯一owner桥再次private验证。Rate恒1（设置0请求Pause），Position与CanControl不发PropertiesChanged，Seeked仅确认反馈；metadata与控制分别opt-in，无歌词/artURL/OpenUri。Debug/Release编译、Clang、no-undefined链接通过；无新增／执行测试或真实bus服务启动，GNOME/KDE／沙箱／最低Qt／发行身份／权限仍G，产品入口未接。
+**产品的 MPRIS（2026-11-08，维护者决定）**：在界面层实现（`ui/app/mpris.{h,cpp}`，Qt DBus、标准会话总线，服务名 `org.mpris.MediaPlayer2.cirrus`），由和窗口同一个 `App.player` 驱动，行为与界面一致（上一首按播放顺序、启动恢复的队列、登录时保留的歌），带封面（`mpris:artUrl`，图片主机的 512 像素图）、`DesktopEntry`、Raise（显示窗口）和 Quit。下面 B-031 的后端适配不接入产品（它绕过界面的播放适配层，代码保留）。详见 [docs/ui/pages/shell.md §7](ui/pages/shell.md)。
+
+此前的后端 MPRIS 代码：[B-031 §9.8](tasks/B-031-playback-observation.md)可选Qt DBus target默认关闭，显式private runtimeRoot/bus，不采用环境地址／autolaunch／TCP；独立I/O线程从原观测投影发布，控制经唯一owner桥再次private验证。Rate恒1（设置0请求Pause），Position与CanControl不发PropertiesChanged，Seeked仅确认反馈；metadata与控制分别opt-in，无歌词/artURL/OpenUri。Debug/Release编译、Clang、no-undefined链接通过；无新增／执行测试或真实bus服务启动，GNOME/KDE／沙箱／最低Qt／发行身份／权限仍G，产品入口未接。
 
 此前O3b2：[B-031 §9.6](tasks/B-031-playback-observation.md)Core private owner→单I/O线程/native socket、严格私有发现/双向SO_PEERCRED/hello实例关联及显式XDG选择限定I/S；新50、Debug361＋runtime6/Release307、0fail/skip，58登记非全58。八真实慢client/input/retained＋native pending/wake/期限/隐私/异步thread关闭已验；production namespace不猜测、default off/无产品接线。发行身份/另一真实OS user负测/沙箱/minQt/部署性能与MPRIS仍G，无新依赖。
 
