@@ -31,8 +31,6 @@ struct AudioStreamState {
     qint64 activeEnd = 0;
     qint64 wanted = -1; // the reader's last position, a hint for the downloader
     std::optional<domain::PlaybackError> failure;
-    bool canceled = false;
-    bool interruptPending = false; // the next read that has to wait returns -1
     [[nodiscard]] bool available(qint64 position) const; // lock held
     [[nodiscard]] bool complete() const;                 // lock held
 };
@@ -66,6 +64,10 @@ class AudioStream final
     AudioStream(std::shared_ptr<AudioStreamState> state, QPointer<AudioStore> store, quint64 id);
     std::shared_ptr<AudioStreamState> m_state;
     std::unique_ptr<QFile> m_file; // the reader's own handle, used on the reading thread
+    // This handle's own (the file may have other handles: the same song again, the next
+    // one being the same file); under m_state->lock.
+    bool m_canceled = false;
+    bool m_interruptPending = false; // the next read that has to wait returns -1
     QPointer<AudioStore> m_store;
     quint64 m_id;
 };

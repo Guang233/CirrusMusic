@@ -187,7 +187,7 @@ void AudioStream::cancel()
 {
     {
         std::lock_guard lock(m_state->lock);
-        m_state->canceled = true;
+        m_canceled = true;
     }
     m_state->changed.notify_all();
 }
@@ -195,14 +195,14 @@ void AudioStream::interrupt()
 {
     {
         std::lock_guard lock(m_state->lock);
-        m_state->interruptPending = true;
+        m_interruptPending = true;
     }
     m_state->changed.notify_all();
 }
 void AudioStream::clearInterrupt()
 {
     std::lock_guard lock(m_state->lock);
-    m_state->interruptPending = false;
+    m_interruptPending = false;
 }
 qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
 {
@@ -218,10 +218,10 @@ qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
         s.wanted = position;
         bool asked = false;
         while (!s.available(position)) {
-            if (s.canceled || s.failure)
+            if (m_canceled || s.failure)
                 return -1;
-            if (s.interruptPending) {
-                s.interruptPending = false;
+            if (m_interruptPending) {
+                m_interruptPending = false;
                 return -1;
             }
             if (moved && !asked) {
@@ -240,7 +240,7 @@ qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
             }
             s.changed.wait_for(lock, std::chrono::milliseconds(100));
         }
-        if (s.canceled)
+        if (m_canceled)
             return -1;
         // The contiguous bytes from here: whole chunks, then the running request.
         auto chunk = size_t(position / s.chunkBytes);

@@ -328,6 +328,24 @@ class AudioStoreTest : public QObject
         QCOMPARE(read.get(), QByteArray("FAILED"));
     }
 
+    // Playing the same song again right after stopping it: the stopped handle's cancel
+    // must not reach the new one (it shares the download until the old one is released).
+    void cancelingOneHandleLeavesTheOthers()
+    {
+        test::RangeServer server{noise(Chunk * 2, 40)};
+        server.intervalMs = 5;
+        server.blockBytes = 16 * 1024;
+        auto s = store(server);
+        auto old = s->open(source(server.body));
+        old->cancel();
+        old->interrupt();
+        auto again = s->open(source(server.body));
+        old.reset();
+        auto read = readAsync(again);
+        QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+        QCOMPARE(read.get(), server.body);
+    }
+
     void interruptWakesOneRead()
     {
         test::RangeServer server{noise(Chunk * 8, 16)};
