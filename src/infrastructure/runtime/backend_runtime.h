@@ -41,6 +41,7 @@ struct BackendConfig {
     QString keychainService; // caller-selected application identity; no invented app ID
     bool persistListeningState = false; // explicit local metadata persistence; no product opt-in
     QString resourceCacheRoot{};        // empty=disabled; explicit existing private Linux directory
+    QString audioCacheRoot{}; // empty: audio streams through temporary files only (ADR-0008)
 };
 
 // Factories run on the backend thread, never return pre-created GUI-thread QObjects.

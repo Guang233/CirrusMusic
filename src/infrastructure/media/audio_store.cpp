@@ -191,6 +191,19 @@ void AudioStream::cancel()
     }
     m_state->changed.notify_all();
 }
+void AudioStream::interrupt()
+{
+    {
+        std::lock_guard lock(m_state->lock);
+        m_state->interruptPending = true;
+    }
+    m_state->changed.notify_all();
+}
+void AudioStream::clearInterrupt()
+{
+    std::lock_guard lock(m_state->lock);
+    m_state->interruptPending = false;
+}
 qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
 {
     auto& s = *m_state;
@@ -207,6 +220,10 @@ qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
         while (!s.available(position)) {
             if (s.canceled || s.failure)
                 return -1;
+            if (s.interruptPending) {
+                s.interruptPending = false;
+                return -1;
+            }
             if (moved && !asked) {
                 asked = true; // tell the downloader once where we are
                 lock.unlock();

@@ -390,8 +390,19 @@ add_library(cirrus_media STATIC
     infrastructure/media/audio_store.cpp
     infrastructure/media/qt_playback_backend.h
     infrastructure/media/qt_playback_backend.cpp
+    infrastructure/media/audio_decoder.h
+    infrastructure/media/audio_decoder.cpp
+    infrastructure/media/audio_output.h
+    infrastructure/media/audio_output.cpp
+    infrastructure/media/audio_engine.h
+    infrastructure/media/audio_engine.cpp
 )
-target_link_libraries(cirrus_media PUBLIC cirrus_application Qt6::Network Qt6::Multimedia)
+# The audio engine decodes with FFmpeg (ADR-0008): LGPL builds, linked dynamically.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CIRRUS_FFMPEG REQUIRED IMPORTED_TARGET
+    libavformat libavcodec libavutil libswresample)
+target_link_libraries(cirrus_media PUBLIC cirrus_application Qt6::Network Qt6::Multimedia
+    PRIVATE PkgConfig::CIRRUS_FFMPEG)
 
 # Composition stays out of application/domain and is not linked into the template UI.
 add_library(cirrus_backend STATIC

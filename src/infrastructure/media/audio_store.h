@@ -32,6 +32,7 @@ struct AudioStreamState {
     qint64 wanted = -1; // the reader's last position, a hint for the downloader
     std::optional<domain::PlaybackError> failure;
     bool canceled = false;
+    bool interruptPending = false; // the next read that has to wait returns -1
     [[nodiscard]] bool available(qint64 position) const; // lock held
     [[nodiscard]] bool complete() const;                 // lock held
 };
@@ -51,6 +52,10 @@ class AudioStream final
     qint64 read(qint64 position, char* out, qint64 maximum);
     // Wakes a blocked read (it returns -1); later reads fail too.
     void cancel();
+    // The read that is waiting, or the next one that has to wait, returns -1; reads after
+    // that work again. Sticky so it can't slip past a read that hasn't started yet.
+    void interrupt();
+    void clearInterrupt();
     [[nodiscard]] bool complete() const;
     [[nodiscard]] std::optional<domain::PlaybackError> failure() const;
 

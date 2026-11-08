@@ -36,16 +36,18 @@ std::optional<BackendHost::Paths> BackendHost::preparePaths(QString* error)
 {
     const QString data =
         QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + u'/' + kDirectory;
-    const QString cache = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) +
-                          u'/' + kDirectory + QStringLiteral("/resources");
-    for (const QString& path : {data, cache}) {
+    const QString cacheBase =
+        QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + u'/' + kDirectory;
+    const QString cache = cacheBase + QStringLiteral("/resources");
+    const QString audio = cacheBase + QStringLiteral("/audio");
+    for (const QString& path : {data, cache, audio}) {
         if (!makePrivateDirectory(path)) {
             if (error)
                 *error = path;
             return std::nullopt;
         }
     }
-    return Paths{data + QStringLiteral("/state.sqlite"), cache, kKeychainService};
+    return Paths{data + QStringLiteral("/state.sqlite"), cache, kKeychainService, audio};
 }
 
 BackendHost::BackendHost(const Paths& paths, QObject* parent)
@@ -54,6 +56,7 @@ BackendHost::BackendHost(const Paths& paths, QObject* parent)
                            .keychainService = paths.keychainService,
                            .persistListeningState = false,
                            .resourceCacheRoot = paths.cache,
+                           .audioCacheRoot = paths.audioCache,
                        }))
 {
     auto& facade = m_runtime->facade();

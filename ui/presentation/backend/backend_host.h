@@ -29,6 +29,8 @@ class BackendHost : public QObject
         // The resource cache (covers, song details, lyrics): a private directory.
         QString cache;
         QString keychainService;
+        // The audio cache (played songs, ADR-0008): a private directory.
+        QString audioCache;
     };
     // The app's directories (Cirrus, com.guang233.Cirrus), created private (0700);
     // nullopt with `error` set when they cannot be made.

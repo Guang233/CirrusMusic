@@ -8,7 +8,8 @@
 #include "infrastructure/cache/cached_music_query_service.h"
 #include "infrastructure/cache/resource_cache_service.h"
 #include "infrastructure/cache/resource_cache_worker.h"
-#include "infrastructure/media/qt_playback_backend.h"
+#include "infrastructure/media/audio_engine.h"
+#include "infrastructure/media/audio_store.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
 #include "infrastructure/netease/music/collection_gateway.h"
@@ -338,6 +339,7 @@ class BackendWorker final : public QObject
         m_playback.reset();
         m_streamResolver.reset();
         m_player.reset();
+        m_audioStore.reset(); // after the engine: its streams are gone
         m_reports.reset();
         m_reportRequests.clear();
         m_collections.reset();
@@ -381,6 +383,13 @@ class BackendWorker final : public QObject
     {
         if (m_cache)
             m_cache->contextChanged();
+        // The audio cache is per account (guests share one); a token refresh keeps it.
+        const QString partition =
+            snapshot.accountId.isEmpty() ? QStringLiteral("guest") : snapshot.accountId;
+        if (m_audioStore && partition != m_audioPartition) {
+            m_audioPartition = partition;
+            m_audioStore->setPartition(m_audioPartition);
+        }
         auto event = makeEvent(Kind::Session);
         event.session = std::move(snapshot);
         emit delivered(event);
@@ -497,8 +506,14 @@ class BackendWorker final : public QObject
                     const auto c = m_togetherRequests.take(id);
                     emit togetherDelivered({c.id, c.generation, context, std::move(result)});
                 });
-        m_player = m_factories.playback ? m_factories.playback()
-                                        : std::make_unique<media::QtPlaybackBackend>();
+        if (m_factories.playback) {
+            m_player = m_factories.playback();
+        } else {
+            media::AudioStore::Options audio;
+            audio.root = m_config.audioCacheRoot;
+            m_audioStore = std::make_unique<media::AudioStore>(audio);
+            m_player = std::make_unique<media::AudioEngine>(*m_audioStore);
+        }
         if (!m_player) {
             startup(StartupError::Configuration);
             return;
@@ -652,6 +667,8 @@ class BackendWorker final : public QObject
     QHash<quint64, CommentWriteCommand> m_commentWriteRequests;
     std::unique_ptr<netease::TogetherGateway> m_together;
     QHash<quint64, TogetherCommand> m_togetherRequests;
+    std::unique_ptr<media::AudioStore> m_audioStore; // before m_player: outlives the engine
+    QString m_audioPartition;
     std::unique_ptr<IPlaybackBackend> m_player;
     std::unique_ptr<netease::StreamResolver> m_streamResolver;
     std::unique_ptr<PlaybackCoordinator> m_playback;

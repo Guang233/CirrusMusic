@@ -120,6 +120,19 @@ target_link_libraries(tst_audio_store PRIVATE cirrus_media Qt6::Test)
 add_test(NAME audio_store COMMAND tst_audio_store)
 set_tests_properties(audio_store PROPERTIES TIMEOUT 60)
 
+qt_add_executable(tst_audio_decoder unit/audio_decoder_test.cpp)
+target_link_libraries(tst_audio_decoder PRIVATE cirrus_media Qt6::Test)
+target_compile_definitions(tst_audio_decoder PRIVATE AUDIO_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/audio")
+add_test(NAME audio_decoder COMMAND tst_audio_decoder)
+set_tests_properties(audio_decoder PROPERTIES TIMEOUT 60)
+
+# Plays on the default output at volume 0; skips itself without a device.
+qt_add_executable(tst_audio_engine unit/audio_engine_test.cpp)
+target_link_libraries(tst_audio_engine PRIVATE cirrus_media Qt6::Test)
+target_compile_definitions(tst_audio_engine PRIVATE AUDIO_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/audio")
+add_test(NAME audio_engine COMMAND tst_audio_engine)
+set_tests_properties(audio_engine PROPERTIES TIMEOUT 60)
+
 qt_add_executable(tst_listening unit/listening_test.cpp)
 target_link_libraries(tst_listening PRIVATE cirrus_application Qt6::Test)
 add_test(NAME listening COMMAND tst_listening)

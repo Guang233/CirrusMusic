@@ -303,6 +303,24 @@ class AudioStoreTest : public QObject
         QCOMPARE(read.get(), QByteArray("FAILED"));
     }
 
+    void interruptWakesOneRead()
+    {
+        test::RangeServer server{noise(Chunk * 8, 16)};
+        server.intervalMs = 10000; // the first block, then a long wait
+        server.blockBytes = 1024;
+        auto s = store(server);
+        auto stream = s->open(source(server.body));
+        auto blocked = readAsync(stream, Chunk * 4, 100);
+        QTest::qWait(100);
+        stream->interrupt();
+        QTRY_VERIFY_WITH_TIMEOUT(ready(blocked), 1000);
+        QCOMPARE(blocked.get(), QByteArray("FAILED"));
+        // Unlike cancel(), later reads still work.
+        auto head = readAsync(stream, 0, 512);
+        QTRY_VERIFY_WITH_TIMEOUT(ready(head), 1000);
+        QCOMPARE(head.get(), server.body.left(512));
+    }
+
     void prefetchedHeadIsReused()
     {
         test::RangeServer server{noise(Chunk * 8, 13)};
