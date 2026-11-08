@@ -119,6 +119,11 @@ class Theme : public QObject
     // Full MD3 scheme for an arbitrary seed without touching the live theme,
     // e.g. the dark scheme the player derives from its cover. Keys are role names.
     Q_INVOKABLE QVariantMap schemeFor(const QColor& seed, bool dark) const;
+    // HCT (the color space MD3 schemes are built in): the closest sRGB color to a hue
+    // (0–360), chroma (0–~150) and tone (0–100), and a color's {hue, chroma, tone}.
+    // A seed's scheme depends only on its hue and chroma.
+    Q_INVOKABLE QColor hct(qreal hue, qreal chroma, qreal tone) const;
+    Q_INVOKABLE QVariantMap hctOf(const QColor& color) const;
     // The same for C++ (PlayerPalette): roles in ColorScheme::Role order.
     [[nodiscard]] ColorScheme::Colors computeColors(const QColor& seed, bool dark) const;
 

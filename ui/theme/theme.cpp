@@ -16,6 +16,7 @@
 #include <QtQml/qqmlfile.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace cirrus::ui
 {
@@ -339,6 +340,21 @@ QColor Theme::mix(const QColor& a, const QColor& b, qreal t) const
     };
     return QColor::fromRgbF(channel(a.redF(), b.redF()), channel(a.greenF(), b.greenF()),
                             channel(a.blueF(), b.blueF()), alpha);
+}
+
+QColor Theme::hct(qreal hue, qreal chroma, qreal tone) const
+{
+    const mcu::Hct value(std::fmod(std::fmod(hue, 360.0) + 360.0, 360.0), std::max(0.0, chroma),
+                         std::clamp(tone, 0.0, 100.0));
+    return QColor::fromRgb(value.ToInt() | 0xff000000u);
+}
+
+QVariantMap Theme::hctOf(const QColor& color) const
+{
+    const mcu::Hct value(color.rgba() | 0xff000000u);
+    return {{QStringLiteral("hue"), value.get_hue()},
+            {QStringLiteral("chroma"), value.get_chroma()},
+            {QStringLiteral("tone"), value.get_tone()}};
 }
 
 QVariantMap Theme::schemeFor(const QColor& seed, bool dark) const

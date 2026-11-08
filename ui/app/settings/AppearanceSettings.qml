@@ -50,6 +50,7 @@ SettingsGroup {
             SeedSwatches {
                 value: App.settings.fixedSeed
                 onChosen: value => App.settings.fixedSeed = value
+                onCustomRequested: customSeed.start()
             }
         }
     }
@@ -118,6 +119,10 @@ SettingsGroup {
         supportingText: qsTr("用淡入淡出代替位移和缩放")
         value: App.settings.reducedMotion
         onSwitched: value => App.settings.reducedMotion = value
+    }
+
+    CustomSeedDialog {
+        id: customSeed
     }
 
     FontPickerDialog {

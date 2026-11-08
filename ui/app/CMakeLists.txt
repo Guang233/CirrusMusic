@@ -42,6 +42,7 @@ qt_add_qml_module(appCirrusMusic
         settings/ActionSetting.qml
         settings/SliderSetting.qml
         settings/SeedSwatches.qml
+        settings/CustomSeedDialog.qml
         settings/FontPickerDialog.qml
         settings/AccountSettings.qml
         settings/PlaybackSettings.qml

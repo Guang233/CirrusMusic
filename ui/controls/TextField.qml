@@ -20,7 +20,8 @@ T.TextField {
     readonly property bool outlined: variant === Md.Outlined
     readonly property bool floated: activeFocus || length > 0 || preeditText.length > 0
     readonly property bool hasSupporting: supportingText !== ""
-    readonly property real fieldHeight: 56
+    // 56 by default; compact fields (inside a list row) may use 40–48.
+    property real fieldHeight: 56
     readonly property color accent: error ? ColorScope.scheme.error : ColorScope.scheme.primary
     readonly property color mutedColor: enabled ? ColorScope.scheme.onSurfaceVariant
                                                 : Qt.alpha(ColorScope.scheme.onSurface,
@@ -36,8 +37,9 @@ T.TextField {
     implicitHeight: fieldHeight + (hasSupporting ? 20 : 0)
     leftPadding: leadingGlyph !== "" ? 52 : 16
     rightPadding: trailingGlyph !== "" ? 52 : 16
-    topPadding: label !== "" && !outlined ? 24 : 16
-    bottomPadding: (label !== "" && !outlined ? 8 : 16) + (hasSupporting ? 20 : 0)
+    topPadding: label !== "" && !outlined ? 24 : Math.min(16, (fieldHeight - 24) / 2)
+    bottomPadding: (label !== "" && !outlined ? 8 : Math.min(16, (fieldHeight - 24) / 2))
+                   + (hasSupporting ? 20 : 0)
     verticalAlignment: TextInput.AlignVCenter
     font: Theme.type.bodyLarge.font
     color: enabled ? ColorScope.scheme.onSurface : Qt.alpha(ColorScope.scheme.onSurface,

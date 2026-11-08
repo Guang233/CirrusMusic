@@ -94,12 +94,12 @@
 ## 5. 输入
 
 - **TextArea**（`placeholderText`、`maximumLines`、`supportingText`、`counterText`、`error`；信号 `submitted`）：MD3 描边文本框的多行版本，无浮动标签。最小高 56，随内容变高到 `maximumLines` 行后在框内滚动（光标跟随）；描边、颜色同 Outlined TextField，圆角默认 large（16，`radius` 可改；2026-11-03 维护者要求比 MD3 的 4 圆一些，因为它是写字的框，不是表单里的一行）。聚焦和悬停时描边颜色、粗细（1 → 2 px）用 `fastEffects` 弹簧过渡；框下左侧辅助文字、右侧计数（bodySmall）。Enter 换行，Ctrl+Enter 发 `submitted`。用 `Flickable` 包 `T.TextArea`，不用 `TextArea.flickable`（那样内距会算两次、高度不随内容）。
-- **TextField**（`variant`：Filled／Outlined；`label`、`placeholderText`、`leadingGlyph`、`trailingGlyph`、`supportingText`、`error`）：高 56；Filled 容器 SurfaceContainerHighest、上圆角 4、底部指示线 1 px（聚焦 2 px Primary）；Outlined 描边 1 px Outline（聚焦 2 px Primary）、圆角 4。标签在有内容或聚焦时上浮缩小（bodyLarge → bodySmall，`fastSpatial`）。
+- **TextField**（`variant`：Filled／Outlined；`label`、`placeholderText`、`leadingGlyph`、`trailingGlyph`、`supportingText`、`error`、`fieldHeight`）：高 56（`fieldHeight` 可改成 40–48，用于列表行里的紧凑输入框，如设置页的缓存上限）；Filled 容器 SurfaceContainerHighest、上圆角 4、底部指示线 1 px（聚焦 2 px Primary）；Outlined 描边 1 px Outline（聚焦 2 px Primary）、圆角 4。标签在有内容或聚焦时上浮缩小（bodyLarge → bodySmall，`fastSpatial`）。
 - **SearchBar**：高 56、全圆角、SurfaceContainerHigh，左侧搜索图标、右侧清除按钮（有内容时出现，Esc 同样清空）。建议列表属于页面，由阶段 3 实现。
 
 ## 6. Slider
 
-MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外圆角全圆、内侧圆角 2；把手为 4×44 的竖条，与两侧轨道各留 6 px 间隙，按下或聚焦时变为 2 px 宽；未激活轨道末端有 4 px 停止点。拖动时把手上方显示数值气泡（InverseSurface）。`handleHeight` 可调（默认 44）。`wavy`：把手左侧的已激活部分画成 MD3E 水波（与 ProgressBar 共用 `WaveLine`），`waving` 控制流动与抚平；配合细轨道和短把手（`trackHeight: 4; handleHeight: 16`）就是迷你播放条的进度条。
+MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外圆角全圆、内侧圆角 2；把手为 4×44 的竖条，与两侧轨道各留 6 px 间隙，按下或聚焦时变为 2 px 宽；未激活轨道末端有 4 px 停止点。拖动时把手上方显示数值气泡（InverseSurface）。`handleHeight` 可调（默认 44）。`trackColors`（颜色列表，2 个以上）：整条轨道画成这些颜色的横向渐变（把手两侧照样留间隙），把手改用 OnSurface、没有停止点，用于取色（色相、色彩度；2026-11-08）。`wavy`：把手左侧的已激活部分画成 MD3E 水波（与 ProgressBar 共用 `WaveLine`），`waving` 控制流动与抚平；配合细轨道和短把手（`trackHeight: 4; handleHeight: 16`）就是迷你播放条的进度条。
 
 ## 7. 进度
 

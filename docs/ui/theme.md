@@ -51,6 +51,7 @@ Behavior on opacity {
 | `Theme.motion.custom(ζ, k, spatial)` | 令牌之外的自定义弹簧 |
 | `Theme.motion.segment(p, a, b)`、`lerp(a, b, p)` | 共享进度的区间映射（截断，用于透明度、颜色）与线性插值（不截断，用于几何），见 [motion-choreography.md §1.2](motion-choreography.md) |
 | `Theme.schemeFor(seed, dark)` | 不改变当前主题，计算任意种子的完整配色（例如播放页需要的深色方案） |
+| `Theme.hct(hue, chroma, tone)`、`Theme.hctOf(color)` | HCT 与颜色互换（`hctOf` 返回 `{hue, chroma, tone}`）。种子色的配色只取决于色相和色彩度；自定义主题色对话框用它（pages/settings.md §2） |
 
 枚举是限定作用域的（`Theme.Mode.Dark`），因为 `Mode` 和 `SeedSource` 都有 `System`。
 
