@@ -14,11 +14,13 @@ namespace
 {
 ListeningReport report(ListeningReportAction action = ListeningReportAction::Play)
 {
-    return {QUuid::createUuid(),
-            {"9007199254740993"},
-            {"2"},
-            action,
-            action == ListeningReportAction::Play ? 35 : 0};
+    ListeningReport r{QUuid::createUuid(),
+                      {"9007199254740993"},
+                      QStringLiteral("2"),
+                      action,
+                      action == ListeningReportAction::Play ? 35 : 0};
+    r.end = ListeningReportEnd::Ui;
+    return r;
 }
 ListeningReportResult result(const QSignalSpy& s)
 {
@@ -96,7 +98,21 @@ class ListeningReportTest : public QObject
         r.playedSeconds = 1;
         QVERIFY(!r.isValid());
         r = report();
-        r.playlist = {};
+        r.sourceId = {};
+        QVERIFY(!r.isValid());
+        r.source = ListeningReportSource::DailyRecommend; // the web leaves it out
+        QVERIFY(r.isValid());
+        r.source = ListeningReportSource::Search;
+        QVERIFY(!r.isValid());
+        r.sourceId = QStringLiteral("陈奕迅 富士山下");
+        QVERIFY(r.isValid());
+        r.sourceId = QStringLiteral("a\nb");
+        QVERIFY(!r.isValid());
+        r.sourceId = QString(257, QLatin1Char('a'));
+        QVERIFY(!r.isValid());
+        r = report();
+        r.source = ListeningReportSource::Album;
+        r.sourceId = QStringLiteral("not-an-id");
         QVERIFY(!r.isValid());
         r = report();
         r.eventId = {};
@@ -109,18 +125,40 @@ class ListeningReportTest : public QObject
             QCOMPARE(c->protocol, Protocol::Eapi);
             QVERIFY(requiresAccountCookie(op));
             QCOMPARE(c->destination, OfficialDestination::ListeningLog);
-            auto p = QJsonObject{{"id", "9007199254740993"}, {"sourceId", "2"}};
-            if (op == ApiOperation::ListeningPlay)
+            auto p = QJsonObject{{"id", "9007199254740993"}, {"source", "list"}, {"sourceId", "2"}};
+            if (op == ApiOperation::ListeningPlay) {
                 p.insert("time", 35);
+                p.insert("end", "ui");
+            }
             QVERIFY(operationPayload(op, p));
             p.insert("url", "arbitrary");
             QVERIFY(!operationPayload(op, p));
         }
-        QVERIFY(!operationPayload(ApiOperation::ListeningPlay,
-                                  {{"id", "1"}, {"sourceId", "2"}, {"time", 1.5}}));
-        QVERIFY(!operationPayload(ApiOperation::ListeningPlay,
-                                  {{"id", "1"}, {"sourceId", "2"}, {"time", 0}}));
-        QVERIFY(!operationPayload(ApiOperation::ListeningStart, {{"id", "1"}, {"sourceId", "0"}}));
+        const QJsonObject play{
+            {"id", "1"}, {"source", "list"}, {"sourceId", "2"}, {"time", 35}, {"end", "playend"}};
+        const auto with = [&](const char* key, QJsonValue value) {
+            auto p = play;
+            p.insert(key, value);
+            return p;
+        };
+        QVERIFY(operationPayload(ApiOperation::ListeningPlay, play));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("time", 1.5)));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("time", 0)));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("end", "skip")));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("source", "fm")));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("sourceId", "keywords")));
+        auto searched = with("source", "search");
+        searched.insert("sourceId", "富士山下");
+        const auto search = operationPayload(ApiOperation::ListeningPlay, searched);
+        QVERIFY(search);
+        const auto logs =
+            QJsonDocument::fromJson(search->value("logs").toString().toUtf8()).array();
+        const auto json = logs.first().toObject().value("json").toObject();
+        QCOMPARE(json.value("source").toString(), "search");
+        QCOMPARE(json.value("sourceId").toString(), "富士山下");
+        QCOMPARE(json.value("content").toString(), QString());
+        QVERIFY(!operationPayload(ApiOperation::ListeningStart,
+                                  {{"id", "1"}, {"source", "list"}, {"sourceId", "0"}}));
         const auto log = officialRequestUrl(Protocol::Eapi, u"/api/feedback/weblog",
                                             OfficialDestination::ListeningLog);
         QVERIFY(log);
@@ -173,7 +211,7 @@ class ListeningReportTest : public QObject
                 QCOMPARE(json.value("time").toInt(), 35);
                 QCOMPARE(json.value("source").toString(), "list");
                 QCOMPARE(json.value("sourceId").toString(), "2");
-                QCOMPARE(json.value("end").toString(), "playend");
+                QCOMPARE(json.value("end").toString(), "ui");
             } else
                 QVERIFY(!json.contains("time"));
             QCOMPARE(h.http->requests.size(), done.size() + 1); // no automatic second action

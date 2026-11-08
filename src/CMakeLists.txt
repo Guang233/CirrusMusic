@@ -76,6 +76,8 @@ add_library(cirrus_application STATIC
     application/playback/listening_fm.cpp
     application/playback/listening_session.cpp
     application/playback/listening_session.h
+    application/playback/listening_reporter.cpp
+    application/playback/listening_reporter.h
     application/playback/playback_observation_publisher.cpp
     application/playback/playback_observation_publisher.h
     application/playback/system_media_commands.cpp

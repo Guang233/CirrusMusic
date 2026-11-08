@@ -121,10 +121,13 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
         return id;
     }
     QJsonObject parameters{{QStringLiteral("id"), report.song.value},
-                           {QStringLiteral("sourceId"), report.playlist.value}};
+                           {QStringLiteral("source"), sourceName(report.source)},
+                           {QStringLiteral("sourceId"), report.sourceId}};
     const bool play = report.action == ListeningReportAction::Play;
-    if (play)
+    if (play) {
         parameters.insert(QStringLiteral("time"), report.playedSeconds);
+        parameters.insert(QStringLiteral("end"), endName(report.end));
+    }
     const auto apiId = m_client->submit(
         context, play ? ApiOperation::ListeningPlay : ApiOperation::ListeningStart, parameters);
     m_pending[id].apiId = apiId;

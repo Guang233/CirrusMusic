@@ -217,6 +217,11 @@ target_link_libraries(tst_listening_history PRIVATE cirrus_application Qt6::Test
 add_test(NAME listening_history COMMAND tst_listening_history)
 set_tests_properties(listening_history PROPERTIES TIMEOUT 20)
 
+qt_add_executable(tst_listening_reporter unit/listening_reporter_test.cpp)
+target_link_libraries(tst_listening_reporter PRIVATE cirrus_application Qt6::Test)
+add_test(NAME listening_reporter COMMAND tst_listening_reporter)
+set_tests_properties(listening_reporter PROPERTIES TIMEOUT 15)
+
 qt_add_executable(tst_listening_report unit/listening_report_test.cpp)
 target_link_libraries(tst_listening_report PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME listening_report COMMAND tst_listening_report)

@@ -6,6 +6,7 @@
 #include "domain/account/credential_login_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
+#include "domain/playback/listening_report.h"
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
@@ -524,26 +525,44 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     }
     if (operation == ApiOperation::ListeningStart || operation == ApiOperation::ListeningPlay) {
         const bool play = operation == ApiOperation::ListeningPlay;
+        using domain::ListeningReportEnd;
+        using domain::ListeningReportSource;
         const auto id = parameters.value(QStringLiteral("id")).toString();
+        const auto sourceText = parameters.value(QStringLiteral("source")).toString();
         const auto source = parameters.value(QStringLiteral("sourceId")).toString();
+        const auto endText = parameters.value(QStringLiteral("end")).toString();
         const auto time = parameters.value(QStringLiteral("time"));
         const auto seconds = time.toInteger(-1);
-        if (parameters.size() != (play ? 3 : 2) || !domain::validMusicId(id) ||
-            !domain::validMusicId(source) ||
+        std::optional<ListeningReportSource> kind;
+        for (auto k : {ListeningReportSource::List, ListeningReportSource::Album,
+                       ListeningReportSource::Artist, ListeningReportSource::Toplist,
+                       ListeningReportSource::DailyRecommend, ListeningReportSource::Search,
+                       ListeningReportSource::Song})
+            if (domain::sourceName(k) == sourceText)
+                kind = k;
+        bool endKnown = !play;
+        for (auto e : {ListeningReportEnd::PlayEnd, ListeningReportEnd::Ui,
+                       ListeningReportEnd::Interrupt, ListeningReportEnd::Exception})
+            endKnown = endKnown || domain::endName(e) == endText;
+        if (parameters.size() != (play ? 5 : 3) || !domain::validMusicId(id) || !kind ||
+            !domain::validSourceId(*kind, source) || !endKnown ||
             (play && (seconds <= 0 || seconds > 604800 || time != QJsonValue(seconds))))
             return std::nullopt;
+        // startplay's content is the page's query string on the web; ids only.
         QJsonObject json{{QStringLiteral("id"), id},
                          {QStringLiteral("type"), QStringLiteral("song")},
                          {QStringLiteral("mainsite"), QStringLiteral("1")},
                          {QStringLiteral("mainsiteWeb"), QStringLiteral("1")},
-                         {QStringLiteral("content"), QStringLiteral("id=") + source}};
+                         {QStringLiteral("content"), domain::validMusicId(source)
+                                                         ? QStringLiteral("id=") + source
+                                                         : QString()}};
         if (play) {
             json.insert(QStringLiteral("download"), 0);
-            json.insert(QStringLiteral("end"), QStringLiteral("playend"));
+            json.insert(QStringLiteral("end"), endText);
             json.insert(QStringLiteral("sourceId"), source);
             json.insert(QStringLiteral("time"), seconds);
             json.insert(QStringLiteral("wifi"), 0);
-            json.insert(QStringLiteral("source"), QStringLiteral("list"));
+            json.insert(QStringLiteral("source"), sourceText);
         }
         const QJsonArray logs{QJsonObject{
             {QStringLiteral("action"), play ? QStringLiteral("play") : QStringLiteral("startplay")},
