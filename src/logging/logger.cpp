@@ -450,6 +450,14 @@ void installCrashHandler() {}
 #endif
 } // namespace
 
+QStringList detail::splitNames(const char* names)
+{
+    QStringList list;
+    for (const QString& name : QString::fromLatin1(names).split(u','))
+        list.append(name.trimmed());
+    return list;
+}
+
 QString quoted(QStringView value)
 {
     QString text =

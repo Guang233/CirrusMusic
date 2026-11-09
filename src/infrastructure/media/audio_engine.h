@@ -74,6 +74,8 @@ class AudioEngine : public application::IPlaybackBackend
     qint64 m_lastPosition = -1;
     quint64 m_seekSerial = 0;
     quint64 m_underruns = 0;
+    quint64 m_underrunsLogged = 0; // reported in the log every kUnderrunLogMs at most
+    QElapsedTimer m_underrunWindow;
     float m_volume = 0.5f;
     bool m_active = false;
     bool m_ready = false;

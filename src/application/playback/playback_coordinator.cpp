@@ -1,4 +1,5 @@
 #include "playback_coordinator.h"
+#include "logging/log.h"
 #include <QThread>
 #include <QTimer>
 #include <algorithm>
@@ -73,6 +74,15 @@ void PlaybackCoordinator::resolved(quint64 id, SessionToken context, StreamResul
         if (!forCurrent && !forNext)
             return;
         auto source = usable(std::move(result), refresh.query.song);
+        if (const auto* failure = std::get_if<PlaybackFailure>(&source))
+            qCWarning(lcPlayback) << log::event("load.refresh_failed")
+                                  << log::field("token", refresh.token.generation)
+                                  << log::field("song", refresh.query.song.value)
+                                  << log::field("err", failure->error)
+                                  << log::field("code", failure->providerCode.value_or(0));
+        else
+            qCInfo(lcPlayback) << log::event("load.refreshed")
+                               << log::field("token", refresh.token.generation);
         if (auto* fresh = std::get_if<StreamSource>(&source)) {
             MediaSource physical = std::move(*fresh);
             m_backend.refresh(refresh.token, std::move(physical));
@@ -93,6 +103,12 @@ void PlaybackCoordinator::resolved(quint64 id, SessionToken context, StreamResul
         return;
     }
     auto& source = std::get<StreamSource>(checked);
+    qCInfo(lcPlayback) << log::event("load.resolved") << log::field("token", token.generation)
+                       << log::field("song", m_snapshot.song.value)
+                       << log::field("quality", source.actualQuality)
+                       << log::field("preview", source.preview.has_value())
+                       << log::field("bytes", source.size)
+                       << log::field("ms", m_loadClock.elapsed());
     m_snapshot.actualQuality = source.actualQuality;
     m_snapshot.preview = source.preview;
     m_snapshot.state = PlaybackState::Loading;
@@ -118,6 +134,9 @@ bool PlaybackCoordinator::preload(LoadToken currentToken, LoadToken next,
         return false;
     dropNext();
     m_lastGeneration = next.generation;
+    qCInfo(lcPlayback) << log::event("preload.start") << log::field("token", next.generation)
+                       << log::field("song", query->song.value)
+                       << log::field("quality", query->quality);
     m_next = Next{next, *query};
     const auto request = m_resolver.resolve(next.session, *query);
     if (!request) {
@@ -132,7 +151,11 @@ bool PlaybackCoordinator::preload(LoadToken currentToken, LoadToken next,
 void PlaybackCoordinator::preloaded(StreamResult result)
 {
     auto checked = usable(std::move(result), m_next->query.song);
-    if (!std::holds_alternative<StreamSource>(checked)) {
+    if (const auto* failure = std::get_if<PlaybackFailure>(&checked)) {
+        qCInfo(lcPlayback) << log::event("preload.unresolved")
+                           << log::field("token", m_next->token.generation)
+                           << log::field("err", failure->error)
+                           << log::field("code", failure->providerCode.value_or(0));
         m_next.reset(); // loaded the usual way later, where a failure shows
         return;
     }
@@ -140,6 +163,10 @@ void PlaybackCoordinator::preloaded(StreamResult result)
     m_next->actualQuality = source.actualQuality;
     m_next->preview = source.preview;
     m_next->loaded = true;
+    qCInfo(lcPlayback) << log::event("preload.resolved")
+                       << log::field("token", m_next->token.generation)
+                       << log::field("quality", source.actualQuality)
+                       << log::field("preview", source.preview.has_value());
     MediaSource physical = std::move(source);
     m_backend.preload(std::move(physical), m_next->token);
 }
@@ -176,6 +203,9 @@ void PlaybackCoordinator::advance()
     m_snapshot = std::move(snapshot);
     m_query = next.query;
     m_ready = true;
+    m_loadClock.start();
+    qCInfo(lcPlayback) << log::event("load.advanced") << log::field("token", next.token.generation)
+                       << log::field("song", next.query.song.value);
     m_seek.reset();
     m_deadline.stop();
 }
@@ -192,6 +222,8 @@ void PlaybackCoordinator::expired(LoadToken token)
     for (const auto& refresh : m_refreshes)
         if (refresh.token == token)
             return; // already asking
+    qCInfo(lcPlayback) << log::event("load.refresh") << log::field("token", token.generation)
+                       << log::field("song", query.song.value);
     const auto request = m_resolver.resolve(token.session, query);
     if (request)
         m_refreshes.append({token, std::move(query), request});
@@ -233,9 +265,19 @@ bool PlaybackCoordinator::start(LoadToken token, StreamQuery query, TransportInt
     if ((intent != TransportIntent::Play && intent != TransportIntent::Pause) ||
         !m_session.accepts(token.session) || token.generation <= m_lastGeneration ||
         !validMusicId(query.song.value) || qualityName(query.quality).isEmpty() ||
-        (session.phase != SessionPhase::Guest && session.phase != SessionPhase::Authenticated))
+        (session.phase != SessionPhase::Guest && session.phase != SessionPhase::Authenticated)) {
+        qCWarning(lcPlayback) << log::event("load.refused") << log::field("token", token.generation)
+                              << log::field("song", query.song.value)
+                              << log::field("intent", intent)
+                              << log::field("stale_token", token.generation <= m_lastGeneration)
+                              << log::field("session", m_session.accepts(token.session));
         return false;
+    }
     m_lastGeneration = token.generation;
+    m_loadClock.start();
+    qCInfo(lcPlayback) << log::event("load.start") << log::field("token", token.generation)
+                       << log::field("song", query.song.value)
+                       << log::field("quality", query.quality) << log::field("intent", intent);
     // Invalidate prior state BEFORE cancel/stop (adapters may synchronously emit on abort).
     m_snapshot = {};
     retire();
@@ -255,6 +297,20 @@ bool PlaybackCoordinator::start(LoadToken token, StreamQuery query, TransportInt
 }
 void PlaybackCoordinator::fail(PlaybackFailure failure)
 {
+    const bool expected =
+        failure.error == PlaybackError::Canceled || failure.error == PlaybackError::StaleContext;
+    if (expected)
+        qCInfo(lcPlayback) << log::event("load.ended")
+                           << log::field("token", m_snapshot.token.generation)
+                           << log::field("err", failure.error);
+    else
+        qCWarning(lcPlayback) << log::event("load.failed")
+                              << log::field("token", m_snapshot.token.generation)
+                              << log::field("song", m_snapshot.song.value)
+                              << log::field("err", failure.error)
+                              << log::field("code", failure.providerCode.value_or(0))
+                              << log::field("state", m_snapshot.state)
+                              << log::field("ms", m_loadClock.elapsed());
     m_snapshot.state = PlaybackState::Failed;
     m_snapshot.failure = failure;
     m_snapshot.seekable = false;
@@ -338,6 +394,9 @@ void PlaybackCoordinator::receive(PlaybackEvent event)
             return;
         m_ready = true;
         m_deadline.stop();
+        qCInfo(lcPlayback) << log::event("load.ready")
+                           << log::field("token", event.token.generation)
+                           << log::field("ms", m_loadClock.elapsed());
         m_snapshot.state = m_snapshot.intent == TransportIntent::Play ? PlaybackState::Ready
                                                                       : PlaybackState::Paused;
         break;

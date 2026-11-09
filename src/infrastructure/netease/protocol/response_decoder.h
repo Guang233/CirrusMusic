@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include <QByteArray>
 #include <QJsonObject>
@@ -22,6 +23,9 @@ enum class DecodeError {
     InvalidBusinessCode,
     UnsupportedEncoding
 };
+CIRRUS_LOG_ENUM(DecodeError, None, InvalidLimits, InputTooLarge, DecryptionFailed, InvalidGzip,
+                DecodedTooLarge, InvalidUtf8, InvalidJson, UnexpectedRoot, InvalidBusinessCode,
+                UnsupportedEncoding)
 
 struct DecodeLimits {
     qsizetype inputBytes = 1024 * 1024 + 16;

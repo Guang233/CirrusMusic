@@ -2,6 +2,7 @@
 
 #include "domain/account/session_types.h"
 #include "domain/music/music_types.h"
+#include "logging/log.h"
 #include "media_source.h"
 #include <utility>
 
@@ -58,6 +59,10 @@ enum class PlaybackError {
     Decode,
     NoOutput
 };
+CIRRUS_LOG_ENUM(PlaybackError, InvalidRequest, StaleContext, Canceled, Unavailable,
+                ProtocolKeyMissing, Network, Timeout, RateLimited, InvalidResponse, UnsafeSource,
+                Expired, TooLarge, Storage, UnsupportedFormat, Decode, NoOutput)
+CIRRUS_LOG_ENUM(AudioQuality, Standard, Exhigh, Lossless, HiRes)
 struct PlaybackFailure {
     PlaybackError error{};
     std::optional<int> providerCode;
@@ -69,6 +74,8 @@ struct LoadToken {
 };
 enum class PlaybackState { Empty, Resolving, Loading, Ready, Playing, Paused, Ended, Failed };
 enum class TransportIntent { Play, Pause, Stop };
+CIRRUS_LOG_ENUM(PlaybackState, Empty, Resolving, Loading, Ready, Playing, Paused, Ended, Failed)
+CIRRUS_LOG_ENUM(TransportIntent, Play, Pause, Stop)
 struct ObservedPlayback {
     static constexpr qint64 MaximumMs = 7LL * 24 * 60 * 60 * 1000;
     qint64 playedMs = 0;

@@ -4,9 +4,11 @@
 #include <QDebug>
 #include <QMetaEnum>
 #include <QString>
+#include <QStringList>
 #include <QUuid>
 
 #include <concepts>
+#include <iterator>
 #include <type_traits>
 
 class QUrl;
@@ -95,4 +97,24 @@ template <typename T> Text field(const char* key, const T& value)
 {
     return {QString::fromLatin1(key) + u'=' + detail::value(value)};
 }
+
+namespace detail
+{
+QStringList splitNames(const char* names);
+}
 } // namespace cirrus::log
+
+// Names an enum in the log (field() finds logName() next to the enum). Put it in the
+// enum's namespace, after the enum: CIRRUS_LOG_ENUM(TransportError, None, Timeout, ...).
+// Listed enumerators log their own spelling, whatever their values; others a number.
+#define CIRRUS_LOG_ENUM(Enum, ...)                                                                 \
+    inline QString logName(Enum value)                                                             \
+    {                                                                                              \
+        using enum Enum;                                                                           \
+        static constexpr Enum values[] = {__VA_ARGS__};                                            \
+        static const QStringList names = ::cirrus::log::detail::splitNames(#__VA_ARGS__);          \
+        for (qsizetype i = 0; i < qsizetype(std::size(values)); ++i)                               \
+            if (values[i] == value)                                                                \
+                return names.value(i);                                                             \
+        return QString::number(qlonglong(value));                                                  \
+    }

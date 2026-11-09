@@ -25,6 +25,8 @@ enum class ApiError {
     Cookie,
     MissingProtocolKey // xeapi without a valid installation key; nothing was sent
 };
+CIRRUS_LOG_ENUM(ApiError, None, InvalidRequest, StaleContext, Canceled, Busy, Transport, Crypto,
+                Decode, Cookie, MissingProtocolKey)
 
 // Infrastructure envelope only. Application ports must map this to typed values.
 struct ApiResult {
@@ -98,6 +100,7 @@ class SessionApiClient final : public QObject
         quint64 transportId = 0;
         ApiError forcedError{};
         std::shared_ptr<SessionCookieStore> credentials;
+        QElapsedTimer elapsed; // for the log
     };
     void invalidatePrevious(domain::SessionToken context);
     void start(quint64 requestId);

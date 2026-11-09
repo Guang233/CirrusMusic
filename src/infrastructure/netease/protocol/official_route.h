@@ -1,5 +1,7 @@
 #pragma once
 
+#include "logging/log.h"
+
 #include <QStringView>
 #include <QUrl>
 
@@ -10,6 +12,8 @@ namespace cirrus::netease
 
 enum class Protocol { Api, Weapi, Eapi, Xeapi };
 enum class OfficialDestination { Default, ListeningLog, TogetherHttp };
+CIRRUS_LOG_ENUM(Protocol, Api, Weapi, Eapi, Xeapi)
+CIRRUS_LOG_ENUM(OfficialDestination, Default, ListeningLog, TogetherHttp)
 
 // Internal route construction only, NOT an operation registry or a signer.
 // Accept a canonical /api/... path; reject full URLs, queries and escapes.

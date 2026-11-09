@@ -1,6 +1,7 @@
 #pragma once
 #include "application/account/session_coordinator.h"
 #include "application/ports/playback.h"
+#include <QElapsedTimer>
 #include <QTimer>
 
 namespace cirrus::application
@@ -62,6 +63,7 @@ class PlaybackCoordinator final : public QObject
     quint64 m_lastGeneration = 0; // never reuse a load identity, even after stop/session change
     bool m_ready = false;
     QTimer m_deadline;
+    QElapsedTimer m_loadClock; // since start(), for the log
     std::optional<qint64> m_seek;
     domain::StreamQuery m_query; // the current load's, for refreshing its address
     std::optional<Next> m_next;

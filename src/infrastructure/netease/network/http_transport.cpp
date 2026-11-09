@@ -1,5 +1,6 @@
 #include "http_transport.h"
 #include "infrastructure/network/cache_retention_policy.h"
+#include "logging/log.h"
 #include <QElapsedTimer>
 
 #include "infrastructure/netease/protocol/comment_v3_policy.h"
@@ -77,6 +78,9 @@ struct HttpTransport::Pending {
     QElapsedTimer elapsed;
     bool xeapi = false;
     TransportError forcedError = TransportError::None;
+    // For the log: the operation's path (no query), never the URL or the body.
+    QString path;
+    Protocol protocol = Protocol::Eapi;
 };
 
 HttpTransport::HttpTransport(QObject* parent)
@@ -115,6 +119,8 @@ quint64 HttpTransport::post(TransportRequest request)
     auto pending = std::make_shared<Pending>();
     pending->limit = request.responseLimit;
     pending->elapsed.start();
+    pending->path = request.logicalPath.left(256);
+    pending->protocol = request.protocol;
     m_pending.insert(id, pending);
     // Always deferred: even validation failure/cancel-before-start can be observed
     // after post() returns. Callers must keep a receiver connected until completion.
@@ -284,6 +290,30 @@ void HttpTransport::finish(quint64 id)
                 network::cacheRetention(*pending->reply, pending->elapsed.elapsed());
         pending->reply->deleteLater();
     }
+    // One record per request (docs/tasks/logging.md §8): failures as warnings, with what
+    // Qt said; the rest in detail mode. The API client adds the operation's outcome.
+    const bool h2 = pending->reply &&
+                    pending->reply->attribute(QNetworkRequest::Http2WasUsedAttribute).toBool();
+    if (result.error == TransportError::None)
+        qCDebug(lcNet) << log::event("request.done") << log::field("req", id)
+                       << log::field("path", pending->path)
+                       << log::field("proto", pending->protocol)
+                       << log::field("status", result.httpStatus)
+                       << log::field("bytes", result.body.size())
+                       << log::field("ms", pending->elapsed.elapsed()) << log::field("h2", h2);
+    else if (result.error == TransportError::Canceled)
+        qCDebug(lcNet) << log::event("request.canceled") << log::field("req", id)
+                       << log::field("path", pending->path)
+                       << log::field("ms", pending->elapsed.elapsed());
+    else
+        qCWarning(lcNet) << log::event("request.failed") << log::field("req", id)
+                         << log::field("path", pending->path)
+                         << log::field("proto", pending->protocol)
+                         << log::field("err", result.error)
+                         << log::field("qt", QNetworkReply::NetworkError(result.networkError))
+                         << log::field("status", result.httpStatus)
+                         << log::field("ms", pending->elapsed.elapsed()) << log::field("h2", h2)
+                         << log::field("retry_after", QString::fromLatin1(result.retryAfter));
     emit completed(id, result);
 }
 

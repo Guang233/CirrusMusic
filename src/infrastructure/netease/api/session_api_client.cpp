@@ -1,6 +1,7 @@
 #include "session_api_client.h"
 #include "comment_write_operation.h"
 #include "infrastructure/netease/protocol/comment_v3_policy.h"
+#include "logging/log.h"
 
 #include "infrastructure/netease/protocol/eapi_request_profile.h"
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
@@ -250,6 +251,7 @@ quint64 SessionApiClient::submit(domain::SessionToken context, ApiOperation oper
     Pending pending;
     pending.context = context;
     pending.operation = operation;
+    pending.elapsed.start();
     pending.commentV3Token = std::move(commentV3Token);
     const auto contract = operationContract(operation, parameters);
     const auto payload = operationPayload(operation, parameters);
@@ -508,6 +510,7 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
     const auto pending = m_pending.take(id);
     m_transportIds.remove(pending.transportId);
     const auto candidateReceipt = result.credentialReceipt;
+    const auto code = result.decoded.businessCode;
     if (!accepts(pending.context)) {
         result = {ApiError::StaleContext};
     } else if (pending.forcedError != ApiError::None) {
@@ -523,6 +526,33 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
         result.cacheRetention = {};
     }
     result.submittedToTransport = pending.transportId != 0;
+    // Every operation's outcome (docs/tasks/logging.md §8): the provider's code, whatever
+    // it means for this operation (QR polling answers 800-803, for one). Transport
+    // failures were logged by the transport.
+    const QString path = pending.contract.logicalPath.isEmpty()
+                             ? QStringLiteral("op#") + QString::number(int(pending.operation))
+                             : pending.contract.logicalPath;
+    const qint64 ms = pending.elapsed.elapsed();
+    switch (result.error) {
+    case ApiError::None:
+        qCInfo(lcApi) << log::event("api.done") << log::field("path", path)
+                      << log::field("code", code ? QString::number(*code) : QStringLiteral("-"))
+                      << log::field("ms", ms);
+        break;
+    case ApiError::Canceled:
+    case ApiError::StaleContext:
+    case ApiError::Transport:
+        qCDebug(lcApi) << log::event("api.ended") << log::field("path", path)
+                       << log::field("err", result.error)
+                       << log::field("transport", result.transportError) << log::field("ms", ms);
+        break;
+    default:
+        qCWarning(lcApi) << log::event("api.failed") << log::field("path", path)
+                         << log::field("err", result.error)
+                         << log::field("decode", result.decoded.error)
+                         << log::field("status", result.httpStatus) << log::field("ms", ms);
+        break;
+    }
     emit completed(id, pending.context, std::move(result));
 }
 

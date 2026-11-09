@@ -25,6 +25,8 @@ enum class TransportError {
     Network,
     HttpStatus
 };
+CIRRUS_LOG_ENUM(TransportError, None, InvalidRequest, Canceled, Timeout, ResponseTooLarge,
+                ResponseHeadersTooLarge, RedirectBlocked, Network, HttpStatus)
 
 struct TransportRequest {
     Protocol protocol = Protocol::Eapi;
