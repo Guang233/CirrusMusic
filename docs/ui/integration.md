@@ -283,3 +283,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - D4：`LibrarySource::canSavePlaylists()`，后端为 false，歌单页隐藏"收藏"按钮；假数据仍为 true。
   - `BackendCatalog` 的类型转换挪到 `backend_mapping.h`，两个适配层共用。
   - 验证：构建、qmllint；游客身份启动，音乐库各处按预期报"需要登录"。真实账号下的读写要维护者登录后走一遍（喜欢／取消喜欢、收藏专辑／歌手／播客、新建／改名／删除歌单、加歌和移出、排序）。
+  - 维护者第一次实测（2026-11-09，日志）：
+    - 收藏／取消专辑、关注／取消歌手成功（`write.done`）。
+    - 喜欢失败：`/api/radio/like` 回业务码 −460。按参考实现 2021 年的修法，只给红心的 Weapi Cookie 补 `os=pc`、`appver`（[collection-writes.md §1a](../api/collection-writes.md)），待再试。
+    - 音乐库、最近播放打不开：`/api/play-record/song/list` 回 200，但服务端不理会 limit，总是发整份列表，映射器按"超过 limit 条"判无效；改为只读前 limit 条（[cloud-history-reads.md](../api/cloud-history-reads.md)）。最近播放页（limit 100）也失败，原因日志里看不出来，所以补了诊断：网关对映射器不接受的 200 响应记 `api music.invalid`（路径），云端最近播放的映射器在 debug 记是哪项检查、第几条（`music.invalid_why`）。
+    - 音乐库总览原来以"最近一首"作为页面的加载结果，这条辅助读取失败就整页报错，"新建歌单"（在歌单标签里）也就看不到。改为只有"未登录"才让整页失败，其他失败只空着那行摘要。

@@ -242,6 +242,7 @@ L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现
 - 各模块的事件（§8）：
   - 网络：`net request.failed`（逻辑路径、协议、错误、Qt 错误名、HTTP 状态、耗时、是否 HTTP/2、retry-after）；成功和取消记 debug。
   - 接口：`api.done`（路径、业务码、耗时）、`api.failed`（解码、Cookie 等）；传输失败只由网络层记。
+  - 读取：`api music.invalid`（warning，路径）是业务码 200 但映射器不接受的响应；映射器可在 debug 记 `music.invalid_why`（哪项检查、第几条，现有云端最近播放）。
   - 音频存储：`audio.open`（已缓存比例、是否校验过、临时文件）、`audio.range`（debug）、`audio.range_failed`、`audio.url_refused`/`url_needed`/`url_refreshed`、`audio.failed`、`audio.cached`、`audio.prefetch`、`audio_cache.evicted`/`clear`。
   - 音频引擎：`engine.load`/`ready`（打开耗时）/`ended`/`failed`/`next_opened`/`advanced`/`source_expired`/`device_changed`/`no_output`，`engine.underruns`（每 10 秒汇总）。
   - 播放：`load.start`/`refused`/`resolved`（实际音质、试听、耗时）/`ready`/`failed`（错误、业务码、当时状态）/`advanced`/`refresh`、`preload.*`；队列 `queue.replace`/`restored`/`select`/`next`/`previous`/`stop`/`advance`/`begin`/`begin_refused`。
