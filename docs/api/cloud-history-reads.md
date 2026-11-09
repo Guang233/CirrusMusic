@@ -36,7 +36,7 @@ Facade不接受任意uid，从已验证快照捕获accountId；MusicQueryService
 
 `CloudRecentSongs { query, songs, optional total }`，`RecentSong { Song, optional providerPlayTime }`。
 
-当前decoder契约为root code200、`data.list`为数组，每项含歌曲对象 `data`，至多请求limit条；`data.total`缺失／null为未知，若存在必须是安全非负整数且不小于返回条目数。歌曲沿用已有映射，wide ID用规范字符串、未知标题／艺人／专辑／曲目时长保持已有语义。
+当前decoder契约为root code200、`data.list`为数组，每项含歌曲对象 `data`；**服务端不理会limit**（2026-11-09实测：limit 1与100的响应同为455 KB），decoder只读前limit条（服务端顺序，最新在前），其后的条目不解析也不校验；`data.total`缺失／null为未知，若存在必须是安全非负整数且不小于返回条目数。歌曲沿用已有映射，wide ID用规范字符串、未知标题／艺人／专辑／曲目时长保持已有语义。
 
 - 保留服务端顺序和重复歌曲，不重新排序、不按SongId去重，也不承诺列表每项必定代表独立一次播放。
 - `resourceId`如果存在必须匹配内嵌歌曲ID；`resourceType`如果存在必须为SONG。缺失标记保持未知，不能将显式VIDEO等记录混入音乐结果。

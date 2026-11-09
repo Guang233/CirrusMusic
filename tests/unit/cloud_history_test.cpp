@@ -203,10 +203,16 @@ class CloudHistoryTest : public QObject
         QJsonArray recentRows;
         for (int i = 0; i < 3; ++i)
             recentRows.append(QJsonObject{{"data", QJsonObject{{"id", i + 1}}}});
+        recentRows.append(1); // past the limit: not read
+        // The service ignores the limit and sends its whole list: the first rows are kept.
         const auto recent =
             mapMusicResponse(RecentSongsQuery{"101", 2},
                              {{"code", 200}, {"data", QJsonObject{{"list", recentRows}}}});
-        QVERIFY(std::holds_alternative<MusicFailure>(recent));
+        QVERIFY(std::holds_alternative<CloudRecentSongs>(recent));
+        const auto& kept = std::get<CloudRecentSongs>(recent).songs;
+        QCOMPARE(kept.size(), 2);
+        QCOMPARE(kept.at(0).song.id.value, QStringLiteral("1"));
+        QCOMPARE(kept.at(1).song.id.value, QStringLiteral("2"));
         QJsonArray ranks;
         for (int i = 0; i < 1000; ++i)
             ranks.append(QJsonObject{{"song", QJsonObject{{"id", i + 1}}}});

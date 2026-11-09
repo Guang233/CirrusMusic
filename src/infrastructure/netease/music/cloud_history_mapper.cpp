@@ -1,6 +1,8 @@
 #include "cloud_history_mapper.h"
+#include "logging/log.h"
 #include "music_mapping.h"
 #include <QJsonArray>
+#include <algorithm>
 #include <cmath>
 
 namespace cirrus::netease
@@ -17,6 +19,13 @@ bool number(const QJsonValue& value, std::optional<qint64>& out)
         return true;
     out = nonnegative(value);
     return out.has_value();
+}
+// Which check a response failed; the gateway logs the failure itself (music.invalid).
+MusicFailure invalidBecause(const char* reason, qsizetype row = -1)
+{
+    qCDebug(lcApi) << log::event("music.invalid_why") << log::field("reason", reason)
+                   << log::field("row", row);
+    return MusicFailure{MusicError::InvalidResponse};
 }
 } // namespace
 std::optional<CloudHistoryRequest> cloudHistoryRequest(const MusicQuery& query)
@@ -46,34 +55,40 @@ MusicResult mapCloudHistoryResponse(const MusicQuery& query, const QJsonObject& 
     if (const auto* q = std::get_if<RecentSongsQuery>(&query)) {
         const auto raw = object.value(QStringLiteral("data"));
         if (!raw.isObject())
-            return invalid;
+            return invalidBecause("data");
         const auto data = raw.toObject();
         const auto values = data.value(QStringLiteral("list"));
         CloudRecentSongs result;
         result.query = *q;
-        if (!values.isArray() || values.toArray().size() > q->limit ||
-            !number(data.value(QStringLiteral("total")), result.total) ||
-            (result.total && *result.total < values.toArray().size()))
-            return invalid;
-        for (const auto value : values.toArray()) {
+        if (!values.isArray())
+            return invalidBecause("list");
+        const auto list = values.toArray();
+        if (!number(data.value(QStringLiteral("total")), result.total) ||
+            (result.total && *result.total < list.size()))
+            return invalidBecause("total");
+        // The service sends its whole list whatever the limit (a limit of 1 and of 100
+        // got the same 455 KB, 2026-11-09): the first `limit` rows, newest first.
+        for (qsizetype i = 0; i < std::min<qsizetype>(list.size(), q->limit); ++i) {
+            const auto value = list.at(i);
             if (!value.isObject())
-                return invalid;
+                return invalidBecause("row", i);
             const auto row = value.toObject();
             const auto rawSong = row.value(QStringLiteral("data"));
             if (!rawSong.isObject())
-                return invalid;
+                return invalidBecause("row_data", i);
             const auto song = songFrom(rawSong.toObject());
             if (!song)
-                return invalid;
+                return invalidBecause("song", i);
             const auto resourceId = row.value(QStringLiteral("resourceId"));
             const auto type = row.value(QStringLiteral("resourceType"));
-            if ((!absent(resourceId) && providerId(resourceId) != song->id.value) ||
-                (!absent(type) && type != QJsonValue(QStringLiteral("SONG"))))
-                return invalid;
+            if (!absent(resourceId) && providerId(resourceId) != song->id.value)
+                return invalidBecause("resource_id", i);
+            if (!absent(type) && type != QJsonValue(QStringLiteral("SONG")))
+                return invalidBecause("resource_type", i);
             RecentSong item;
             item.song = *song;
             if (!number(row.value(QStringLiteral("playTime")), item.providerPlayTime))
-                return invalid;
+                return invalidBecause("play_time", i);
             result.songs.append(item); // duplicates and server ordering are intentional
         }
         return result;
