@@ -59,6 +59,17 @@ SQL索引记录scope/kind/key、written/expires/touched、payload bytes/SHA256�
 
 allowlist为安全接纳范围，不是这四个host都已实测可用的承诺；普通fetch失败保留，不绕过。
 
+### 5a. 加载速度（2026-11-09，维护者反馈"封面加载太慢，加载过的也慢"）
+
+日志（`cover.fetched`、新加的 `ui.backend cover.served`）显示：命中磁盘的封面中位 400–490 ms，下载的 930–1090 ms。原因有四处，参照 Glide／Coil 的做法逐一改了：
+
+1. **重新编码**：下载的 JPEG 解码后编成 PNG 存（每张约 250 KB），命中时还要再解码、编码一遍，都在后端线程上。维护者定：**存图片主机缩好的原字节**（约 10–80 KB）。下载后在线程池完整解码一次做 §5 的检查（`CoverFetcher::rejection`：格式、尺寸、单帧、能完整解码），通过才存；命中时库里已核对过 SHA256，只读文件头（`plausible`）。旧的 PNG 行照样能用。表里的封面行仍只来自 `CoverFetcher`。
+2. **排队**：UI 队列一次 6 个、先来先服务，后端一次只下载 2 个、其余回 Busy 再重试，磁盘命中也排在下载后面。现在服务、worker、store 一次都可容 `CacheJobsInFlight`（32）个；worker 自己排队下载（同时 6 个，HTTP/2 共用连接），不再回 Busy；UI 队列最新的先跑，滚出屏幕的封面由 `CoverProvider` 取消。
+3. **SQLite**：每个任务都新开连接、走一遍路径安全检查、在主数据库的执行线程上跑；每次命中都单独写一次 `touched`（`synchronous=FULL` 下每次都要 fsync）。现在 store 有自己的线程（`cache`），连接打开一次（路径检查也一次）、出错才重开；写入攒 50 ms（最多 32 条）一个事务，各条用 SAVEPOINT 互不连累；命中的 `touched` 攒 2 s 一起写。读和写同一个 key 时先写。条目上限从 10000 提到 `CacheMaximumEntries`（100000）：新的封面小，512 MiB 能放下的远多于一万张。
+4. **内存**：`BackendImages` 留最近封面的原字节（64 MiB），`CoverProvider` 的解码图从 64 MiB 提到 128 MiB。
+
+结果（同一测试目录，离屏启动两次）：磁盘命中中位 23–29 ms，下载 135–305 ms。测试：`tst_cover_checks`（检查）、`tst_resource_cache_store`（命中、批量写、跨实例、替换和清除）。
+
 ## 6. clear、取消、账号和重入
 
 账号切换／同token的account或phase变化／Stopping同步失效owner请求；后台和结果消费都用原scope复验，不能把旧请求重新贴上新token。旧已接纳SQL写仍只触碰旧账号分区；它不授权向新账号交付数据。
