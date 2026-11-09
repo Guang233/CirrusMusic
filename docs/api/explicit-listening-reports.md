@@ -85,7 +85,7 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 - `ListeningReport` 的 `playlist` 换成 `sourceId`（字符串）加 `source`（`ListeningReportSource`：list／album／artist／toplist／dailySongRecommend／search／song，取值照网页版前端，见 UI 接入 §6.1 的表）和 `end`（`ListeningReportEnd`：playend／ui／interrupt／exception）。`validSourceId`：搜索是关键词（可打印、≤256 字符），每日推荐可以为空，其余是规范数字 ID。payload 照填 `source`、`sourceId`、`end`；startplay 的 `content` 只在 sourceId 是数字 ID 时写 `id=…`，否则为空。PC 端的取值是否与网页版相同待真实验证。
 - `application::ListeningReporter`（`src/application/playback/listening_reporter.*`）：看 `ListeningSession` 的听歌记录，每次加载结算时至多发一次 Play，秒数取真实累计（`playedMs / 1000`）。结算：播完 playend、换歌 ui、失败 exception、停止／会话变化／退出 interrupt；暂停超过 5 分钟按 interrupt 报，之后继续播放这次加载不再报。不到 3 秒、游客、私人 FM（没有来源证据）、记录的账号不是当前账号都不报。来源由调用方按队列条目给（界面记住每个条目从哪里点开）；不知道时报为 `song`，sourceId 是歌曲自己。结果不重试。`flush()` 在关闭前结算正在播的这首，最多等 2 秒。
-- 由界面层的 `BackendHost` 创建（不进 `BackendRuntime`，后端测试不会多出请求）。测试 `tst_listening_reporter`（6 项）；`tst_listening_report` 改为覆盖来源、结束原因与搜索关键词。
+- 由界面层的 `BackendHost` 创建（不进 `BackendRuntime`，后端测试不会多出请求）。测试 `tst_listening_reporter`（7 项）；`tst_listening_report` 改为覆盖来源、结束原因与搜索关键词。
 
 ## 4b. 真实账号验证（2026-11-09）
 
@@ -95,6 +95,7 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 - **计入听歌排行**：维护者在官方客户端"听歌排行 · 最近一周"里看到当天从歌单播放的两首都在。
 - **不进"最近播放"**：官方客户端的"最近播放"里没有这些歌。也就是说"最近播放"由别的途径更新，不是 weblog 的 play；具体是哪条接口没有证据（APK 不读），参考实现里也只有读取（`record_recent_song`），没有写入。维护者指出网页版也会上传最近播放，猜测在 weblog 的其他 action 里，待查（只看网页版公开的前端代码，不读 APK）。
 - 维护者决定（2026-11-09）：Cirrus 的"最近播放"页只显示云端；本机听歌数据放到以后的"听歌统计"仪表盘页。
+- 网页版公开前端代码（2026-11-09）：切歌时先 `play`（上一首），再 `startplay`（新歌）；没有其他写入最近播放的请求。Cirrus 原先只发 `play`，现在 `ListeningReporter` 在每次加载第一次出声时也发 `startplay`（[UI 接入 §6.1](../ui/integration.md)）。它是否让歌进"最近播放"待验证。
 
 ## 5. 未决事项
 

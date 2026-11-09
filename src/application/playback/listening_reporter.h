@@ -11,10 +11,11 @@ namespace cirrus::application
 {
 class ListeningSession;
 
-// Reports what was listened to (docs/ui/integration.md §6.1, D5): one Play per load
-// with the genuinely observed seconds, once it is settled: played to the end, replaced,
-// stopped, failed, or paused for longer than the pause timeout. Loads under 3 s are
-// not reported, nor guests, nor personal FM (no evidence for its source). The source
+// Reports what was listened to (docs/ui/integration.md §6.1, D5), as the web client
+// does: a StartPlay when a load is first heard, then one Play with the genuinely
+// observed seconds once it is settled: played to the end, replaced, stopped, failed, or
+// paused for longer than the pause timeout. Plays under 3 s are not reported; guests
+// and personal FM (no evidence for its source) get neither. The source
 // comes from the caller per queue entry; without one the song itself is the source.
 // Results are not retried (the facade doesn't either). Caller-thread object; facade and
 // session must outlive it.
@@ -43,6 +44,15 @@ class ListeningReporter final : public QObject
     void recordChanged(const domain::StoredListeningRecord& row);
     void playbackChanged(const domain::PlaybackSnapshot& snapshot);
     void report(const domain::StoredListeningRecord& row, domain::ListeningReportEnd end);
+    struct Prepared {
+        domain::ListeningReport report;
+        const char* origin; // the source: "known", "invalid" (so the song) or "none"
+    };
+    // The report for `row`, or none when it must not be sent (logged).
+    std::optional<Prepared> prepare(const domain::StoredListeningRecord& row,
+                                    domain::ListeningReportAction action);
+    void send(const Prepared& prepared, const domain::StoredListeningRecord& row);
+    static void remember(QSet<QUuid>& set, QList<QUuid>& order, QUuid id);
     void finishFlush();
 
     BackendFacade& m_facade;
@@ -51,6 +61,8 @@ class ListeningReporter final : public QObject
     std::optional<domain::StoredListeningRecord> m_active; // the load playing, its latest total
     QSet<QUuid> m_reported;                                // record ids already settled
     QList<QUuid> m_reportedOrder;                          // bounds m_reported
+    QSet<QUuid> m_started;                                 // record ids StartPlay was sent for
+    QList<QUuid> m_startedOrder;                           // bounds m_started
     QSet<quint64> m_inFlight;
     QTimer m_pause;
     QTimer m_flushTimer;

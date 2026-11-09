@@ -54,6 +54,11 @@ void ListeningReporter::recordChanged(const StoredListeningRecord& row)
 {
     if (row.end == ListeningEnd::Active) {
         m_active = row;
+        if (!m_started.contains(row.id)) { // first heard: the web's startplay
+            remember(m_started, m_startedOrder, row.id);
+            if (auto start = prepare(row, ListeningReportAction::StartPlay))
+                send(*start, row);
+        }
         return;
     }
     if (m_active && m_active->id == row.id)
@@ -70,6 +75,61 @@ void ListeningReporter::playbackChanged(const PlaybackSnapshot& snapshot)
         m_pause.stop();
 }
 
+void ListeningReporter::remember(QSet<QUuid>& set, QList<QUuid>& order, QUuid id)
+{
+    set.insert(id);
+    order.append(id);
+    if (order.size() > kRememberedRecords)
+        set.remove(order.takeFirst());
+}
+
+std::optional<ListeningReporter::Prepared>
+ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportAction action)
+{
+    const auto session = m_facade.snapshot();
+    if (row.source == ListeningMode::PersonalFm || row.accountId.isEmpty() ||
+        session.phase != SessionPhase::Authenticated || session.accountId != row.accountId) {
+        qCInfo(lcReport) << log::event("report.skip") << log::field("action", action)
+                         << log::field("reason", row.source == ListeningMode::PersonalFm ? "fm"
+                                                 : row.accountId.isEmpty()               ? "guest"
+                                                 : session.phase != SessionPhase::Authenticated
+                                                     ? "signed_out"
+                                                     : "other_account")
+                         << log::field("song", row.song.value);
+        return std::nullopt; // FM: no evidence for its source; guests can't; never another
+                             // account's
+    }
+    ListeningReport report{QUuid::createUuid(), row.song, row.song.value, action,
+                           action == ListeningReportAction::Play ? row.playedMs / 1000 : 0};
+    report.source = ListeningReportSource::Song; // played as itself, unless we know better
+    const char* origin = "none";
+    if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
+        auto known = report;
+        known.source = found->source;
+        known.sourceId = found->id;
+        origin = known.isValid() ? "known" : "invalid";
+        if (known.isValid())
+            report = known;
+    }
+    return Prepared{report, origin};
+}
+
+void ListeningReporter::send(const Prepared& prepared, const StoredListeningRecord& row)
+{
+    const auto& report = prepared.report;
+    qCInfo(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
+                     << log::field("action", report.action) << log::field("song", row.song.value)
+                     << log::field("record_end", row.end) << log::field("end", report.end)
+                     << log::field("played_ms", row.playedMs)
+                     << log::field("origin", prepared.origin)
+                     << log::field("source", report.source);
+    if (const auto id = m_facade.reportListening(report))
+        m_inFlight.insert(id);
+    else
+        qCWarning(lcReport) << log::event("report.not_queued")
+                            << log::field("event", report.eventId);
+}
+
 void ListeningReporter::report(const StoredListeningRecord& row, ListeningReportEnd end)
 {
     if (row.id.isNull() || m_reported.contains(row.id))
@@ -80,44 +140,11 @@ void ListeningReporter::report(const StoredListeningRecord& row, ListeningReport
                           << log::field("played_ms", row.playedMs);
         return; // a short load may still grow while it plays
     }
-    m_reported.insert(row.id);
-    m_reportedOrder.append(row.id);
-    if (m_reportedOrder.size() > kRememberedRecords)
-        m_reported.remove(m_reportedOrder.takeFirst());
-    const auto session = m_facade.snapshot();
-    if (row.source == ListeningMode::PersonalFm || row.accountId.isEmpty() ||
-        session.phase != SessionPhase::Authenticated || session.accountId != row.accountId) {
-        qCInfo(lcReport) << log::event("report.skip")
-                         << log::field("reason", row.source == ListeningMode::PersonalFm ? "fm"
-                                                 : row.accountId.isEmpty()               ? "guest"
-                                                 : session.phase != SessionPhase::Authenticated
-                                                     ? "signed_out"
-                                                     : "other_account")
-                         << log::field("song", row.song.value);
-        return; // FM: no evidence for its source; guests can't; never another account's
+    remember(m_reported, m_reportedOrder, row.id);
+    if (auto play = prepare(row, ListeningReportAction::Play)) {
+        play->report.end = end;
+        send(*play, row);
     }
-    ListeningReport report{QUuid::createUuid(), row.song, row.song.value,
-                           ListeningReportAction::Play, row.playedMs / 1000};
-    report.source = ListeningReportSource::Song; // played as itself, unless we know better
-    report.end = end;
-    const char* origin = "none";
-    if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
-        auto known = report;
-        known.source = found->source;
-        known.sourceId = found->id;
-        origin = known.isValid() ? "known" : "invalid";
-        if (known.isValid())
-            report = known;
-    }
-    qCInfo(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
-                     << log::field("song", row.song.value) << log::field("record_end", row.end)
-                     << log::field("end", end) << log::field("played_ms", row.playedMs)
-                     << log::field("origin", origin) << log::field("source", report.source);
-    if (const auto id = m_facade.reportListening(report))
-        m_inFlight.insert(id);
-    else
-        qCWarning(lcReport) << log::event("report.not_queued")
-                            << log::field("event", report.eventId);
 }
 
 void ListeningReporter::flush(std::function<void()> done, int timeoutMs)

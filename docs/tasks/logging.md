@@ -244,7 +244,7 @@ L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现
   - 音频存储：`audio.open`（已缓存比例、是否校验过、临时文件）、`audio.range`（debug）、`audio.range_failed`、`audio.url_refused`/`url_needed`/`url_refreshed`、`audio.failed`、`audio.cached`、`audio.prefetch`、`audio_cache.evicted`/`clear`。
   - 音频引擎：`engine.load`/`ready`（打开耗时）/`ended`/`failed`/`next_opened`/`advanced`/`source_expired`/`device_changed`/`no_output`，`engine.underruns`（每 10 秒汇总）。
   - 播放：`load.start`/`refused`/`resolved`（实际音质、试听、耗时）/`ready`/`failed`（错误、业务码、当时状态）/`advanced`/`refresh`、`preload.*`；队列 `queue.replace`/`restored`/`select`/`next`/`previous`/`stop`/`advance`/`begin`/`begin_refused`。
-  - 上报：`report.settled`（结束方式、秒数、来源是否找到）、`report.skip`（原因）、`report.send`、`report.response`（debug，只有字段名）、`report.result`（结果、业务码）、`report.flush`/`flush_timeout`。
+  - 上报：`report.settled`（动作 StartPlay／Play、结束方式、秒数、来源是否找到）、`report.skip`（原因）、`report.send`、`report.response`（debug，只有字段名）、`report.result`（结果、业务码）、`report.flush`/`flush_timeout`。
   - 认证：`session.phase`（账号散列）、`guest.bootstrap`、`login.qr_ready`/`qr_status`/`failed`/`signed_in`；密钥环 `keyring.done`/`failed`（固定条目名）；`db.opened`/`open_failed`；`backend.start`/`started`/`close`/`drained`。
   - 封面：`cover.failed`（debug：`cover.fetched`）。展示层：`player.play`（条数、来源）、`player.play_pause`、`model.failed`（游客的"需要登录"记 info）。平台：`mpris.command`。
 - 会话头的 `commit=` 每次构建检查（`cmake/cirrus_commit.cmake`），有未提交改动时带 `-dirty`。

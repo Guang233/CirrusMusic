@@ -143,7 +143,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 - 退出程序时正在播的歌：先结算再关闭后端（最多等 2 秒），超时就放弃。
 - 必须上报，没有设置开关；游客不报。
 - 结果是 Rejected／Unknown 时不重试（后端也不重试）。
-- StartPlay：官方客户端的做法未知，先不发；要发的话每次加载开始时一次，等来源字段核实时一起确认。
+- StartPlay：每次加载第一次真正出声时（累计时长第一次大于 0）发一次，和网页版一样在上一首的 Play 之后；没出声就失败的加载不发；不满 3 秒的加载只有 StartPlay。最初先不发，2026-11-09 为查"最近播放"补上（§8），是否就是"最近播放"的来源待维护者确认。
 
 **来源**：展示层要记住每个队列条目从哪里来（`playSongs` 加来源参数；“下一首播放”“加入队列”的条目各自带来源），这部分无论怎样都要做。
 
@@ -261,6 +261,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
     - 听歌上报：换歌时发出一条（歌曲 833263，167 秒，`end=ui`，`source=dailySongRecommend`，sourceId 为空），服务器回 code 200（响应只有 `code`、`data`、`message` 三个字段）。是否进了"最近播放"要维护者在官方客户端确认；没进的话，嫌疑是每日推荐的空 sourceId 或缺少 startplay，用日志再试其他来源（歌单）对比。
     - 第二轮（`cirrus-20261109-150805-139311.log`，从歌单播放）：
       - 听歌上报：两条，`source=list`、`sourceId` 是歌单 129003828，166 秒和 16 秒，服务器都回 code 200（`Acknowledged`），维护者确认仍不在"最近播放"。来源不是原因。维护者随后在官方客户端的听歌排行（最近一周）里看到这两首都计入了：**上报是有效的，只是"最近播放"不由这个接口更新**（2026-11-09）。维护者决定：Cirrus 的"最近播放"页只显示云端（第 7 步接入时照此）；本机的听歌数据另做"听歌统计"页（听歌时长等，最后做成仪表盘）；网页版也会上传最近播放，维护者猜在 weblog 里，待查。
+      - 查"最近播放"（2026-11-09，只读网页版公开下发的 `core.js`、`frame.js`，没有发送请求）：网页版切歌时先给上一首发 `play`（听了 3 秒以上），紧接着给新歌发 `startplay`（`{id, type:"song", content:<页面查询串>}`）；`play`／`playend` 走 `new-bi-log`（换一种加密，发往 `clientlogusf.music.163.com`），其余 action 走 `bi-log`。网页版没有别的写入最近播放的请求（`/api/song/play` 定义了但没有调用处）。Cirrus 只发 `play`、从来不发 `startplay`，这是和网页版唯一明显的差别，所以补上 StartPlay（`tst_listening_reporter` 加 `startPlayWhenFirstHeard`）。待维护者再听几首，看"最近播放"是否出现；仍不出现的话，下一个嫌疑是加密／域名（我们走 eapi 的 ListeningLogOsx 配置）。
       - HTTP/2 问题查实：闲置约 3 分钟后取播放地址（`/api/song/enhance/player/url/v1`，xeapi）连续两次 `qt=ProtocolFailure`（Qt：HTTP/2 stream 1 "連線已關閉"），都是新连接的第一个请求，同时别的主机的请求都成功；第三次才好。已修：传输层加 `TransportRequest::retryLostConnection`，只给逐个列出的读操作（`retriesLostConnection()`：播放地址、歌曲详情、歌词、歌单／专辑／歌手、每日推荐、搜索、排行榜等）打开；连接在收到任何响应前断开（`ProtocolFailure`／`RemoteHostClosed`）时，同一请求改走 HTTP/1.1 再发一次，记 `net request.retry`。写操作和上报永不重试（`tst_http_transport` 加一项）。
     - 顺带：Qt Wayland 输入法每次焦点变化都警告一次（Qt 的问题），占了日志的大半，日志规则里关掉了；退出快捷键改用 `sequences`，消掉启动时的警告。音乐库、最近播放、侧栏歌单报"需要登录"是因为音乐库还没接后端（第 7 步），不是错误。
   - 重启后音量回到 50%：启动时保存的音量在后端就绪前发出被丢弃，已改为后端就绪时直接发给门面（不经播放会话，否则会话把它算作用户操作、拒绝恢复上次的队列），每首歌拿到引擎回报的音量后不一致再纠正一次。离线验证：保存 3%，引擎从第一首起就是 3%，上次的队列照常恢复。

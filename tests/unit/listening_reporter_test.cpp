@@ -64,12 +64,22 @@ struct Harness {
         p.observed = ObservedPlayback{playedMs};
         facade.deliverPlayback({c.generation, p});
     }
-    void answer(int index)
+    QList<ListeningReport> of(ListeningReportAction action) const
+    {
+        QList<ListeningReport> out;
+        for (const auto& c : reports)
+            if (c.report.action == action)
+                out.append(c.report);
+        return out;
+    }
+    QList<ListeningReport> plays() const { return of(ListeningReportAction::Play); }
+    QList<ListeningReport> starts() const { return of(ListeningReportAction::StartPlay); }
+    void answer(qsizetype index)
     {
         ListeningReportDelivery d{reports[index].id,
                                   reports[index].generation,
                                   reports[index].context,
-                                  {reports[index].report.eventId, ListeningReportAction::Play,
+                                  {reports[index].report.eventId, reports[index].report.action,
                                    ReportOutcome::Acknowledged, ReportError::None}};
         facade.deliverListeningReport(d);
     }
@@ -89,10 +99,10 @@ class ListeningReporterTest : public QObject
         const auto queue = h.session.queue();
         origins.insert(queue.entries[0].id, {ListeningReportSource::Album, "77"});
         h.state(PlaybackState::Playing, 12400);
-        QVERIFY(h.reports.isEmpty()); // still playing
+        QVERIFY(h.plays().isEmpty()); // still playing
         QVERIFY(h.session.next());
-        QCOMPARE(h.reports.size(), 1);
-        const auto r = h.reports.first().report;
+        QCOMPARE(h.plays().size(), 1);
+        const auto r = h.plays().first();
         QCOMPARE(r.song.value, "1");
         QCOMPARE(r.playedSeconds, 12);
         QCOMPARE(r.source, ListeningReportSource::Album);
@@ -100,26 +110,61 @@ class ListeningReporterTest : public QObject
         QCOMPARE(r.end, ListeningReportEnd::Ui);
         QCOMPARE(h.reports.first().accountId, "101");
     }
+    void startPlayWhenFirstHeard()
+    {
+        Harness h;
+        h.reporter.setOriginLookup([](QUuid) {
+            return std::optional(ListeningReporter::Origin{ListeningReportSource::List, "55"});
+        });
+        QVERIFY(h.session.replaceQueue({{"1"}, {"2"}}));
+        QVERIFY(h.reports.isEmpty()); // loading, nothing heard yet
+        h.state(PlaybackState::Playing, 0);
+        QVERIFY(h.reports.isEmpty());
+        h.state(PlaybackState::Playing, 400);
+        QCOMPARE(h.starts().size(), 1); // once, however long it plays
+        h.state(PlaybackState::Playing, 9000);
+        QCOMPARE(h.reports.size(), 1);
+        const auto start = h.starts().first();
+        QCOMPARE(start.song.value, "1");
+        QCOMPARE(start.playedSeconds, 0);
+        QCOMPARE(start.source, ListeningReportSource::List);
+        QCOMPARE(start.sourceId, "55");
+        QVERIFY(start.isValid());
+        // Going on: the Play of the first, then the StartPlay of the next, as the web.
+        QVERIFY(h.session.next());
+        QTRY_COMPARE(h.play().query.song.value, "2");
+        h.state(PlaybackState::Playing, 1000);
+        QCOMPARE(h.reports.size(), 3);
+        QCOMPARE(h.reports[1].report.action, ListeningReportAction::Play);
+        QCOMPARE(h.reports[1].report.song.value, "1");
+        QCOMPARE(h.reports[2].report.action, ListeningReportAction::StartPlay);
+        QCOMPARE(h.reports[2].report.song.value, "2");
+        // A short load has its StartPlay, never a Play.
+        bool done = false;
+        h.reporter.flush([&] { done = true; }, 50);
+        QTRY_VERIFY(done);
+        QCOMPARE(h.plays().size(), 1);
+    }
     void endedFailedAndShortLoads()
     {
         Harness h;
         QVERIFY(h.session.replaceQueue({{"1"}, {"2"}, {"3"}}));
         h.state(PlaybackState::Playing, 2900);
         QVERIFY(h.session.next()); // under 3 s: not reported
-        QVERIFY(h.reports.isEmpty());
+        QVERIFY(h.plays().isEmpty());
         h.state(PlaybackState::Playing, 200000);
         h.state(PlaybackState::Ended, 200000);
-        QCOMPARE(h.reports.size(), 1);
-        QCOMPARE(h.reports.last().report.end, ListeningReportEnd::PlayEnd);
-        QCOMPARE(h.reports.last().report.song.value, "2");
+        QCOMPARE(h.plays().size(), 1);
+        QCOMPARE(h.plays().last().end, ListeningReportEnd::PlayEnd);
+        QCOMPARE(h.plays().last().song.value, "2");
         // No origin known: the song itself.
-        QCOMPARE(h.reports.last().report.source, ListeningReportSource::Song);
-        QCOMPARE(h.reports.last().report.sourceId, "2");
+        QCOMPARE(h.plays().last().source, ListeningReportSource::Song);
+        QCOMPARE(h.plays().last().sourceId, "2");
         QTRY_COMPARE(h.play().query.song.value, "3"); // advanced
         h.state(PlaybackState::Playing, 5000);
         h.state(PlaybackState::Failed, 5000);
-        QCOMPARE(h.reports.size(), 2);
-        QCOMPARE(h.reports.last().report.end, ListeningReportEnd::Exception);
+        QCOMPARE(h.plays().size(), 2);
+        QCOMPARE(h.plays().last().end, ListeningReportEnd::Exception);
     }
     void longPauseSettlesOnce()
     {
@@ -128,19 +173,19 @@ class ListeningReporterTest : public QObject
         QVERIFY(h.session.replaceQueue({{"1"}, {"2"}}));
         h.state(PlaybackState::Playing, 8000);
         h.state(PlaybackState::Paused, 8000);
-        QTRY_COMPARE(h.reports.size(), 1);
-        QCOMPARE(h.reports.first().report.playedSeconds, 8);
-        QCOMPARE(h.reports.first().report.end, ListeningReportEnd::Interrupt);
+        QTRY_COMPARE(h.plays().size(), 1);
+        QCOMPARE(h.plays().first().playedSeconds, 8);
+        QCOMPARE(h.plays().first().end, ListeningReportEnd::Interrupt);
         // Playing on after that never reports this load again.
         h.state(PlaybackState::Playing, 20000);
         QVERIFY(h.session.next());
-        QCOMPARE(h.reports.size(), 1);
+        QCOMPARE(h.plays().size(), 1);
         // A short pause is not a settlement.
         h.state(PlaybackState::Playing, 6000);
         h.state(PlaybackState::Paused, 6000);
         h.state(PlaybackState::Playing, 6000);
         QTest::qWait(120);
-        QCOMPARE(h.reports.size(), 1);
+        QCOMPARE(h.plays().size(), 1);
     }
     void guestsAndFmAreNotReported()
     {
@@ -148,7 +193,7 @@ class ListeningReporterTest : public QObject
         QVERIFY(guest.session.replaceQueue({{"1"}, {"2"}}));
         guest.state(PlaybackState::Playing, 60000);
         QVERIFY(guest.session.next());
-        QVERIFY(guest.reports.isEmpty());
+        QVERIFY(guest.reports.isEmpty()); // neither StartPlay nor Play
     }
     void flushSettlesThePlayingLoadAndWaits()
     {
@@ -157,11 +202,12 @@ class ListeningReporterTest : public QObject
         h.state(PlaybackState::Playing, 30000);
         bool done = false;
         h.reporter.flush([&] { done = true; }, 5000);
-        QCOMPARE(h.reports.size(), 1);
-        QCOMPARE(h.reports.first().report.end, ListeningReportEnd::Interrupt);
+        QCOMPARE(h.plays().size(), 1);
+        QCOMPARE(h.plays().first().end, ListeningReportEnd::Interrupt);
         QTest::qWait(50);
-        QVERIFY(!done); // waits for the answer
-        h.answer(0);
+        QVERIFY(!done); // waits for the answers
+        for (qsizetype i = 0; i < h.reports.size(); ++i)
+            h.answer(i);
         QVERIFY(done);
         // Without an answer it gives up after the timeout.
         Harness late;
@@ -187,15 +233,15 @@ class ListeningReporterTest : public QObject
         QVERIFY(h.session.replaceQueue({{"1"}, {"2"}}));
         h.state(PlaybackState::Playing, 4000);
         QVERIFY(h.session.next());
-        QCOMPARE(h.reports.first().report.source, ListeningReportSource::Search);
-        QCOMPARE(h.reports.first().report.sourceId, "富士山下");
+        QCOMPARE(h.plays().first().source, ListeningReportSource::Search);
+        QCOMPARE(h.plays().first().sourceId, "富士山下");
         // An origin that isn't valid falls back to the song.
         h.reporter.setOriginLookup([](QUuid) {
             return std::optional(ListeningReporter::Origin{ListeningReportSource::Album, ""});
         });
         h.state(PlaybackState::Playing, 4000);
         h.state(PlaybackState::Ended, 4000);
-        QCOMPARE(h.reports.last().report.source, ListeningReportSource::Song);
+        QCOMPARE(h.plays().last().source, ListeningReportSource::Song);
     }
 };
 QTEST_GUILESS_MAIN(ListeningReporterTest)
