@@ -1,4 +1,5 @@
 #include "theme.h"
+#include "logging/log.h"
 
 #include "fonts.h"
 
@@ -225,7 +226,8 @@ void Theme::requestProviderImage(quint64 generation, const QUrl& url)
         engine ? dynamic_cast<QQuickAsyncImageProvider*>(engine->imageProvider(url.host()))
                : nullptr;
     if (!provider) {
-        qWarning("Theme.cover: no async image provider \"%s\"", qPrintable(url.host()));
+        qCWarning(lcUiTheme) << log::event("cover.no_provider")
+                             << log::field("provider", url.host());
         applyPalette(generation, {});
         return;
     }

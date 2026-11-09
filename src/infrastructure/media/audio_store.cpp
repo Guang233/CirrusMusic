@@ -1,4 +1,5 @@
 #include "audio_store.h"
+#include "logging/log.h"
 #include "media_source_policy.h"
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -273,7 +274,8 @@ AudioStore::AudioStore(Options options, std::unique_ptr<QNetworkAccessManager> m
     Q_ASSERT(m_manager->thread() == thread() && !m_manager->parent());
     m_rootUsable = !m_options.root.isEmpty() && makePrivateDirectory(m_options.root);
     if (!m_options.root.isEmpty() && !m_rootUsable)
-        qWarning("audio cache root is not a private directory; nothing is kept");
+        qCWarning(lcMedia) << log::event("audio_cache.root_unusable")
+                           << log::field("dir", log::path(m_options.root));
 }
 AudioStore::~AudioStore()
 {
@@ -793,7 +795,7 @@ void AudioStore::verified(QString base, qint64 size, QByteArray md5, bool good)
     if (d)
         d->verifying = false;
     if (!good) {
-        qWarning("audio cache: a downloaded file failed its md5 check; not kept");
+        qCWarning(lcMedia) << log::event("audio_cache.md5_mismatch") << log::field("bytes", size);
         // Gone from the cache now; open handles keep reading the unlinked file, and the
         // next open() downloads afresh instead of reusing this one.
         QFile::remove(base + QStringLiteral(".meta"));

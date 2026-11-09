@@ -1,4 +1,5 @@
 #include "single_instance.h"
+#include "logging/log.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -83,8 +84,8 @@ bool SingleInstance::claim()
         socket.disconnectFromServer();
         return false;
     }
-    qWarning("Another instance holds %s but does not answer; starting anyway",
-             qPrintable(m_lock->fileName()));
+    qCWarning(lcApp) << log::event("app.single_instance_stale")
+                     << log::field("lock", log::path(m_lock->fileName()));
     m_lock.reset();
     return true;
 }
@@ -104,7 +105,8 @@ void SingleInstance::listen(const QString& name)
         }
     });
     if (!m_server->listen(name))
-        qWarning("Cannot listen for other launches: %s", qPrintable(m_server->errorString()));
+        qCWarning(lcApp) << log::event("app.single_instance_listen_failed")
+                         << log::field("err", m_server->serverError());
 }
 
 void SingleInstance::read(QLocalSocket* socket)

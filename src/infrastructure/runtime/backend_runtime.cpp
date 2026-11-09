@@ -724,7 +724,7 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
         m_resourceQueries = new cache::CachedMusicQueryService(*m_facade, *m_cache, this);
     }
     auto* thread = new QThread; // self-deletes after finish; never destroyed while running
-    thread->setObjectName(QStringLiteral("CirrusBackend"));
+    thread->setObjectName(QStringLiteral("backend"));
     auto* worker = new BackendWorker(std::move(config), std::move(factories));
     worker->moveToThread(thread);
     auto outcome = std::make_shared<std::atomic_bool>(false);

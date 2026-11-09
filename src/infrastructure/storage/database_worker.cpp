@@ -271,7 +271,7 @@ DatabaseWorker::DatabaseWorker(QString path, QList<Migration> migrations, QObjec
     : QObject(parent), m_path(std::move(path)),
       m_executor(new Executor(m_path, std::move(migrations)))
 {
-    m_thread.setObjectName(QStringLiteral("cirrus-db"));
+    m_thread.setObjectName(QStringLiteral("db"));
     m_executor->moveToThread(&m_thread);
     m_thread.start();
 }

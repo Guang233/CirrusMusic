@@ -1,4 +1,5 @@
 #include "mpris.h"
+#include "logging/log.h"
 
 #include "desktop.h"
 #include "media_state.h"
@@ -41,7 +42,8 @@ Mpris::Mpris(Player* player, Desktop* desktop, QObject* parent)
         return;
     if (!bus.registerObject(kPath, this, QDBusConnection::ExportAdaptors) ||
         !bus.registerService(kService)) {
-        qWarning("MPRIS: cannot register %s", qPrintable(kService));
+        qCWarning(lcPlatform) << log::event("mpris.register_failed")
+                              << log::field("err", bus.lastError().name());
         bus.unregisterObject(kPath);
         return;
     }

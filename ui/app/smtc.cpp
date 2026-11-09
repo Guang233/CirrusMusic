@@ -1,4 +1,5 @@
 #include "smtc.h"
+#include "logging/log.h"
 
 #include "media_state.h"
 #include "player.h"
@@ -138,8 +139,8 @@ Smtc::Smtc(Player* player, QWindow* window, QObject* parent) : QObject(parent), 
         controls.IsRewindEnabled(false);
         controls.IsEnabled(true);
     } catch (const winrt::hresult_error& error) {
-        qWarning("SMTC: unavailable (%s)", qPrintable(QString::fromWCharArray(
-                                               error.message().c_str(), error.message().size())));
+        qCWarning(lcPlatform) << log::event("smtc.unavailable")
+                              << log::field("hresult", qint64(error.code().value));
         native->controls = nullptr;
     }
     if (!native->controls) {
@@ -232,8 +233,8 @@ void Smtc::update()
         timeline.Position(span(s.positionMs));
         controls.UpdateTimelineProperties(timeline);
     } catch (const winrt::hresult_error& error) {
-        qWarning("SMTC: update failed (%s)", qPrintable(QString::fromWCharArray(
-                                                 error.message().c_str(), error.message().size())));
+        qCWarning(lcPlatform) << log::event("smtc.update_failed")
+                              << log::field("hresult", qint64(error.code().value));
     }
 
     if (s.status == media::Status::Playing)

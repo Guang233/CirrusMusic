@@ -5,6 +5,8 @@
 #include "backend_sources.h"
 #include "desktop.h"
 #include "gpu_preference.h"
+#include "logging/log.h"
+#include "logging/logger.h"
 #ifdef CIRRUS_UI_MPRIS
 #include "mpris.h"
 #endif
@@ -18,10 +20,13 @@
 #include "title_bar_mode.h"
 
 #include <QCommandLineParser>
+#include <QDir>
 #include <QFile>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QRandomGenerator>
 #include <QSettings>
+#include <QStandardPaths>
 #ifdef CIRRUS_UI_TRAY
 // QSystemTrayIcon needs QApplication (docs/10-linux-integration.md §4).
 #include <QApplication>
@@ -57,10 +62,71 @@ void moveOldSettings()
         QFile::rename(before, now);
 }
 
+// The key that makes account ids in the log unreadable but comparable (docs/tasks/logging.md
+// §5); kept in the settings, which a diagnostic package never contains.
+QByteArray accountKey()
+{
+    QSettings settings;
+    const QString name = QStringLiteral("diagnostics/accountKey");
+    QByteArray key = QByteArray::fromBase64(settings.value(name).toByteArray());
+    if (key.size() < 32) {
+        key.resize(32);
+        QRandomGenerator::system()->generate(key.begin(), key.end());
+        settings.setValue(name, key.toBase64());
+    }
+    return key;
+}
+
+QString graphicsName(QSGRendererInterface::GraphicsApi api)
+{
+    switch (api) {
+    case QSGRendererInterface::Software:
+        return QStringLiteral("software");
+    case QSGRendererInterface::OpenGL:
+        return QStringLiteral("opengl");
+    case QSGRendererInterface::Vulkan:
+        return QStringLiteral("vulkan");
+    case QSGRendererInterface::Direct3D11:
+        return QStringLiteral("d3d11");
+    case QSGRendererInterface::Direct3D12:
+        return QStringLiteral("d3d12");
+    case QSGRendererInterface::Metal:
+        return QStringLiteral("metal");
+    default:
+        return QString::number(int(api));
+    }
+}
+
+// The log's session file (docs/tasks/logging.md §6), with the roots log::path() hides.
+void startLog()
+{
+    namespace log = cirrus::log;
+    const auto location = [](QStandardPaths::StandardLocation l) {
+        return QStandardPaths::writableLocation(l) + QStringLiteral("/Cirrus");
+    };
+    const QString logs = log::standardDirectory(QStringLiteral("Cirrus"));
+    log::setPathRoots(
+        {{QStringLiteral("<data>"), location(QStandardPaths::GenericDataLocation)},
+         {QStringLiteral("<cache>"), location(QStandardPaths::GenericCacheLocation)},
+         {QStringLiteral("<config>"), location(QStandardPaths::GenericConfigLocation)},
+         {QStringLiteral("<logs>"), logs},
+         {QStringLiteral("<tmp>"), QDir::tempPath()}});
+    log::setAccountKey(accountKey());
+    log::FileOptions options;
+    options.directory = logs;
+    options.header = QStringLiteral("commit=") + QStringLiteral(CIRRUS_COMMIT);
+    if (!log::start(options))
+        qCWarning(lcLog) << log::event("log.file_unavailable")
+                         << log::field("dir", log::path(logs));
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
+    // Every record from here on goes through the app's log (docs/tasks/logging.md); it
+    // is the last thing to go.
+    cirrus::log::Session logging;
     // The app's identity (UQ-06, docs/ui/integration.md §6 D1). Set first: the GPU
     // choice reads the settings before the application object exists.
     QCoreApplication::setOrganizationName(QStringLiteral("Cirrus"));
@@ -76,18 +142,30 @@ int main(int argc, char* argv[])
     QCommandLineParser parser;
     parser.addHelpOption();
     parser.addOption(cirrus::ui::titlebar::option());
+    const QCommandLineOption logLevel(QStringLiteral("log-level"),
+                                      QStringLiteral("info (default) or debug, for this run."),
+                                      QStringLiteral("level"));
+    parser.addOption(logLevel);
     parser.process(app);
+    if (parser.value(logLevel) == u"debug")
+        cirrus::log::setVerbose(true);
 
     // A second launch shows the running app's window instead.
     cirrus::ui::SingleInstance instance;
     if (!instance.claim())
         return 0;
+    startLog();
+    qCInfo(lcApp) << cirrus::log::event("app.platform")
+                  << cirrus::log::field("qpa", QGuiApplication::platformName())
+                  << cirrus::log::field("graphics", graphicsName(QQuickWindow::graphicsApi()))
+                  << cirrus::log::field("verbose", cirrus::log::verbose());
 
     // The backend (UI phase 5, docs/ui/integration.md): closed before the app quits.
     QString unwritable;
     const auto paths = cirrus::ui::BackendHost::preparePaths(&unwritable);
     if (!paths) {
-        qCritical("Cannot create %s", qPrintable(unwritable));
+        qCCritical(lcApp) << cirrus::log::event("app.paths_unavailable")
+                          << cirrus::log::field("dir", cirrus::log::path(unwritable));
         return 1;
     }
     cirrus::ui::BackendHost backend(*paths);
@@ -136,5 +214,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    return QGuiApplication::exec();
+    const int code = QGuiApplication::exec();
+    qCInfo(lcApp) << cirrus::log::event("app.quit") << cirrus::log::field("code", code);
+    return code;
 }

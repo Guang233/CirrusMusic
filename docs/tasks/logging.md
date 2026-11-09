@@ -42,15 +42,15 @@
   · 拼成一条记录：时间、级别、线程名、分类、正文
   · 放进有界队列（加锁、不做 I/O）；满了丢弃并计数
         │
-        ├──► 终端 sink（有终端或设了 CIRRUS_LOG_CONSOLE 时，与现在一样输出到 stderr）
+        ├──► 终端 sink（始终输出到 stderr，与 Qt 默认一样；从桌面启动时没人看，也无妨）
         ├──► 内存环形缓冲（最近 2000 条，诊断包和以后的应用内查看用）
         └──► 写文件线程：批量写入、按大小切分、启动时清理旧文件
 ```
 
 - **新库 `cirrus_logging`**（`src/logging/`，只依赖 QtCore），`cirrus_backend`、展示层、`appCirrusMusic`、`appCirrusGallery` 和测试都链接它。分类声明集中在 `src/logging/categories.h`，任何层都能直接用。
-- **安装时机**：`main()` 里先设好应用名（存储路径要用），然后马上安装处理器，在 `QGuiApplication` 构造之前。文件打开之前的记录先存在内存里，文件就绪后补写。
+- **安装时机**：`main()` 里先设好应用名（存储路径要用），然后马上安装处理器（`log::Session`，比应用对象先建、后销毁），在 `QGuiApplication` 构造之前。单实例检查通过后才打开文件（`log::start`），之前的记录先存在内存里，文件就绪后补写；第二次启动只唤起已有窗口，不留日志文件。
 - **退出**：写一条 `app.exit`，排空队列，关闭文件。`qFatal` 和 `critical` 会同步落盘再返回，防止进程随后崩溃时丢掉最后几条。
-- **异常退出检测**：启动时如果上一份日志没有 `app.exit` 结尾，记一条 `app.previous_session_unclean`，带上那份文件名。另外安装一个只做异步信号安全操作的信号处理器（SIGSEGV/SIGABRT 等）：往已打开的文件描述符写一行 `fatal signal N`，然后恢复默认处理。Windows 上用 `SetUnhandledExceptionFilter` 做同样的事。堆栈见 §10 LQ6。
+- **异常退出检测**：启动时如果上一份日志没有 `app.exit` 结尾，记一条 `app.previous_session_unclean`，带上那份文件名。另外安装一个只做异步信号安全操作的信号处理器（SIGSEGV/SIGABRT 等）：往已打开的文件描述符写一行 `fatal signal N`，然后恢复默认处理。Windows 第一版不写这一行，只靠下次启动的异常退出检测。堆栈见 §10 LQ6。
 - **线程名**：后端工作线程、数据库线程、音频线程、写文件线程等在创建时设 `objectName`，日志里显示名字而不是地址。
 - **性能**：被关掉的 debug 分类几乎没有开销（`QLoggingCategory` 先判断）。处理器只格式化字符串再入队；队列上限 8192 条，满了丢弃，恢复后补一条 `log.dropped count=N`。同一条正文在 1 秒内重复超过 20 次就合并，之后补一条 `repeated N times`，避免某个循环刷满日志。
 - **音频实时线程禁止写日志**：处理器要加锁、要分配内存。欠载、解码错误等在实时线程里只累加原子计数，由所属线程用定时器汇总后再写（例如 `audio.underruns count=3 window_s=10`）。
@@ -146,7 +146,7 @@ qCWarning(lcNet).noquote() << event("request.failed")
 - 每次启动一个文件：`cirrus-20261109-140312-<pid>.log`；单个文件超过 4 MiB 就续写 `…-2.log`。
 - 保留：总量 20 MiB 或 7 天，先到先删，从最旧的删起（09 §1）。当前文件和上一次启动的文件始终保留，不管多旧，方便排查"上次为什么崩了"。启动时清理一次，写满切分时也检查一次。
 - 每个文件开头写一段会话头：版本、git 提交、构建类型、Qt 版本、操作系统和内核、QPA 平台、渲染后端和 GPU 选择、界面语言、启动参数（不含路径）。不写用户名、主机名、路径。
-- 开发和测试：环境变量 `CIRRUS_LOG_DIR` 可以改写位置；单元测试默认不写文件，只在需要时把处理器装到临时目录。
+- 开发和测试：位置跟着 `XDG_STATE_HOME` 走（测试运行设成 `build/linux-dev-local/xdg/state`）；单元测试默认不写文件，只在需要时把处理器装到临时目录。
 
 ## 7. 用户可见的部分（设置 → 新增"诊断"组）
 
@@ -211,9 +211,28 @@ qCWarning(lcNet).noquote() << event("request.failed")
 
 | 步 | 内容 | 完成条件 |
 | --- | --- | --- |
-| L1 核心 | `cirrus_logging`：处理器、队列、写文件线程、轮转与保留、会话头、异常退出检测、`event`/`field`/脱敏包装、分类表；在 `appCirrusMusic` 和 Gallery 里安装；现有约 25 处调用迁移到新分类 | `tst_logging`（格式、转义、轮转、保留、队列满、多线程、重复合并、异常退出标记）通过；从桌面启动后 `~/.local/state/Cirrus/logs` 里有完整的一次会话 |
+| L1 核心（**已完成**，§12） | `cirrus_logging`：处理器、队列、写文件线程、轮转与保留、会话头、异常退出检测、`event`/`field`/脱敏包装、分类表；在 `appCirrusMusic` 和 Gallery 里安装；现有约 25 处调用迁移到新分类 | `tst_logging`（格式、转义、轮转、保留、队列满、多线程、重复合并、异常退出标记）通过；从桌面启动后 `~/.local/state/Cirrus/logs` 里有完整的一次会话 |
 | L2 后端覆盖 | §8 中网络、接口、鉴权、密钥环、存储、缓存、播放、媒体、上报、平台的事件 | 金丝雀测试通过；用真实后端放一首歌、换一首、退出，日志能完整看出请求、加载、上报的经过 |
 | L3 设置 | "诊断"组（先写进 settings.md 评审），导出诊断包 | Gallery 截图检查；导出的 zip 内容与预览一致 |
 | L4 文档 | HANDOFF、AGENTS、13 §4、11 §5（按 LQ2 的决定）更新约定 | — |
 
 L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现、偶发的"无法播放"（[integration.md §8](../ui/integration.md)）。
+
+## 12. 实施记录
+
+**L1 核心（2026-11-09）**
+- `src/logging/`（目标 `cirrus_logging`，只依赖 QtCore；`cirrus_domain`、协议、存储、密钥环、展示层、主题、应用和 Gallery 都链接它）：
+  - `categories.h`：§4.1 的全部分类（`lcApp`、`lcNet`、`lcApi`、`lcAuth`、`lcSecrets`、`lcStorage`、`lcCache`、`lcPlayback`、`lcMedia`、`lcReport`、`lcPlatform`、`lcUi`、`lcUiBackend`、`lcUiTheme`、`lcLog`）。原来的 `cirrus.ui.fonts`、`cirrus.ui.palette` 并入 `cirrus.ui.theme`。
+  - `log.h`：`event()`、`field()`、`host()`、`path()`、`account()`。枚举的名字依次取：枚举旁边的 `logName()`（ADL）、`Q_ENUM`、都没有就写数字。`QUrl`、`QByteArray` 等传进 `field()` 编译不过。
+  - `logger.h`：`install`/`start`/`shutdown`/`flush`、`setVerbose`、`standardDirectory`、`recent`、`setPathRoots`、`setAccountKey`，以及 `Session`。
+- 处理器之外还有一道兜底清洗：所有记录（包括 Qt、QML 自己的）都会去掉 URL 的查询串和片段，路径根目录换成 `<data>`、`<cache>`、`<config>`、`<logs>`、`<tmp>`，家目录换成 `~`。
+- 账号散列的密钥存在设置里（`diagnostics/accountKey`，32 字节随机），诊断包不含设置。
+- 线程名：`main`、`backend`、`db`、`decode`；线程池线程沿用 Qt 的名字。
+- `appCirrusMusic` 新增 `--log-level debug`（只管本次运行）；会话头带 `commit=`（配置时的 git 提交）。
+- 现有 25 处调用已改成事件格式：后端主机、登录恢复、模型、字体、取色、封面、MPRIS、SMTC、单实例、音频缓存。
+- 验证：
+  - `tst_logging` 9 项通过：字段格式与转义、安全包装、会话文件（文件头、暂存记录、单行、清洗、权限、详细模式）、上次异常退出（含信号号）、切分与按时间/总量清理、重复合并、4 线程 2000 条不丢。
+  - `audio_store`、`storage`、`audio_engine` 测试通过；clang-format 通过。
+  - 离屏启动真实应用后退出：`xdg/state/Cirrus/logs` 下目录 0700、文件 0600，内容是 `app.start` → `app.platform` → `backend.ready` → `app.quit` → `app.exit`。
+  - Gallery 正常输出到终端。
+- 下一步 L2：§8 各模块的事件。

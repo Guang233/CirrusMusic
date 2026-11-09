@@ -1,4 +1,5 @@
 #include "loadable_model.h"
+#include "logging/log.h"
 
 #include "app.h"
 #include "network_status.h"
@@ -116,7 +117,8 @@ LoadError LoadableModel::describe(const Failure& failure, int* state) const
         break;
     case failure::Invalid:
         // A malformed request is our bug, not something the user can fix.
-        qWarning("%s: invalid request", metaObject()->className());
+        qCWarning(lcUi) << log::event("model.invalid_request")
+                        << log::field("model", metaObject()->className());
         error.message = tr("加载失败");
         break;
     case failure::Unknown:

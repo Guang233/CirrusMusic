@@ -88,8 +88,17 @@ set_target_properties(appCirrusMusic PROPERTIES
 
 # Shown in Settings › About.
 target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_VERSION="${PROJECT_VERSION}")
+# The commit, for the log's session header (docs/tasks/logging.md §6); as of configuring.
+execute_process(COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    OUTPUT_VARIABLE CIRRUS_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT CIRRUS_COMMIT)
+    set(CIRRUS_COMMIT "unknown")
+endif()
+target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_COMMIT="${CIRRUS_COMMIT}")
 
 target_link_libraries(appCirrusMusic PRIVATE
+    cirrus_logging
     Qt6::Quick
     Qt6::Network
     cirrus_ui_themeplugin

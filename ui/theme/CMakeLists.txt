@@ -50,7 +50,7 @@ endif()
 target_compile_features(cirrus_ui_theme PUBLIC cxx_std_20)
 find_package(Qt6 REQUIRED COMPONENTS QuickControls2)
 # QuickControls2 for ColorScope's QQuickAttachedPropertyPropagator (public since Qt 6.5).
-target_link_libraries(cirrus_ui_theme PRIVATE Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 cirrus_mcu)
+target_link_libraries(cirrus_ui_theme PRIVATE cirrus_logging Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 cirrus_mcu)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # xdg-desktop-portal accent color and light/dark preference (system_appearance.cpp)
     find_package(Qt6 REQUIRED COMPONENTS DBus)

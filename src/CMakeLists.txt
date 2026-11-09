@@ -8,6 +8,19 @@ if(NOT EXISTS "${Qt6Gui_DIR}/Qt6QWebpPluginConfig.cmake")
                     "placeholder. Install it with the Qt Maintenance Tool.")
 endif()
 
+# The app's log (docs/tasks/logging.md): categories, the record helpers and the handler
+# that writes the session's file. Every layer links it.
+add_library(cirrus_logging STATIC
+    logging/categories.cpp
+    logging/categories.h
+    logging/log.h
+    logging/logger.cpp
+    logging/logger.h
+)
+target_compile_features(cirrus_logging PUBLIC cxx_std_20)
+target_include_directories(cirrus_logging PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(cirrus_logging PUBLIC Qt6::Core)
+
 add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE
     domain/account/session_types.h
@@ -44,7 +57,7 @@ target_sources(cirrus_domain INTERFACE
 )
 target_compile_features(cirrus_domain INTERFACE cxx_std_20)
 target_include_directories(cirrus_domain INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_domain INTERFACE Qt6::Core)
+target_link_libraries(cirrus_domain INTERFACE Qt6::Core cirrus_logging)
 
 add_library(cirrus_application STATIC
     application/backend/backend_facade.cpp
@@ -217,7 +230,7 @@ add_library(cirrus_netease_protocol STATIC
 
 target_compile_features(cirrus_netease_protocol PUBLIC cxx_std_20)
 target_include_directories(cirrus_netease_protocol PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core PRIVATE OpenSSL::Crypto ZLIB::ZLIB)
+target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core cirrus_logging PRIVATE OpenSSL::Crypto ZLIB::ZLIB)
 
 add_library(cirrus_netease_network STATIC
     infrastructure/netease/network/http_transport.cpp
@@ -264,7 +277,7 @@ add_library(cirrus_storage STATIC
 )
 target_compile_features(cirrus_storage PUBLIC cxx_std_20)
 target_include_directories(cirrus_storage PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_storage PUBLIC Qt6::Sql)
+target_link_libraries(cirrus_storage PUBLIC Qt6::Sql cirrus_logging)
 
 # Optional Runtime composition uses the existing database executor; Core has no SQL dependency.
 add_library(cirrus_listening_state STATIC
@@ -303,7 +316,7 @@ add_library(cirrus_secrets STATIC
 )
 target_compile_features(cirrus_secrets PUBLIC cxx_std_20)
 target_include_directories(cirrus_secrets PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_secrets PUBLIC Qt6::Core PRIVATE Qt6Keychain::Qt6Keychain)
+target_link_libraries(cirrus_secrets PUBLIC Qt6::Core cirrus_logging PRIVATE Qt6Keychain::Qt6Keychain)
 
 # Composition-level glue between protocol state, storage and secrets.
 add_library(cirrus_bootstrap STATIC

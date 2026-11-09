@@ -1,0 +1,17 @@
+#include "categories.h"
+
+Q_LOGGING_CATEGORY(lcApp, "cirrus.app")
+Q_LOGGING_CATEGORY(lcLog, "cirrus.log")
+Q_LOGGING_CATEGORY(lcNet, "cirrus.net")
+Q_LOGGING_CATEGORY(lcApi, "cirrus.api")
+Q_LOGGING_CATEGORY(lcAuth, "cirrus.auth")
+Q_LOGGING_CATEGORY(lcSecrets, "cirrus.secrets")
+Q_LOGGING_CATEGORY(lcStorage, "cirrus.storage")
+Q_LOGGING_CATEGORY(lcCache, "cirrus.cache")
+Q_LOGGING_CATEGORY(lcPlayback, "cirrus.playback")
+Q_LOGGING_CATEGORY(lcMedia, "cirrus.media")
+Q_LOGGING_CATEGORY(lcReport, "cirrus.report")
+Q_LOGGING_CATEGORY(lcPlatform, "cirrus.platform")
+Q_LOGGING_CATEGORY(lcUi, "cirrus.ui")
+Q_LOGGING_CATEGORY(lcUiBackend, "cirrus.ui.backend")
+Q_LOGGING_CATEGORY(lcUiTheme, "cirrus.ui.theme")

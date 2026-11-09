@@ -296,8 +296,10 @@ void AudioEngine::startProducer(qint64 positionMs, bool seek)
     m_stream->clearInterrupt(); // left over from stopping the previous producer
     const bool reopening = m_ready;
     Producer* raw = producer.get();
-    producer->thread = std::thread(
-        [raw, engine = this, token = m_token, reopening] { raw->run(engine, token, reopening); });
+    producer->thread = std::thread([raw, engine = this, token = m_token, reopening] {
+        QThread::currentThread()->setObjectName(QStringLiteral("decode")); // in the log
+        raw->run(engine, token, reopening);
+    });
     m_producer = std::move(producer);
     m_seekSerial = 0;
 }

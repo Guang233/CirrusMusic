@@ -1,4 +1,5 @@
 #include "cover_palette.h"
+#include "logging/log.h"
 
 #include "cpp/quantize/celebi.h"
 #include "cpp/score/score.h"
@@ -14,8 +15,6 @@ namespace cirrus::ui
 {
 namespace
 {
-Q_LOGGING_CATEGORY(lcPalette, "cirrus.ui.palette")
-
 constexpr int kDecodeEdge = 128; // MD3 recommends ~112-128 px for quantization
 constexpr int kQuantizeColors = 128;
 constexpr int kDominantColors = 5;
@@ -30,7 +29,9 @@ CoverPalette extractCoverPalette(const QString& path)
         reader.setScaledSize(size.scaled(kDecodeEdge, kDecodeEdge, Qt::KeepAspectRatio));
     QImage image = reader.read();
     if (image.isNull()) {
-        qCWarning(lcPalette) << "cannot decode cover" << path << reader.errorString();
+        qCWarning(lcUiTheme) << log::event("palette.decode_failed")
+                             << log::field("file", log::path(path))
+                             << log::field("err", reader.error());
         return {};
     }
     return extractCoverPalette(std::move(image));

@@ -1,4 +1,5 @@
 #include "backend_session.h"
+#include "logging/log.h"
 
 #include "application/backend/backend_facade.h"
 #include "domain/account/credential_login_types.h"
@@ -10,8 +11,6 @@
 #include <QDateTime>
 #include <QLoggingCategory>
 #include <QSettings>
-
-Q_DECLARE_LOGGING_CATEGORY(lcBackendHost)
 
 namespace cirrus::ui
 {
@@ -182,8 +181,8 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
                         m_state.formError = tr("登录失败");
                     break;
                 case Attempt::Restore:
-                    qCWarning(lcBackendHost)
-                        << "could not restore the remembered account:" << int(failure.error);
+                    qCWarning(lcUiBackend)
+                        << log::event("account.restore_failed") << log::field("err", failure.error);
                     // No usable record (the backend forgets a damaged one): stop trying.
                     if (failure.error == AuthError::CredentialRejected)
                         QSettings().setValue(kRememberedKey, false);
@@ -198,7 +197,7 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
                 if (const auto* saved = std::get_if<bool>(&result))
                     QSettings().setValue(kRememberedKey, *saved);
                 else
-                    qCWarning(lcBackendHost) << "could not save the account to the keyring";
+                    qCWarning(lcUiBackend) << log::event("account.save_failed");
             });
     connect(facade, &BackendFacade::smsCodeSent, this,
             [this](domain::SessionToken, const application::SmsCodeResult& result) {

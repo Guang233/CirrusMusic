@@ -29,6 +29,7 @@ set_target_properties(appCirrusGallery PROPERTIES
 )
 
 target_link_libraries(appCirrusGallery PRIVATE
+    cirrus_logging
     Qt6::Quick
     cirrus_ui_themeplugin
     cirrus_ui_controlsplugin

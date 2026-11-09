@@ -1,4 +1,5 @@
 #include "fonts.h"
+#include "logging/log.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -16,8 +17,6 @@ namespace cirrus::ui
 {
 namespace
 {
-Q_LOGGING_CATEGORY(lcFonts, "cirrus.ui.fonts")
-
 const QString kSymbolsPath =
     QStringLiteral(":/qt/qml/Cirrus/Theme/fonts/MaterialSymbolsRounded.ttf");
 // Embedded only when tools/ui/prepare_fonts.py fetched it (ui/theme/CMakeLists.txt).
@@ -29,7 +28,7 @@ QString registerFont(const QString& path)
     const QStringList families =
         id < 0 ? QStringList{} : QFontDatabase::applicationFontFamilies(id);
     if (families.isEmpty()) {
-        qCWarning(lcFonts) << "failed to register bundled font" << path;
+        qCWarning(lcUiTheme) << log::event("font.register_failed") << log::field("font", path);
         return {};
     }
     return families.constFirst();
@@ -88,7 +87,7 @@ Fonts::Fonts(QObject* parent)
     if (QFile::exists(kMiSansPath))
         m_bundled = registerFont(kMiSansPath);
     else
-        qCInfo(lcFonts) << "no bundled text font in this build; using the system font";
+        qCInfo(lcUiTheme) << log::event("font.system_fallback");
     update();
 }
 

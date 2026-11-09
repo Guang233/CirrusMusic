@@ -1,6 +1,7 @@
 #include "app.h"
 #include "app_settings.h"
 #include "fake_sources.h"
+#include "logging/logger.h"
 #include "title_bar_mode.h"
 
 #include <QCommandLineParser>
@@ -25,6 +26,8 @@ Q_IMPORT_QML_PLUGIN(M3ShapesPlugin)
 // use or change that memory, so screenshots stay reproducible.
 int main(int argc, char* argv[])
 {
+    // The app's log format and filters, on stderr only (docs/tasks/logging.md).
+    cirrus::log::Session logging;
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("Cirrus Gallery"));
     // Where the gallery remembers its last page, cover and mode (QML Settings).

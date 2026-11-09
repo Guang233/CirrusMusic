@@ -1,4 +1,5 @@
 #include "backend_host.h"
+#include "logging/log.h"
 
 #include "application/backend/backend_facade.h"
 #include "application/playback/listening_reporter.h"
@@ -10,8 +11,6 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 #include <QTimer>
-
-Q_LOGGING_CATEGORY(lcBackendHost, "cirrus.ui.backend")
 
 namespace cirrus::ui
 {
@@ -66,26 +65,28 @@ BackendHost::BackendHost(const Paths& paths, QObject* parent)
     connect(&facade, &application::BackendFacade::started, this,
             [](application::StartupError error) {
                 if (error == application::StartupError::None)
-                    qCInfo(lcBackendHost) << "backend ready";
+                    qCInfo(lcUiBackend) << log::event("backend.ready");
                 else if (error == application::StartupError::GuestBootstrap)
-                    qCWarning(lcBackendHost) << "backend ready without guest access";
+                    qCWarning(lcUiBackend) << log::event("backend.ready_without_guest");
                 else
-                    qCWarning(lcBackendHost) << "backend failed to start:" << int(error);
+                    qCCritical(lcUiBackend)
+                        << log::event("backend.start_failed") << log::field("err", error);
             });
     connect(&facade, &application::BackendFacade::persistenceWarning, this,
             [](application::PersistenceArea area) {
-                qCWarning(lcBackendHost) << "keyring could not save" << int(area);
+                qCWarning(lcUiBackend)
+                    << log::event("backend.persistence_warning") << log::field("area", area);
             });
     connect(&facade, &application::BackendFacade::stopped, this, [this](bool persistenceFailed) {
         if (persistenceFailed)
-            qCWarning(lcBackendHost) << "backend stopped; some records were not saved";
+            qCWarning(lcUiBackend) << log::event("backend.stopped_unsaved");
         finish();
     });
     connect(&facade, &application::BackendFacade::closeDelayed, this, [this] {
-        qCWarning(lcBackendHost) << "backend close is taking long (keyring?)";
+        qCWarning(lcUiBackend) << log::event("backend.close_delayed");
         QTimer::singleShot(kGraceMs, this, [this] {
             if (m_done) {
-                qCWarning(lcBackendHost) << "quitting before the backend stopped";
+                qCWarning(lcUiBackend) << log::event("backend.quit_before_stopped");
                 finish();
             }
         });
