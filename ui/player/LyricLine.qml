@@ -291,14 +291,7 @@ Item {
             }
         }
 
-        // Lines keep the ruby's room when any line has ruby (§6.1), except those with
-        // their romanization below: that row already makes them taller.
-        Item {
-            width: parent.width
-            height: line.view.rubyRoom
-            visible: line.view.rubyRoom > 0 && !line.showRuby && !line.romanBelow
-        }
-
+        // Only lines with ruby have its room above (§6.1).
         Item {
             id: pieceBox
             width: parent.width
