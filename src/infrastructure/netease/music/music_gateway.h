@@ -19,6 +19,8 @@ class MusicGateway final : public application::IMusicGateway
         domain::SessionToken context;
         application::MusicQuery query;
         quint64 apiId = 0;
+        QString path;        // the last operation sent, for the log
+        bool mapped = false; // its code-200 response went to a mapper
         bool canceled = false;
         std::optional<domain::PlaylistSongsPage> page;
     };

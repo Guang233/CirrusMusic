@@ -7,6 +7,7 @@
 #include "entity_search_mapper.h"
 #include "infrastructure/netease/api/discovery_browse_operation.h"
 #include "library_mapper.h"
+#include "logging/log.h"
 #include "music_mapper.h"
 #include "playlist_discovery_mapper.h"
 #include "podcast_mapper.h"
@@ -201,6 +202,10 @@ void MusicGateway::submitApi(quint64 id, ApiOperation operation, QJsonObject par
 {
     auto& pending = m_pending[id];
     m_apiIds.remove(pending.apiId);
+    const auto contract = operationContract(operation, parameters);
+    pending.path =
+        contract ? contract->logicalPath : QStringLiteral("op#") + QString::number(int(operation));
+    pending.mapped = false;
     pending.apiId = m_client->submit(pending.context, operation, std::move(parameters));
     m_apiIds.insert(pending.apiId, id);
 }
@@ -208,6 +213,7 @@ void MusicGateway::submitApi(quint64 id, ApiOperation operation, QJsonObject par
 void MusicGateway::receiveSuccess(quint64 id, const QJsonObject& object,
                                   domain::CacheRetention retention)
 {
+    m_pending[id].mapped = true;
     const auto pending = m_pending.value(id);
     const auto* query = std::get_if<domain::PlaylistSongsQuery>(&pending.query);
     if (!query) {
@@ -283,6 +289,12 @@ void MusicGateway::finish(quint64 id, MusicResult result, domain::CacheRetention
         result = MusicFailure{MusicError::Canceled};
     if (m_client && !m_client->accepts(pending.context))
         result = MusicFailure{MusicError::StaleContext};
+    // A code-200 response the mapper would not take: the service changed its shape, or
+    // the contract is too strict. The mapper may say why at debug (docs/tasks/logging.md §8).
+    if (const auto* error = std::get_if<MusicFailure>(&result);
+        error && error->error == MusicError::InvalidResponse && pending.mapped) {
+        qCWarning(lcApi) << log::event("music.invalid") << log::field("path", pending.path);
+    }
     if (std::holds_alternative<MusicFailure>(result) ||
         (!std::holds_alternative<DetailQuery>(pending.query) &&
          !std::holds_alternative<LyricQuery>(pending.query)))
