@@ -32,6 +32,8 @@ Item {
                                             && line.view.interludeIndex < 0)
     readonly property bool wordsMode: line.view.wordFill && words.length > 0
     readonly property bool showRuby: line.view.rubyOn && ruby.length > 0
+    // The romanization on its own row under the original (not ruby, or not aligned).
+    readonly property bool romanBelow: line.view.showRomanization && romanization !== "" && !showRuby
     readonly property bool interlude: line.view.interludeIndex === index
     // Pieces laid out one by one (words or ruby units); empty: one wrapping text.
     readonly property var pieces: buildPieces()
@@ -289,11 +291,12 @@ Item {
             }
         }
 
-        // Every line keeps the ruby's room when any line has ruby (§6.1).
+        // Lines keep the ruby's room when any line has ruby (§6.1), except those with
+        // their romanization below: that row already makes them taller.
         Item {
             width: parent.width
             height: line.view.rubyRoom
-            visible: line.view.rubyRoom > 0 && !line.showRuby
+            visible: line.view.rubyRoom > 0 && !line.showRuby && !line.romanBelow
         }
 
         Item {
@@ -338,7 +341,7 @@ Item {
         }
         Text {
             width: parent.width
-            visible: line.view.showRomanization && line.romanization !== "" && !line.showRuby
+            visible: line.romanBelow
             text: line.romanization
             wrapMode: Text.Wrap
             horizontalAlignment: line.textAlign
