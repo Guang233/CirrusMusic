@@ -36,6 +36,14 @@ template <class T> struct Outcome {
     std::optional<Failure> failure;
 };
 
+// A write that was sent but whose effect was not seen (docs/ui/integration.md §2): it is
+// undone like a failure and told as "maybe not saved".
+template <class T> bool maybeSaved(const Outcome<T>& outcome)
+{
+    return outcome.failure &&
+           (outcome.failure->kind == failure::Unknown || outcome.failure->kind == failure::Timeout);
+}
+
 // Called at most once, never synchronously from the request call, never after the
 // request was canceled or the source destroyed.
 template <class T> using Reply = std::function<void(Outcome<T>)>;

@@ -104,9 +104,10 @@ void PodcastPageModel::setSubscribed(bool subscribed)
             m_info.subscribed = !subscribed;
             emit subscribedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut    ? tr("登录后才能收藏播客")
-                        : subscribed ? tr("没能收藏，请稍后再试")
-                                     : tr("没能取消收藏，请稍后再试"));
+            emit notice(signedOut             ? tr("登录后才能收藏播客")
+                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
+                        : subscribed          ? tr("没能收藏，请稍后再试")
+                                              : tr("没能取消收藏，请稍后再试"));
         });
 }
 

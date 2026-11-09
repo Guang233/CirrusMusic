@@ -75,8 +75,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 | `likedSongKeys`、`recentSongs`、`recentCollections`、`recentVoices`、`listeningRanking` | `likedSongIds`、`recentSongs`、`recentPlaylists`／`Albums`／`Podcasts`、`recentVoices`、`listeningRanking` | ✅ |
 | `setSongLiked`、`setAlbumSubscribed`、`setArtistFollowed`、`setPodcastSubscribed` | `mutateCollection(SongHeart／AlbumCollection／ArtistCollection／PodcastSubscription)` | ✅ |
 | `createPlaylist`、`updatePlaylist`、`deletePlaylist`、`reorderPlaylist` | `PlaylistCreate`、`PlaylistRename` + `PlaylistDescription`（两次写）、`PlaylistDelete`、`PlaylistSongOrder` | ✅ |
-| `addToPlaylist`、`removeFromPlaylist` | `PlaylistCollection`（一次最多 100 首） | ⚠️ 超过 100 首分批 |
-| `setPlaylistSubscribed`（收藏别人的歌单） | — | ❌ 后端因 checkToken v2 的门槛暂缓（§6 D4） |
+| `addToPlaylist`、`removeFromPlaylist` | `PlaylistCollection`（一次最多 100 首） | ✅ 超过 100 首分批（§8 第 7 步） |
+| `setPlaylistSubscribed`（收藏别人的歌单） | — | ❌ 后端因 checkToken v2 的门槛暂缓（§6 D4）；`canSavePlaylists()` 为 false，歌单页隐藏"收藏" |
 
 **CommentSource**：`comments`、`replies` → `sortedComments`／`hotComments`、`commentFloor`；四种写 → `mutateComment`（点赞、发表、回复、删除）。✅
 
@@ -121,7 +121,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 | D2 | **二维码生成库** | **已决定（按建议）**：引入 Nayuki QR Code generator（MIT，单个 .cpp/.hpp，放 `third_party/`，不改源码），二维码在本地生成，不把登录链接发给任何第三方服务 |
 | D3 | **队列拖动排序**：后端没有移动条目 | **已决定（按建议）**：我按后端的约定（HANDOFF）给 `ListeningSession` 加 `move(entry, index)`，只改顺序不重新加载。不愿意动后端的话：接入后先隐藏拖动把手，Alt+↑/↓ 也关掉 |
 | D4 | **收藏别人的歌单**：后端暂缓 | **已决定（按建议）**：接入后隐藏歌单页的“收藏”按钮，音乐库照常显示已收藏的歌单（读取是好的）。等后端解决 v2 门槛再打开 |
-| D5 | **听歌上报**（`reportListening`，后端规定播放时不自动调用） | **已决定（2026-11-07）**：必须上报、没有开关（官方客户端也这样做）；时机见下方 §6.1。**已实现，待真实账号验证**（2026-11-08，§8） |
+| D5 | **听歌上报**（`reportListening`，后端规定播放时不自动调用） | **已决定（2026-11-07）**：必须上报、没有开关（官方客户端也这样做）；时机见下方 §6.1。**已实现，真实账号验证通过**（2026-11-09：`play` 计入听歌排行，`startplay` 让歌进"最近播放"，§8） |
 | D6 | **退出卡住**：密钥环不回调时 `stopped` 永远不来 | **已决定（按建议）**：等 `closeDelayed` 后再给 5 秒（共 10 秒），仍未停止就直接退出，并在日志里记一条。正常情况下不会遇到 |
 | D7 | **启动时恢复上次的播放队列**（已做，§8）（后端 `persistListeningState`，现在关着；设置页那一项写着“等后端”） | **已决定（2026-11-07）**：持久化必须做，总是恢复上次的队列和位置；**启动后是否自动播放**由用户在设置里选（默认不播放）。后端的恢复本身从不播放，自动播放是恢复完成后由 UI 发一次播放。队列绑定账号：记住的账号恢复后才恢复它的队列 |
 | D8 | **真实网络访问**：接入后运行应用就会访问网易云的官方接口，登录用你的账号 | **已决定（2026-11-07）**：可以用维护者的账号测试。登录方式：现在后端只有扫码登录（加上恢复记住的账号、本地退出，没有服务端注销）；~~以后要加手机验证码、邮箱密码登录，是单独的后端任务~~ → **2026-11-07 改为本阶段第 3 步一起做**：手机号＋验证码、手机号＋密码、邮箱＋密码都加（后端见 [credential-login.md](../api/credential-login.md)）；网易要求安全验证（8821／-462）时提示改用扫码或验证码，不内嵌网页；区号用内置常用列表，默认 +86 |
@@ -267,3 +267,19 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 重启后音量回到 50%：启动时保存的音量在后端就绪前发出被丢弃，已改为后端就绪时直接发给门面（不经播放会话，否则会话把它算作用户操作、拒绝恢复上次的队列），每首歌拿到引擎回报的音量后不一致再纠正一次。离线验证：保存 3%，引擎从第一首起就是 3%，上次的队列照常恢复。
   - 播放页多位歌手只能跳到第一位：点歌手名时一位直接跳转、几位弹出菜单选；"更多"菜单和队列菜单每位歌手一项（`SongItem.artists`）。只做了编译和 lint，没有截图验证。
 
+- **第 7 步（音乐库与写操作）代码完成（2026-11-09，维护者要求先接业务、引擎阶段 E 往后放）**：
+  - `BackendLibrary`（`ui/presentation/backend/backend_library.{h,cpp}`）按 §4 的表接 `LibrarySource`。读取：
+    - `library()` 只给账号的歌单（侧栏和"收藏到歌单"用），按页读完，最多 1000 个；
+    - `libraryCollections` 是歌单、专辑、歌手、播客四类分页；
+    - 另有 `likedSongKeys`、`likedPlaylist`、云端的 `recentSongs`／`recentCollections`／`recentVoices`（维护者 2026-11-09 定：最近播放只显示云端），以及 `listeningRanking`。
+    - "我喜欢的音乐"按后端的 `accountLikedSongs` 标记认，不按位置。创建者不明的歌单不当作自己的，不出现在"收藏到歌单"里。服务没有"最近播放的歌手"，这一类返回空列表。
+  - 写操作经 `CollectionWrites` 分派器：
+    - 一次只发一条、按顺序，保证"喜欢"和随后的"取消喜欢"不会乱序；
+    - 写入记下发起时的账号，换了账号就不发；
+    - 页面关掉只丢掉回调，写入照常完成（页面早已显示成功）；
+    - 加歌、移出每 100 首一批，改歌单信息是改名、改简介两次写，任一步失败就停；
+    - 排序先重新读一次歌单，用现在的歌曲列表建 `PlaylistSongOrder`。
+  - 结果对照：Acknowledged 是成功；Unknown 是"发出去了但没看到结果"，按失败撤回，提示"可能没有保存成功，刷新看看"（`maybeSaved()`，超时同样处理）；业务码 405 显示为操作频繁。日志事件 `ui.backend write.done`／`write.failed`／`write.dropped`／`write.refused`，只记操作类别和结果，不记内容。
+  - D4：`LibrarySource::canSavePlaylists()`，后端为 false，歌单页隐藏"收藏"按钮；假数据仍为 true。
+  - `BackendCatalog` 的类型转换挪到 `backend_mapping.h`，两个适配层共用。
+  - 验证：构建、qmllint；游客身份启动，音乐库各处按预期报"需要登录"。真实账号下的读写要维护者登录后走一遍（喜欢／取消喜欢、收藏专辑／歌手／播客、新建／改名／删除歌单、加歌和移出、排序）。

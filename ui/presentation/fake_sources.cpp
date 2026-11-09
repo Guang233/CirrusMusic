@@ -1549,6 +1549,8 @@ class FakeLibrary : public QObject, public LibrarySource
         });
     }
 
+    [[nodiscard]] bool canSavePlaylists() const override { return true; }
+
     Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) override
     {
         if (playlistKey == FakeAccount::kLikedPlaylist)

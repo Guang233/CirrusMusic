@@ -30,6 +30,8 @@ Library::Library(LibrarySource* source, Session* session, QObject* parent)
         reload();
 }
 
+bool Library::canSavePlaylists() const { return m_source && m_source->canSavePlaylists(); }
+
 void Library::reload()
 {
     if (!m_session->signedIn())
@@ -84,7 +86,9 @@ void Library::setLiked(const QString& songKey, bool liked)
                 return;
             }
             setLikedLocally(songKey, !liked);
-            emit notice(liked ? tr("没能喜欢这首歌，请稍后再试") : tr("没能取消喜欢，请稍后再试"));
+            emit notice(maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
+                        : liked             ? tr("没能喜欢这首歌，请稍后再试")
+                                            : tr("没能取消喜欢，请稍后再试"));
         });
 }
 
@@ -100,7 +104,8 @@ void Library::addToPlaylist(const QString& playlistKey, const QString& title,
                 emit playlistChanged(playlistKey);
                 emit notice(tr("已收藏到「%1」").arg(title));
             } else {
-                emit notice(tr("没能收藏到「%1」，请稍后再试").arg(title));
+                emit notice(maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
+                                                : tr("没能收藏到「%1」，请稍后再试").arg(title));
             }
         });
 }

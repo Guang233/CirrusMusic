@@ -3,6 +3,7 @@
 #include "backend_catalog.h"
 #include "backend_host.h"
 #include "backend_images.h"
+#include "backend_library.h"
 #include "backend_playback.h"
 #include "backend_session.h"
 #include "fake_sources.h"
@@ -55,6 +56,8 @@ Sources makeBackendSources(BackendHost& host)
         });
     sources.playback = std::move(playback);
     sources.lyrics = std::make_unique<BackendLyrics>(host.runtime());
+    // Step 7: the library and its writes.
+    sources.library = std::make_unique<BackendLibrary>(host.runtime());
     return sources;
 }
 

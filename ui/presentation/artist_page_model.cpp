@@ -234,9 +234,10 @@ void ArtistPageModel::setFollowed(bool followed)
             m_info.followed = !followed;
             emit followedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut  ? tr("登录后才能关注歌手")
-                        : followed ? tr("没能关注，请稍后再试")
-                                   : tr("没能取消关注，请稍后再试"));
+            emit notice(signedOut             ? tr("登录后才能关注歌手")
+                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
+                        : followed            ? tr("没能关注，请稍后再试")
+                                              : tr("没能取消关注，请稍后再试"));
         });
 }
 

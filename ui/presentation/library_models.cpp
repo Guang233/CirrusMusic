@@ -146,7 +146,9 @@ void LibraryOverviewModel::createPlaylist(const QString& title)
             if (!outcome.value) {
                 const bool signedOut =
                     outcome.failure && outcome.failure->kind == failure::SignedOut;
-                emit notice(signedOut ? tr("登录后才能新建歌单") : tr("没能新建歌单，请稍后再试"));
+                emit notice(signedOut             ? tr("登录后才能新建歌单")
+                            : maybeSaved(outcome) ? tr("可能没有新建成功，刷新看看")
+                                                  : tr("没能新建歌单，请稍后再试"));
                 return;
             }
             if (m_playlists->state() != loadstate::Idle)

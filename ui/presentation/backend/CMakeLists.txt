@@ -9,6 +9,11 @@ qt_add_library(cirrus_presentation_backend STATIC
     backend_images.cpp
     backend_catalog.h
     backend_catalog.cpp
+    backend_library.h
+    backend_library.cpp
+    backend_mapping.h
+    collection_writes.h
+    collection_writes.cpp
     backend_playback.h
     backend_playback.cpp
     music_requests.h

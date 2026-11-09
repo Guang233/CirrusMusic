@@ -90,6 +90,8 @@ QString PlaylistPageModel::failureMessage(const Outcome<bool>& outcome,
         return tr("登录已失效，请重新登录");
     if (outcome.failure && outcome.failure->kind == failure::Rejected)
         return tr("没能保存：只能修改自己创建的歌单");
+    if (maybeSaved(outcome))
+        return tr("可能没有保存成功，刷新看看");
     return otherwise;
 }
 

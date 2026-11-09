@@ -27,6 +27,8 @@ class Library : public QObject
     Q_PROPERTY(int likedCount READ likedCount NOTIFY likedChanged)
     // The account's "我喜欢的音乐" playlist; empty until known (or signed out).
     Q_PROPERTY(QString likedPlaylistKey READ likedPlaylistKey NOTIFY likedPlaylistChanged)
+    // Others' playlists can be saved (the playlist page shows "收藏" then).
+    Q_PROPERTY(bool canSavePlaylists READ canSavePlaylists CONSTANT)
 
   public:
     Library(LibrarySource* source, Session* session, QObject* parent = nullptr);
@@ -34,6 +36,7 @@ class Library : public QObject
     [[nodiscard]] int likedRevision() const { return m_revision; }
     [[nodiscard]] int likedCount() const { return int(m_liked.size()); }
     [[nodiscard]] QString likedPlaylistKey() const { return m_likedPlaylistKey; }
+    [[nodiscard]] bool canSavePlaylists() const;
     Q_INVOKABLE bool isLiked(const QString& songKey) const { return m_liked.contains(songKey); }
     Q_INVOKABLE void setLiked(const QString& songKey, bool liked);
     // `title` names the playlist in the notice.

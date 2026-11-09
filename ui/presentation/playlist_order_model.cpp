@@ -154,8 +154,9 @@ void PlaylistOrderModel::save()
                 return;
             }
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut ? tr("登录已失效，请重新登录")
-                                  : tr("没能保存歌曲顺序，请稍后再试"));
+            emit notice(signedOut             ? tr("登录已失效，请重新登录")
+                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
+                                              : tr("没能保存歌曲顺序，请稍后再试"));
         });
     emit savingChanged();
 }

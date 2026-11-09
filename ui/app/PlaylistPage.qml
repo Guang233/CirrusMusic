@@ -190,7 +190,7 @@ SongCollectionPage {
         spacing: 8
         // Someone else's playlist (P5).
         Button {
-            visible: !pageModel.own
+            visible: !pageModel.own && App.library.canSavePlaylists
             variant: Md.Tonal
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
