@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include <QMetaType>
 #include <QString>
@@ -17,6 +18,7 @@ struct QrLoginChallenge {
 // Authorized is a QR protocol outcome, NOT an authenticated account/session.
 // Identity verification and exact-token credential handoff must happen separately.
 enum class QrLoginStatus { Expired, WaitingForScan, WaitingForConfirmation, Authorized };
+CIRRUS_LOG_ENUM(QrLoginStatus, Expired, WaitingForScan, WaitingForConfirmation, Authorized)
 
 } // namespace cirrus::domain
 

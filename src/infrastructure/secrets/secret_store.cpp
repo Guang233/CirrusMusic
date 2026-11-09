@@ -1,7 +1,9 @@
 #include "secret_store.h"
+#include "logging/log.h"
 
 #include <qt6keychain/keychain.h>
 
+#include <QElapsedTimer>
 #include <QPointer>
 
 namespace cirrus::secrets
@@ -29,6 +31,19 @@ SecretError mapError(QKeychain::Error error)
     return SecretError::Failed;
 }
 
+// Every keyring result (docs/tasks/logging.md §8): the entry's fixed name, never its data.
+void logResult(const char* op, const QString& key, SecretError error, qint64 ms)
+{
+    if (error == SecretError::None || (error == SecretError::NotFound && op[0] == 'r'))
+        qCInfo(lcSecrets) << log::event("keyring.done") << log::field("op", op)
+                          << log::field("key", key) << log::field("err", error)
+                          << log::field("ms", ms);
+    else
+        qCWarning(lcSecrets) << log::event("keyring.failed") << log::field("op", op)
+                             << log::field("key", key) << log::field("err", error)
+                             << log::field("ms", ms);
+}
+
 template <typename Callback> void defer(QObject* context, Callback callback)
 {
     QMetaObject::invokeMethod(context, std::move(callback), Qt::QueuedConnection);
@@ -36,18 +51,21 @@ template <typename Callback> void defer(QObject* context, Callback callback)
 
 // Common job setup; the context-bound connection drops results for dead contexts.
 template <typename Job, typename OnFinished>
-void startJob(Job* job, const QString& key, QObject* context, OnFinished onFinished)
+void startJob(Job* job, const char* op, const QString& key, QObject* context, OnFinished onFinished)
 {
     job->setAutoDelete(true);
     job->setInsecureFallback(false);
     job->setKey(key);
-    QObject::connect(job, &QKeychain::Job::finished, context,
-                     [context, onFinished = std::move(onFinished)](QKeychain::Job* finished) {
-                         // Re-defer: some backends finish synchronously inside start().
-                         defer(context, [onFinished, error = mapError(finished->error())] {
-                             onFinished(error);
-                         });
-                     });
+    QElapsedTimer clock;
+    clock.start();
+    QObject::connect(
+        job, &QKeychain::Job::finished, context,
+        [context, op, key, clock, onFinished = std::move(onFinished)](QKeychain::Job* finished) {
+            const auto error = mapError(finished->error());
+            logResult(op, key, error, clock.elapsed());
+            // Re-defer: some backends finish synchronously inside start().
+            defer(context, [onFinished, error] { onFinished(error); });
+        });
     job->start();
 }
 
@@ -83,14 +101,18 @@ void KeychainSecretStore::read(const QString& key, QObject* context,
     job->setInsecureFallback(false);
     job->setKey(key);
     // The job is deleted after finished(); copy the data out inside the signal.
-    QObject::connect(
-        job, &QKeychain::Job::finished, context, [context, done](QKeychain::Job* finished) {
-            SecretResult result{mapError(finished->error()), {}};
-            if (result.ok()) {
-                result.data = static_cast<QKeychain::ReadPasswordJob*>(finished)->binaryData();
-            }
-            defer(context, [done, result = std::move(result)] { done(result); });
-        });
+    QElapsedTimer clock;
+    clock.start();
+    QObject::connect(job, &QKeychain::Job::finished, context,
+                     [context, done, key, clock](QKeychain::Job* finished) {
+                         SecretResult result{mapError(finished->error()), {}};
+                         logResult("read", key, result.error, clock.elapsed());
+                         if (result.ok()) {
+                             result.data =
+                                 static_cast<QKeychain::ReadPasswordJob*>(finished)->binaryData();
+                         }
+                         defer(context, [done, result = std::move(result)] { done(result); });
+                     });
     job->start();
 }
 
@@ -104,7 +126,7 @@ void KeychainSecretStore::write(const QString& key, const QByteArray& data, QObj
     }
     auto* job = new QKeychain::WritePasswordJob(m_service);
     job->setBinaryData(data);
-    startJob(job, key, context, std::move(done));
+    startJob(job, "write", key, context, std::move(done));
 }
 
 void KeychainSecretStore::remove(const QString& key, QObject* context,
@@ -115,7 +137,7 @@ void KeychainSecretStore::remove(const QString& key, QObject* context,
         defer(context, [done] { done(SecretError::Failed); });
         return;
     }
-    startJob(new QKeychain::DeletePasswordJob(m_service), key, context, std::move(done));
+    startJob(new QKeychain::DeletePasswordJob(m_service), "remove", key, context, std::move(done));
 }
 
 } // namespace cirrus::secrets

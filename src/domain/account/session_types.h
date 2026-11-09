@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include <QMetaType>
 #include <QString>
@@ -16,6 +17,7 @@ struct SessionToken {
 };
 
 enum class SessionPhase { Guest, Authenticating, Committing, Authenticated, Expired };
+CIRRUS_LOG_ENUM(SessionPhase, Guest, Authenticating, Committing, Authenticated, Expired)
 
 struct AccountIdentity {
     QString accountId;

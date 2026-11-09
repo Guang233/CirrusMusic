@@ -1,5 +1,7 @@
 #include "backend_runtime.h"
 #include "application/music/personal_fm_source.h"
+#include "logging/log.h"
+#include <QElapsedTimer>
 
 #include "application/music/music_query_service.h"
 #include "application/playback/listening_session.h"
@@ -49,6 +51,10 @@ class BackendWorker final : public QObject
         if (m_started || m_closing)
             return;
         m_started = true;
+        m_clock.start();
+        qCInfo(lcApp) << log::event("backend.start")
+                      << log::field("db", log::path(m_config.databasePath))
+                      << log::field("audio_cache", !m_config.audioCacheRoot.isEmpty());
         if (!QDir::isAbsolutePath(m_config.databasePath) ||
             m_config.keychainService.trimmed().isEmpty()) {
             startup(StartupError::Configuration);
@@ -356,6 +362,8 @@ class BackendWorker final : public QObject
             return;
         m_closing = true;
         m_ready = false;
+        m_clock.start();
+        qCInfo(lcApp) << log::event("backend.close");
         if (m_cache)
             m_cache->close();
         // Stop producers, not stored identity. In particular, do NOT call signOut
@@ -427,6 +435,8 @@ class BackendWorker final : public QObject
         if (m_closing)
             return;
         m_ready = error == StartupError::None || error == StartupError::GuestBootstrap;
+        qCInfo(lcApp) << log::event("backend.started") << log::field("err", error)
+                      << log::field("ms", m_clock.elapsed());
         auto event = makeEvent(Kind::Started);
         event.startupError = error;
         emit delivered(event);
@@ -662,6 +672,9 @@ class BackendWorker final : public QObject
             // DatabaseWorker joins its own SQL executor here, NOT on the UI thread.
             // Queued DB jobs settle and the process lock is released before stopped.
             m_database.reset();
+            qCInfo(lcApp) << log::event("backend.drained")
+                          << log::field("persistence_failed", failed)
+                          << log::field("ms", m_clock.elapsed());
             emit drained(failed);
         });
     }
@@ -671,6 +684,7 @@ class BackendWorker final : public QObject
     bool m_started = false;
     bool m_ready = false;
     bool m_closing = false;
+    QElapsedTimer m_clock; // start and close durations, for the log
     bool m_drainQueued = false;
     quint64 m_generation = 0;
     std::unique_ptr<storage::DatabaseWorker> m_database;

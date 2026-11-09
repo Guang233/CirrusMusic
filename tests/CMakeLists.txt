@@ -327,3 +327,8 @@ qt_add_executable(tst_logging unit/logging_test.cpp)
 target_link_libraries(tst_logging PRIVATE cirrus_logging Qt6::Test)
 add_test(NAME logging COMMAND tst_logging)
 set_tests_properties(logging PROPERTIES TIMEOUT 30)
+
+qt_add_executable(tst_log_canary unit/log_canary_test.cpp support/fake_http.h support/fake_range_http.h)
+target_link_libraries(tst_log_canary PRIVATE cirrus_netease_api cirrus_media cirrus_application Qt6::Test)
+add_test(NAME log_canary COMMAND tst_log_canary)
+set_tests_properties(log_canary PROPERTIES TIMEOUT 30)

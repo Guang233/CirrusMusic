@@ -1,5 +1,6 @@
 #include "cover_fetcher.h"
 #include "infrastructure/network/cache_retention_policy.h"
+#include "logging/log.h"
 #include "resource_cache_codec.h"
 #include <QBuffer>
 #include <QElapsedTimer>
@@ -198,6 +199,15 @@ void CoverFetcher::finish(quint64 id, CacheError error)
         reply->deleteLater();
     } else
         error = CacheError::Network;
+    if (error == CacheError::None)
+        qCDebug(lcCache) << log::event("cover.fetched") << log::field("id", id)
+                         << log::field("bytes", png.size())
+                         << log::field("ms", pending->elapsed.elapsed());
+    else if (error != CacheError::Canceled)
+        qCWarning(lcCache) << log::event("cover.failed") << log::field("id", id)
+                           << log::field("err", error)
+                           << log::field("host", log::host(pending->job.coverUrl))
+                           << log::field("ms", pending->elapsed.elapsed());
     emit completed(id, error, std::move(png), ttl);
 }
 void CoverFetcher::cancel(quint64 id) { finish(id, CacheError::Canceled); }

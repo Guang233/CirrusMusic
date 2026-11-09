@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include "application/account/qr_login_service.h"
 #include "application/backend/comment_write_messages.h"
@@ -26,6 +27,7 @@ class CommentWriteRequests;
 
 enum class BackendState { Dormant, Starting, Ready, Failed, Stopping, Stopped };
 enum class StartupError { None, Configuration, Storage, GuestBootstrap };
+CIRRUS_LOG_ENUM(StartupError, None, Configuration, Storage, GuestBootstrap)
 enum class AccountAction {
     BeginLogin,
     Restore,
@@ -36,6 +38,7 @@ enum class AccountAction {
     SendSmsCode
 };
 enum class PersistenceArea { ProtocolKey, AnonymousToken };
+CIRRUS_LOG_ENUM(PersistenceArea, ProtocolKey, AnonymousToken)
 
 struct BackendCommand {
     quint64 id = 0;

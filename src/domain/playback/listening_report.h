@@ -1,19 +1,23 @@
 #pragma once
 #include "domain/music/catalog_types.h"
+#include "logging/log.h"
 #include <QUuid>
 
 namespace cirrus::domain
 {
 // Explicit individual weblog action; no timing policy or automatic two-request sequence.
 enum class ListeningReportAction { StartPlay, Play };
+CIRRUS_LOG_ENUM(ListeningReportAction, StartPlay, Play)
 // Where the song was played from, as the web client names it (`source`): a playlist,
 // album, artist page, chart, daily recommendations, a search (sourceId is the
 // keywords) or a song page. Evidence: docs/ui/integration.md §6.1; the PC client's
 // values are not verified (docs/api/explicit-listening-reports.md §2).
 enum class ListeningReportSource { List, Album, Artist, Toplist, DailyRecommend, Search, Song };
+CIRRUS_LOG_ENUM(ListeningReportSource, List, Album, Artist, Toplist, DailyRecommend, Search, Song)
 // Why the listening ended (`end`): played to the end, the user went on, interrupted
 // (stopped, paused for long, closed), an error.
 enum class ListeningReportEnd { PlayEnd, Ui, Interrupt, Exception };
+CIRRUS_LOG_ENUM(ListeningReportEnd, PlayEnd, Ui, Interrupt, Exception)
 inline QString sourceName(ListeningReportSource source)
 {
     switch (source) {
@@ -82,6 +86,7 @@ struct ListeningReport {
     }
 };
 enum class ReportOutcome { NotSent, Acknowledged, Rejected, Unknown };
+CIRRUS_LOG_ENUM(ReportOutcome, NotSent, Acknowledged, Rejected, Unknown)
 enum class ReportError {
     None,
     InvalidRequest,
@@ -96,6 +101,9 @@ enum class ReportError {
     ProviderRejected,
     ProtocolFailure
 };
+CIRRUS_LOG_ENUM(ReportError, None, InvalidRequest, AuthenticationRequired, StaleContext, Busy,
+                Canceled, Network, Timeout, RateLimited, InvalidResponse, ProviderRejected,
+                ProtocolFailure)
 struct ListeningReportResult {
     QUuid eventId;
     ListeningReportAction action = ListeningReportAction::Play;

@@ -1,4 +1,5 @@
 #include "backend_playback.h"
+#include "logging/log.h"
 
 #include "app_settings.h"
 #include "music_requests.h"
@@ -579,6 +580,14 @@ void BackendPlayback::startQueue(const QStringList& keys, int index,
         ids.append(domain::SongId{keys.at(i)});
         idOrigins.append(origins.value(i));
     }
+    // What the user asked to play (docs/tasks/logging.md §8); the session logs the rest.
+    const PlayOrigin origin = origins.value(index);
+    qCInfo(lcUi) << log::event("player.play") << log::field("count", keys.size())
+                 << log::field("valid", ids.size()) << log::field("index", index)
+                 << log::field("origin", playback::Origin(origin.kind))
+                 << log::field("origin_id", origin.kind == playback::FromSearch
+                                                ? QStringLiteral("len:%1").arg(origin.id.size())
+                                                : origin.id);
     if (start < 0)
         return;
     // The backend's queue holds so many; keep those around the one chosen.
@@ -590,8 +599,10 @@ void BackendPlayback::startQueue(const QStringList& keys, int index,
         start -= from;
     }
     loadOrigins(); // this account's, before replacing them
-    if (!m_session->replaceQueue(ids, start, quality()) || !m_session)
+    if (!m_session->replaceQueue(ids, start, quality()) || !m_session) {
+        qCWarning(lcUi) << log::event("player.play_refused");
         return;
+    }
     // The new entries, in the order given.
     const auto entries = m_session->queue().entries;
     m_origins.clear();
@@ -659,6 +670,9 @@ void BackendPlayback::playPause()
         return;
     ListeningSession& session = *m_session;
     const auto play = session.playback();
+    qCInfo(lcUi) << log::event("player.play_pause") << log::field("state", play.state)
+                 << log::field("intent", play.intent) << log::field("kept", bool(m_kept))
+                 << log::field("live", m_live);
     switch (play.state) {
     case PlaybackState::Empty:
     case PlaybackState::Ended:

@@ -1,9 +1,11 @@
 #pragma once
 #include "listening_types.h"
+#include "logging/log.h"
 
 namespace cirrus::domain
 {
 enum class ListeningEnd { Active, Ended, Failed, Stopped, Replaced, Detached };
+CIRRUS_LOG_ENUM(ListeningEnd, Active, Ended, Failed, Stopped, Replaced, Detached)
 struct ListeningRecord {
     LoadToken token;   // distinct loads, including replaying the same song/queue entry
     QString accountId; // empty for guest; never reassigned on login

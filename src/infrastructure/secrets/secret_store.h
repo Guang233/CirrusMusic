@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include <QByteArray>
 #include <QObject>
@@ -16,6 +17,7 @@ enum class SecretError {
     Denied,      // user or system refused access
     Failed
 };
+CIRRUS_LOG_ENUM(SecretError, None, NotFound, Unavailable, Denied, Failed)
 
 struct SecretResult {
     SecretError error = SecretError::None;

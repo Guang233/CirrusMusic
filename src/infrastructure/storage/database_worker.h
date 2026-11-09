@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include <QObject>
 #include <QPointer>
@@ -26,6 +27,8 @@ enum class StorageError {
     Query,
     NotOpen
 };
+CIRRUS_LOG_ENUM(StorageError, None, InvalidPath, Unavailable, Locked, Corrupt, NewerSchema,
+                ChecksumMismatch, InsufficientSpace, BackupFailed, MigrationFailed, Query, NotOpen)
 
 template <typename T> struct StorageResult {
     StorageError error = StorageError::None;

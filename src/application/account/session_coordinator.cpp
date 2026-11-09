@@ -1,4 +1,5 @@
 #include "session_coordinator.h"
+#include "logging/log.h"
 
 #include <QThread>
 
@@ -32,6 +33,9 @@ domain::SessionToken SessionCoordinator::transition(domain::SessionPhase phase, 
         qFatal("Session epoch exhausted");
     }
     ++m_snapshot.token.epoch;
+    qCInfo(lcAuth) << log::event("session.phase") << log::field("from", m_snapshot.phase)
+                   << log::field("to", phase) << log::field("epoch", m_snapshot.token.epoch)
+                   << log::field("account", log::account(accountId));
     m_snapshot.phase = phase;
     m_snapshot.accountId = std::move(accountId);
     const auto notification = m_snapshot;
@@ -61,6 +65,10 @@ bool SessionCoordinator::completeAuthentication(const domain::SessionToken& prep
         return false;
     }
     // Same token: credentials were already bound to this exact epoch.
+    qCInfo(lcAuth) << log::event("session.phase") << log::field("from", m_snapshot.phase)
+                   << log::field("to", domain::SessionPhase::Authenticated)
+                   << log::field("epoch", m_snapshot.token.epoch)
+                   << log::field("account", log::account(m_snapshot.accountId));
     m_snapshot.phase = domain::SessionPhase::Authenticated;
     emit changed(m_snapshot);
     return accepts(prepared) && m_snapshot.phase == domain::SessionPhase::Authenticated;

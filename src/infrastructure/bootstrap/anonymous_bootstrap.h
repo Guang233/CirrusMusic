@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include "infrastructure/netease/api/session_api_client.h"
 #include "infrastructure/netease/api/xeapi_key_registrar.h"
@@ -17,6 +18,7 @@ enum class BootstrapError {
     RegisterFailed, // transport/decode/crypto/stale context of anonymous registration
     Rejected        // business code != 200 or no valid MUSIC_A in the response
 };
+CIRRUS_LOG_ENUM(BootstrapError, None, Busy, Canceled, KeyUnavailable, RegisterFailed, Rejected)
 
 struct BootstrapResult {
     BootstrapError error = BootstrapError::None;

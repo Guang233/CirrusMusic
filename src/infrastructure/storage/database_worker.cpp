@@ -1,4 +1,5 @@
 #include "database_worker.h"
+#include "logging/log.h"
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -297,6 +298,10 @@ void DatabaseWorker::open()
         m_executor,
         [this, executor = m_executor] {
             const auto error = executor->open();
+            if (error == StorageError::None)
+                qCInfo(lcStorage) << log::event("db.opened");
+            else
+                qCCritical(lcStorage) << log::event("db.open_failed") << log::field("err", error);
             deliver([this, error] { emit opened(error); });
         },
         Qt::QueuedConnection);

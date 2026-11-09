@@ -1,5 +1,6 @@
 #include "listening_reporter.h"
 #include "listening_session.h"
+#include "logging/log.h"
 #include <QThread>
 
 namespace cirrus::application
@@ -71,29 +72,52 @@ void ListeningReporter::playbackChanged(const PlaybackSnapshot& snapshot)
 
 void ListeningReporter::report(const StoredListeningRecord& row, ListeningReportEnd end)
 {
-    if (row.id.isNull() || m_reported.contains(row.id) || row.playedMs < MinimumMs)
+    if (row.id.isNull() || m_reported.contains(row.id))
+        return;
+    if (row.playedMs < MinimumMs) {
+        qCDebug(lcReport) << log::event("report.skip") << log::field("reason", "short")
+                          << log::field("song", row.song.value)
+                          << log::field("played_ms", row.playedMs);
         return; // a short load may still grow while it plays
+    }
     m_reported.insert(row.id);
     m_reportedOrder.append(row.id);
     if (m_reportedOrder.size() > kRememberedRecords)
         m_reported.remove(m_reportedOrder.takeFirst());
     const auto session = m_facade.snapshot();
     if (row.source == ListeningMode::PersonalFm || row.accountId.isEmpty() ||
-        session.phase != SessionPhase::Authenticated || session.accountId != row.accountId)
+        session.phase != SessionPhase::Authenticated || session.accountId != row.accountId) {
+        qCInfo(lcReport) << log::event("report.skip")
+                         << log::field("reason", row.source == ListeningMode::PersonalFm ? "fm"
+                                                 : row.accountId.isEmpty()               ? "guest"
+                                                 : session.phase != SessionPhase::Authenticated
+                                                     ? "signed_out"
+                                                     : "other_account")
+                         << log::field("song", row.song.value);
         return; // FM: no evidence for its source; guests can't; never another account's
+    }
     ListeningReport report{QUuid::createUuid(), row.song, row.song.value,
                            ListeningReportAction::Play, row.playedMs / 1000};
     report.source = ListeningReportSource::Song; // played as itself, unless we know better
     report.end = end;
-    if (const auto origin = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
+    const char* origin = "none";
+    if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
         auto known = report;
-        known.source = origin->source;
-        known.sourceId = origin->id;
+        known.source = found->source;
+        known.sourceId = found->id;
+        origin = known.isValid() ? "known" : "invalid";
         if (known.isValid())
             report = known;
     }
+    qCInfo(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
+                     << log::field("song", row.song.value) << log::field("record_end", row.end)
+                     << log::field("end", end) << log::field("played_ms", row.playedMs)
+                     << log::field("origin", origin) << log::field("source", report.source);
     if (const auto id = m_facade.reportListening(report))
         m_inFlight.insert(id);
+    else
+        qCWarning(lcReport) << log::event("report.not_queued")
+                            << log::field("event", report.eventId);
 }
 
 void ListeningReporter::flush(std::function<void()> done, int timeoutMs)
@@ -101,6 +125,7 @@ void ListeningReporter::flush(std::function<void()> done, int timeoutMs)
     Q_ASSERT(QThread::currentThread() == thread());
     m_flushDone = std::move(done);
     m_session.finishHistoryForStorage(); // settles the playing load (recordChanged)
+    qCInfo(lcReport) << log::event("report.flush") << log::field("in_flight", m_inFlight.size());
     if (m_inFlight.isEmpty()) {
         QTimer::singleShot(0, this, &ListeningReporter::finishFlush);
         return;
@@ -110,6 +135,9 @@ void ListeningReporter::flush(std::function<void()> done, int timeoutMs)
 
 void ListeningReporter::finishFlush()
 {
+    if (m_flushDone && !m_inFlight.isEmpty())
+        qCWarning(lcReport) << log::event("report.flush_timeout")
+                            << log::field("in_flight", m_inFlight.size());
     m_flushTimer.stop();
     if (auto done = std::exchange(m_flushDone, {}))
         done();

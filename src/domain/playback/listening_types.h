@@ -1,5 +1,6 @@
 #pragma once
 #include "domain/playback/playback_types.h"
+#include "logging/log.h"
 
 namespace cirrus::domain
 {
@@ -10,6 +11,9 @@ struct QueueEntry {
 enum class ListeningMode { Queue, PersonalFm };
 enum class QueueOrder { Sequential, Shuffle };
 enum class QueueRepeat { Off, All, One };
+CIRRUS_LOG_ENUM(ListeningMode, Queue, PersonalFm)
+CIRRUS_LOG_ENUM(QueueOrder, Sequential, Shuffle)
+CIRRUS_LOG_ENUM(QueueRepeat, Off, All, One)
 struct QueueSnapshot {
     QList<QueueEntry> entries;
     QUuid active;

@@ -138,9 +138,17 @@ QString MprisRoot::identity() const { return QGuiApplication::applicationDisplay
 
 QString MprisRoot::desktopEntry() const { return QGuiApplication::desktopFileName(); }
 
-void MprisRoot::Raise() { emit m_owner->desktop()->showRequested(); }
+void MprisRoot::Raise()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "raise");
+    emit m_owner->desktop()->showRequested();
+}
 
-void MprisRoot::Quit() { m_owner->desktop()->quit(); }
+void MprisRoot::Quit()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "quit");
+    m_owner->desktop()->quit();
+}
 
 // --- org.mpris.MediaPlayer2.Player ------------------------------------------------
 
@@ -225,17 +233,37 @@ bool MprisPlayer::canSeek() const
     return m_owner->player()->seekable() && m_owner->player()->durationMs() > 0;
 }
 
-void MprisPlayer::Next() { m_owner->player()->next(); }
+void MprisPlayer::Next()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "next");
+    m_owner->player()->next();
+}
 
-void MprisPlayer::Previous() { m_owner->player()->previous(); }
+void MprisPlayer::Previous()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "previous");
+    m_owner->player()->previous();
+}
 
-void MprisPlayer::Pause() { media::pause(*m_owner->player()); }
+void MprisPlayer::Pause()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "pause");
+    media::pause(*m_owner->player());
+}
 
-void MprisPlayer::PlayPause() { m_owner->player()->playPause(); }
+void MprisPlayer::PlayPause()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "play_pause");
+    m_owner->player()->playPause();
+}
 
 void MprisPlayer::Stop() { Pause(); }
 
-void MprisPlayer::Play() { media::play(*m_owner->player()); }
+void MprisPlayer::Play()
+{
+    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "play");
+    media::play(*m_owner->player());
+}
 
 void MprisPlayer::Seek(qlonglong offset)
 {

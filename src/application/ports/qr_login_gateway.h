@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include "domain/account/credential_login_types.h"
 #include "domain/account/qr_login_types.h"
@@ -25,6 +26,8 @@ enum class AuthError {
     CredentialRejected,
     ProtocolFailure
 };
+CIRRUS_LOG_ENUM(AuthError, InvalidRequest, Canceled, StaleContext, Busy, Network, Timeout,
+                RateLimited, ProviderRejected, InvalidResponse, CredentialRejected, ProtocolFailure)
 
 struct AuthFailure {
     AuthError error{};

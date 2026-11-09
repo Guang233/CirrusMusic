@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include "music_types.h"
 #include <QByteArray>
@@ -23,6 +24,8 @@ enum class CacheError {
     Network,
     Timeout
 };
+CIRRUS_LOG_ENUM(CacheError, None, Disabled, InvalidRequest, Busy, Canceled, StaleContext, Storage,
+                Corrupt, Capacity, Unsupported, Network, Timeout)
 struct CacheUsage {
     qint64 metadataBytes = 0, coverBytes = 0, entries = 0;
     qint64 databaseBytes = 0; // main file only, not WAL/journal/process memory

@@ -1,5 +1,6 @@
 #include "listening_session.h"
 #include "application/music/personal_fm_source.h"
+#include "logging/log.h"
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
@@ -138,15 +139,24 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
 {
     Q_ASSERT(QThread::currentThread() == thread());
     const auto entry = candidate.current();
-    if (!entry || m_backend.state() != BackendState::Ready)
+    if (!entry || m_backend.state() != BackendState::Ready) {
+        qCWarning(lcPlayback) << log::event("queue.begin_refused")
+                              << log::field("reason", entry ? "backend_not_ready" : "no_entry");
         return false;
+    }
     const auto sourceSession = m_backend.snapshot();
     const auto revision = ++m_revision;
     m_starting = true;
     const auto id = m_backend.playSong(entry->song, quality, intent);
     m_starting = false;
-    if (!acceptLoadCommand(id, revision))
+    qCInfo(lcPlayback) << log::event("queue.begin") << log::field("song", entry->song.value)
+                       << log::field("intent", intent) << log::field("automatic", automatic)
+                       << log::field("fm", fm) << log::field("command", id);
+    if (!acceptLoadCommand(id, revision)) {
+        qCWarning(lcPlayback) << log::event("queue.begin_refused")
+                              << log::field("reason", "command") << log::field("command", id);
         return false;
+    }
     commit(std::move(candidate), intent, quality, automatic, fm, sourceSession, revision);
     return true;
 }
@@ -226,6 +236,8 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
                                     AudioQuality quality)
 {
+    qCInfo(lcPlayback) << log::event("queue.replace") << log::field("count", songs.size())
+                       << log::field("index", startIndex) << log::field("quality", quality);
     if (startIndex < 0 || startIndex >= songs.size())
         return false;
     auto candidate = m_queue;
@@ -245,6 +257,7 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     auto candidate = m_queue;
     if (!candidate.restore(saved))
         return false;
+    qCInfo(lcPlayback) << log::event("queue.restored") << log::field("count", saved.entries.size());
     const auto revision = ++m_revision;
     m_queue = std::move(candidate);
     m_queueContext = expected.token;
@@ -272,6 +285,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
 }
 bool ListeningSession::select(QUuid entry)
 {
+    qCInfo(lcPlayback) << log::event("queue.select") << log::field("entry", entry);
     if (m_mode == ListeningMode::PersonalFm || !queueContextMatches())
         return false;
     auto candidate = m_queue;
@@ -282,6 +296,7 @@ bool ListeningSession::select(QUuid entry)
 }
 bool ListeningSession::next()
 {
+    qCInfo(lcPlayback) << log::event("queue.next") << log::field("mode", m_mode);
     if (m_mode == ListeningMode::PersonalFm)
         return !m_fmWaiting && enterFmWait(false, true);
     if (!queueContextMatches())
@@ -309,6 +324,7 @@ bool ListeningSession::canGoPrevious() const
 }
 bool ListeningSession::previous()
 {
+    qCInfo(lcPlayback) << log::event("queue.previous") << log::field("mode", m_mode);
     if (m_mode == ListeningMode::PersonalFm)
         return current() && !m_fmWaiting && m_playback.positionMs > 3000 && m_playback.seekable &&
                seek(0);
@@ -368,6 +384,7 @@ bool ListeningSession::stop()
 {
     if (!current())
         return false;
+    qCInfo(lcPlayback) << log::event("queue.stop");
     const auto revision = ++m_revision;
     m_starting = true;
     const auto id = m_backend.stopPlayback();
@@ -663,6 +680,9 @@ void ListeningSession::adoptAdvance()
 }
 void ListeningSession::advance(bool naturalEnd)
 {
+    // After an end (natural) or a failure (skips at most 5 entries in a row).
+    qCInfo(lcPlayback) << log::event("queue.advance") << log::field("natural", naturalEnd)
+                       << log::field("skipped", m_autoVisited.size());
     if (naturalEnd)
         m_autoVisited.clear();
     const auto count = m_queue.snapshot().entries.size();

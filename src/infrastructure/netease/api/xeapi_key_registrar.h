@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/log.h"
 
 #include "infrastructure/netease/network/http_transport.h"
 #include "xeapi_key_ring.h"
@@ -21,6 +22,8 @@ enum class XeapiKeyError {
     InvalidKey,
     RingGone
 };
+CIRRUS_LOG_ENUM(XeapiKeyError, None, InvalidRequest, Canceled, Transport, Decode, Rejected,
+                Signature, InvalidKey, RingGone)
 
 struct XeapiKeyResult {
     XeapiKeyError error = XeapiKeyError::None;

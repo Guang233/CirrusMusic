@@ -133,6 +133,10 @@ LoadError LoadableModel::describe(const Failure& failure, int* state) const
 
 void LoadableModel::fail(const Failure& failure)
 {
+    // Every page or list that fails to load (docs/tasks/logging.md §8).
+    qCWarning(lcUi) << log::event("model.failed") << log::field("model", metaObject()->className())
+                    << log::field("kind", failure.kind) << log::field("refreshing", m_refreshing)
+                    << log::field("retry_after_ms", failure.retryAfterMs.value_or(0));
     int state = loadstate::Error;
     const LoadError error = describe(failure, &state);
     setError(error);

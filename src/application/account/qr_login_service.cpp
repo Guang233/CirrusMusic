@@ -1,4 +1,5 @@
 #include "qr_login_service.h"
+#include "logging/log.h"
 
 #include <QThread>
 #include <utility>
@@ -303,6 +304,9 @@ void QrLoginService::cancel()
 
 void QrLoginService::fail(domain::SessionToken context, AuthFailure failure)
 {
+    qCWarning(lcAuth) << log::event("login.failed") << log::field("err", failure.error)
+                      << log::field("code", failure.providerCode.value_or(0))
+                      << log::field("retry_after_ms", failure.retryAfterMs.value_or(0));
     if (!m_session.accepts(context)) {
         return;
     }
@@ -332,7 +336,8 @@ void QrLoginService::keyCompleted(quint64 id, domain::SessionToken context, QrKe
     }
     const auto challenge = std::get<domain::QrLoginChallenge>(result);
     m_key = challenge.key;
-    schedulePoll(); // first automatic check waits one full interval
+    qCInfo(lcAuth) << log::event("login.qr_ready"); // never the key
+    schedulePoll();                                 // first automatic check waits one full interval
     emit challengeReady(context, challenge);
 }
 
@@ -351,6 +356,7 @@ void QrLoginService::statusCompleted(quint64 id, domain::SessionToken context,
         return;
     }
     const auto state = std::get<domain::QrLoginStatus>(result);
+    qCInfo(lcAuth) << log::event("login.qr_status") << log::field("state", state);
     if (state == domain::QrLoginStatus::Expired) {
         const bool canceled = m_session.cancelAuthentication(context);
         const auto after = m_session.snapshot();
@@ -432,6 +438,9 @@ void QrLoginService::promotionCompleted(quint64 id, domain::SessionToken context
         if (m_gateway && m_session.accepts(context)) {
             m_gateway->storeSession(context, identity, remember);
         }
+        qCInfo(lcAuth) << log::event("login.signed_in")
+                       << log::field("account", log::account(identity.accountId))
+                       << log::field("remember", remember);
         if (m_session.accepts(context)) {
             emit signedIn(context, identity);
         }
