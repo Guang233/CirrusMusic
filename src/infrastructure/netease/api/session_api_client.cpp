@@ -317,6 +317,13 @@ void SessionApiClient::start(quint64 id)
                 header->append("; ");
             header->append("MUSIC_A=" + m_anonymousToken);
         }
+        // The heart answers -460 to a request without a client's os and appver
+        // (docs/api/collection-writes.md §1a): those of the Pc eapi profile.
+        if (it->operation == ApiOperation::SongHeart) {
+            if (!header->isEmpty())
+                header->append("; ");
+            header->append("os=pc; appver=3.1.17.204416");
+        }
         auto payload = it->payload;
         payload.insert(QStringLiteral("e_r"), false);
         payload.insert(QStringLiteral("csrf_token"), QString::fromUtf8(*csrf));

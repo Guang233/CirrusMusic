@@ -261,6 +261,9 @@ class CollectionsTest : public QObject
             QCOMPARE(r.url().host(), mode / 2 == 1 ? "interfacepc.music.163.com" : "music.163.com");
             QVERIFY(r.rawHeader("Cookie").contains("MUSIC_U=synthetic-original"));
             QVERIFY(!r.rawHeader("Cookie").contains("synthetic-rotation"));
+            // Only the heart says which client it is (-460 otherwise).
+            QCOMPARE(r.rawHeader("Cookie").contains("os=pc; appver=3.1.17.204416"),
+                     operations[mode] == ApiOperation::SongHeart);
             if (mode / 2 == 1) {
                 const auto wire = decodeEapiRequest(h.http->bodies.last());
                 QVERIFY(wire);

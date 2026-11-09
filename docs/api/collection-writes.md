@@ -14,6 +14,12 @@
 
 本轮没有读取真实记忆凭据／密钥环、登录真实账号、请求业务服务／音源／头像／私人文件、执行SDK或继续此前−462窗口。只有fake HTTP／fake secrets和临时安装SQL，产品入口仍模板。
 
+### 1a. 红心的 −460（2026-11-09 实测）
+
+维护者登录后点红心，Weapi `/api/radio/like` 两次都回业务码 −460（HTTP 200），同一会话里专辑、歌手收藏（同为 Weapi）都成功。参考实现 2021-02-27 修同一个 −460（Binaryify #1151，提交 d1907ae）的做法是只给这个接口的 Cookie 补 `os=pc`、`appver`；现在的参考实现则给所有请求补全套客户端 Cookie。原生 Weapi 只带 cookie jar 里的值，没有这两项。
+
+处理：只给 SongHeart 的 Weapi Cookie 补 `os=pc; appver=3.1.17.204416`（与 Pc eapi 档案同一版本号），其他 Weapi 不变；不改协议、不改 v1、不双发。这是**按参考实现推断的原因，还没有实网确认**：维护者再点一次红心看 `write.done change=song_heart`；仍是 −460 再看别的差异（osver、deviceId 等），不盲目叠加。
+
 ## 2. Core接口与有界输入
 
 `domain/music/collection_types.h`：
