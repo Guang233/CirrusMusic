@@ -2,6 +2,7 @@
 
 #include "sources.h"
 
+#include <QCache>
 #include <QHash>
 #include <QObject>
 
@@ -20,7 +21,9 @@ class CacheQueue;
 // Covers from the backend's resource cache (docs/ui/integration.md §4 ImageSource):
 // a cover key is the cover's URL, fetched once and kept on disk at one of the cache's
 // sizes. Keys that aren't URLs (the sample covers, while pages still show fake data)
-// go to `fallback`. The same cover asked for twice at once is fetched once.
+// go to `fallback`. The same cover asked for twice at once is fetched once; the bytes
+// of the last ones shown stay in memory (decoding them again is cheap, the trip to the
+// backend's disk cache is not).
 class BackendImages : public QObject, public ImageSource
 {
   public:
@@ -38,6 +41,8 @@ class BackendImages : public QObject, public ImageSource
     CacheQueue* m_queue;
     // "url@size" -> the fetch and who waits for it.
     QHash<QString, std::shared_ptr<Fetch>> m_fetches;
+    // "url@size" -> the image hosts' bytes; cost in KiB.
+    QCache<QString, QByteArray> m_bytes{64 * 1024};
     quint64 m_nextWaiter = 0;
 };
 

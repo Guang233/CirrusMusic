@@ -5,6 +5,8 @@
 #include <QMutex>
 #include <QQuickAsyncImageProvider>
 
+#include <memory>
+
 namespace cirrus::ui
 {
 
@@ -26,12 +28,12 @@ class CoverProvider : public QQuickAsyncImageProvider
     // Shared with the decode jobs, which can outlive a canceled response.
     struct Cache {
         QMutex mutex;
-        QCache<QString, QImage> images{64 * 1024}; // cost in KiB
+        QCache<QString, QImage> images{128 * 1024}; // cost in KiB
     };
 
   private:
     ImageSource* m_source;
-    QObject* m_guiContext; // lives on the GUI thread; source calls are posted to it
+    std::shared_ptr<QObject> m_guiContext; // lives on the GUI thread; source calls go to it
     std::shared_ptr<Cache> m_cache = std::make_shared<Cache>();
 };
 

@@ -20,6 +20,7 @@ struct Job {
     QMutex mutex;
     CoverResponse* response = nullptr; // null once canceled or destroyed
     Request request;                   // GUI thread only
+    std::weak_ptr<QObject> gui;        // the provider's GUI thread context
 };
 
 class CoverResponse : public QQuickImageResponse
@@ -38,10 +39,14 @@ class CoverResponse : public QQuickImageResponse
     }
     QString errorString() const override { return m_error; }
 
-    // Results of a canceled request are still cached; only the delivery is dropped.
+    // No longer shown (a page scrolled it away): the source request goes too, so what
+    // is on screen loads first. Called on the image loader's thread.
     void cancel() override
     {
         detach();
+        if (const auto gui = m_job->gui.lock())
+            QMetaObject::invokeMethod(
+                gui.get(), [job = m_job]() { job->request.cancel(); }, Qt::QueuedConnection);
         emit finished();
     }
 
@@ -96,14 +101,19 @@ QImage decode(const QByteArray& bytes, const QSize& requested)
 }
 } // namespace
 
-CoverProvider::CoverProvider(ImageSource* source) : m_source(source), m_guiContext(new QObject) {}
+// Deleted on its own thread, whichever thread lets go of it last.
+CoverProvider::CoverProvider(ImageSource* source)
+    : m_source(source), m_guiContext(new QObject, [](QObject* o) { o->deleteLater(); })
+{
+}
 
-CoverProvider::~CoverProvider() { delete m_guiContext; }
+CoverProvider::~CoverProvider() = default;
 
 QQuickImageResponse* CoverProvider::requestImageResponse(const QString& id,
                                                          const QSize& requestedSize)
 {
     auto job = std::make_shared<Job>();
+    job->gui = m_guiContext;
     auto* response = new CoverResponse(job);
     const QString key = QUrl::fromPercentEncoding(id.toUtf8());
     const QString cacheKey =
@@ -121,12 +131,13 @@ QQuickImageResponse* CoverProvider::requestImageResponse(const QString& id,
     // this returns.
     if (!cached.isNull()) {
         QMetaObject::invokeMethod(
-            m_guiContext, [job, cached]() { deliver(job, cached, {}); }, Qt::QueuedConnection);
+            m_guiContext.get(), [job, cached]() { deliver(job, cached, {}); },
+            Qt::QueuedConnection);
         return response;
     }
 
     QMetaObject::invokeMethod(
-        m_guiContext,
+        m_guiContext.get(),
         [job, key, cacheKey, requestedSize, cache = m_cache, source = m_source]() {
             {
                 const QMutexLocker lock(&job->mutex);

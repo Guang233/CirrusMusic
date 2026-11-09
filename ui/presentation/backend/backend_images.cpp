@@ -4,7 +4,9 @@
 
 #include "infrastructure/cache/resource_cache_service.h"
 #include "infrastructure/runtime/backend_runtime.h"
+#include "logging/log.h"
 
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
@@ -79,6 +81,7 @@ template <class T> Request failLater(QObject* context, Reply<T> reply, failure::
 
 struct BackendImages::Fetch {
     quint64 ticket = 0;
+    QElapsedTimer elapsed;
     QHash<quint64, Reply<QByteArray>> waiters;
 };
 
@@ -103,10 +106,19 @@ Request BackendImages::image(const QString& key, int size, Reply<QByteArray> rep
         return failLater(this, std::move(reply), failure::Rejected);
     const int kept = bucket(size);
     const QString id = url.toString() + u'@' + QString::number(kept);
+    if (const QByteArray* bytes = m_bytes.object(id)) {
+        auto alive = std::make_shared<bool>(true);
+        QTimer::singleShot(0, this, [alive, reply = std::move(reply), bytes = *bytes]() {
+            if (*alive)
+                reply(Outcome<QByteArray>{bytes});
+        });
+        return Request([alive]() { *alive = false; });
+    }
 
     std::shared_ptr<Fetch>& fetch = m_fetches[id];
     if (!fetch) {
         fetch = std::make_shared<Fetch>();
+        fetch->elapsed.start();
         fetch->ticket = m_queue->enqueue(
             [url, kept](cache::ResourceCacheService& cache) {
                 return cache.cover(url, kept, domain::CacheReadMode::PreferCache);
@@ -115,9 +127,19 @@ Request BackendImages::image(const QString& key, int size, Reply<QByteArray> rep
                 Outcome<QByteArray> outcome;
                 // A cover fetched but not saved (the cache's disk) still shows.
                 const auto* bytes = std::get_if<QByteArray>(&result.value);
-                if (bytes && !bytes->isEmpty())
+                if (bytes && !bytes->isEmpty()) {
                     outcome.value = *bytes;
-                else
+                    m_bytes.insert(id, new QByteArray(*bytes),
+                                   int(std::max<qsizetype>(1, bytes->size() / 1024)));
+                    if (const auto it = m_fetches.constFind(id); it != m_fetches.cend())
+                        qCDebug(lcUiBackend)
+                            << log::event("cover.served")
+                            << log::field("from", result.status == domain::CacheStatus::Hit
+                                                      ? "disk"
+                                                      : "network")
+                            << log::field("bytes", bytes->size())
+                            << log::field("ms", (*it)->elapsed.elapsed());
+                } else
                     outcome.failure = Failure{failureOf(result.error), std::nullopt};
                 finish(id, std::move(outcome));
             },

@@ -8,8 +8,9 @@ namespace cirrus::ui
 namespace
 {
 
-// The cache takes 7 jobs at a time; one stays free for the backend's own (song details).
-constexpr int kRunning = 6;
+// The cache takes 31 jobs at a time (cache::CacheJobsInFlight); some stay free for the
+// backend's own (song details) and the other queue (Settings › Storage).
+constexpr int kRunning = 24;
 // When the cache was full anyway (the backend's jobs), try again after this.
 constexpr int kRetryMs = 200;
 
@@ -103,8 +104,10 @@ void CacheQueue::pump()
     if (m_busy && m_retry.isActive())
         return; // turned away a moment ago: wait for the retry
     m_busy = false;
+    // Newest first: what was asked for last is what is on screen now (a scrolled-away
+    // cover is canceled by its page).
     while (!m_waiting.empty() && m_running.size() < kRunning && open()) {
-        Job& job = m_waiting.front();
+        Job& job = m_waiting.back();
         const quint64 id = job.submit(*m_cache);
         if (id == 0) {
             // Full with the backend's own jobs; a moment later.
@@ -112,7 +115,7 @@ void CacheQueue::pump()
             return;
         }
         m_running.insert(id, std::move(job));
-        m_waiting.pop_front();
+        m_waiting.pop_back();
     }
 }
 
@@ -127,12 +130,12 @@ void CacheQueue::completed(const domain::CacheResult& result)
     // The session changed (or the cache was cleared) under it: again, when it can.
     if (result.error == domain::CacheError::StaleContext ||
         result.error == domain::CacheError::Canceled) {
-        m_waiting.push_front(std::move(job));
+        m_waiting.push_back(std::move(job)); // next to run
         return;
     }
-    // The cache downloads two covers at a time and turns the rest away: a moment later.
+    // The cache was full: after the others.
     if (result.error == domain::CacheError::Busy) {
-        m_waiting.push_back(std::move(job));
+        m_waiting.push_front(std::move(job));
         m_busy = true;
         m_retry.start();
         return;
