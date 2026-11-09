@@ -116,6 +116,7 @@ QtObject {
     readonly property string how_to_reg: "\ue174"
     readonly property string thumb_up: "\uf577"
     readonly property string content_copy: "\ue14d"
+    readonly property string select_all: "\ue162"
     readonly property string desktop_windows: "\ue30c"
     readonly property string database: "\uf20e"
     readonly property string font_download: "\ue167"
@@ -238,6 +239,7 @@ QtObject {
         "how_to_reg",
         "thumb_up",
         "content_copy",
+        "select_all",
         "desktop_windows",
         "database",
         "font_download",

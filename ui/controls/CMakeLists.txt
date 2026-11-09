@@ -29,6 +29,7 @@ qt_add_qml_module(cirrus_ui_controls
         RadioButton.qml
         ToolTip.qml
         ScrollBar.qml
+        SelectableText.qml
         TextField.qml
         TextArea.qml
         SearchBar.qml

@@ -127,6 +127,7 @@ person_add
 how_to_reg
 thumb_up
 content_copy
+select_all
 desktop_windows
 database
 font_download

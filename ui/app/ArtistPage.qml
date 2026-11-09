@@ -330,16 +330,9 @@ SongCollectionPage {
         }
     }
 
-    // Body text that can be selected and copied; plain text, never HTML.
-    component ReadingText: TextEdit {
+    // Body text that can be selected and copied.
+    component ReadingText: SelectableText {
         width: parent ? parent.width : 0
-        readOnly: true
-        selectByMouse: true
-        textFormat: TextEdit.PlainText
-        wrapMode: TextEdit.Wrap
         color: Theme.color.onSurfaceVariant
-        selectionColor: Theme.color.primaryContainer
-        selectedTextColor: Theme.color.onPrimaryContainer
-        font: Theme.type.bodyLarge.font
     }
 }

@@ -258,6 +258,14 @@ ControlPage {
             text: qsTr("只有文字")
             onClicked: plainDialog.open()
         }
+        Button {
+            variant: Md.Tonal
+            text: qsTr("阅读（简介）")
+            onClicked: readingDialog.open()
+        }
+    }
+    Caption {
+        text: qsTr("说明文字都能选中复制（右键：复制、全选）。阅读对话框（reading）最宽 720，正文 bodyLarge，打开时焦点在文字上，Ctrl+A、Ctrl+C 直接可用；窗口不够高时中间部分滚动（滚轮、PageUp／PageDown）。")
     }
 
     Dialog {
@@ -267,6 +275,14 @@ ControlPage {
         supportingText: qsTr("“深夜通勤”和其中的 9 首歌会从你的音乐库移除，歌曲本身不受影响。")
         rejectText: qsTr("取消")
         acceptText: qsTr("删除")
+    }
+    Dialog {
+        id: readingDialog
+        reading: true
+        title: qsTr("深夜通勤")
+        supportingText: Array(9).fill(qsTr("下班路上的地铁、末班公交和空荡的街，配一些不吵的歌：城市流行、轻电子、几首老歌。歌单每周五更新，按心情从慢到快排好，适合从上车听到下车。")).join("\n\n")
+        Component.onCompleted: if (GalleryState.capturing)
+            open()
     }
     Dialog {
         id: plainDialog

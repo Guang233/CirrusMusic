@@ -248,6 +248,7 @@ SongCollectionPage {
 
     Dialog {
         id: descriptionDialog
+        reading: true
         title: pageModel.title
         supportingText: pageModel.description
     }

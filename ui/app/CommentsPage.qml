@@ -684,19 +684,12 @@ Item {
                     spec: Theme.motion.standardDefaultSpatial
                     threshold: 0.5
                 }
-                TextEdit {
+                SelectableText {
                     id: textEdit
                     width: parent.width
-                    readOnly: true
-                    selectByMouse: true
                     activeFocusOnPress: false
-                    textFormat: TextEdit.PlainText
-                    wrapMode: TextEdit.Wrap
                     text: row.text
                     color: Theme.color.onSurface
-                    selectionColor: Qt.alpha(Theme.color.primary, 0.4)
-                    selectedTextColor: Theme.color.onSurface
-                    font: Theme.type.bodyLarge.font
                 }
             }
             Button {

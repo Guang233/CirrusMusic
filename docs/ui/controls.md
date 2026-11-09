@@ -132,11 +132,20 @@ MD3E 样式：轨道高 16（`trackHeight` 可调为 24／40／56／96）、外�
 
 ## 8c. 对话框（第二批，阶段 3）
 
-- **Dialog**：MD3 基础对话框的外观，桌面的交互（维护者要求：MD3E 风格，但符合电脑的操作逻辑，尽量支持纯键盘操作）。基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 320–560（不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24；遮罩 Scrim 32 %。
-  - 布局（一列，间距 16）：标题行（可选图标 `glyph` 24 Secondary、标题 `title` titleLarge、右端关闭按钮"关闭（Esc）"）→ 说明 `supportingText`（bodyMedium，OnSurfaceVariant）→ 子项 → 按钮行（右对齐，间距 8，与上方相隔 24）：`buttons` 里的额外按钮、`rejectText` 文字按钮、`acceptText` 填充按钮（默认按钮，最右）。
+- **Dialog**：MD3 基础对话框的外观，桌面的交互（维护者要求：MD3E 风格，但符合电脑的操作逻辑，尽量支持纯键盘操作）。基于 `T.Popup`（不用 `T.Dialog`，它自己排 header／footer，与这里的单列布局冲突），挂在窗口的 Overlay 上居中；宽 320–560（`reading` 时到 720；不超过窗口宽减 48），高不超过窗口高减 48。容器 SurfaceContainerHigh、extraLarge 圆角、3 级阴影，内边距 24；遮罩 Scrim 32 %。
+  - 布局（一列，间距 16）：标题行（可选图标 `glyph` 24 Secondary、标题 `title` titleLarge、右端关闭按钮"关闭（Esc）"）→ 说明 `supportingText`（bodyMedium，OnSurfaceVariant；用 `SelectableText`，能选中复制，§8e）→ 子项 → 按钮行（右对齐，间距 8，与上方相隔 24）：`buttons` 里的额外按钮、`rejectText` 文字按钮、`acceptText` 填充按钮（默认按钮，最右）。
   - 键盘：Esc 等于取消（`rejected`）；Enter 在按钮上时点击该按钮（与 GTK、KDE 一致），否则执行默认按钮（`accepted`，`acceptEnabled` 为假时不执行）；Tab／Shift+Tab 只在对话框内循环。打开时焦点给对话框本身而不是某个控件（不出现焦点环，Esc／Enter 照常可用，按 Tab 才进入控件），设了 `initialFocusItem`（如输入框）时给它；关闭后焦点回到打开前的控件。
   - 鼠标：点击外面不关闭（桌面上误点不该丢掉对话框里的状态）。
+  - 滚动：标题行和按钮行固定，中间（说明和子项）超出窗口高度时滚动（滚轮、拖动滚动条，焦点不在输入框时 ↑↓／PageUp／PageDown）；键盘选择文字时跟着滚到光标处。宽度按内容的自然宽度算（说明用不换行的宽度，子项取最宽的 `implicitWidth`），不再受子项随对话框变宽的影响。
+  - **阅读对话框**（`reading: true`，2026-11-09 维护者反馈"对话框太窄，不符合电脑习惯；简介无法选中复制"）：给歌单、专辑、播客的简介这类长文本。最宽 720（每行约 42 个汉字），说明用 bodyLarge、OnSurface；打开时焦点在文字上（不显示焦点环），Ctrl+A、Ctrl+C 直接可用，Esc 照常关闭。
   - 动效：进入时缩放 0.95→1（`standardFastSpatial`）并淡入，退出淡出（`fastEffects`）。Gallery 导航页有示例。
+
+## 8e. 可选中的文字
+
+- **SelectableText**（2026-11-09）：只读、可选中复制的正文（对话框说明、简介、歌手介绍、评论）。基于 `TextEdit`（只读、纯文本，保留换行），颜色取 `ColorScope.scheme`（默认 OnSurfaceVariant，选区 PrimaryContainer）、字体默认 bodyLarge。
+  - 鼠标：拖动选择，双击选词，三击选行；指针为 I 形（文字不是可点击的东西，不用手形）。右键打开菜单："复制"（Ctrl+C；没有选中时复制全部）、"全选"（Ctrl+A）。
+  - 键盘：`activeFocusOnTab` 时 Tab 进入，Shift+方向键选择，Ctrl+A、Ctrl+C；Menu 键或 Shift+F10 打开同一菜单。从键盘得到焦点（或得到焦点后按过键）时显示焦点环；点击得到焦点、或 `focusQuietly()`（对话框打开时）不显示。失去焦点时清掉选区。
+  - 以前歌手页和评论页各写了一份只读 `TextEdit`，已换成它。
 
 ## 8d. 提示条（阶段 3）
 
