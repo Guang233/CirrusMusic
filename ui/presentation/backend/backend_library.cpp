@@ -262,13 +262,27 @@ Request BackendLibrary::libraryCollections(collection::Kind kind, PageRequest pa
             this, std::move(reply),
             Outcome<ResultPage<CollectionItem>>{ResultPage<CollectionItem>{{}, false, {}, {}}});
     switch (kind) {
-    case collection::Playlist:
-        return read<domain::MyPlaylistsPage>(
-            m_requests,
-            [query = *query](BackendFacade& facade) {
-                return signedIn(facade) ? facade.myPlaylists(query) : MusicRequests::NeedsSignIn;
-            },
-            std::move(reply), playlistsPageOf);
+    case collection::Playlist: {
+        // All of them on the first page, read as the rail does: the service sends its
+        // whole list whatever the limit (a limit of 30 and of 100 got the same reply,
+        // 2026-11-09), and whether it keeps to the offset is not known.
+        if (page.offset > 0)
+            return replyLater(
+                this, std::move(reply),
+                Outcome<ResultPage<CollectionItem>>{ResultPage<CollectionItem>{{}, false, {}, {}}});
+        auto state = std::make_shared<PlaylistsRead>();
+        readPlaylists(
+            m_requests, state, [reply = std::move(reply)](Outcome<QList<CollectionItem>> outcome) {
+                if (!outcome.value) {
+                    reply({std::nullopt, false, outcome.failure});
+                    return;
+                }
+                const auto total = qint64(outcome.value->size());
+                reply({ResultPage<CollectionItem>{std::move(*outcome.value), false, total, {}},
+                       outcome.partial, std::nullopt});
+            });
+        return Request([state] { state->current.cancel(); });
+    }
     case collection::Album:
         return read<domain::SavedAlbumsPage>(
             m_requests,
