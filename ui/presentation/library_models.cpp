@@ -107,8 +107,9 @@ LibraryOverviewModel::LibraryOverviewModel(QObject* parent)
     reload();
 }
 
-// The page settles with the last song played (it also tells a guest apart); this
-// week's top song follows on its own and is left out if it fails.
+// The page settles with the last song played, which also tells a guest apart: only
+// SignedOut fails the page, any other failure leaves that line out (the tabs load on
+// their own). This week's top song follows on its own and is left out if it fails.
 Request LibraryOverviewModel::load()
 {
     auto* source = App::instance()->librarySource();
@@ -119,11 +120,16 @@ Request LibraryOverviewModel::load()
         m_weekTop = outcome.value->constFirst().title;
         emit summaryChanged();
     });
-    return source->recentSongs(1, handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
-                                   m_lastPlayed = songs.isEmpty() ? QString() : songs.first().title;
-                                   emit summaryChanged();
-                                   return false;
-                               }));
+    auto settle = handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
+        m_lastPlayed = songs.isEmpty() ? QString() : songs.first().title;
+        emit summaryChanged();
+        return false;
+    });
+    return source->recentSongs(1, [settle = std::move(settle)](Outcome<QList<SongInfo>> outcome) {
+        if (outcome.failure && outcome.failure->kind != failure::SignedOut)
+            outcome = {QList<SongInfo>{}};
+        settle(std::move(outcome));
+    });
 }
 
 void LibraryOverviewModel::clear()
