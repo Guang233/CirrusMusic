@@ -253,7 +253,9 @@ qint64 AudioStream::read(qint64 position, char* out, qint64 maximum)
     }
     if (!m_file) {
         m_file = std::make_unique<QFile>(s.path);
-        if (!m_file->open(QIODevice::ReadOnly)) {
+        // Unbuffered: a buffered handle reads ahead past the download head into the
+        // file's unwritten (zero) bytes and later serves them from its buffer.
+        if (!m_file->open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
             m_file.reset();
             return -1;
         }

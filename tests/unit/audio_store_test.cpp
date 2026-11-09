@@ -90,6 +90,34 @@ class AudioStoreTest : public QObject
     }
     void cleanup() { m_dir.reset(); }
 
+    // The reader catches up with the download in small reads (a decoder near the write
+    // head): what it gets is what arrived, never the unwritten (zero) bytes after it,
+    // whatever its file handle read ahead (2026-11-09: FLAC failed to decode at start).
+    void readsAtTheDownloadHeadSeeNoUnwrittenBytes()
+    {
+        test::RangeServer server{noise(300 * 1024, 7)};
+        server.blockBytes = 3000;
+        server.intervalMs = 1;
+        auto s = store(server);
+        auto stream = s->open(source(server.body));
+        QVERIFY(stream);
+        auto read = std::async(std::launch::async, [stream] {
+            QByteArray out;
+            char buffer[2048];
+            while (out.size() < stream->size()) {
+                const auto got = stream->read(out.size(), buffer, sizeof buffer);
+                if (got <= 0)
+                    return QByteArray("FAILED");
+                out.append(buffer, got);
+            }
+            return out;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(ready(read), 10000);
+        const QByteArray got = read.get();
+        QCOMPARE(got.size(), server.body.size());
+        QVERIFY(got == server.body);
+    }
+
     void streamsThenPlaysFromCache()
     {
         test::RangeServer server{noise(Chunk * 4 + 1000, 1)};

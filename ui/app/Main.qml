@@ -183,7 +183,7 @@ AppWindow {
 
     // The way out when the window only hides and there is no tray menu.
     Shortcut {
-        sequence: StandardKey.Quit
+        sequences: [StandardKey.Quit] // every binding of it (Ctrl+Q and the like)
         context: Qt.ApplicationShortcut
         onActivated: Desktop.quit()
     }

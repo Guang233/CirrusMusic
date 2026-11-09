@@ -658,8 +658,11 @@ void setVerbose(bool verbose)
         QMutexLocker lock(&s.mutex);
         s.verbose = verbose;
     }
-    QLoggingCategory::setFilterRules(verbose ? QStringLiteral("*.debug=false\ncirrus.*.debug=true")
-                                             : QStringLiteral("*.debug=false"));
+    // Qt Wayland's text-input warns "Trying to disable … but 0x0 is focused" on every
+    // focus change (a Qt bug, harmless): it filled most of a session's log.
+    const QString quiet = QStringLiteral("*.debug=false\nqt.qpa.wayland.textinput.warning=false");
+    QLoggingCategory::setFilterRules(verbose ? quiet + QStringLiteral("\ncirrus.*.debug=true")
+                                             : quiet);
 }
 
 bool verbose()
