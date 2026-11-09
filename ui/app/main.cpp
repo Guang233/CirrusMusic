@@ -3,6 +3,7 @@
 #include "app_settings.h"
 #include "backend_host.h"
 #include "backend_sources.h"
+#include "cirrus_commit.h"
 #include "desktop.h"
 #include "gpu_preference.h"
 #include "logging/log.h"

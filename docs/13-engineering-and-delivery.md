@@ -89,7 +89,7 @@ ctest --test-dir build/linux-dev --output-on-failure --no-tests=error
 
 ### 日志与错误
 
-`QLoggingCategory` 按 `cirrus.api`、`cirrus.playback`、`cirrus.storage`、`cirrus.ui`、`cirrus.platform` 分类。日志在边界脱敏；用户看到翻译后的错误，诊断记录稳定英文 eventName。错误必须处理、传递或明确说明忽略理由。
+全应用日志见 [tasks/logging.md](tasks/logging.md)：分类表（§4.1，`src/logging/categories.h`）、级别（§4.2）、格式与写法（§4.3–§4.4）、脱敏（§5）、约定（§9）。日志在边界脱敏；用户看到翻译后的错误，诊断记录稳定英文 eventName。错误必须处理、传递或明确说明忽略理由。
 
 ## 5. 分支与评审
 

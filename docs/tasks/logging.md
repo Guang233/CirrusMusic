@@ -212,7 +212,7 @@ qCWarning(lcNet).noquote() << event("request.failed")
 | 步 | 内容 | 完成条件 |
 | --- | --- | --- |
 | L1 核心（**已完成**，§12） | `cirrus_logging`：处理器、队列、写文件线程、轮转与保留、会话头、异常退出检测、`event`/`field`/脱敏包装、分类表；在 `appCirrusMusic` 和 Gallery 里安装；现有约 25 处调用迁移到新分类 | `tst_logging`（格式、转义、轮转、保留、队列满、多线程、重复合并、异常退出标记）通过；从桌面启动后 `~/.local/state/Cirrus/logs` 里有完整的一次会话 |
-| L2 后端覆盖 | §8 中网络、接口、鉴权、密钥环、存储、缓存、播放、媒体、上报、平台的事件 | 金丝雀测试通过；用真实后端放一首歌、换一首、退出，日志能完整看出请求、加载、上报的经过 |
+| L2 后端覆盖（**已完成**，§12） | §8 中网络、接口、鉴权、密钥环、存储、缓存、播放、媒体、上报、平台的事件 | 金丝雀测试通过；用真实后端放一首歌、换一首、退出，日志能完整看出请求、加载、上报的经过 |
 | L3 设置 | "诊断"组（先写进 settings.md 评审），导出诊断包 | Gallery 截图检查；导出的 zip 内容与预览一致 |
 | L4 文档 | HANDOFF、AGENTS、13 §4、11 §5（按 LQ2 的决定）更新约定 | — |
 
@@ -235,4 +235,21 @@ L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现
   - `audio_store`、`storage`、`audio_engine` 测试通过；clang-format 通过。
   - 离屏启动真实应用后退出：`xdg/state/Cirrus/logs` 下目录 0700、文件 0600，内容是 `app.start` → `app.platform` → `backend.ready` → `app.quit` → `app.exit`。
   - Gallery 正常输出到终端。
-- 下一步 L2：§8 各模块的事件。
+
+**L2 后端覆盖（2026-11-09）**
+- 枚举起名：`CIRRUS_LOG_ENUM(Enum, A, B, …)`（`log.h`，借 C++20 `using enum` 按值对名字，不依赖顺序）。已给传输、接口、解码、播放、上报、会话、登录、密钥环、存储、缓存、匿名注册等错误与状态枚举起名。`log::join()` 用于运行时才决定级别的记录。
+- 各模块的事件（§8）：
+  - 网络：`net request.failed`（逻辑路径、协议、错误、Qt 错误名、HTTP 状态、耗时、是否 HTTP/2、retry-after）；成功和取消记 debug。
+  - 接口：`api.done`（路径、业务码、耗时）、`api.failed`（解码、Cookie 等）；传输失败只由网络层记。
+  - 音频存储：`audio.open`（已缓存比例、是否校验过、临时文件）、`audio.range`（debug）、`audio.range_failed`、`audio.url_refused`/`url_needed`/`url_refreshed`、`audio.failed`、`audio.cached`、`audio.prefetch`、`audio_cache.evicted`/`clear`。
+  - 音频引擎：`engine.load`/`ready`（打开耗时）/`ended`/`failed`/`next_opened`/`advanced`/`source_expired`/`device_changed`/`no_output`，`engine.underruns`（每 10 秒汇总）。
+  - 播放：`load.start`/`refused`/`resolved`（实际音质、试听、耗时）/`ready`/`failed`（错误、业务码、当时状态）/`advanced`/`refresh`、`preload.*`；队列 `queue.replace`/`restored`/`select`/`next`/`previous`/`stop`/`advance`/`begin`/`begin_refused`。
+  - 上报：`report.settled`（结束方式、秒数、来源是否找到）、`report.skip`（原因）、`report.send`、`report.response`（debug，只有字段名）、`report.result`（结果、业务码）、`report.flush`/`flush_timeout`。
+  - 认证：`session.phase`（账号散列）、`guest.bootstrap`、`login.qr_ready`/`qr_status`/`failed`/`signed_in`；密钥环 `keyring.done`/`failed`（固定条目名）；`db.opened`/`open_failed`；`backend.start`/`started`/`close`/`drained`。
+  - 封面：`cover.failed`（debug：`cover.fetched`）。展示层：`player.play`（条数、来源）、`player.play_pause`、`model.failed`（游客的"需要登录"记 info）。平台：`mpris.command`。
+- 会话头的 `commit=` 每次构建检查（`cmake/cirrus_commit.cmake`），有未提交改动时带 `-dirty`。
+- 验证：
+  - `tst_log_canary`：假 Cookie、MUSIC_U、二维码 key、设备号、响应体、签名地址（路径和查询串）、账号 ID 走真实代码路径（详细模式），文件里都不出现，该有的记录都在。
+  - 受影响的测试（网络、接口、播放、引擎、音频存储、上报、会话、密钥环、存储等）通过；`backend_runtime` 仍只有已知的 `closeWhileDatabaseOpening` 失败。
+  - 离屏启动真实应用：一次会话 25 行，启动、恢复游客、各接口、退出都看得清。
+- 下一步 L3：设置里的"诊断"组。

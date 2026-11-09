@@ -172,14 +172,12 @@ void ListeningReportGateway::finish(quint64 id, ListeningReportResult result)
     m_ids.remove(p.apiId);
     result.eventId = p.report.eventId;
     result.action = p.report.action;
-    const log::Text fields{QStringList{
-        log::field("id", id).text, log::field("event", p.report.eventId).text,
-        log::field("song", p.report.song.value).text, log::field("outcome", result.outcome).text,
-        log::field("err", result.error).text,
-        log::field("code", result.providerCode ? QString::number(*result.providerCode)
-                                               : QStringLiteral("-"))
-            .text}
-                               .join(u' ')};
+    const auto fields =
+        log::join({log::field("id", id), log::field("event", p.report.eventId),
+                   log::field("song", p.report.song.value), log::field("outcome", result.outcome),
+                   log::field("err", result.error),
+                   log::field("code", result.providerCode ? QString::number(*result.providerCode)
+                                                          : QStringLiteral("-"))});
     if (result.outcome == ReportOutcome::Acknowledged)
         qCInfo(lcReport) << log::event("report.result") << fields;
     else

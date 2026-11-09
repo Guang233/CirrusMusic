@@ -8,6 +8,7 @@
 #include <QUuid>
 
 #include <concepts>
+#include <initializer_list>
 #include <iterator>
 #include <type_traits>
 
@@ -96,6 +97,20 @@ template <typename T> QString value(const T& v)
 template <typename T> Text field(const char* key, const T& value)
 {
     return {QString::fromLatin1(key) + u'=' + detail::value(value)};
+}
+
+// Fields put together, for a record whose level is chosen at run time:
+//   const auto fields = log::join({log::field("id", id), log::field("err", error)});
+//   if (ok) qCInfo(lc) << log::event("x.done") << fields; else qCWarning(lc) << ...;
+inline Text join(std::initializer_list<Text> parts)
+{
+    QString text;
+    for (const Text& part : parts) {
+        if (!text.isEmpty())
+            text += u' ';
+        text += part.text;
+    }
+    return {text};
 }
 
 namespace detail

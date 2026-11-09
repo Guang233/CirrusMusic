@@ -88,14 +88,16 @@ set_target_properties(appCirrusMusic PROPERTIES
 
 # Shown in Settings › About.
 target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_VERSION="${PROJECT_VERSION}")
-# The commit, for the log's session header (docs/tasks/logging.md §6); as of configuring.
-execute_process(COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    OUTPUT_VARIABLE CIRRUS_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-if(NOT CIRRUS_COMMIT)
-    set(CIRRUS_COMMIT "unknown")
-endif()
-target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_COMMIT="${CIRRUS_COMMIT}")
+# The commit, for the log's session header (docs/tasks/logging.md §6): checked at every
+# build; the header only changes (and main.cpp only rebuilds) when the commit does.
+set(CIRRUS_COMMIT_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/cirrus_commit.h")
+add_custom_target(cirrus_commit
+    COMMAND ${CMAKE_COMMAND} -DSRC=${PROJECT_SOURCE_DIR} -DOUT=${CIRRUS_COMMIT_HEADER}
+            -P ${PROJECT_SOURCE_DIR}/cmake/cirrus_commit.cmake
+    BYPRODUCTS ${CIRRUS_COMMIT_HEADER}
+    COMMENT "Checking the commit for the log header" VERBATIM)
+add_dependencies(appCirrusMusic cirrus_commit)
+target_include_directories(appCirrusMusic PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 target_link_libraries(appCirrusMusic PRIVATE
     cirrus_logging
