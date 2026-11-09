@@ -288,3 +288,5 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
     - 喜欢失败：`/api/radio/like` 回业务码 −460。按参考实现 2021 年的修法，只给红心的 Weapi Cookie 补 `os=pc`、`appver`（[collection-writes.md §1a](../api/collection-writes.md)），待再试。
     - 音乐库、最近播放打不开：`/api/play-record/song/list` 回 200，但服务端不理会 limit，总是发整份列表，映射器按"超过 limit 条"判无效；改为只读前 limit 条（[cloud-history-reads.md](../api/cloud-history-reads.md)）。最近播放页（limit 100）也失败，原因日志里看不出来，所以补了诊断：网关对映射器不接受的 200 响应记 `api music.invalid`（路径），云端最近播放的映射器在 debug 记是哪项检查、第几条（`music.invalid_why`）。
     - 音乐库总览原来以"最近一首"作为页面的加载结果，这条辅助读取失败就整页报错，"新建歌单"（在歌单标签里）也就看不到。改为只有"未登录"才让整页失败，其他失败只空着那行摘要。
+  - 维护者第二次实测（2026-11-09）：喜欢／取消喜欢（补 Cookie 后 −460 消失）、新建、加歌、改名、改简介、删除歌单都 `write.done`，音乐库和最近播放能打开；维护者确认"都没有问题了"。
+    - 日志里另有一处维护者没注意到的失败：音乐库"歌单"标签 3 次 `music.invalid path=/api/user/playlist`。侧栏（limit 100）和标签（limit 30）收到的是同一份响应，映射器里只有"不超过 limit 条"这一项随 limit 变，所以 `/api/user/playlist` 也不理会 limit。服务端是否理会 offset 没有证据，不能只截前 limit 条（offset 也被忽略时第二页会重复），改为歌单标签第一页就按侧栏的方式（从头 100 一页）读出全部、不再有下一页。
