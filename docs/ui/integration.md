@@ -61,7 +61,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 | `suggestions`、`hotKeywords` | `searchSuggestions`、`hotKeywords`／`hotKeywordDetails` | ✅ |
 | `searchSongs`、`searchCollections`、`searchVoices` | `searchSongs`、`searchAlbums`／`Artists`／`Playlists`／`Podcasts`、`searchVoices` | ✅ |
 | `podcast`、`podcastVoices` | `podcastDetails`、`podcastPrograms` | ✅ |
-| `feed`（首页、发现的分区） | `recommendedPlaylists`、`dailyRecommendedPlaylists`、`charts`、`discover(...)` 组合 | ⚠️ 一个 feed 由多个后端读组成：并发发出，各分区独立加载／失败 |
+| `feed`（首页、发现的分区） | — | 已没有页面在用（首页改为各行 `shelf`，见 pages/home.md）；后端回空列表 |
 | `dailySongs`、`dailyHistoryDates`、`dailyHistorySongs` | `dailyRecommendations`、`dailyRecommendationHistoryDates`、`…HistorySongs` | ✅ |
 | `shelf`、`charts` | `recommendedPlaylists`／`dailyRecommendedPlaylists`、`charts` | ✅ |
 | `playlistCategories`、`categoryPlaylists`、`premiumPlaylists` | `playlistTags`、`playlistList`、`premiumPlaylists` | ✅ |
@@ -290,3 +290,13 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
     - 音乐库总览原来以"最近一首"作为页面的加载结果，这条辅助读取失败就整页报错，"新建歌单"（在歌单标签里）也就看不到。改为只有"未登录"才让整页失败，其他失败只空着那行摘要。
   - 维护者第二次实测（2026-11-09）：喜欢／取消喜欢（补 Cookie 后 −460 消失）、新建、加歌、改名、改简介、删除歌单都 `write.done`，音乐库和最近播放能打开；维护者确认"都没有问题了"。
     - 日志里另有一处维护者没注意到的失败：音乐库"歌单"标签 3 次 `music.invalid path=/api/user/playlist`。侧栏（limit 100）和标签（limit 30）收到的是同一份响应，映射器里只有"不超过 limit 条"这一项随 limit 变，所以 `/api/user/playlist` 也不理会 limit。服务端是否理会 offset 没有证据，不能只截前 limit 条（offset 也被忽略时第二页会重复），改为歌单标签第一页就按侧栏的方式（从头 100 一页）读出全部、不再有下一页。
+- **第 8 步（首页与发现）代码完成（2026-11-09）**：`BackendCatalog` 的最后九个方法（`ui/presentation/backend/backend_discover.cpp`），假数据的后备随之去掉（`feed` 回空列表）。
+  - 首页：每日推荐歌单（需登录）、推荐歌单（`personalized`，20 张）、新碟上架（`LatestAlbums`）、热门歌手（`PopularArtists`，20 位）、榜单（`charts(WithPreviews)`，有预览的取前三行）。卡片按 key 去重，保留服务端顺序。
+  - 发现页：
+    - 分类是三次并发读：目录（分组）、热门、精品；只有目录失败才算失败，热门失败时用目录里标了热门的，精品失败时精品为空（结果标为部分）。"全部"不进分类列表。
+    - 分类歌单：`playlistList`（最热／最新），"" 即"全部"。
+    - 精品歌单按服务端游标翻页：下一页的 `before` 是本页最后一个歌单的 `updateTime`；没有这个值或与本次相同就不再有下一页。
+    - 歌手：页面的类型、地区、首字母换成后端的编码（"#" 为 0，热门为 −1）。
+    - 新碟：`NewAlbums`，地区编号相同。
+    - 新碟榜：本月的 `AlbumCharts`，取周或月那一组；服务端没给那一组时按失败处理（不知道≠空）。
+  - 验证：构建、qmllint；游客身份离屏运行：首页四行和榜单都读到（每日推荐歌单报"需要登录"）。临时钩子让程序开在发现页并加载所有标签：分类 5 组／热门 10／精品分类 33，精品歌单 30 个、翻到第二页共 60 个，歌手 30、新碟 30、新碟榜周 28／月 300、榜单 5 个带预览加 60 个，均无 `music.invalid`；钩子已撤掉并确认程序照常开在首页。没有截图（真实应用不支持 `--grab`），页面观感要维护者看一眼。
