@@ -40,8 +40,7 @@ class CoverChecksTest : public QObject
     void rejects()
     {
         QCOMPARE(QByteArray(CoverFetcher::rejection({})), QByteArray("bytes"));
-        QCOMPARE(QByteArray(CoverFetcher::rejection("not an image at all")),
-                 QByteArray("format"));
+        QCOMPARE(QByteArray(CoverFetcher::rejection("not an image at all")), QByteArray("format"));
         const auto wide = encoded({2049, 16}, "PNG");
         QCOMPARE(QByteArray(CoverFetcher::rejection(wide)), QByteArray("dimensions"));
         QVERIFY(!CoverFetcher::plausible(wide));
