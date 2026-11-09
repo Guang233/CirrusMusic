@@ -23,8 +23,8 @@ Sources makeBackendSources(BackendHost& host)
     sources.cache = std::make_unique<BackendCache>(host.runtime());
     // Step 3: the account, sign-in and restoring a remembered account.
     sources.session = std::make_unique<BackendSession>(host.runtime());
-    // Step 4: search (the rest of the catalog still comes from the fakes).
-    sources.catalog = std::make_unique<BackendCatalog>(host.runtime(), std::move(sources.catalog));
+    // Steps 4, 5 and 8: search, details, home and discover.
+    sources.catalog = std::make_unique<BackendCatalog>(host.runtime());
     // Step 6: playback and lyrics.
     auto playback = std::make_unique<BackendPlayback>(host.runtime(), *sources.catalog);
     // The listening reports take each song's origin from it (integration.md §6.1).

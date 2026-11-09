@@ -90,10 +90,8 @@ AlbumPage albumPageOf(const domain::AlbumDetails& details)
 
 } // namespace
 
-BackendCatalog::BackendCatalog(runtime::BackendRuntime& runtime,
-                               std::unique_ptr<CatalogSource> fallback, QObject* parent)
-    : QObject(parent), m_fallback(std::move(fallback)),
-      m_requests(new MusicRequests(runtime.facade(), this)),
+BackendCatalog::BackendCatalog(runtime::BackendRuntime& runtime, QObject* parent)
+    : QObject(parent), m_requests(new MusicRequests(runtime.facade(), this)),
       m_historyDates(std::make_shared<std::shared_ptr<const domain::DailyHistoryDates>>())
 {
     m_session = [facade = QPointer<BackendFacade>(&runtime.facade())]() {

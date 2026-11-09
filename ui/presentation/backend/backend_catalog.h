@@ -25,13 +25,12 @@ namespace cirrus::ui
 class MusicRequests;
 
 // The read-only catalog from the backend (docs/ui/integration.md §4 CatalogSource),
-// one group per step: search (step 4) and details with the daily songs (step 5); what
-// is not connected yet goes to `fallback` (the fakes).
+// one group per step: search (step 4), details with the daily songs (step 5), home
+// and discover (step 8).
 class BackendCatalog : public QObject, public CatalogSource
 {
   public:
-    BackendCatalog(runtime::BackendRuntime& runtime, std::unique_ptr<CatalogSource> fallback,
-                   QObject* parent = nullptr);
+    explicit BackendCatalog(runtime::BackendRuntime& runtime, QObject* parent = nullptr);
     ~BackendCatalog() override;
 
     // Step 4: search.
@@ -62,49 +61,26 @@ class BackendCatalog : public QObject, public CatalogSource
     Request dailyHistoryDates(Reply<QStringList> reply) override;
     Request dailyHistorySongs(const QString& date, Reply<QList<SongInfo>> reply) override;
 
-    // Not connected yet: the fallback's.
-    Request feed(Feed which, Reply<QList<FeedSection>> reply) override
-    {
-        return m_fallback->feed(which, std::move(reply));
-    }
-    Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) override
-    {
-        return m_fallback->shelf(which, std::move(reply));
-    }
-    Request charts(Reply<QList<ChartInfo>> reply) override
-    {
-        return m_fallback->charts(std::move(reply));
-    }
-    Request playlistCategories(Reply<PlaylistCategories> reply) override
-    {
-        return m_fallback->playlistCategories(std::move(reply));
-    }
+    // Step 8: home and discover (backend_discover.cpp).
+    // No page uses the feed any more (docs/ui/pages/home.md §8): an empty list.
+    Request feed(Feed which, Reply<QList<FeedSection>> reply) override;
+    Request shelf(feed::Shelf which, Reply<QList<CollectionItem>> reply) override;
+    Request charts(Reply<QList<ChartInfo>> reply) override;
+    // Three reads: the catalogue (its groups), the hot and the premium categories; the
+    // catalogue alone settles it, the other two are left empty if they fail.
+    Request playlistCategories(Reply<PlaylistCategories> reply) override;
     Request categoryPlaylists(const QString& category, bool newest, PageRequest page,
-                              Reply<ResultPage<CollectionItem>> reply) override
-    {
-        return m_fallback->categoryPlaylists(category, newest, page, std::move(reply));
-    }
+                              Reply<ResultPage<CollectionItem>> reply) override;
+    // The next page's `before` is the last playlist's update time (the service's cursor).
     Request premiumPlaylists(const QString& category, qint64 before, int limit,
-                             Reply<ResultPage<CollectionItem>> reply) override
-    {
-        return m_fallback->premiumPlaylists(category, before, limit, std::move(reply));
-    }
+                             Reply<ResultPage<CollectionItem>> reply) override;
     Request browseArtists(int kind, int area, const QString& initial, PageRequest page,
-                          Reply<ResultPage<CollectionItem>> reply) override
-    {
-        return m_fallback->browseArtists(kind, area, initial, page, std::move(reply));
-    }
-    Request newAlbums(int area, PageRequest page, Reply<ResultPage<CollectionItem>> reply) override
-    {
-        return m_fallback->newAlbums(area, page, std::move(reply));
-    }
-    Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) override
-    {
-        return m_fallback->albumChart(area, monthly, std::move(reply));
-    }
+                          Reply<ResultPage<CollectionItem>> reply) override;
+    Request newAlbums(int area, PageRequest page, Reply<ResultPage<CollectionItem>> reply) override;
+    // This month's chart, its week or month group.
+    Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) override;
 
   private:
-    std::unique_ptr<CatalogSource> m_fallback;
     MusicRequests* m_requests;
     // The signed-in account's key (a playlist of its own), empty for guests.
     std::function<QString()> m_session;
