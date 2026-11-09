@@ -93,7 +93,8 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 
 - 每日推荐（`source=dailySongRecommend`、sourceId 空）和歌单（`source=list`、sourceId 为歌单 ID）各发出若干条 `play`，服务器都回 code 200，响应字段只有 `code`、`data`、`message`。
 - **计入听歌排行**：维护者在官方客户端"听歌排行 · 最近一周"里看到当天从歌单播放的两首都在。
-- **不进"最近播放"**：官方客户端的"最近播放"里没有这些歌。也就是说"最近播放"由别的途径更新，不是 weblog 的 play；具体是哪条接口没有证据（APK 不读），参考实现里也只有读取（`record_recent_song`），没有写入。
+- **不进"最近播放"**：官方客户端的"最近播放"里没有这些歌。也就是说"最近播放"由别的途径更新，不是 weblog 的 play；具体是哪条接口没有证据（APK 不读），参考实现里也只有读取（`record_recent_song`），没有写入。维护者指出网页版也会上传最近播放，猜测在 weblog 的其他 action 里，待查（只看网页版公开的前端代码，不读 APK）。
+- 维护者决定（2026-11-09）：Cirrus 的"最近播放"页只显示云端；本机听歌数据放到以后的"听歌统计"仪表盘页。
 
 ## 5. 未决事项
 
