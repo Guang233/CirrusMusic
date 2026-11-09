@@ -334,6 +334,7 @@ void SessionApiClient::start(quint64 id)
                             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
         request.musicReferer = true;
         request.responseLimit = it->contract.responseLimit;
+        request.retryLostConnection = retriesLostConnection(it->operation);
         it->transportId = m_transport->post(std::move(request));
         m_transportIds.insert(it->transportId, id);
         it->payload = {};
@@ -373,6 +374,7 @@ void SessionApiClient::start(quint64 id)
     request.userAgent = prepared.userAgent;
     request.responseLimit = it->contract.responseLimit;
     // HttpTransport guarantees deferred completion, so registration cannot race.
+    request.retryLostConnection = retriesLostConnection(it->operation);
     it->transportId = m_transport->post(std::move(request));
     m_transportIds.insert(it->transportId, id);
     it->payload = {};
@@ -416,6 +418,7 @@ void SessionApiClient::startXeapi(quint64 id, Pending& pending)
     request.xeapiHeaders = prepared.headers;
     request.commentV3Token = std::move(pending.commentV3Token);
     request.responseLimit = pending.contract.responseLimit;
+    request.retryLostConnection = retriesLostConnection(pending.operation);
     pending.transportId = m_transport->post(std::move(request));
     m_transportIds.insert(pending.transportId, id);
     pending.payload = {};

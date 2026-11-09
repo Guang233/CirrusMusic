@@ -81,6 +81,9 @@ struct HttpTransport::Pending {
     // For the log: the operation's path (no query), never the URL or the body.
     QString path;
     Protocol protocol = Protocol::Eapi;
+    // retryLostConnection: the request to send again, once.
+    std::optional<TransportRequest> again;
+    bool retried = false;
 };
 
 HttpTransport::HttpTransport(QObject* parent)
@@ -156,7 +159,11 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         return;
     }
     pending->xeapi = request.protocol == Protocol::Xeapi;
+    if (request.retryLostConnection && !pending->retried)
+        pending->again = request;
     QNetworkRequest wire(*url);
+    if (pending->retried) // the HTTP/2 connection was lost: this time over HTTP/1.1
+        wire.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     wire.setHeader(QNetworkRequest::ContentTypeHeader,
                    QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
     wire.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
@@ -249,6 +256,27 @@ void HttpTransport::finish(quint64 id)
     }
     if (pending->timer) {
         pending->timer->stop();
+    }
+    // A read whose connection closed before any response: once more, over HTTP/1.1
+    // (2026-11-09: the player-URL host closed fresh HTTP/2 connections after idling).
+    if (pending->again && pending->forcedError == TransportError::None && pending->reply &&
+        pending->body.isEmpty() && pending->reply->bytesAvailable() == 0 &&
+        pending->reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 0 &&
+        (pending->reply->error() == QNetworkReply::ProtocolFailure ||
+         pending->reply->error() == QNetworkReply::RemoteHostClosedError)) {
+        qCWarning(lcNet) << log::event("request.retry") << log::field("req", id)
+                         << log::field("path", pending->path)
+                         << log::field("qt", pending->reply->error())
+                         << log::field("ms", pending->elapsed.elapsed());
+        auto request = *std::exchange(pending->again, std::nullopt);
+        pending->retried = true;
+        pending->reply->disconnect(this);
+        pending->reply->deleteLater(); // its timer goes with it
+        pending->reply.clear();
+        m_pending.insert(id, pending);
+        QTimer::singleShot(0, this,
+                           [this, id, request = std::move(request)] { start(id, request); });
+        return;
     }
     drain(pending);
     TransportResult result;

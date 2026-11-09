@@ -20,6 +20,7 @@ class HttpTransportTest : public QObject
     void invalidRequest();
     void outOfOrder();
     void destruction();
+    void lostConnectionRetriedOnceForReads();
     void explicitHeaders();
     void invalidHeaders_data();
     void invalidHeaders();
@@ -264,6 +265,64 @@ void HttpTransportTest::responseCookieLimits()
     QCOMPARE(result(spy).error, TransportError::ResponseHeadersTooLarge);
     QVERIFY(result(spy).setCookieHeaders.isEmpty());
     QVERIFY(result(spy).body.isEmpty());
+}
+
+void HttpTransportTest::lostConnectionRetriedOnceForReads()
+{
+    const auto lost = [] {
+        Plan plan{"", 0};
+        plan.error = QNetworkReply::ProtocolFailure;
+        plan.headers = {};
+        return plan;
+    };
+    // A marked read: once more over HTTP/1.1, then its answer.
+    {
+        auto manager = std::make_unique<FakeManager>();
+        auto* fake = manager.get();
+        fake->plans = {lost(), Plan{"fine"}};
+        HttpTransport transport(std::move(manager));
+        QSignalSpy spy(&transport, &HttpTransport::completed);
+        auto read = request();
+        read.retryLostConnection = true;
+        const auto id = transport.post(read);
+        QTRY_COMPARE(spy.size(), 1);
+        QCOMPARE(spy.at(0).at(0).toULongLong(), id);
+        QCOMPARE(result(spy).error, TransportError::None);
+        QCOMPARE(result(spy).body, QByteArray("fine"));
+        QCOMPARE(fake->requests.size(), 2);
+        QVERIFY(
+            fake->requests.at(0).attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool());
+        QVERIFY(
+            !fake->requests.at(1).attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool());
+        QCOMPARE(fake->bodies.at(1), fake->bodies.at(0));
+    }
+    // Lost twice: the failure, no third try.
+    {
+        auto manager = std::make_unique<FakeManager>();
+        auto* fake = manager.get();
+        fake->plans = {lost(), lost(), Plan{"never"}};
+        HttpTransport transport(std::move(manager));
+        QSignalSpy spy(&transport, &HttpTransport::completed);
+        auto read = request();
+        read.retryLostConnection = true;
+        (void)transport.post(read);
+        QTRY_COMPARE(spy.size(), 1);
+        QCOMPARE(result(spy).error, TransportError::Network);
+        QCOMPARE(fake->requests.size(), 2);
+    }
+    // Not marked (writes): never again.
+    {
+        auto manager = std::make_unique<FakeManager>();
+        auto* fake = manager.get();
+        fake->plans = {lost(), Plan{"never"}};
+        HttpTransport transport(std::move(manager));
+        QSignalSpy spy(&transport, &HttpTransport::completed);
+        (void)transport.post(request());
+        QTRY_COMPARE(spy.size(), 1);
+        QCOMPARE(result(spy).error, TransportError::Network);
+        QTest::qWait(20);
+        QCOMPARE(fake->requests.size(), 1);
+    }
 }
 
 QTEST_GUILESS_MAIN(HttpTransportTest)

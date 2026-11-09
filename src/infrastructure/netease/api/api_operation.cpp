@@ -6,10 +6,10 @@
 #include "domain/account/credential_login_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
-#include "domain/playback/listening_report.h"
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
+#include "domain/playback/listening_report.h"
 #include "together_operation.h"
 
 #include <QJsonArray>
@@ -325,6 +325,32 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
                                     ResponseEncoding::EapiAutoJson};
     }
     return std::nullopt;
+}
+
+bool retriesLostConnection(ApiOperation operation)
+{
+    switch (operation) {
+    case ApiOperation::SongStream:
+    case ApiOperation::SongDetails:
+    case ApiOperation::SongLyrics:
+    case ApiOperation::AlbumDetails:
+    case ApiOperation::ArtistDetails:
+    case ApiOperation::ArtistSongs:
+    case ApiOperation::ArtistAlbums:
+    case ApiOperation::PlaylistDetails:
+    case ApiOperation::DailyRecommendations:
+    case ApiOperation::SearchSongs:
+    case ApiOperation::SearchAlbums:
+    case ApiOperation::SearchArtists:
+    case ApiOperation::SearchPlaylists:
+    case ApiOperation::SearchSuggestions:
+    case ApiOperation::HotKeywords:
+    case ApiOperation::Charts:
+    case ApiOperation::RecommendedPlaylists:
+        return true;
+    default:
+        return false;
+    }
 }
 
 bool requiresAccountCookie(ApiOperation operation)
