@@ -1,6 +1,7 @@
 #pragma once
 #include "catalog_types.h"
 #include "entity_search_types.h"
+#include "logging/log.h"
 #include "music_types.h"
 #include "playlist_cover_types.h"
 #include "playlist_order_types.h"
@@ -132,6 +133,7 @@ inline std::optional<QString> collectionSourceAccount(const CollectionMutation& 
     return std::nullopt;
 }
 enum class CollectionOutcome { NotSent, Acknowledged, Rejected, Unknown };
+CIRRUS_LOG_ENUM(CollectionOutcome, NotSent, Acknowledged, Rejected, Unknown)
 enum class CollectionError {
     None,
     InvalidRequest,
@@ -146,6 +148,9 @@ enum class CollectionError {
     ProviderRejected,
     ProtocolFailure
 };
+CIRRUS_LOG_ENUM(CollectionError, None, InvalidRequest, AuthenticationRequired, StaleContext, Busy,
+                Canceled, Network, Timeout, RateLimited, InvalidResponse, ProviderRejected,
+                ProtocolFailure)
 struct CollectionResult {
     QUuid eventId;
     CollectionOutcome outcome = CollectionOutcome::NotSent;
