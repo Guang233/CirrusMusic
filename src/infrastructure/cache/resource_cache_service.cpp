@@ -55,7 +55,8 @@ quint64 ResourceCacheService::submit(CacheJob job)
     const bool clearing = job.operation == CacheOperation::Clear ||
                           job.operation == CacheOperation::ClearAll ||
                           job.operation == CacheOperation::Remove;
-    if (!live() || (m_clearing && !clearing) || m_pending.size() >= (clearing ? 8 : 7) ||
+    if (!live() || (m_clearing && !clearing) ||
+        m_pending.size() >= (clearing ? CacheJobsInFlight : CacheJobsInFlight - 1) ||
         m_nextId == std::numeric_limits<quint64>::max())
         return 0;
     job.id = ++m_nextId;
@@ -99,8 +100,8 @@ quint64 ResourceCacheService::lyrics(SongId song)
 quint64 ResourceCacheService::putSong(const CacheWriteContext& context, Song song,
                                       qint64 allowedTtlMs, std::optional<CacheRetention> retention)
 {
-    if (!validWrite(context) || m_clearing || m_pending.size() >= 7 || allowedTtlMs <= 0 ||
-        allowedTtlMs > maximumCacheTtl(CacheKind::Song))
+    if (!validWrite(context) || m_clearing || m_pending.size() >= CacheJobsInFlight - 1 ||
+        allowedTtlMs <= 0 || allowedTtlMs > maximumCacheTtl(CacheKind::Song))
         return 0;
     CacheJob job;
     job.operation = CacheOperation::Write;
@@ -117,8 +118,8 @@ quint64 ResourceCacheService::putLyrics(const CacheWriteContext& context, SongLy
                                         qint64 allowedTtlMs,
                                         std::optional<CacheRetention> retention)
 {
-    if (!validWrite(context) || m_clearing || m_pending.size() >= 7 || allowedTtlMs <= 0 ||
-        allowedTtlMs > maximumCacheTtl(CacheKind::Lyrics))
+    if (!validWrite(context) || m_clearing || m_pending.size() >= CacheJobsInFlight - 1 ||
+        allowedTtlMs <= 0 || allowedTtlMs > maximumCacheTtl(CacheKind::Lyrics))
         return 0;
     CacheJob job;
     job.operation = CacheOperation::Write;

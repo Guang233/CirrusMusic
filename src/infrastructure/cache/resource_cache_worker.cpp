@@ -37,7 +37,7 @@ void ResourceCacheWorker::submit(CacheJob job)
     emit completed(failure(job.id, CacheError::Unsupported));
     return;
 #endif
-    if (!job.id || m_jobs.contains(job.id) || m_jobs.size() >= 8 || m_closed ||
+    if (!job.id || m_jobs.contains(job.id) || m_jobs.size() >= CacheJobsInFlight || m_closed ||
         job.revision < m_revision) {
         emit completed(failure(job.id, CacheError::Busy));
         return;
@@ -91,20 +91,16 @@ void ResourceCacheWorker::stored(CacheResult result)
         return;
     }
     if (m_networkValues.contains(job.id)) {
-        const auto png = m_networkValues.take(job.id);
-        result.value = png;
+        result.value = m_networkValues.take(job.id);
         result.status = CacheStatus::Network; // error still reports a failed cache write
         finish(std::move(result));
         return;
     }
     if (job.operation == CacheOperation::Cover && result.error == CacheError::None) {
         if (result.status == CacheStatus::Hit) {
-            const auto png =
-                CoverFetcher::normalize(std::get<QByteArray>(result.value), job.coverSize);
-            if (png.isEmpty())
+            // Checked in full when fetched; the digest matched: the header is enough.
+            if (!CoverFetcher::plausible(std::get<QByteArray>(result.value)))
                 result = failure(job.id, CacheError::Corrupt);
-            else
-                result.value = png;
         } else if (job.mode == CacheReadMode::PreferCache &&
                    (result.status == CacheStatus::Miss || result.status == CacheStatus::Expired)) {
             m_fetcher.request(job);
@@ -113,7 +109,7 @@ void ResourceCacheWorker::stored(CacheResult result)
     }
     finish(std::move(result));
 }
-void ResourceCacheWorker::fetched(quint64 id, CacheError error, QByteArray png, qint64 ttlMs)
+void ResourceCacheWorker::fetched(quint64 id, CacheError error, QByteArray bytes, qint64 ttlMs)
 {
     const auto it = m_jobs.constFind(id);
     if (it == m_jobs.cend())
@@ -132,14 +128,14 @@ void ResourceCacheWorker::fetched(quint64 id, CacheError error, QByteArray png, 
         now > 253402300799999LL - 7 * CacheDayMs) {
         CacheResult result;
         result.id = id;
-        result.value = std::move(png);
+        result.value = std::move(bytes);
         result.status = CacheStatus::Network;
         finish(std::move(result));
         return;
     }
-    m_networkValues.insert(id, png);
+    m_networkValues.insert(id, bytes);
     job.operation = CacheOperation::Write;
-    job.payload = std::move(png);
+    job.payload = std::move(bytes);
     job.ttlMs = ttlMs;
     job.notAfterMs = now + ttlMs;
     m_store.submit(std::move(job));

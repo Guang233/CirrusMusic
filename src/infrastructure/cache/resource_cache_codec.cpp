@@ -208,7 +208,7 @@ class Codec
 QByteArray encodeCacheValue(const CacheValue& value, CacheKind kind)
 {
     if (kind == CacheKind::Cover)
-        return {}; // only the cover normalizer may produce PNG rows
+        return {}; // cover rows come only from CoverFetcher, after its checks
     QByteArray bytes;
     Codec codec(bytes, false, maximumCachePayload(kind));
     qint64 version = 1, tag = static_cast<int>(kind);

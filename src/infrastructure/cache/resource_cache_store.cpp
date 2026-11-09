@@ -358,8 +358,9 @@ void ResourceCacheStore::submit(CacheJob job)
                       job.key.begin(), job.key.end(),
                       [](QChar c) { return (c >= u'0' && c <= u'9') || (c >= u'a' && c <= u'f'); })
             : validMusicId(job.key);
-    if (!job.id || m_pending >= 8 || job.kind < CacheKind::Song || job.kind > CacheKind::Cover ||
-        job.operation < CacheOperation::Read || job.operation > CacheOperation::Cover ||
+    if (!job.id || m_pending >= CacheJobsInFlight || job.kind < CacheKind::Song ||
+        job.kind > CacheKind::Cover || job.operation < CacheOperation::Read ||
+        job.operation > CacheOperation::Cover ||
         (job.source.accountId.size() && !validMusicId(job.source.accountId)) ||
         ((job.operation == CacheOperation::Read || job.operation == CacheOperation::Write ||
           job.operation == CacheOperation::Cover || job.operation == CacheOperation::Remove) &&

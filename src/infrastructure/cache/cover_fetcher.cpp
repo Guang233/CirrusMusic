@@ -6,8 +6,8 @@
 #include <QElapsedTimer>
 #include <QImageReader>
 #include <QNetworkReply>
-#include <QPainter>
 #include <QPointer>
+#include <QThreadPool>
 #include <QTimer>
 #include <QUrl>
 #include <algorithm>
@@ -28,6 +28,7 @@ struct CoverFetcher::Pending {
     QByteArray bytes;
     QTimer* timer = nullptr;
     QElapsedTimer elapsed;
+    qint64 ttlMs = 0;
 };
 CoverFetcher::CoverFetcher(QObject* parent) : QObject(parent)
 {
@@ -35,44 +36,62 @@ CoverFetcher::CoverFetcher(QObject* parent) : QObject(parent)
             [](QNetworkReply* reply, QAuthenticator*) { reply->abort(); });
 }
 CoverFetcher::~CoverFetcher() { close(); }
-QByteArray CoverFetcher::normalize(QByteArray bytes, int size)
+namespace
 {
-    if (!validCoverSize(size) || bytes.isEmpty() || bytes.size() > 4 * 1024 * 1024)
-        return {};
-    QBuffer input(&bytes);
-    input.open(QIODevice::ReadOnly);
-    QImageReader reader(&input);
-    reader.setDecideFormatFromContent(true);
-    reader.setAutoTransform(true);
-    const auto format = reader.format();
-    const auto dimensions = reader.size();
-    if ((format != "png" && format != "jpeg" && format != "webp") || dimensions.isEmpty() ||
-        dimensions.width() > 2048 || dimensions.height() > 2048 ||
-        qint64(dimensions.width()) * dimensions.height() > 4 * 1024 * 1024 ||
-        reader.supportsAnimation() || reader.imageCount() > 1)
-        return {};
-    const auto decoded = reader.read();
-    if (decoded.isNull() || decoded.size() != dimensions)
-        return {};
-    const auto target = dimensions.scaled(size, size, Qt::KeepAspectRatio);
-    QImage clean(target, QImage::Format_ARGB32_Premultiplied);
-    clean.fill(Qt::transparent);
+// A reader on the image's header; `format` and `size` are known without decoding.
+struct Header {
+    QBuffer buffer;
+    QImageReader reader;
+    explicit Header(const QByteArray& bytes) : buffer()
     {
-        QPainter painter(&clean);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.drawImage(clean.rect(), decoded);
+        buffer.setData(bytes);
+        buffer.open(QIODevice::ReadOnly);
+        reader.setDevice(&buffer);
+        reader.setDecideFormatFromContent(true);
+        reader.setAutoTransform(true);
     }
-    QByteArray output;
-    QBuffer buffer(&output);
-    buffer.open(QIODevice::WriteOnly);
-    if (!clean.save(&buffer, "PNG") || output.size() > maximumCachePayload(CacheKind::Cover))
-        return {};
-    return output;
+    // The checks that need no decoding; nullptr when they pass.
+    const char* rejection()
+    {
+        const auto format = reader.format();
+        const auto dimensions = reader.size();
+        if (format != "png" && format != "jpeg" && format != "webp")
+            return "format";
+        if (dimensions.isEmpty() || dimensions.width() > 2048 || dimensions.height() > 2048 ||
+            qint64(dimensions.width()) * dimensions.height() > 4 * 1024 * 1024)
+            return "dimensions";
+        if (reader.supportsAnimation() || reader.imageCount() > 1)
+            return "frames";
+        return nullptr;
+    }
+};
+} // namespace
+const char* CoverFetcher::rejection(const QByteArray& bytes)
+{
+    if (bytes.isEmpty() || bytes.size() > maximumCachePayload(CacheKind::Cover))
+        return "bytes";
+    Header header(bytes);
+    if (const char* why = header.rejection())
+        return why;
+    const auto dimensions = header.reader.size();
+    const auto decoded = header.reader.read();
+    if (decoded.isNull() || decoded.size() != dimensions)
+        return "decode";
+    return nullptr;
+}
+bool CoverFetcher::plausible(const QByteArray& bytes)
+{
+    if (bytes.isEmpty() || bytes.size() > maximumCachePayload(CacheKind::Cover))
+        return false;
+    Header header(bytes);
+    return header.rejection() == nullptr;
 }
 void CoverFetcher::request(CacheJob job)
 {
-    if (m_closed || m_pending.size() >= 2 || m_pending.contains(job.id) ||
-        !validCoverUrl(job.coverUrl) || !validCoverSize(job.coverSize)) {
+    // A few at once: the image hosts speak HTTP/2, these share one connection.
+    if (m_closed || m_pending.size() + m_checking.size() >= 6 || m_pending.contains(job.id) ||
+        m_checking.contains(job.id) || !validCoverUrl(job.coverUrl) ||
+        !validCoverSize(job.coverSize)) {
         emit completed(job.id, CacheError::Busy, {}, 0);
         return;
     }
@@ -162,8 +181,6 @@ void CoverFetcher::finish(quint64 id, CacheError error)
         return;
     pending->timer->stop();
     pending->timer->deleteLater();
-    QByteArray png;
-    qint64 ttl = 0;
     if (error == CacheError::None && pending->elapsed.elapsed() >= 15000)
         error = CacheError::Timeout;
     if (pending->reply) {
@@ -176,45 +193,85 @@ void CoverFetcher::finish(quint64 id, CacheError error)
                                   .trimmed()
                                   .toLower();
             // The image hosts send JPEG covers as the nonstandard "image/jpg", and WebP
-            // uploads under that label too; the bytes' real format is checked in
-            // normalize() (WebP only when Qt's WebP plugin is there).
+            // uploads under that label too; the bytes' real format is checked by
+            // rejection() (WebP only when Qt's WebP plugin is there).
             if (reply->error() != QNetworkReply::NoError ||
                 reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 200 ||
                 (type != "image/jpeg" && type != "image/jpg" && type != "image/png" &&
                  type != "image/webp"))
                 error = CacheError::Network;
-            else {
-                png = normalize(std::move(pending->bytes), pending->job.coverSize);
-                if (png.isEmpty())
-                    error = CacheError::Unsupported;
-                else if (pending->elapsed.elapsed() >= 15000) {
-                    png.clear();
-                    error = CacheError::Timeout;
-                } else
-                    ttl = retention(*reply, pending->elapsed.elapsed());
-            }
+            else
+                pending->ttlMs = retention(*reply, pending->elapsed.elapsed());
         }
         if (!reply->isFinished())
             reply->abort();
         reply->deleteLater();
     } else
         error = CacheError::Network;
+    if (error != CacheError::None) {
+        complete(pending, error, {}, 0);
+        return;
+    }
+    // Decoding takes a while: off this thread. The context lives on this thread for as
+    // long as the pool job may post back (deleted later, from whichever thread is last).
+    m_checking.insert(id, pending);
+    const std::shared_ptr<QObject> context(new QObject, [](QObject* o) { o->deleteLater(); });
+    context->moveToThread(thread());
+    QThreadPool::globalInstance()->start(
+        [context, self = QPointer<CoverFetcher>(this), id, bytes = pending->bytes]() mutable {
+            const char* rejected = rejection(bytes);
+            // `self` is only read back on this object's thread.
+            QMetaObject::invokeMethod(
+                context.get(),
+                [self = std::move(self), id, rejected]() {
+                    if (self)
+                        self->checked(id, rejected);
+                },
+                Qt::QueuedConnection);
+        });
+}
+void CoverFetcher::checked(quint64 id, const char* rejected)
+{
+    const auto pending = m_checking.take(id);
+    if (!pending)
+        return; // canceled meanwhile
+    if (rejected) {
+        qCDebug(lcCache) << log::event("cover.rejected") << log::field("id", id)
+                         << log::field("reason", rejected);
+        complete(pending, CacheError::Unsupported, {}, 0);
+        return;
+    }
+    auto bytes = std::move(pending->bytes);
+    complete(pending, CacheError::None, std::move(bytes), pending->ttlMs);
+}
+void CoverFetcher::complete(const std::shared_ptr<Pending>& pending, CacheError error,
+                            QByteArray bytes, qint64 ttlMs)
+{
+    const auto id = pending->job.id;
     if (error == CacheError::None)
         qCDebug(lcCache) << log::event("cover.fetched") << log::field("id", id)
-                         << log::field("bytes", png.size())
+                         << log::field("bytes", bytes.size())
                          << log::field("ms", pending->elapsed.elapsed());
     else if (error != CacheError::Canceled)
         qCWarning(lcCache) << log::event("cover.failed") << log::field("id", id)
                            << log::field("err", error)
                            << log::field("host", log::host(pending->job.coverUrl))
                            << log::field("ms", pending->elapsed.elapsed());
-    emit completed(id, error, std::move(png), ttl);
+    emit completed(id, error, std::move(bytes), ttlMs);
 }
-void CoverFetcher::cancel(quint64 id) { finish(id, CacheError::Canceled); }
+void CoverFetcher::cancel(quint64 id)
+{
+    if (const auto pending = m_checking.take(id)) {
+        complete(pending, CacheError::Canceled, {}, 0);
+        return;
+    }
+    finish(id, CacheError::Canceled);
+}
 void CoverFetcher::close()
 {
     m_closed = true;
-    const auto ids = m_pending.keys();
+    QList<quint64> ids = m_pending.keys();
+    ids << m_checking.keys();
     const QPointer<CoverFetcher> guard(this);
     for (const auto id : ids) {
         cancel(id);

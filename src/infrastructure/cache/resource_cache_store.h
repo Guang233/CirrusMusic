@@ -7,6 +7,9 @@
 namespace cirrus::cache
 {
 enum class CacheOperation { Read, Write, Remove, Clear, ClearAll, Usage, Cover };
+// Jobs in flight at once through the service, the worker and the store (one of them a
+// clear). Covers are most of them: a page asks for a few dozen at a time.
+inline constexpr int CacheJobsInFlight = 32;
 struct CacheJob {
     quint64 id = 0, revision = 0;
     domain::SessionSnapshot source; // private in-process binding, never persisted

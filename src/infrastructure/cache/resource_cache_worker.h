@@ -24,7 +24,7 @@ class ResourceCacheWorker final : public QObject
   private:
     bool live(const CacheJob& job) const;
     void stored(domain::CacheResult result);
-    void fetched(quint64 id, domain::CacheError error, QByteArray png, qint64 ttlMs);
+    void fetched(quint64 id, domain::CacheError error, QByteArray bytes, qint64 ttlMs);
     void finish(domain::CacheResult result);
     void drain();
     ResourceCacheStore m_store;
