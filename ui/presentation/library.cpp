@@ -110,4 +110,28 @@ void Library::addToPlaylist(const QString& playlistKey, const QString& title,
         });
 }
 
+void Library::createPlaylistWith(const QString& title, const QStringList& songKeys)
+{
+    const QString trimmed = title.trimmed();
+    if (trimmed.isEmpty() || songKeys.isEmpty())
+        return;
+    const quint64 ticket = ++m_nextCreate;
+    m_creates[ticket] = m_source->createPlaylist(trimmed, [this, ticket, trimmed,
+                                                           songKeys](Outcome<QString> outcome) {
+        if (auto it = m_creates.find(ticket); it != m_creates.end()) {
+            it->second.release();
+            m_creates.erase(it);
+        }
+        if (!outcome.value) {
+            const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
+            emit notice(signedOut             ? tr("登录后才能新建歌单")
+                        : maybeSaved(outcome) ? tr("可能没有新建成功，刷新看看")
+                                              : tr("没能新建歌单，请稍后再试"));
+            return;
+        }
+        emit playlistChanged(*outcome.value); // the rail lists it
+        addToPlaylist(*outcome.value, trimmed, songKeys);
+    });
+}
+
 } // namespace cirrus::ui

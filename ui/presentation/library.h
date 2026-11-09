@@ -42,6 +42,10 @@ class Library : public QObject
     // `title` names the playlist in the notice.
     Q_INVOKABLE void addToPlaylist(const QString& playlistKey, const QString& title,
                                    const QStringList& songKeys);
+    // Creates a playlist titled `title`, then adds `songKeys` to it (the add-to-playlist
+    // dialog's 新建歌单). playlistChanged once it exists, so the rail shows it; each
+    // step tells its own failure.
+    Q_INVOKABLE void createPlaylistWith(const QString& title, const QStringList& songKeys);
     // Fetches the liked songs again.
     Q_INVOKABLE void reload();
     // A playlist's songs were changed elsewhere (the order page): emits playlistChanged.
@@ -67,6 +71,9 @@ class Library : public QObject
     Request m_likedPlaylistLoad;
     // One write per song key or playlist key at a time; a newer one replaces it.
     std::map<QString, Request> m_writes;
+    // Playlists being created, by ticket (the dialog closes at once; several may run).
+    std::map<quint64, Request> m_creates;
+    quint64 m_nextCreate = 0;
 };
 
 } // namespace cirrus::ui
