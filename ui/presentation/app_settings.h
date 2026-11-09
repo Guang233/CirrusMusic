@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QDateTime>
 #include <QObject>
 #include <QSettings>
 #include <QStringList>
@@ -143,6 +144,10 @@ class AppSettings : public QObject
     // 0.5–50 GiB, default 2 GiB (docs/tasks/audio-engine.md §7 Q2).
     CIRRUS_SETTING(qint64, audioCacheLimit, setAudioCacheLimit, "storage/audioCacheLimit",
                    qint64(2) << 30)
+    // Detailed logging is on until then (Settings › Diagnostics, docs/tasks/logging.md
+    // §7); invalid or past: off.
+    CIRRUS_SETTING(QDateTime, verboseLogUntil, setVerboseLogUntil, "diagnostics/verboseUntil",
+                   QDateTime())
 
   public:
     explicit AppSettings(QObject* parent = nullptr);

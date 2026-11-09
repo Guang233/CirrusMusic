@@ -53,6 +53,8 @@ qt_add_qml_module(cirrus_presentation
         discover_models.cpp
         cache_status.h
         cache_status.cpp
+        diagnostics.h
+        diagnostics.cpp
         comments_model.h
         comments_model.cpp
         paged_model.h

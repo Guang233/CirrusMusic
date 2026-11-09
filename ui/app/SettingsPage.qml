@@ -157,6 +157,9 @@ PageScaffold {
             StorageSettings {
                 shell: page.shell
             }
+            DiagnosticsSettings {
+                shell: page.shell
+            }
             ShortcutSettings {}
             AboutSettings {}
         }

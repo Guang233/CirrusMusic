@@ -14,12 +14,13 @@ add_library(cirrus_logging STATIC
     logging/categories.cpp
     logging/categories.h
     logging/log.h
+    logging/log_archive.cpp
     logging/logger.cpp
     logging/logger.h
 )
 target_compile_features(cirrus_logging PUBLIC cxx_std_20)
 target_include_directories(cirrus_logging PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_logging PUBLIC Qt6::Core)
+target_link_libraries(cirrus_logging PUBLIC Qt6::Core PRIVATE ZLIB::ZLIB)
 
 add_library(cirrus_domain INTERFACE)
 target_sources(cirrus_domain INTERFACE

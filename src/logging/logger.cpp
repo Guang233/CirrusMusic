@@ -669,6 +669,34 @@ bool verbose()
     return s.verbose;
 }
 
+QList<LogFile> files()
+{
+    auto& s = state();
+    QMutexLocker fileLock(&s.fileMutex);
+    QList<LogFile> list;
+    if (!s.started)
+        return list;
+    const auto found = logFiles(s.options.directory);
+    for (auto it = found.crbegin(); it != found.crend(); ++it)
+        list.append({it->info.filePath(), it->info.fileName(), it->info.size(),
+                     it->info.lastModified(), it->prefix == s.prefix});
+    return list;
+}
+
+qint64 clearOld()
+{
+    auto& s = state();
+    QMutexLocker fileLock(&s.fileMutex);
+    if (!s.started)
+        return 0;
+    qint64 freed = 0;
+    for (const FileEntry& f : logFiles(s.options.directory))
+        if (f.prefix != s.prefix && QFile::remove(f.info.filePath()))
+            freed += f.info.size();
+    s.previousPrefix.clear();
+    return freed;
+}
+
 QString standardDirectory(const QString& app)
 {
 #if defined(Q_OS_MACOS)

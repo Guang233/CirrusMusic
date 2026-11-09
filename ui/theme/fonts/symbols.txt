@@ -133,3 +133,4 @@ font_download
 fullscreen
 fullscreen_exit
 tune
+bug_report

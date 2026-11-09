@@ -213,8 +213,8 @@ qCWarning(lcNet).noquote() << event("request.failed")
 | --- | --- | --- |
 | L1 核心（**已完成**，§12） | `cirrus_logging`：处理器、队列、写文件线程、轮转与保留、会话头、异常退出检测、`event`/`field`/脱敏包装、分类表；在 `appCirrusMusic` 和 Gallery 里安装；现有约 25 处调用迁移到新分类 | `tst_logging`（格式、转义、轮转、保留、队列满、多线程、重复合并、异常退出标记）通过；从桌面启动后 `~/.local/state/Cirrus/logs` 里有完整的一次会话 |
 | L2 后端覆盖（**已完成**，§12） | §8 中网络、接口、鉴权、密钥环、存储、缓存、播放、媒体、上报、平台的事件 | 金丝雀测试通过；用真实后端放一首歌、换一首、退出，日志能完整看出请求、加载、上报的经过 |
-| L3 设置 | "诊断"组（先写进 settings.md 评审），导出诊断包 | Gallery 截图检查；导出的 zip 内容与预览一致 |
-| L4 文档 | HANDOFF、AGENTS、13 §4、11 §5（按 LQ2 的决定）更新约定 | — |
+| L3 设置（**已完成**，§12） | "诊断"组（先写进 settings.md 评审），导出诊断包 | Gallery 截图检查；导出的 zip 内容与预览一致 |
+| L4 文档（**已完成**） | HANDOFF、AGENTS、13 §4、11 §5（按 LQ2 的决定）更新约定 | — |
 
 L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现、偶发的"无法播放"（[integration.md §8](../ui/integration.md)）。
 
@@ -252,4 +252,15 @@ L1、L2 完成后，就用日志排查两个遗留问题：听歌上报没出现
   - `tst_log_canary`：假 Cookie、MUSIC_U、二维码 key、设备号、响应体、签名地址（路径和查询串）、账号 ID 走真实代码路径（详细模式），文件里都不出现，该有的记录都在。
   - 受影响的测试（网络、接口、播放、引擎、音频存储、上报、会话、密钥环、存储等）通过；`backend_runtime` 仍只有已知的 `closeWhileDatabaseOpening` 失败。
   - 离屏启动真实应用：一次会话 25 行，启动、恢复游客、各接口、退出都看得清。
-- 下一步 L3：设置里的"诊断"组。
+
+**L3 设置（2026-11-09）**
+- 日志库：`log::files()`（新到旧，标出本次运行的）、`log::clearOld()`（只留本次运行的）、`log::writeArchive()`（自己写的 zip：deflate、UTF-8 文件名、`QSaveFile` 写完才落盘；zlib 已是依赖）。
+- 展示层 `App.diagnostics`（`ui/presentation/diagnostics.{h,cpp}`）：`verbose`（打开时把到期时间写进 `App.settings.verboseLogUntil`，启动时还没到期就重新打开，定时器到期自动关，记 `log.verbose`/`log.verbose_expired`）、`verboseEnds`、`available`、`bytes`、`oldBytes`、`files`、`refresh()`、`openFolder()`、`exportTo()`（只接受列表里的文件名，导出前先 `flush`）、`packageName()`、`clear()`。
+- 设置页新增"诊断"组（`DiagnosticsSettings.qml`，图标 `bug_report` 已加进图标子集）和 `ExportLogsDialog.qml`（文件列表超过 360 px 滚动；回车、空格勾选当前项；系统保存对话框）。
+- 验证：
+  - `tst_logging` 10 项通过（新增列文件、打包、清除；打出的 zip 用 Python `zipfile -t` 校验通过）；qmllint 无警告。
+  - 真实应用截图：诊断组四行、导出对话框（勾选、取消勾选）；打开详细日志后日志里有 `log.verbose on=true`。离屏软件渲染时列表裁剪外会漏出复选框的勾，OpenGL 后端没有，是软件渲染器的限制。
+  - 撤掉测试钩子后，干净的二进制能正常启动和退出。
+- 没有验证：系统文件管理器打开文件夹、系统保存对话框（离屏没有），等维护者在桌面上试。
+
+**接下来**：用日志排查听歌上报没出现在"最近播放"、偶发"无法播放"（integration.md §8）。需要维护者在桌面上打开"详细日志"、复现一次，然后导出诊断包或直接看 `~/.local/state/Cirrus/logs`。

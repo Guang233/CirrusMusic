@@ -239,6 +239,39 @@ class LoggingTest : public QObject
         QVERIFY(all.indexOf("log.repeated") < all.indexOf("cirrus.media different"));
     }
 
+    void filesClearAndArchive()
+    {
+        QTemporaryDir dir;
+        const auto o = options(dir);
+        oldFile(o.directory, "cirrus-20261108-100000-12.log", 1000, 1);
+        log::install(false);
+        QVERIFY(log::start(o));
+        qCInfo(lcApp) << log::event("hello");
+        log::flush();
+        auto list = log::files();
+        QCOMPARE(list.size(), 2);
+        QVERIFY(list.first().current); // newest first
+        QVERIFY(!list.last().current);
+        QCOMPARE(list.last().name, "cirrus-20261108-100000-12.log");
+        const QString zip = dir.filePath("out.zip");
+        QVERIFY(log::writeArchive(zip, {list.first().path, list.last().path}));
+        QFile f(zip);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const QByteArray bytes = f.readAll();
+        QVERIFY(bytes.startsWith("PK\x03\x04"));
+        QVERIFY(bytes.contains("cirrus-20261108-100000-12.log"));
+        QVERIFY(bytes.contains("PK\x05\x06"));
+        QVERIFY(bytes.size() < list.last().bytes); // deflated
+        QVERIFY(!log::writeArchive(dir.filePath("bad.zip"), {dir.filePath("missing.log")}));
+        QVERIFY(!QFile::exists(dir.filePath("bad.zip")));
+        QCOMPARE(log::clearOld(), list.last().bytes);
+        list = log::files();
+        QCOMPARE(list.size(), 1);
+        QVERIFY(list.first().current);
+        if (qEnvironmentVariableIsSet("CIRRUS_KEEP_ZIP"))
+            QFile::copy(zip, qEnvironmentVariable("CIRRUS_KEEP_ZIP"));
+    }
+
     void manyThreads()
     {
         QTemporaryDir dir;

@@ -14,6 +14,7 @@ namespace cirrus::ui
 
 class AppSettings;
 class CacheStatus;
+class Diagnostics;
 class FakeControls;
 class Formatter;
 class CurrentLyrics;
@@ -32,6 +33,7 @@ class App : public QObject
     Q_OBJECT
     Q_MOC_INCLUDE("app_settings.h")
     Q_MOC_INCLUDE("cache_status.h")
+    Q_MOC_INCLUDE("diagnostics.h")
     Q_MOC_INCLUDE("fake_controls.h")
     Q_MOC_INCLUDE("formatter.h")
     Q_MOC_INCLUDE("lyrics.h")
@@ -43,6 +45,7 @@ class App : public QObject
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
     Q_PROPERTY(cirrus::ui::CacheStatus* cache READ cache CONSTANT)
+    Q_PROPERTY(cirrus::ui::Diagnostics* diagnostics READ diagnostics CONSTANT)
     Q_PROPERTY(cirrus::ui::Formatter* format READ format CONSTANT)
     Q_PROPERTY(cirrus::ui::Library* library READ library CONSTANT)
     Q_PROPERTY(cirrus::ui::CurrentLyrics* lyrics READ lyrics CONSTANT)
@@ -66,6 +69,7 @@ class App : public QObject
 
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
     [[nodiscard]] CacheStatus* cache() const { return m_cache; }
+    [[nodiscard]] Diagnostics* diagnostics() const { return m_diagnostics; }
     [[nodiscard]] Formatter* format() const { return m_format; }
     [[nodiscard]] Library* library() const { return m_library; }
     [[nodiscard]] CurrentLyrics* lyrics() const { return m_lyrics; }
@@ -90,6 +94,7 @@ class App : public QObject
     Sources m_sources;
     AppSettings* m_settings;
     CacheStatus* m_cache;
+    Diagnostics* m_diagnostics;
     Formatter* m_format;
     NetworkStatus* m_network;
     Player* m_player;

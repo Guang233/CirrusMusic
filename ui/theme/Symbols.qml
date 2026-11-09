@@ -122,6 +122,7 @@ QtObject {
     readonly property string fullscreen: "\ue5d0"
     readonly property string fullscreen_exit: "\ue5d1"
     readonly property string tune: "\ue429"
+    readonly property string bug_report: "\ue868"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -242,6 +243,7 @@ QtObject {
         "font_download",
         "fullscreen",
         "fullscreen_exit",
-        "tune"
+        "tune",
+        "bug_report"
     ]
 }

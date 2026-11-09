@@ -52,6 +52,8 @@ qt_add_qml_module(appCirrusMusic
         settings/AppearanceSettings.qml
         settings/WindowSettings.qml
         settings/StorageSettings.qml
+        settings/DiagnosticsSettings.qml
+        settings/ExportLogsDialog.qml
         settings/ShortcutSettings.qml
         settings/AboutSettings.qml
         HomePage.qml

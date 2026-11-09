@@ -1,5 +1,7 @@
 #pragma once
 #include <QByteArray>
+#include <QDateTime>
+#include <QList>
 #include <QString>
 #include <QStringList>
 
@@ -37,6 +39,21 @@ bool verbose();
 // Where `app`'s logs go (§6): $XDG_STATE_HOME/<app>/logs on Linux (~/.local/state),
 // ~/Library/Logs/<app> on macOS, %LOCALAPPDATA%/<app>/logs on Windows.
 QString standardDirectory(const QString& app);
+
+// The log's files (the settings page, exporting), newest first; empty before start().
+struct LogFile {
+    QString path;
+    QString name;
+    qint64 bytes = 0;
+    QDateTime modified;
+    bool current = false; // this session's
+};
+QList<LogFile> files();
+// Removes every file but this session's; the bytes freed.
+qint64 clearOld();
+// Writes `files` (paths from files()) into a zip at `target`, deflated; false when a file
+// can't be read or the target can't be written (nothing half-written is left).
+bool writeArchive(const QString& target, const QStringList& files);
 
 QString directory();   // empty before start()
 QString currentFile(); // the file written now
