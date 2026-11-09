@@ -260,7 +260,7 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
     - 无法播放的第二个原因查实并已修：第一次播放日推第一首（FLAC，没有缓存）时，引擎就绪 0.7 秒后报 `engine.failed err=Decode`，期间下载没有任何失败；再按播放时已缓存 13%，就正常了。原因是读文件的 `QFile` 带缓冲：解码追到下载头附近时只要几 KB，它却一次预读 16 KB，把文件里还没写入的零读进缓冲区，下一次往前读直接从缓冲区拿到这些零。改为不带缓冲打开（`tst_audio_store` 加 `readsAtTheDownloadHeadSeeNoUnwrittenBytes`，修复前必失败）。写入缓存的数据一直是对的（完成后还有 md5 校验）。HTTP/2 连接问题在这次日志里没有出现。
     - 听歌上报：换歌时发出一条（歌曲 833263，167 秒，`end=ui`，`source=dailySongRecommend`，sourceId 为空），服务器回 code 200（响应只有 `code`、`data`、`message` 三个字段）。是否进了"最近播放"要维护者在官方客户端确认；没进的话，嫌疑是每日推荐的空 sourceId 或缺少 startplay，用日志再试其他来源（歌单）对比。
     - 第二轮（`cirrus-20261109-150805-139311.log`，从歌单播放）：
-      - 听歌上报：两条，`source=list`、`sourceId` 是歌单 129003828，166 秒和 16 秒，服务器都回 code 200（`Acknowledged`），维护者确认仍不在"最近播放"。来源不是原因。
+      - 听歌上报：两条，`source=list`、`sourceId` 是歌单 129003828，166 秒和 16 秒，服务器都回 code 200（`Acknowledged`），维护者确认仍不在"最近播放"。来源不是原因。维护者随后在官方客户端的听歌排行（最近一周）里看到这两首都计入了：**上报是有效的，只是"最近播放"不由这个接口更新**（2026-11-09）。
       - HTTP/2 问题查实：闲置约 3 分钟后取播放地址（`/api/song/enhance/player/url/v1`，xeapi）连续两次 `qt=ProtocolFailure`（Qt：HTTP/2 stream 1 "連線已關閉"），都是新连接的第一个请求，同时别的主机的请求都成功；第三次才好。已修：传输层加 `TransportRequest::retryLostConnection`，只给逐个列出的读操作（`retriesLostConnection()`：播放地址、歌曲详情、歌词、歌单／专辑／歌手、每日推荐、搜索、排行榜等）打开；连接在收到任何响应前断开（`ProtocolFailure`／`RemoteHostClosed`）时，同一请求改走 HTTP/1.1 再发一次，记 `net request.retry`。写操作和上报永不重试（`tst_http_transport` 加一项）。
     - 顺带：Qt Wayland 输入法每次焦点变化都警告一次（Qt 的问题），占了日志的大半，日志规则里关掉了；退出快捷键改用 `sequences`，消掉启动时的警告。音乐库、最近播放、侧栏歌单报"需要登录"是因为音乐库还没接后端（第 7 步），不是错误。
   - 重启后音量回到 50%：启动时保存的音量在后端就绪前发出被丢弃，已改为后端就绪时直接发给门面（不经播放会话，否则会话把它算作用户操作、拒绝恢复上次的队列），每首歌拿到引擎回报的音量后不一致再纠正一次。离线验证：保存 3%，引擎从第一首起就是 3%，上次的队列照常恢复。

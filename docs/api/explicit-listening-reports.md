@@ -87,6 +87,14 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 - `application::ListeningReporter`（`src/application/playback/listening_reporter.*`）：看 `ListeningSession` 的听歌记录，每次加载结算时至多发一次 Play，秒数取真实累计（`playedMs / 1000`）。结算：播完 playend、换歌 ui、失败 exception、停止／会话变化／退出 interrupt；暂停超过 5 分钟按 interrupt 报，之后继续播放这次加载不再报。不到 3 秒、游客、私人 FM（没有来源证据）、记录的账号不是当前账号都不报。来源由调用方按队列条目给（界面记住每个条目从哪里点开）；不知道时报为 `song`，sourceId 是歌曲自己。结果不重试。`flush()` 在关闭前结算正在播的这首，最多等 2 秒。
 - 由界面层的 `BackendHost` 创建（不进 `BackendRuntime`，后端测试不会多出请求）。测试 `tst_listening_reporter`（6 项）；`tst_listening_report` 改为覆盖来源、结束原因与搜索关键词。
 
+## 4b. 真实账号验证（2026-11-09）
+
+维护者用自己的账号、Cirrus 的自动上报验证（日志 `report.send`／`report.result`，见 [UI 接入 §8](../ui/integration.md)）：
+
+- 每日推荐（`source=dailySongRecommend`、sourceId 空）和歌单（`source=list`、sourceId 为歌单 ID）各发出若干条 `play`，服务器都回 code 200，响应字段只有 `code`、`data`、`message`。
+- **计入听歌排行**：维护者在官方客户端"听歌排行 · 最近一周"里看到当天从歌单播放的两首都在。
+- **不进"最近播放"**：官方客户端的"最近播放"里没有这些歌。也就是说"最近播放"由别的途径更新，不是 weblog 的 play；具体是哪条接口没有证据（APK 不读），参考实现里也只有读取（`record_recent_song`），没有写入。
+
 ## 5. 未决事项
 
 自动时机、最低有效收听阈值、试听资格、来源扩展、自然End／手动切歌／失败／关闭的终止字段、跨设备行为及结果对账都未在本包决定。后续[最近听过／听歌排行读取](cloud-history-reads.md)已另包离线接入，不证明本报告已进入云端记录；详细本地历史持久化／分析按维护者后续需求。UI仍最后，不以接口接通宣称用户的播放已进入云端记录。
