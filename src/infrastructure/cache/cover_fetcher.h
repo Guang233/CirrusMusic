@@ -12,7 +12,14 @@ class CoverFetcher final : public QObject
   public:
     explicit CoverFetcher(QObject* parent = nullptr);
     ~CoverFetcher() override;
+    // Downloads at once (and being checked): the image hosts speak HTTP/2, these share
+    // one connection.
+    static constexpr int MaximumFetches = 6;
     void request(CacheJob job); // explicit, never implicit metadata prefetch
+    [[nodiscard]] bool full() const
+    {
+        return m_pending.size() + m_checking.size() >= MaximumFetches;
+    }
     void cancel(quint64 id);
     void close();
     // Why the image hosts' bytes are not taken as a cover (nullptr when they are): a

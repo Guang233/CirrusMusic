@@ -88,10 +88,8 @@ bool CoverFetcher::plausible(const QByteArray& bytes)
 }
 void CoverFetcher::request(CacheJob job)
 {
-    // A few at once: the image hosts speak HTTP/2, these share one connection.
-    if (m_closed || m_pending.size() + m_checking.size() >= 6 || m_pending.contains(job.id) ||
-        m_checking.contains(job.id) || !validCoverUrl(job.coverUrl) ||
-        !validCoverSize(job.coverSize)) {
+    if (m_closed || full() || m_pending.contains(job.id) || m_checking.contains(job.id) ||
+        !validCoverUrl(job.coverUrl) || !validCoverSize(job.coverSize)) {
         emit completed(job.id, CacheError::Busy, {}, 0);
         return;
     }

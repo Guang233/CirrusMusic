@@ -74,7 +74,7 @@ void ResourceCacheWorker::submit(CacheJob job)
         return;
     }
     if (job.operation == CacheOperation::Cover && job.mode == CacheReadMode::Refresh)
-        m_fetcher.request(std::move(job));
+        fetch(job);
     else
         m_store.submit(std::move(job));
 }
@@ -103,14 +103,38 @@ void ResourceCacheWorker::stored(CacheResult result)
                 result = failure(job.id, CacheError::Corrupt);
         } else if (job.mode == CacheReadMode::PreferCache &&
                    (result.status == CacheStatus::Miss || result.status == CacheStatus::Expired)) {
-            m_fetcher.request(job);
+            fetch(job);
             return;
         }
     }
     finish(std::move(result));
 }
+void ResourceCacheWorker::fetch(const CacheJob& job)
+{
+    if (m_fetcher.full())
+        m_fetchQueue.push_back(job.id);
+    else
+        m_fetcher.request(job);
+}
+void ResourceCacheWorker::nextFetch()
+{
+    while (!m_fetchQueue.empty() && !m_fetcher.full()) {
+        const auto id = m_fetchQueue.front();
+        m_fetchQueue.pop_front();
+        const auto it = m_jobs.constFind(id);
+        if (it == m_jobs.cend())
+            continue; // canceled meanwhile
+        if (!live(*it)) {
+            finish(failure(id, CacheError::StaleContext));
+            continue;
+        }
+        m_fetcher.request(*it);
+    }
+}
 void ResourceCacheWorker::fetched(quint64 id, CacheError error, QByteArray bytes, qint64 ttlMs)
 {
+    // A download slot is free: the next waiting one goes first.
+    QMetaObject::invokeMethod(this, &ResourceCacheWorker::nextFetch, Qt::QueuedConnection);
     const auto it = m_jobs.constFind(id);
     if (it == m_jobs.cend())
         return;
@@ -175,6 +199,7 @@ void ResourceCacheWorker::close()
         return;
     m_closed = true;
     m_clear.reset();
+    m_fetchQueue.clear();
     const auto ids = m_jobs.keys();
     for (const auto id : ids)
         cancel(id);

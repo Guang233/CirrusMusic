@@ -1,5 +1,6 @@
 #pragma once
 #include "cover_fetcher.h"
+#include <deque>
 #include <functional>
 
 namespace cirrus::cache
@@ -27,11 +28,15 @@ class ResourceCacheWorker final : public QObject
     void fetched(quint64 id, domain::CacheError error, QByteArray bytes, qint64 ttlMs);
     void finish(domain::CacheResult result);
     void drain();
+    // Downloads the cover, or queues it while the fetcher is full.
+    void fetch(const CacheJob& job);
+    void nextFetch();
     ResourceCacheStore m_store;
     CoverFetcher m_fetcher;
     Context m_context;
     QHash<quint64, CacheJob> m_jobs;
     QHash<quint64, QByteArray> m_networkValues;
+    std::deque<quint64> m_fetchQueue; // jobs (in m_jobs) waiting for the fetcher
     std::optional<CacheJob> m_clear;
     quint64 m_revision = 0;
     bool m_closed = false;
