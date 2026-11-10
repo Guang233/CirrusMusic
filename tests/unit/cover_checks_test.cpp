@@ -5,6 +5,7 @@
 
 #include <QBuffer>
 #include <QImage>
+#include <QImageWriter>
 #include <QTest>
 
 using cirrus::cache::CoverFetcher;
@@ -36,6 +37,15 @@ class CoverChecksTest : public QObject
         }
         // Not square, at the most.
         QCOMPARE(CoverFetcher::rejection(encoded({2048, 1024}, "JPEG")), nullptr);
+    }
+    void acceptsStillWebp()
+    {
+        // The image hosts send WebP covers (some animated: their first frame).
+        if (!QImageWriter::supportedImageFormats().contains("webp"))
+            QSKIP("no WebP plugin in this Qt (the Qt Image Formats module)");
+        const auto bytes = encoded({512, 512}, "WEBP");
+        QCOMPARE(CoverFetcher::rejection(bytes), nullptr);
+        QVERIFY(CoverFetcher::plausible(bytes));
     }
     void rejects()
     {

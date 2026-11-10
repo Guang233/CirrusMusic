@@ -60,8 +60,9 @@ struct Header {
         if (dimensions.isEmpty() || dimensions.width() > 2048 || dimensions.height() > 2048 ||
             qint64(dimensions.width()) * dimensions.height() > 4 * 1024 * 1024)
             return "dimensions";
-        if (reader.supportsAnimation() || reader.imageCount() > 1)
-            return "frames";
+        // Animated covers are taken too and show their first frame: the image hosts
+        // send some covers as animated WebP (2026-11-10, home and discover), refused
+        // before ("frames").
         return nullptr;
     }
 };
@@ -234,8 +235,13 @@ void CoverFetcher::checked(quint64 id, const char* rejected)
     if (!pending)
         return; // canceled meanwhile
     if (rejected) {
+        // The format the bytes say they are (a name from their header), for the log.
+        QBuffer sniff(&pending->bytes);
+        sniff.open(QIODevice::ReadOnly);
+        const auto format = QString::fromLatin1(QImageReader::imageFormat(&sniff).left(16));
         qCDebug(lcCache) << log::event("cover.rejected") << log::field("id", id)
-                         << log::field("reason", rejected);
+                         << log::field("reason", rejected)
+                         << log::field("format", format.isEmpty() ? QStringLiteral("-") : format);
         complete(pending, CacheError::Unsupported, {}, 0);
         return;
     }
