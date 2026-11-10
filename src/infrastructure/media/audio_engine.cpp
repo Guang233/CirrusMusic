@@ -3,6 +3,7 @@
 #include "audio_output.h"
 #include "audio_store.h"
 #include "logging/log.h"
+#include "loudness.h"
 #include <QThread>
 #include <algorithm>
 #include <atomic>
@@ -27,6 +28,8 @@ constexpr int kSuspendAfterMs = 300; // past the fade-out
 // this long before the current one ends (or once the current file is all here).
 constexpr qint64 kPrefetchBytes = 1024 * 1024;
 constexpr qint64 kOpenNextBeforeMs = 30000;
+// A normalization gain changing (another track, the switch) slides over this long.
+constexpr int kGainRampMs = 50;
 } // namespace
 
 // The decoder thread and what it shares with the owner.
@@ -47,6 +50,7 @@ struct AudioEngine::Producer {
     bool nextFailed = false; // it wouldn't open: the current track just ends
     quint64 boundary = 0;
     qint64 nextDurationMs = 0;
+    float nextGain = 1;               // the next track's normalization gain (lock)
     std::atomic<quint64> produced{0}; // frames into the ring since the last flush
     std::atomic<bool> eof{false};
     AudioOutput* output = nullptr; // outlives the thread: the owner joins first
@@ -54,6 +58,13 @@ struct AudioEngine::Producer {
     std::shared_ptr<AudioStream> stream;
     QString format;
     std::thread thread;
+    // Volume normalization: on or off (the owner flips it), the gain of the track being
+    // decoded, and what is applied now, sliding to its target (producer thread).
+    std::atomic<bool> normalize{false};
+    float trackGain = 1;
+    float applied = 1;
+    float rampTarget = 1;
+    float rampStep = 0;
 
     [[nodiscard]] bool quitting()
     {
@@ -61,9 +72,31 @@ struct AudioEngine::Producer {
         return quit;
     }
     void run(AudioEngine* engine, LoadToken token, bool reopening);
+    // Multiplies the frames from `from` on by the normalization gain (or 1 when off).
+    void applyGain(std::vector<float>& out, size_t from);
     bool crossNext(std::unique_ptr<AudioDecoder>& decoder,
                    std::unique_ptr<AudioResampler>& resampler, std::vector<float>& out);
 };
+
+void AudioEngine::Producer::applyGain(std::vector<float>& out, size_t from)
+{
+    const float target = normalize.load(std::memory_order_relaxed) ? trackGain : 1.0f;
+    if (target != rampTarget) {
+        rampTarget = target;
+        rampStep = (target - applied) / float(std::max(1, outRate * kGainRampMs / 1000));
+    }
+    if (applied == 1.0f && rampTarget == 1.0f)
+        return;
+    for (size_t i = from; i + 1 < out.size(); i += 2) {
+        if (applied != rampTarget) {
+            applied += rampStep;
+            if ((rampStep > 0) == (applied > rampTarget))
+                applied = rampTarget;
+        }
+        out[i] *= applied;
+        out[i + 1] *= applied;
+    }
+}
 
 // At the end of the current track: opens the next one and decodes on into it. False
 // when there is none (or it won't open, or a seek or stop came in meanwhile).
@@ -91,7 +124,9 @@ bool AudioEngine::Producer::crossNext(std::unique_ptr<AudioDecoder>& decoder,
     }
     // The same rate keeps the resampler running, so the joint stays continuous.
     if (opened->sampleRate() != resampler->inRate()) {
+        const size_t from = out.size();
         resampler->flush(out);
+        applyGain(out, from); // the current track's tail, at its gain
         resampler = std::make_unique<AudioResampler>(opened->sampleRate(), outRate);
     }
     {
@@ -101,6 +136,7 @@ bool AudioEngine::Producer::crossNext(std::unique_ptr<AudioDecoder>& decoder,
         crossed = true;
         boundary = produced + quint64(out.size() / 2);
         nextDurationMs = opened->durationMs();
+        trackGain = nextGain;
     }
     decoder = std::move(opened);
     return true;
@@ -201,7 +237,9 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
         }
         chunk.clear();
         if (decoder->read(chunk, kDecodeFrames)) {
+            const size_t from = out.size();
             resampler->process(chunk, out);
+            applyGain(out, from);
             continue;
         }
         if (decoder->error()) {
@@ -212,7 +250,9 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
             continue; // a seek or stop is waiting
         if (crossNext(decoder, resampler, out))
             continue; // on into the next track, no gap
+        const size_t from = out.size();
         resampler->flush(out);
+        applyGain(out, from);
         eof = true;
         if (out.empty() && flushing) {
             output->endFlush();
@@ -265,7 +305,10 @@ void AudioEngine::load(MediaSource source, LoadToken token)
     m_clock.start();
     qCInfo(lcMedia) << log::event("engine.load") << log::field("token", token.generation)
                     << log::field("format", m_source.format)
-                    << log::field("preview", m_source.preview.has_value());
+                    << log::field("preview", m_source.preview.has_value())
+                    << log::field("gain_db", m_source.gainDb
+                                                 ? QString::number(*m_source.gainDb, 'f', 1)
+                                                 : QStringLiteral("-"));
     PlaybackError error{};
     m_stream = m_store.open(m_source, &error);
     if (!m_stream) {
@@ -296,7 +339,12 @@ void AudioEngine::startProducer(qint64 positionMs, bool seek)
         m_next->stream->clearInterrupt();
         producer->nextStream = m_next->stream;
         producer->nextFormat = m_next->source.format.toLower();
+        producer->nextGain = normalizationGain(m_next->source);
     }
+    // New audio after the flush: at its gain from the first frame.
+    producer->normalize = m_normalize;
+    producer->trackGain = normalizationGain(m_source);
+    producer->applied = producer->rampTarget = m_normalize ? producer->trackGain : 1.0f;
     m_output->beginFlush();     // nothing old plays; the producer ends it with new audio
     m_stream->clearInterrupt(); // left over from stopping the previous producer
     const bool reopening = m_ready;
@@ -552,6 +600,7 @@ void AudioEngine::openNext()
     std::lock_guard guard(m_producer->lock);
     m_producer->nextStream = m_next->stream;
     m_producer->nextFormat = m_next->source.format.toLower();
+    m_producer->nextGain = normalizationGain(m_next->source);
 }
 
 void AudioEngine::dropNext()
@@ -680,6 +729,16 @@ void AudioEngine::seek(qint64 positionMs)
     m_producer->wake.notify_all();
     if (m_stream)
         m_stream->interrupt(); // don't wait out a download where we no longer play
+}
+
+void AudioEngine::setNormalization(bool on)
+{
+    if (on == m_normalize)
+        return;
+    m_normalize = on;
+    if (m_producer)
+        m_producer->normalize = on; // from the next decoded chunk, sliding
+    qCInfo(lcMedia) << log::event("engine.normalize") << log::field("on", on);
 }
 
 void AudioEngine::setVolume(float linear)

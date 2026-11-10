@@ -21,8 +21,12 @@ Player::Player(PlaybackSource* source, AppSettings* settings, QObject* parent)
     if (!m_source)
         return;
     m_source->setChangedHandler([this]() { update(); });
-    if (m_settings)
+    if (m_settings) {
         m_source->setVolume(std::clamp(m_settings->volume(), 0.0, 1.0));
+        m_source->setNormalization(m_settings->normalizeVolume());
+        connect(m_settings, &AppSettings::normalizeVolumeChanged, this,
+                [this] { m_source->setNormalization(m_settings->normalizeVolume()); });
+    }
     update();
 }
 

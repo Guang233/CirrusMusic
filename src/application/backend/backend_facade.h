@@ -99,7 +99,7 @@ struct CollectionDelivery {
     domain::CollectionResult result;
 };
 
-enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume, Preload };
+enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume, Preload, Normalize };
 struct PlaybackCommand {
     quint64 id = 0;
     quint64 generation = 0; // account intent barrier
@@ -108,6 +108,7 @@ struct PlaybackCommand {
     domain::StreamQuery query;
     qint64 positionMs = 0;
     float volume = 0.5f;
+    bool normalize = false; // Normalize: volume normalization on or off
     domain::TransportIntent intent = domain::TransportIntent::Play;
     domain::LoadToken next; // Preload: the generation it plays under; empty song cancels
 };
@@ -251,6 +252,9 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 stopPlayback();
     [[nodiscard]] quint64 seekPlayback(qint64 positionMs);
     [[nodiscard]] quint64 setPlaybackVolume(float linear);
+    // Volume normalization (docs/tasks/audio-engine.md §6.5), a setting: like the volume
+    // it needs no load and outlives one.
+    [[nodiscard]] quint64 setPlaybackNormalization(bool on);
 
     // Runtime delivery endpoints; queued connections only, not public commands.
     void deliver(BackendEvent event);

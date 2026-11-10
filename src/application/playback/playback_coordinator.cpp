@@ -367,6 +367,7 @@ void PlaybackCoordinator::applyIntent()
         m_backend.pause();
 }
 void PlaybackCoordinator::setVolume(float linear) { m_backend.setVolume(linear); }
+void PlaybackCoordinator::setNormalization(bool on) { m_backend.setNormalization(on); }
 void PlaybackCoordinator::receive(PlaybackEvent event)
 {
     using Kind = PlaybackEvent::Kind;

@@ -315,6 +315,8 @@ class BackendWorker final : public QObject
                     m_playback->stop(command.token);
             } else if (command.action == PlaybackAction::Volume)
                 m_playback->setVolume(command.volume);
+            else if (command.action == PlaybackAction::Normalize)
+                m_playback->setNormalization(command.normalize);
             else if (command.action == PlaybackAction::Preload) {
                 std::optional<domain::StreamQuery> query;
                 if (!command.query.song.value.isEmpty())

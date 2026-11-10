@@ -33,6 +33,12 @@ SettingsGroup {
         onChosen: value => App.settings.audioQuality = value
     }
     SwitchSetting {
+        text: qsTr("音量均衡")
+        supportingText: qsTr("每首歌听起来差不多响")
+        value: App.settings.normalizeVolume
+        onSwitched: value => App.settings.normalizeVolume = value
+    }
+    SwitchSetting {
         text: qsTr("启动时继续播放")
         supportingText: qsTr("打开应用后接着播上次的歌")
         value: App.settings.resumeOnStart

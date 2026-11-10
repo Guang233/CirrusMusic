@@ -63,6 +63,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     void removeAt(int index) override;
     void move(int from, int to) override;
     void setVolume(double volume) override;
+    void setNormalization(bool on) override;
     void setOrder(playback::Order order) override;
     void setRepeat(playback::Repeat repeat) override;
     void startFm() override;
@@ -113,6 +114,7 @@ class BackendPlayback : public QObject, public PlaybackSource
         QList<PlayOrigin> origins; // per key
     };
     void applyVolume();
+    void applyNormalization();
     void startQueue(const QStringList& keys, int index, const QList<PlayOrigin>& origins);
     void loadOrigins();
     void saveOrigins() const;
@@ -136,6 +138,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     bool m_detailsArrived = false;
     std::optional<double> m_volume;  // the user's, once set
     domain::LoadToken m_volumeFixed; // the load whose volume was set again
+    std::optional<bool> m_normalize; // the setting, once known
     bool m_notifyPending = false;
     bool m_live = false;       // something loaded (or Personal FM waiting)
     bool m_removing = false;   // in removeAt(): a stop now is the user's

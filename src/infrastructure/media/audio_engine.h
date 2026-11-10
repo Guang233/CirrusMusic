@@ -30,6 +30,7 @@ class AudioEngine : public application::IPlaybackBackend
     void stop() override;
     void seek(qint64 positionMs) override;
     void setVolume(float linear) override;
+    void setNormalization(bool on) override;
     void preload(domain::MediaSource source, domain::LoadToken next) override;
     void refresh(domain::LoadToken token, domain::MediaSource source) override;
 
@@ -77,6 +78,7 @@ class AudioEngine : public application::IPlaybackBackend
     quint64 m_underrunsLogged = 0; // reported in the log every kUnderrunLogMs at most
     QElapsedTimer m_underrunWindow;
     float m_volume = 0.5f;
+    bool m_normalize = false;
     bool m_active = false;
     bool m_ready = false;
     bool m_playing = false;

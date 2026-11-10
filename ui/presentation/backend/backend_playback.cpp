@@ -191,9 +191,13 @@ BackendPlayback::BackendPlayback(runtime::BackendRuntime& runtime, CatalogSource
     connect(&runtime.facade(), &application::BackendFacade::sessionChanged, this,
             [this](const domain::SessionSnapshot&) {
                 applyVolume(); // set before the backend could take it (startup)
+                applyNormalization();
                 update();
             });
-    connect(&runtime.facade(), &application::BackendFacade::stateChanged, this, changed);
+    connect(&runtime.facade(), &application::BackendFacade::stateChanged, this, [this] {
+        applyNormalization();
+        update();
+    });
     // A sign-in goes through several session changes in a row: resume once it has
     // settled for a moment, not at a Guest phase between them.
     m_resume.setSingleShot(true);
@@ -848,6 +852,20 @@ void BackendPlayback::applyVolume()
     // queue restored after one is refused.
     if (m_volume && m_facade && settled())
         static_cast<void>(m_facade->setPlaybackVolume(float(*m_volume)));
+}
+
+// A setting for the engine, not a user's command: straight to the facade, again on
+// every session change (it refuses until ready; the engine ignores a repeat).
+void BackendPlayback::applyNormalization()
+{
+    if (m_normalize && m_facade)
+        static_cast<void>(m_facade->setPlaybackNormalization(*m_normalize));
+}
+
+void BackendPlayback::setNormalization(bool on)
+{
+    m_normalize = on;
+    applyNormalization();
 }
 
 void BackendPlayback::setVolume(double volume)

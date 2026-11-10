@@ -260,6 +260,8 @@ class PlaybackSource
     virtual void removeAt(int index) = 0;
     virtual void move(int from, int to) = 0;
     virtual void setVolume(double volume) = 0;
+    // Volume normalization (a setting; the fake plays nothing to normalize).
+    virtual void setNormalization(bool on) { Q_UNUSED(on); }
     virtual void setOrder(playback::Order order) = 0;
     virtual void setRepeat(playback::Repeat repeat) = 0;
     // Endless recommendations for the signed-in account (mode PersonalFm).

@@ -792,6 +792,13 @@ quint64 BackendFacade::setPlaybackVolume(float linear)
     c.volume = linear;
     return submitPlayback(c);
 }
+quint64 BackendFacade::setPlaybackNormalization(bool on)
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Normalize;
+    c.normalize = on;
+    return submitPlayback(c);
+}
 quint64 BackendFacade::submitPlayback(PlaybackCommand command)
 {
     Q_ASSERT(QThread::currentThread() == thread());

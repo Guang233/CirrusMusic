@@ -89,6 +89,16 @@ StreamResult mapStreamResponse(const StreamQuery& query, const QJsonObject& obje
             return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
         }))
         source.md5 = md5;
+    // Optional loudness (docs/tasks/audio-engine.md §6.5): measured 23 full tracks,
+    // integrated loudness + gain = −17.96 ± 0.04 LUFS. A peak of 0 is the placeholder
+    // preview clips carry; an odd value is dropped, not a failure.
+    const auto gain = row.value(QStringLiteral("gain"));
+    const auto peak = row.value(QStringLiteral("peak"));
+    if (gain.isDouble() && peak.isDouble() && std::isfinite(gain.toDouble()) &&
+        std::abs(gain.toDouble()) <= 40 && peak.toDouble() > 0 && peak.toDouble() <= 2) {
+        source.gainDb = float(gain.toDouble());
+        source.peak = float(std::min(peak.toDouble(), 1.0));
+    }
     const auto preview = row.value(QStringLiteral("freeTrialInfo"));
     if (!preview.isUndefined() && !preview.isNull()) {
         if (!preview.isObject())

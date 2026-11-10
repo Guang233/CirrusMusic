@@ -90,6 +90,8 @@ class AppSettings : public QObject
     // The last queue always comes back at startup (docs/ui/integration.md §6 D7); this
     // also plays it on.
     CIRRUS_SETTING(bool, resumeOnStart, setResumeOnStart, "playback/resumeOnStart", false)
+    // Volume normalization from the service's loudness (docs/tasks/audio-engine.md §6.5).
+    CIRRUS_SETTING(bool, normalizeVolume, setNormalizeVolume, "playback/normalizeVolume", false)
     // The player's state, applied at startup by App.player: volume (0–1, linear),
     // Playback.Order and Playback.Repeat (the same for every queue and account).
     CIRRUS_SETTING(double, volume, setVolume, "playback/volume", 1.0)

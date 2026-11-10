@@ -22,6 +22,7 @@ class PlaybackCoordinator final : public QObject
     bool resume();
     bool seek(qint64 positionMs);
     void setVolume(float linear);
+    void setNormalization(bool on);
     // Resolves `query` now and hands it to the backend to follow `current` without a gap
     // under `next` (a fresh generation); no query cancels. When the backend gets there the
     // snapshot changes to `next`. Refused when `current` isn't the current load.

@@ -1,3 +1,4 @@
+#include "infrastructure/media/loudness.h"
 #include "infrastructure/media/media_source_policy.h"
 #include "infrastructure/netease/music/stream_resolver.h"
 #include <QJsonArray>
@@ -47,6 +48,40 @@ class StreamTest : public QObject
                                        {{"id", "1"}, {"level", "standard"}, {"unblock", true}}));
         QVERIFY(!netease::operationPayload(netease::ApiOperation::SongStream,
                                            {{"id", 1}, {"level", "standard"}}));
+    }
+    void loudness()
+    {
+        auto r = row();
+        QVERIFY(!std::get<StreamSource>(map(r)).gainDb); // none given
+        r["gain"] = -11.5;
+        r["peak"] = 0.98;
+        auto source = std::get<StreamSource>(map(r));
+        QVERIFY(source.gainDb);
+        QCOMPARE(*source.gainDb, -11.5f);
+        QCOMPARE(source.peak, 0.98f);
+        r["peak"] = 1.05; // capped
+        QCOMPARE(std::get<StreamSource>(map(r)).peak, 1.0f);
+        r["gain"] = 1.5; // what preview clips carry: a placeholder
+        r["peak"] = 0;
+        QVERIFY(!std::get<StreamSource>(map(r)).gainDb);
+        r["gain"] = "-3";
+        r["peak"] = 1;
+        QVERIFY(!std::get<StreamSource>(map(r)).gainDb); // odd: dropped, not a failure
+        r["gain"] = 400;
+        QVERIFY(!std::get<StreamSource>(map(r)).gainDb);
+
+        // To −14 LUFS: gain + 4 dB, no boost past the peak, unchanged when unknown.
+        MediaSource m;
+        QCOMPARE(media::normalizationGain(m), 1.0f);
+        m.gainDb = -10.0f;
+        m.peak = 1.0f;
+        QVERIFY(qAbs(media::normalizationGain(m) - std::pow(10.0f, -6.0f / 20)) < 1e-5f);
+        m.gainDb = 2.0f; // +6 dB wanted, the peak allows +0.9 dB
+        m.peak = 0.9f;
+        QVERIFY(qAbs(media::normalizationGain(m) - 1.0f / 0.9f) < 1e-5f);
+        m.gainDb = 2.0f;
+        m.peak = 0.25f; // room for +12 dB: the full +6 dB
+        QVERIFY(qAbs(media::normalizationGain(m) - std::pow(10.0f, 6.0f / 20)) < 1e-5f);
     }
     void previewAndActualQuality()
     {
