@@ -39,6 +39,10 @@ jobs:
           arch: win64_msvc2022_64
           modules: ${{ env.QT_MODULES }}
           cache: true
+          # Qt 6.11+ on Windows moved to one repository folder per arch; aqtinstall 3.3.0 (the
+          # latest release) cannot find it. Master has the fix (miurahr/aqtinstall#1000); go back
+          # to the default once a release after 3.3.0 ships.
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@5a49f2b391ae8ee1d3c0dd87f8b33c1d49a4deb7
 
       - name: Paths
         run: |
