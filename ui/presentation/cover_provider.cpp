@@ -149,15 +149,15 @@ QQuickImageResponse* CoverProvider::requestImageResponse(const QString& id,
                 [job, cacheKey, requestedSize, cache](Outcome<QByteArray> outcome) {
                     job->request.release();
                     if (!outcome.value) {
-                        deliver(job, {}, QStringLiteral("cover %1 is unavailable").arg(cacheKey));
+                        // No key in the text: QML logs it, and a key may be an address.
+                        deliver(job, {}, QStringLiteral("cover is unavailable"));
                         return;
                     }
                     QThreadPool::globalInstance()->start(
                         [job, cacheKey, requestedSize, cache, bytes = *outcome.value]() {
                             const QImage image = decode(bytes, requestedSize);
                             if (image.isNull()) {
-                                deliver(job, {},
-                                        QStringLiteral("cannot decode cover %1").arg(cacheKey));
+                                deliver(job, {}, QStringLiteral("cannot decode cover"));
                                 return;
                             }
                             {
