@@ -1,6 +1,6 @@
 # 用户主页读取
 
-维护者 2026-11-10 把网易云的用户页纳入范围（设计：[docs/ui/pages/user.md](../ui/pages/user.md)）。这一页记五个读取；关注／取消关注写操作另起（user.md §7 第 4 步）。当前 112 个业务 operation。
+维护者 2026-11-10 把网易云的用户页纳入范围（设计：[docs/ui/pages/user.md](../ui/pages/user.md)）。这一页记五个读取（§1–§4）和关注／取消关注两个写操作（§5）。当前 114 个业务 operation。
 
 ## 1. 操作
 
@@ -41,3 +41,18 @@
 `tst_user_profile`（`tests/unit/user_profile_test.cpp`）覆盖以下内容，合成数据按 §2 的实测形状，放在 `tests/support/synthetic_user_profile.h`：
 - 合同、payload 严格性、四种映射、内容匹配；
 - 游客经真实 client 读取，其中两类不公开、404。
+
+## 5. 关注、取消关注（写）
+
+| operation | 参考模块 | 逻辑路径 | 协议 | payload |
+| --- | --- | --- | --- | --- |
+| UserFollow | follow（t=1） | `/api/user/follow/{uid}` | Weapi | 空 |
+| UserUnfollow | follow（t≠1） | `/api/user/delfollow/{uid}` | Weapi | 空 |
+
+- 路径里带 uid，所以合同在 `user_profile_operation.cpp`（`collectionOperationContract` 不带参数）；变更是 `domain::UserFollow`，走 `CollectionMutation`／收藏 gateway，规则和收藏相同：要账号 Cookie、不重发、code 200 才 Acknowledged，其余 Rejected（带 providerCode），没看到回应是 Unknown。
+- **未实测**：成功的回应和风控（像评论那样）都还没见过，等维护者登录试。
+- 测试：`tst_user_profile` 的 `followWrites`（合同、payload、要账号、不重发）。
+
+## 6. 歌手 → 用户
+
+歌手详情（`/api/artist/head/info/get`）的 `data.user.userId` 映射到 `ArtistDetails::userId`（2026-11-10 实测：音乐人有，`data.user` 缺 userId 时没有；userId 不是合法 ID 或 `data.user` 不是对象时整页拒绝）。测试：`tst_catalog` 的 `artistSchemasAndUnknownPagination`。
