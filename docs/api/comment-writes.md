@@ -90,3 +90,7 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 ```
 
 ignored日志comment-write-final-{build,focused,thread}.log及comment-write-{boundaries,format,diff-check,fixed-hash,links,secrets}.log、静态audit／first／review记录单列。不交付本机cache／凭据；完整docs／FR-030-031部分／域17／TC-COMMENT-WRITE／R-026／路线图／handoff／indexes／NOTICE同步，本地独立提交不推送／发布／bundle。clang-format dry-run、git diff --check及fixed440／公共文件hash通过；**690本地Markdown文件引用、missing0**（排除代码，不查外链／anchor），改动文件有限live-looking Cookie长值模式hit0。证据单列，不当全面秘密／当前服务保证。真实issuerschema／TTL／绑定、NetEase权限／审核／响应／删除效果／Podcasts发布、UI与可靠核验仍另授权；旧v2门禁不绕过。参见[评论读取](comment-reads.md)、[后台生命周期](backend-runtime.md)、[写结果基础](collection-writes.md)。
+
+## 7. 真实服务实测（2026-11-10）
+
+维护者账号登录实测：点赞／取消点赞返回 200。发表（`/api/resource/comments/add`，XEAPI＋v3 令牌）每次都是业务码 250，响应 `data.dialog` 为"风险提示：抱歉，评论发布失败，请稍后重试"（按钮指向在线客服），同一账号在官方客户端能发。结论：直接向易盾 `v3/b` 要来的令牌没有设备采集数据，风控不接受；回复走同一条链，同样不可用。参考项目的 v2 路线要在浏览器环境里运行易盾网页 SDK，需要内嵌 Chromium，维护者决定不做。界面先隐藏发表和回复（[comments.md §10](../ui/pages/comments.md)）；本页的后端合同和代码不变。删除不需要令牌，尚未实测。
