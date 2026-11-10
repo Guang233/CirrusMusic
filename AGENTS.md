@@ -5,7 +5,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 ## Working with the maintainer
 
 - Reply in Chinese.
-- The agent's focus is the UI. Backend code may be changed when a task needs it (the maintainer lifted the UI-only rule on 2026-11-01); follow the backend's own docs and conventions (`docs/HANDOFF.md`) and report unrelated backend problems (e.g. the `tst_entity_search` failure below) to the maintainer.
+- The agent's focus is the UI. Backend code may be changed when a task needs it (the maintainer lifted the UI-only rule on 2026-11-01); follow the backend's own docs and conventions (`docs/HANDOFF.md`) and report unrelated backend problems (e.g. the `tst_entity_search` build failure below) to the maintainer.
 - Logging (backend and UI): use the categories in `src/logging/categories.h` and `log::event`/`log::field` from `src/logging/log.h`; never log URLs, bodies, credentials or user text. Conventions: `docs/tasks/logging.md` §9.
 - Keep verification proportional to the change; skip tests that are not needed.
 - Open design questions (UQ-xx in `docs/ui/README.md` §14) are decided by the maintainer: ask, then record the decision there.
@@ -45,10 +45,11 @@ clang-format --dry-run --Werror <changed C++ files>
 
 - Live preview: `tools/ui/gallery-watch.sh [--page buttons]` rebuilds and restarts the gallery on every UI source change (VS Code task `Gallery: watch`; also `Gallery: run` / `Gallery: screenshot`). Interactive gallery runs reopen the last page, cover and mode.
 - Release: same with `linux-release-local`.
+- Packages, CI and releases: `docs/tasks/release.md` (`packaging/`, `.github/workflows/`). Packages never contain the gallery or tests. The dev build gets its Wayland dock icon from `tools/ui/install-dev-desktop-entry.sh`.
 - `appCirrusMusic` is single-instance: while one runs (including the maintainer's), a second launch only activates it and exits 0. Linux hybrid-graphics machines render on the discrete GPU unless `CIRRUS_GPU=default` (docs/ui/pages/shell.md §7).
 - `appCirrusMusic` starts the real backend (UI phase 5, `docs/ui/integration.md`): it writes `~/.local/share/Cirrus/state.sqlite`, `~/.cache/Cirrus/resources` and the keyring (`com.guang233.Cirrus`), and talks to NetEase on start (anonymous registration). It logs to `$XDG_STATE_HOME/Cirrus/logs` (`docs/tasks/logging.md`). For test runs set `XDG_DATA_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME` to a fixed directory outside `/tmp` (the resource cache refuses a root with a group/world-writable ancestor), e.g. `build/linux-dev-local/xdg/`; do not start it with fresh data directories in a loop (the service throttles new anonymous registrations).
 - Offscreen uses the software renderer; custom shaders need `QT_QUICK_BACKEND=rhi QSG_RHI_BACKEND=opengl`.
-- Full `cmake --build --preset linux-dev-local` currently fails in the backend test `tst_entity_search` (pre-existing, from commit 2c164a7); UI targets and `cirrus_backend` build fine.
+- `tst_entity_search` does not compile (pre-existing, from commit 2c164a7); it is behind `CIRRUS_TEST_ENTITY_SEARCH` (default OFF), so full builds pass.
 - Backend tests: `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error`.
-- Known failures, all pre-existing (they fail the same at 97cbc0e): `backend_runtime` (`closeWhileDatabaseOpening`), and `playback_observation`, `playback_observation_feed`, `linux_observation_service` (`ListeningSession::select` of the active entry returns false). Reported to the maintainer 2026-11-08.
+- Known failures, all pre-existing (they fail the same at 97cbc0e): `backend_runtime` (`closeWhileDatabaseOpening`), and `playback_observation`, `playback_observation_feed`, `linux_observation_service` (`ListeningSession::select` of the active entry returns false). Reported to the maintainer 2026-11-08; CI excludes them (`ci.yml`) until fixed.
 - `tst_audio_engine` plays on the default output at volume 0 and skips itself without a device.

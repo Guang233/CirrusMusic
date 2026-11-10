@@ -134,7 +134,7 @@
 依据 [Linux 集成 §4、§7](../../10-linux-integration.md)，维护者决定（UQ-10）：
 
 - **托盘图标**：`QSystemTrayIcon`，CMake 选项 `CIRRUS_UI_TRAY`（默认开，链接 Qt Widgets、改用 `QApplication`；关掉时保留 `QGuiApplication`，关闭窗口总是退出）。Linux 上 Qt 走 StatusNotifierItem（KDE、带扩展的 GNOME、Waybar 等），没有时退到 XEmbed。菜单：当前歌曲（灰）、播放／暂停、上一首、下一首、显示主窗口、退出 Cirrus。单击显示窗口，中键播放／暂停。图标是应用图标（`ui/app/icons/cirrus-*.png`，见下面"应用图标"），同时作窗口图标。
-- **应用图标**（2026-11-10，维护者在两稿里选了"黄昏"）：黄昏天空里的三道卷云，从左下的细尾到右上的圆头，每道是柔和的云芯加一束细丝，没有音符。由 `tools/ui/make_icon.py` 画出母版 `ui/app/icons/cirrus.svg`，并渲染 16–1024 的 PNG 和 Windows 的 `cirrus.ico`（都是生成文件，改图标就改脚本再运行；需要 `rsvg-convert` 和 ImageMagick）。程序里用 PNG，因为云的柔边是 SVG 滤镜，Qt SVG 不一定支持。macOS 的 `.icns` 打包时用 `iconutil` 从 PNG 生成。草稿在 `build/research-scripts/icon-drafts/`。
+- **应用图标**（2026-11-10，维护者在两稿里选了"黄昏"）：黄昏天空里的三道卷云，从左下的细尾到右上的圆头，每道是柔和的云芯加一束细丝，没有音符。由 `tools/ui/make_icon.py` 画出母版 `ui/app/icons/cirrus.svg`，并渲染 16–1024 的 PNG 和 Windows 的 `cirrus.ico`（都是生成文件，改图标就改脚本再运行；需要 `rsvg-convert` 和 ImageMagick）。程序里用 PNG，因为云的柔边是 SVG 滤镜，Qt SVG 不一定支持。macOS 的 `.icns` 打包时用 `iconutil` 从 PNG 生成。草稿在 `build/research-scripts/icon-drafts/`。Linux 的 Dock／任务栏图标来自安装的桌面文件 `com.guang233.Cirrus.desktop` 和 hicolor 图标（Wayland 不看程序设的窗口图标），开发构建用 `tools/ui/install-dev-desktop-entry.sh`，见 [docs/tasks/release.md §2](../../tasks/release.md)。
 - **关闭主窗口**：第一次关闭弹出"关闭主窗口"对话框（`CloseDialog`，2026-11-01 按维护者要求改为单选项）：最小化到托盘，继续播放（默认）／退出 Cirrus，"不再询问"默认勾选，按钮为取消／确定；Esc、取消或关闭按钮不关窗口。设置 › 窗口 › "关闭主窗口时"：每次询问／最小化到托盘／退出。
 - **没有托盘时**（例如没装扩展的 GNOME）：维护者决定照样按用户的选择在后台播放，不改成退出。文案换成"在后台继续播放"／"后台播放"，并说明回到窗口的办法：再次打开 Cirrus（单实例激活）；退出用 Ctrl+Q（`StandardKey.Quit`，全应用快捷键）。每次关闭前重新检查托盘（面板可能比应用晚启动），出现后补上托盘图标。
 - **退出**：托盘菜单的退出、`Qt.quit()`、会话结束都先置 `Desktop.quitting`，此时关闭窗口不会被改成隐藏。
