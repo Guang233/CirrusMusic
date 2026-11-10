@@ -180,6 +180,7 @@ qCWarning(lcNet).noquote() << event("request.failed")
 | 音频引擎与存储 | 打开流（缓存命中、已缓存比例）、范围请求（区间、状态）、md5 校验失败、取消、设备变化与切换、解码错误、欠载汇总、缓存淘汰 |
 | 听歌上报 | 结算（结束方式、秒数、来源）、不上报的原因（太短、游客、FM、换号）、发送、结果（业务码、结果）、退出时 flush 超时 |
 | 音乐库写操作 | `ui.backend write.done`／`write.failed`（操作类别、结果、错误、业务码）、`write.dropped`（换了账号不发）、`write.refused`、`write.invalid`；不记歌单名、简介等内容 |
+| 评论写操作 | `ui.backend comment_write.done`／`comment_write.failed`（点赞、取消点赞、发表、回复、删除；结果、错误、业务码）、`comment_write.dropped`（换了账号不发）、`comment_write.refused`、`comment_write.invalid`；不记评论内容 |
 | 平台 | MPRIS、SMTC、Now Playing 的注册结果与失败，收到的外部命令（debug） |
 | 展示层 | 页面加载失败（`LoadableModel` 的错误类别）、图片解码失败、无效请求（程序错误） |
 | QML | 所有 QML 警告和 `console.*`（自动） |

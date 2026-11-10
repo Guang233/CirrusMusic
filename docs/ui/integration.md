@@ -300,3 +300,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
     - 新碟：`NewAlbums`，地区编号相同。
     - 新碟榜：本月的 `AlbumCharts`，取周或月那一组；服务端没给那一组时按失败处理（不知道≠空）。
   - 验证：构建、qmllint；游客身份离屏运行：首页四行和榜单都读到（每日推荐歌单报"需要登录"）。临时钩子让程序开在发现页并加载所有标签：分类 5 组／热门 10／精品分类 33，精品歌单 30 个、翻到第二页共 60 个，歌手 30、新碟 30、新碟榜周 28／月 300、榜单 5 个带预览加 60 个，均无 `music.invalid`；钩子已撤掉并确认程序照常开在首页。没有截图（真实应用不支持 `--grab`），页面观感要维护者看一眼。
+- **第 9 步（评论）代码完成（2026-11-10）**：`BackendComments`（`ui/presentation/backend/backend_comments.{h,cpp}`）。
+  - 读取（游客也能读）：评论列表用新版接口 `sortedComments`（推荐、最热、最新），游标是页号，最新排序另带上一页最后一条的时间（`"页:时间"`）；楼层（回复）用 `commentFloor`，游标是最后一条的时间。下一页后端不接受时（最新排序没有最后时间、超过最深页、时间与本页相同）就当作到底。作者、头像、时间、点赞数、是否已赞、回复数、被回复的那条（作者和内容）照后端给的映射。
+  - 写操作经 `CommentWrites` 分派器，规则与第 7 步的 `CollectionWrites` 相同：一次一条、按顺序，记下发起时的账号，换号不发，页面关掉写入照常完成。结果对照：Acknowledged 成功；Unknown 是"可能没成功"；`TokenUnavailable`（发表、回复要先拿的 v3 令牌没拿到，没有发出）按拒绝处理；业务码 405 显示为操作频繁。日志 `ui.backend comment_write.done`／`failed`／`dropped`／`refused`／`invalid`，只记操作类别和结果。
+  - 游客实测（离屏，临时钩子打开一首热门歌的评论页，已撤掉并确认程序照常开在首页）：推荐排序请求 20 条服务端回 26 条，原映射按"不超过 limit"整页拒绝（`music.invalid_why reason=comments_over_limit`，这次给评论映射器也加了原因）；改为新版列表最多 100 条（[comment-reads.md](../api/comment-reads.md)），评论页翻页时按 key 去掉已显示的。之后：推荐第一页 26 条、翻页共 119 条到底；展开楼层读到 11 条回复；最新排序 20 条、翻页 40 条。
+  - 待维护者登录验证：点赞／取消点赞、发表、回复、删除自己的评论。
