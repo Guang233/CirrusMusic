@@ -1,5 +1,9 @@
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
+# The executable's file name. Development builds keep appCirrusMusic (docs, launch
+# configs); packages name it cirrus (Linux) or Cirrus (Windows), docs/tasks/release.md §2.
+set(CIRRUS_EXECUTABLE "appCirrusMusic" CACHE STRING "File name of the app executable")
+
 qt_add_executable(appCirrusMusic
     main.cpp
     app_icon.h
@@ -93,6 +97,7 @@ set_target_properties(appCirrusMusic PROPERTIES
     WIN32_EXECUTABLE TRUE
     # Keep the historical location build/<preset>/appCirrusMusic used by docs and launch configs.
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    OUTPUT_NAME "${CIRRUS_EXECUTABLE}"
 )
 
 # Shown in Settings › About.
@@ -167,8 +172,4 @@ elseif(APPLE)
     endif()
 endif()
 
-install(TARGETS appCirrusMusic
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+include("${PROJECT_SOURCE_DIR}/cmake/CirrusInstall.cmake")

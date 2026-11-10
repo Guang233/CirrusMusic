@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata (software centres, AUR helpers). project_license is added once
+     the maintainer picks the project's license (docs/tasks/release.md §6). -->
+<component type="desktop-application">
+  <id>com.guang233.Cirrus</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>Cirrus</name>
+  <summary>Third-party NetEase Cloud Music client</summary>
+  <summary xml:lang="zh-CN">网易云音乐第三方客户端</summary>
+  <description>
+    <p>A desktop client for NetEase Cloud Music: search, playlists, daily recommendations and
+      lyrics, with a Material 3 Expressive interface.</p>
+    <p xml:lang="zh-CN">网易云音乐的桌面客户端：搜索、歌单、每日推荐与歌词，界面采用 Material 3 Expressive。</p>
+    <p>Cirrus is not affiliated with NetEase.</p>
+    <p xml:lang="zh-CN">Cirrus 与网易无关。</p>
+  </description>
+  <developer id="com.guang233">
+    <name>guang233</name>
+  </developer>
+  <url type="homepage">https://github.com/Guang233/CirrusMusic</url>
+  <launchable type="desktop-id">com.guang233.Cirrus.desktop</launchable>
+  <provides>
+    <binary>@CIRRUS_EXECUTABLE@</binary>
+  </provides>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@PROJECT_VERSION@" date="@CIRRUS_RELEASE_DATE@"/>
+  </releases>
+</component>
