@@ -54,7 +54,7 @@ SQL索引记录scope/kind/key、written/expires/touched、payload bytes/SHA256�
 - 仅HTTPS且无userinfo/fragment/query、无非443端口、无IP字面量；首版精确allowlist `p1.music.126.net` 至 `p4.music.126.net`，不是任意后缀匹配；其他host在service接纳前返回0拒绝，不切代理／DNS／IP、不自动HTTP升级，不扩大下载音乐权限。
 - 独立无凭据manager，不复用API Cookie／Referer／Authorization，不自动Cookie保存／加载或HTTP认证；禁止重定向，不处理Set-Cookie，不自动重试。
 - response只接受200，头部有界，原body≤4MiB，总deadline15s／无进展期限；TLS错误直接失败，压缩编码拒绝，不调用ignoreSslErrors。
-- 仅JPEG/PNG/单帧WebP（Content-Type接受image/jpeg、image/png、image/webp，以及图片主机实际发送的非标准image/jpg，2026-11-07 UI接入实测；部分播客封面上传的就是WebP、仍标image/jpg，维护者2026-11-08同意放开。WebP要Qt Image Formats的插件，没装时CMake警告、这类封面照旧拒为Unsupported），验证实际格式、非多帧、原尺寸≤2048×2048且总像素≤4M，再缩到128/256/512/1024之一（请求时带 `?param=<尺寸>y<尺寸>`，让图片主机先缩好；只加在网络请求上，缓存键和 `validCoverUrl` 仍是不带查询的网址。原图常超过2048像素／4 MiB，歌手头像尤甚，不带参数时被拒为 Unsupported／Capacity，2026-11-08 UI接入实测）；用新图像重绘／重新编码PNG以去掉EXIF／文本等原metadata，不保存任意响应原字节或SVG。未知／越界／插件失败明确拒绝；这些是输入限制，不声称图像解码器无漏洞。
+- 仅JPEG/PNG/WebP（Content-Type接受image/jpeg、image/png、image/webp，以及图片主机实际发送的非标准image/jpg，2026-11-07 UI接入实测；部分播客封面上传的就是WebP、仍标image/jpg，维护者2026-11-08同意放开。WebP要Qt Image Formats的插件，没装时CMake警告、这类封面照旧拒为Unsupported），验证实际格式、原尺寸≤2048×2048且总像素≤4M，再缩到128/256/512/1024之一（请求时带 `?param=<尺寸>y<尺寸>`，让图片主机先缩好；只加在网络请求上，缓存键和 `validCoverUrl` 仍是不带查询的网址。原图常超过2048像素／4 MiB，歌手头像尤甚，不带参数时被拒为 Unsupported／Capacity，2026-11-08 UI接入实测）；用新图像重绘／重新编码PNG以去掉EXIF／文本等原metadata，不保存任意响应原字节或SVG。未知／越界／插件失败明确拒绝；这些是输入限制，不声称图像解码器无漏洞。
 - 封面ttl≤7d且尊重Cache-Control/Age/Date/Expires，扣除保守网络耗时；剩余新鲜度＝min(7d, lifetime−age−耗时)（2026-11-07修正：原先先把lifetime截到7d再减age，CDN上age超过7d的封面——实测多数——永远不落盘；同日修正Date／Expires解析：HTTP日期以GMT结尾，Qt的RFC2822Date不接受，原先所有真实响应都解析失败而不落盘；两处与API响应共用`cacheRetention`）；no-store/no-cache、Vary/Pragma或策略解析不确定时仅返回本次网络结果，不落盘。重编码hash为内容fingerprint，不以ETag当完整性证明。
 
 allowlist为安全接纳范围，不是这四个host都已实测可用的承诺；普通fetch失败保留，不绕过。
@@ -63,12 +63,14 @@ allowlist为安全接纳范围，不是这四个host都已实测可用的承诺�
 
 日志（`cover.fetched`、新加的 `ui.backend cover.served`）显示：命中磁盘的封面中位 400–490 ms，下载的 930–1090 ms。原因有四处，参照 Glide／Coil 的做法逐一改了：
 
-1. **重新编码**：下载的 JPEG 解码后编成 PNG 存（每张约 250 KB），命中时还要再解码、编码一遍，都在后端线程上。维护者定：**存图片主机缩好的原字节**（约 10–80 KB）。下载后在线程池完整解码一次做 §5 的检查（`CoverFetcher::rejection`：格式、尺寸、单帧、能完整解码），通过才存；命中时库里已核对过 SHA256，只读文件头（`plausible`）。旧的 PNG 行照样能用。表里的封面行仍只来自 `CoverFetcher`。
+1. **重新编码**：下载的 JPEG 解码后编成 PNG 存（每张约 250 KB），命中时还要再解码、编码一遍，都在后端线程上。维护者定：**存图片主机缩好的原字节**（约 10–80 KB）。下载后在线程池完整解码一次做 §5 的检查（`CoverFetcher::rejection`：格式、尺寸、能完整解码；原来还拒多帧，见下），通过才存；命中时库里已核对过 SHA256，只读文件头（`plausible`）。旧的 PNG 行照样能用。表里的封面行仍只来自 `CoverFetcher`。
 2. **排队**：UI 队列一次 6 个、先来先服务，后端一次只下载 2 个、其余回 Busy 再重试，磁盘命中也排在下载后面。现在服务、worker、store 一次都可容 `CacheJobsInFlight`（32）个；worker 自己排队下载（同时 6 个，HTTP/2 共用连接），不再回 Busy；UI 队列最新的先跑，滚出屏幕的封面由 `CoverProvider` 取消。
 3. **SQLite**：每个任务都新开连接、走一遍路径安全检查、在主数据库的执行线程上跑；每次命中都单独写一次 `touched`（`synchronous=FULL` 下每次都要 fsync）。现在 store 有自己的线程（`cache`），连接打开一次（路径检查也一次）、出错才重开；写入攒 50 ms（最多 32 条）一个事务，各条用 SAVEPOINT 互不连累；命中的 `touched` 攒 2 s 一起写。读和写同一个 key 时先写。条目上限从 10000 提到 `CacheMaximumEntries`（100000）：新的封面小，512 MiB 能放下的远多于一万张。
 4. **内存**：`BackendImages` 留最近封面的原字节（64 MiB），`CoverProvider` 的解码图从 64 MiB 提到 128 MiB。
 
 结果（同一测试目录，离屏启动两次）：磁盘命中中位 23–29 ms，下载 135–305 ms。测试：`tst_cover_checks`（检查）、`tst_resource_cache_store`（命中、批量写、跨实例、替换和清除）。
+
+- **动态 WebP（2026-11-10）**：维护者日志里 33 次 `cover.failed err=Unsupported`，其中 21 次 `cover.rejected reason=frames`，多在首页和发现页。系统 Qt 6.12 上核对：Qt 写出的静态 WebP `supportsAnimation=0`，FFmpeg 做的 5 帧动态 WebP `supportsAnimation=1`、`imageCount=5`、能解出第一帧，所以这些是图片主机发来的动态封面。改为不再拒多帧，显示第一帧（存的仍是原字节）。另 3 次 `reason=format` 看不出格式：`cover.rejected` 加了 `format`（文件头里的格式名）。另外，本机的 Qt 6.11.2 没装 Qt Image Formats（`plugins/imageformats` 只有 gif、ico、jpeg、svg），WebP 封面在这套 Qt 下一律拒为 `format`；打包和用这套 Qt 开发时要装上这个模块。`tst_cover_checks` 加 `acceptsStillWebp`（没有插件时跳过）。
 
 ## 6. clear、取消、账号和重入
 
