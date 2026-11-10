@@ -64,6 +64,16 @@ struct PodcastSubscription {
                (action == CollectionAction::Collect || action == CollectionAction::Remove);
     }
 };
+// Follows or unfollows a user (docs/api/user-profile-reads.md §5).
+struct UserFollow {
+    QString userId;
+    CollectionAction action = CollectionAction::Collect;
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(userId) &&
+               (action == CollectionAction::Collect || action == CollectionAction::Remove);
+    }
+};
 // Budgets are local UTF-16 limits, not claims about provider maxima. Never normalize text.
 inline bool validPlaylistText(const QString& text, qsizetype maximum, bool description)
 {
@@ -107,7 +117,7 @@ using CollectionChange =
     std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
                  PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription,
                  PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder, PlaylistTagEdit,
-                 PlaylistMakePublic, PlaylistCoverReplace>;
+                 PlaylistMakePublic, PlaylistCoverReplace, UserFollow>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;

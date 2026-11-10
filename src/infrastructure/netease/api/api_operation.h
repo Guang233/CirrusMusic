@@ -124,7 +124,9 @@ enum class ApiOperation {
     UserPlaylists,
     UserFollows,
     UserFans,
-    UserRanking
+    UserRanking,
+    UserFollow,
+    UserUnfollow
 };
 
 struct ApiOperationContract {

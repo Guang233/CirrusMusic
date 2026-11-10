@@ -1,6 +1,7 @@
 #include "../support/fake_http.h"
 #include "../support/synthetic_user_profile.h"
 #include "application/music/music_query_service.h"
+#include "domain/music/collection_types.h"
 #include "infrastructure/netease/api/user_profile_operation.h"
 #include "infrastructure/netease/music/music_gateway.h"
 #include "infrastructure/netease/music/user_profile_mapper.h"
@@ -89,6 +90,26 @@ class UserProfileTest : public QObject
             QVERIFY(!requiresAccountCookie(op));
             QVERIFY(retriesLostConnection(op));
         }
+    }
+    // Follow writes: the signed-in account's, never resent, the uid in the path.
+    void followWrites()
+    {
+        const QJsonObject p{{"uid", "37179178"}};
+        auto c = operationContract(ApiOperation::UserFollow, p);
+        QVERIFY(c);
+        QCOMPARE(c->logicalPath, QString("/api/user/follow/37179178"));
+        QCOMPARE(c->protocol, Protocol::Weapi);
+        c = operationContract(ApiOperation::UserUnfollow, p);
+        QCOMPARE(c->logicalPath, QString("/api/user/delfollow/37179178"));
+        QCOMPARE(*operationPayload(ApiOperation::UserFollow, p), QJsonObject{});
+        QVERIFY(!operationPayload(ApiOperation::UserFollow, {{"uid", "1"}, {"x", 1}}));
+        QVERIFY(!operationContract(ApiOperation::UserUnfollow, {{"uid", "0"}}));
+        for (auto op : {ApiOperation::UserFollow, ApiOperation::UserUnfollow}) {
+            QVERIFY(requiresAccountCookie(op));
+            QVERIFY(!retriesLostConnection(op));
+        }
+        QVERIFY((UserFollow{"1", CollectionAction::Remove}.isValid()));
+        QVERIFY(!UserFollow{"x"}.isValid());
     }
     void invalidRequests()
     {

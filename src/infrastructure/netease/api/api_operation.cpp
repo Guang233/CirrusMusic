@@ -120,6 +120,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::UserFollows:
     case ApiOperation::UserFans:
     case ApiOperation::UserRanking:
+    case ApiOperation::UserFollow:
+    case ApiOperation::UserUnfollow:
         return std::nullopt; // closed user-profile adapter above
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:
@@ -422,6 +424,7 @@ bool retriesLostConnection(ApiOperation operation)
 bool requiresAccountCookie(ApiOperation operation)
 {
     return isTogetherOperation(operation) || isCommentWriteOperation(operation) ||
+           operation == ApiOperation::UserFollow || operation == ApiOperation::UserUnfollow ||
            isCollectionOperation(operation) || operation == ApiOperation::AccountIdentity ||
            operation == ApiOperation::DailyRecommendations ||
            operation == ApiOperation::DailyRecommendedPlaylists ||
@@ -827,6 +830,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::UserFollows:
     case ApiOperation::UserFans:
     case ApiOperation::UserRanking:
+    case ApiOperation::UserFollow:
+    case ApiOperation::UserUnfollow:
         break; // closed user-profile adapter above
     case ApiOperation::LatestAlbums:
     case ApiOperation::NewAlbums:
@@ -958,6 +963,8 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::UserFollows:
     case ApiOperation::UserFans:
     case ApiOperation::UserRanking:
+    case ApiOperation::UserFollow:
+    case ApiOperation::UserUnfollow:
         return false;
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:

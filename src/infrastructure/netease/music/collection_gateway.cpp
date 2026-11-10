@@ -38,6 +38,10 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                 return {c.action == CollectionAction::Collect ? ApiOperation::ArtistSubscribe
                                                               : ApiOperation::ArtistUnsubscribe,
                         {{QStringLiteral("id"), c.artist.value}}};
+            else if constexpr (std::is_same_v<T, UserFollow>)
+                return {c.action == CollectionAction::Collect ? ApiOperation::UserFollow
+                                                              : ApiOperation::UserUnfollow,
+                        {{QStringLiteral("uid"), c.userId}}};
             else if constexpr (std::is_same_v<T, PodcastSubscription>)
                 return {c.action == CollectionAction::Collect ? ApiOperation::PodcastSubscribe
                                                               : ApiOperation::PodcastUnsubscribe,

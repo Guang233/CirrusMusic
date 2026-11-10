@@ -33,7 +33,7 @@ bool validCursor(const QJsonValue& v)
 
 bool isUserProfileOperation(ApiOperation op)
 {
-    return op >= ApiOperation::UserDetail && op <= ApiOperation::UserRanking;
+    return op >= ApiOperation::UserDetail && op <= ApiOperation::UserUnfollow;
 }
 
 std::optional<ApiOperationContract> userProfileContract(ApiOperation op, const QJsonObject& p)
@@ -57,6 +57,12 @@ std::optional<ApiOperationContract> userProfileContract(ApiOperation op, const Q
     case ApiOperation::UserRanking:
         return ApiOperationContract{QStringLiteral("/api/v1/play/record"), Protocol::Weapi,
                                     ResponseEncoding::Json, 4 * 1024 * 1024};
+    case ApiOperation::UserFollow:
+        return ApiOperationContract{QStringLiteral("/api/user/follow/") + uid, Protocol::Weapi,
+                                    ResponseEncoding::Json, 64 * 1024};
+    case ApiOperation::UserUnfollow:
+        return ApiOperationContract{QStringLiteral("/api/user/delfollow/") + uid, Protocol::Weapi,
+                                    ResponseEncoding::Json, 64 * 1024};
     default:
         return std::nullopt;
     }
@@ -67,7 +73,8 @@ std::optional<QJsonObject> userProfilePayload(ApiOperation op, const QJsonObject
     const auto uid = uidOf(p);
     if (!isUserProfileOperation(op) || uid.isEmpty())
         return std::nullopt;
-    if (op == ApiOperation::UserDetail)
+    if (op == ApiOperation::UserDetail || op == ApiOperation::UserFollow ||
+        op == ApiOperation::UserUnfollow)
         return p.size() == 1 ? std::optional<QJsonObject>(QJsonObject{}) : std::nullopt;
     if (op == ApiOperation::UserRanking) {
         const auto type = p.value(QStringLiteral("type"));
