@@ -25,8 +25,11 @@ struct Levels {
     double content, contentVariant, contentChroma;
     double shadowTone;
 };
-constexpr Levels kDark{15, 35, 1.0, 20, 85, 68, 16, 10};
-constexpr Levels kLight{82, 94, 0.7, 90, 18, 40, 18, 35};
+// 2026-11-10: the light set was near white (82–94 at 70% chroma, "white too thick");
+// now 66–86 at a little more than the cover's chroma, content darker to keep 5:1 / 3:1
+// against tone 66 (15 → 5.8:1, 32 → 3.3:1).
+constexpr Levels kDark{15, 35, 1.15, 20, 85, 68, 16, 10};
+constexpr Levels kLight{66, 86, 1.15, 80, 15, 32, 18, 35};
 // Below this mean chroma the cover counts as black and white: neutral content.
 constexpr double kNeutralChroma = 5.0;
 constexpr double kGlareTone = 98;
@@ -82,6 +85,10 @@ void PlayerPalette::setDark(bool dark)
     emit darkChanged();
     update(true);
 }
+
+double PlayerPalette::toneLow() const { return (m_dark ? kDark : kLight).gridLow; }
+double PlayerPalette::toneHigh() const { return (m_dark ? kDark : kLight).gridHigh; }
+double PlayerPalette::chromaFactor() const { return (m_dark ? kDark : kLight).gridChroma; }
 
 QList<QColor> PlayerPalette::computeColors() const
 {

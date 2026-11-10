@@ -43,6 +43,11 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     Q_PROPERTY(QColor shadow READ shadow NOTIFY colorsChanged)
     Q_PROPERTY(QColor glare READ glare NOTIFY colorsChanged)
     Q_PROPERTY(cirrus::ui::ColorScheme* scheme READ scheme CONSTANT)
+    // The background's tone range and chroma factor (§3.1), for backgrounds mapped in a
+    // shader (the blurred cover).
+    Q_PROPERTY(double toneLow READ toneLow NOTIFY darkChanged)
+    Q_PROPERTY(double toneHigh READ toneHigh NOTIFY darkChanged)
+    Q_PROPERTY(double chromaFactor READ chromaFactor NOTIFY darkChanged)
 
   public:
     explicit PlayerPalette(QObject* parent = nullptr);
@@ -59,6 +64,9 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     [[nodiscard]] QColor shadow() const { return m_current.value(Shadow); }
     [[nodiscard]] QColor glare() const { return m_current.value(Glare); }
     [[nodiscard]] ColorScheme* scheme() const { return m_scheme; }
+    [[nodiscard]] double toneLow() const;
+    [[nodiscard]] double toneHigh() const;
+    [[nodiscard]] double chromaFactor() const;
 
     void classBegin() override {}
     void componentComplete() override;

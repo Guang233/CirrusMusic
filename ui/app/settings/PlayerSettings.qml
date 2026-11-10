@@ -27,9 +27,13 @@ SettingsGroup {
     }
     ChoiceSetting {
         text: qsTr("背景")
+        // Stored values: 0 flowing light, 3 still light, 1 blurred cover, 2 solid.
         options: [{
                 value: 0,
                 text: qsTr("流光")
+            }, {
+                value: 3,
+                text: qsTr("静态流光")
             }, {
                 value: 1,
                 text: qsTr("模糊封面")

@@ -9,9 +9,10 @@ import Cirrus.Presentation
 // - 0 flowing light: the cover's 5 × 5 colors as soft points drifting and slowly
 //   turning (shaders/flow.frag, a quarter of the size), scaled up with a dither.
 // - 1 blurred cover: the cover enlarged twice, the copies turning slowly against each
-//   other, heavily blurred at a quarter of the size and toned with the solid color;
-//   it flows and rests like the light.
+//   other, heavily blurred at a quarter of the size, its tones mapped into the
+//   background range (present.frag); it flows and rests like the light.
 // - 2 solid: the solid color.
+// - 3 still light: the flowing light's colors and shapes, not moving.
 // Without shaders (software renderer) it is a still gradient of the same colors. The
 // flow slows to a stop while paused and doesn't run with reduced motion or unseen.
 Item {
@@ -26,6 +27,8 @@ Item {
     readonly property bool shaders: GraphicsInfo.api !== GraphicsInfo.Software
                                     && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property bool still: !shaders || style === 2
+    // The light's texture: flowing (0) or still (3).
+    readonly property bool light: style === 0 || style === 3
     readonly property real speedFactor: [0.5, 1, 1.8][Math.max(0, Math.min(2,
                                                                            App.settings.playerFlowSpeed))]
 
@@ -46,7 +49,8 @@ Item {
 
     FrameAnimation {
         readonly property real target: root.flowing ? root.speedFactor : 0
-        running: root.visible && root.shaders && root.style !== 2 && !Theme.motion.reduced
+        running: root.visible && root.shaders && (root.style === 0 || root.style === 1)
+                 && !Theme.motion.reduced
                  && (target > 0 || root.speed > 0.001)
         onTriggered: {
             // Eases to the target speed over about two seconds.
@@ -110,7 +114,7 @@ Item {
     }
     ShaderEffectSource {
         id: cellTexture
-        sourceItem: root.shaders && root.style === 0 ? cells : null
+        sourceItem: root.shaders && root.light ? cells : null
         hideSource: true
         textureSize: Qt.size(5, 5)
         smooth: false
@@ -129,7 +133,7 @@ Item {
     }
     ShaderEffectSource {
         id: flowTexture
-        sourceItem: root.shaders && root.style === 0 ? flow : null
+        sourceItem: root.shaders && root.light ? flow : null
         hideSource: true
         smooth: true
         visible: false
@@ -186,11 +190,6 @@ Item {
             blur: 1
             autoPaddingEnabled: false
         }
-        // Tones it into the background range (§3.1).
-        Rectangle {
-            anchors.fill: parent
-            color: Qt.alpha(root.colors.solid, 0.55)
-        }
     }
     ShaderEffectSource {
         id: blurredTexture
@@ -205,6 +204,11 @@ Item {
         readonly property var source: root.style === 1 ? blurredTexture : flowTexture
         readonly property size boxSize: Qt.size(width, height)
         readonly property real radius: root.radius
+        // The blurred cover is mapped into the background range here (§3.1).
+        readonly property real toneMap: root.style === 1 ? 1 : 0
+        readonly property real toneLow: root.colors.toneLow
+        readonly property real toneHigh: root.colors.toneHigh
+        readonly property real chroma: root.colors.chromaFactor
         anchors.fill: parent
         visible: !root.still
         fragmentShader: Qt.resolvedUrl("shaders/present.frag.qsb")
