@@ -11,7 +11,7 @@ import Cirrus.Presentation
 // slides in once the header has scrolled away. Keyboard: the list is one Tab stop;
 // ↑/↓ move between comments, Enter opens or closes the replies (or loads more on a
 // floor's end), Space unfolds a long text, L likes, R replies, the menu key opens the
-// menu.
+// menu. Publishing and replying are hidden for now (`canWrite`).
 Item {
     id: page
 
@@ -29,6 +29,9 @@ Item {
     // Comment text is easier to read short of the full width.
     readonly property real textWidth: 720
     readonly property bool signedIn: App.session.signedIn
+    // Publishing and replying: off, NetEase's risk control refuses them from Cirrus
+    // (docs/ui/pages/comments.md §10). Liking and deleting stay.
+    readonly property bool canWrite: false
     // The comment or reply whose reply box is open.
     property string replyKey
     // The header's publish box (created by the list).
@@ -40,6 +43,8 @@ Item {
     property Item sortRow: null
 
     function writeComment(): void {
+        if (!canWrite)
+            return;
         if (!signedIn) {
             shell.openLogin();
             return;
@@ -59,6 +64,8 @@ Item {
     }
 
     function startReply(row: int): void {
+        if (!canWrite)
+            return;
         if (!signedIn) {
             shell.openLogin();
             return;
@@ -296,7 +303,7 @@ Item {
                     page.toggleLike(row);
                 break;
             case Qt.Key_R:
-                if (usable)
+                if (usable && page.canWrite)
                     page.startReply(row);
                 break;
             case Qt.Key_Return:
@@ -409,6 +416,7 @@ Item {
             Item {
                 width: Math.min(parent.width, page.textWidth + 56)
                 height: composerBox.height
+                visible: page.canWrite
                 Avatar {
                     width: 40
                     height: 40
@@ -445,7 +453,7 @@ Item {
             TabState {
                 model: pageModel
                 emptyGlyph: Symbols.comment
-                emptyText: qsTr("还没有评论，来写第一条吧")
+                emptyText: page.canWrite ? qsTr("还没有评论，来写第一条吧") : qsTr("还没有评论")
                 skeleton: Column {
                     width: page.contentWidth
                     spacing: 24
@@ -773,6 +781,7 @@ Item {
                 }
                 Button {
                     anchors.verticalCenter: parent.verticalCenter
+                    visible: page.canWrite
                     focusPolicy: Qt.NoFocus
                     variant: Md.Text
                     size: Md.XSmall
@@ -883,13 +892,14 @@ Item {
             }
             SortButtons {
                 id: compactSort
-                x: writeButton.x - width - 16
+                x: (writeButton.visible ? writeButton.x - 16 : parent.width) - width
                 anchors.verticalCenter: parent.verticalCenter
             }
             Button {
                 id: writeButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
+                visible: page.canWrite
                 variant: Md.Tonal
                 size: Md.XSmall
                 glyph: Symbols.edit
@@ -899,7 +909,7 @@ Item {
         }
     }
 
-    // Copy, reply, delete (the account's own).
+    // Copy, reply (when allowed), delete (the account's own).
     Menu {
         id: commentMenu
         property int row: -1
@@ -923,6 +933,8 @@ Item {
             onTriggered: App.copyText(commentMenu.text)
         }
         MenuItem {
+            visible: page.canWrite
+            height: visible ? implicitHeight : 0
             glyph: Symbols.comment
             text: qsTr("回复")
             trailingText: "R"
