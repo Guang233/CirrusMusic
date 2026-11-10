@@ -82,14 +82,15 @@ jobs:
 
       # Known failures, excluded until fixed (AGENTS.md "Build and verify"):
       # backend_runtime (closeWhileDatabaseOpening), playback_observation,
-      # playback_observation_feed, linux_observation_service.
+      # playback_observation_feed, linux_observation_service; audio_store
+      # (interruptWakesOneRead is timing-dependent: fails about half the runs alone).
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           dbus-run-session --
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service)$"
+          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
 
   windows:
     name: Windows build
