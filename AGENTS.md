@@ -16,9 +16,10 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - UI code lives in `ui/` (QML modules + gallery); the plan, phases and open questions are in `docs/ui/README.md`. Shell/pages use Material 3 Expressive; the player page uses an Apple Music-like style.
 - Cross-platform project, Linux first. Windows/macOS are not verified locally.
 - Commit often (small conventional commits: `feat(ui): ...`, `docs(ui): ...`), without a Claude co-author trailer. The remote `origin` is a private GitHub repo; push only when the maintainer asks, never automatically after commits.
-- Do not hand-edit generated files: `ui/theme/Symbols.qml`, `ui/theme/fonts/*.ttf`, `ui/samples/**`. Regenerate with:
+- Do not hand-edit generated files: `ui/theme/Symbols.qml`, `ui/theme/fonts/*.ttf`, `ui/samples/**`, `ui/app/icons/cirrus*`. Regenerate with:
   - `python3 tools/ui/prepare_fonts.py` (after editing `ui/theme/fonts/symbols.txt`; needs fontTools). It also fetches the default text font MiSans (`ui/theme/fonts/MiSansVF.ttf`, committed unmodified; its license forbids modifying it, so never subset it). Builds without the file fall back to the system font with a CMake warning.
   - `python3 tools/ui/generate_samples.py` (needs Pillow)
+  - `python3 tools/ui/make_icon.py` (the app icon `ui/app/icons/cirrus*`; needs rsvg-convert and ImageMagick)
 - QML singletons need `QT_QML_SINGLETON_TYPE` in CMake; executables link `<module>plugin` and use `Q_IMPORT_QML_PLUGIN`.
 - Avoid QML property names of the form `onXxx` (parsed as signal handlers) and ECMAScript reserved words.
 - Do not copy code from GPL/AGPL reference projects; see `docs/ui/references.md`.
