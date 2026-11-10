@@ -7,6 +7,8 @@ import Cirrus.Presentation
 
 // Footer of the navigation rail: the account (avatar and name; sign in for guests)
 // and settings. Collapsed they stack in the 96 px column, expanded they share a row.
+// A click on the account opens its user page; the context menu (right click, the Menu
+// key) has it and signing out.
 Item {
     id: root
 
@@ -15,6 +17,7 @@ Item {
 
     signal signInRequested
     signal settingsRequested
+    signal profileRequested
 
     implicitHeight: Theme.motion.lerp(104, 56, progress)
 
@@ -29,9 +32,20 @@ Item {
         Accessible.name: App.session.signedIn ? App.session.nickname : qsTr("登录")
         onClicked: {
             if (App.session.signedIn)
-                accountMenu.popup(account, 0, -accountMenu.implicitHeight - 4);
+                root.profileRequested();
             else
                 root.signInRequested();
+        }
+        Keys.onMenuPressed: openMenu()
+
+        function openMenu(): void {
+            if (App.session.signedIn)
+                accountMenu.popup(account, 0, -accountMenu.implicitHeight - 4);
+        }
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: account.openMenu()
         }
 
         HoverHandler {
@@ -81,6 +95,11 @@ Item {
 
         Menu {
             id: accountMenu
+            MenuItem {
+                glyph: Symbols.person
+                text: qsTr("我的主页")
+                onTriggered: root.profileRequested()
+            }
             MenuItem {
                 glyph: Symbols.logout
                 text: qsTr("退出登录")

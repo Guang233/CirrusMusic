@@ -483,6 +483,7 @@ Item {
                 progress: rail.progress
                 onSignInRequested: shell.openLogin()
                 onSettingsRequested: shell.openSettings()
+                onProfileRequested: shell.openUser(App.session.accountKey)
             }
         }
         onActivated: index => shell.select(index)
