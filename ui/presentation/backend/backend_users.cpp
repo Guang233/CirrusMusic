@@ -15,8 +15,26 @@ namespace
 
 using namespace mapping;
 
-// The service's most per page; a user's playlists come in one read of this many.
+// The service's most per page.
 constexpr int kPage = 100;
+// A user's playlists come a page at a time, up to this many.
+constexpr int kMaxPlaylists = 1000;
+
+CollectionItem userPlaylistOf(const domain::LibraryPlaylist& playlist, const QString& user)
+{
+    CollectionItem item;
+    item.key = playlist.id.value;
+    item.kind = collection::Playlist;
+    item.title = playlist.title;
+    item.count = playlist.trackCount ? int(*playlist.trackCount) : -1;
+    item.coverKey = coverKey(playlist.cover);
+    // Its liked-songs playlist is its own; otherwise by the creator.
+    if (playlist.accountLikedSongs == true)
+        item.created = true;
+    else if (playlist.creatorId)
+        item.created = *playlist.creatorId == user;
+    return item;
+}
 
 UserItem userItemOf(const domain::UserSummary& user)
 {
@@ -81,33 +99,61 @@ Request BackendCatalog::user(const QString& key, Reply<UserInfo> reply)
 
 Request BackendCatalog::userPlaylists(const QString& key, Reply<QList<CollectionItem>> reply)
 {
-    const domain::UserProfileQuery query{domain::UserPlaylistsQuery{key, {kPage, 0}}};
-    if (!query.isValid())
+    if (!domain::UserProfileQuery{domain::UserPlaylistsQuery{key}}.isValid())
         return rejectLater(this, std::move(reply));
-    return read<domain::UserProfilePage>(
-        m_requests, [query](BackendFacade& facade) { return facade.userProfile(query); },
-        std::move(reply),
-        [key](const domain::UserProfilePage& page) {
-            QList<CollectionItem> items;
-            const auto* found = std::get_if<domain::UserPlaylists>(&page.content);
-            if (!found)
-                return items;
-            for (const auto& playlist : found->playlists) {
-                CollectionItem item;
-                item.key = playlist.id.value;
-                item.kind = collection::Playlist;
-                item.title = playlist.title;
-                item.count = playlist.trackCount ? int(*playlist.trackCount) : -1;
-                item.coverKey = coverKey(playlist.cover);
-                // Its liked-songs playlist is its own; otherwise by the creator.
-                if (playlist.accountLikedSongs == true)
-                    item.created = true;
-                else if (playlist.creatorId)
-                    item.created = *playlist.creatorId == key;
-                items.append(item);
-            }
-            return items;
-        });
+    // Page after page until the last; the page shows them all at once.
+    struct Fetch {
+        QString key;
+        QList<CollectionItem> items;
+        Request current;
+        Reply<QList<CollectionItem>> reply;
+    };
+    auto fetch = std::make_shared<Fetch>();
+    fetch->key = key;
+    fetch->reply = std::move(reply);
+    auto next = std::make_shared<std::function<void(int)>>();
+    *next = [this, weak = std::weak_ptr<Fetch>(fetch),
+             weakNext = std::weak_ptr<std::function<void(int)>>(next)](int offset) {
+        const auto fetch = weak.lock();
+        if (!fetch)
+            return;
+        const domain::UserProfileQuery query{
+            domain::UserPlaylistsQuery{fetch->key, {kPage, offset}}};
+        fetch->current = read<domain::UserProfilePage>(
+            m_requests, [query](BackendFacade& facade) { return facade.userProfile(query); },
+            Reply<domain::UserPlaylists>(
+                [weak, weakNext, offset](Outcome<domain::UserPlaylists> page) {
+                    const auto fetch = weak.lock();
+                    const auto next = weakNext.lock();
+                    if (!fetch || !next || !fetch->reply)
+                        return;
+                    fetch->current.release(); // done; the next page replaces it
+                    if (!page.value) {
+                        // A later page failing keeps what came; the first fails the read.
+                        auto done = std::exchange(fetch->reply, {});
+                        if (offset == 0)
+                            done({std::nullopt, false, page.failure});
+                        else
+                            done({fetch->items, true, std::nullopt});
+                        return;
+                    }
+                    for (const auto& playlist : page.value->playlists)
+                        fetch->items.append(userPlaylistOf(playlist, fetch->key));
+                    const int nextOffset = offset + int(page.value->playlists.size());
+                    if (page.value->hasMore == true && !page.value->playlists.isEmpty() &&
+                        nextOffset < kMaxPlaylists)
+                        (*next)(nextOffset);
+                    else
+                        std::exchange(fetch->reply, {})({fetch->items, false, std::nullopt});
+                }),
+            [](const domain::UserProfilePage& page) {
+                const auto* found = std::get_if<domain::UserPlaylists>(&page.content);
+                return found ? *found : domain::UserPlaylists{};
+            });
+    };
+    (*next)(0);
+    // The fetch (and with it the step function) lives as long as the request.
+    return Request([fetch, next] { fetch->current.cancel(); });
 }
 
 Request BackendCatalog::userRanking(const QString& key, bool allTime, Reply<UserRanking> reply)
