@@ -114,7 +114,9 @@ QList<QColor> PlayerPalette::computeColors() const
         const mcu::Hct& cell = cells[i];
         const double tone = levels.gridLow + (0.5 + (cell.get_tone() - middle) / span) *
                                                  (levels.gridHigh - levels.gridLow);
-        colors[i] = fromHct(cell.get_hue(), cell.get_chroma() * levels.gridChroma, tone);
+        // A black and white cover stays gray (its slight tints would turn green or cyan).
+        const double chroma = m_palette.monochrome ? 0.0 : cell.get_chroma() * levels.gridChroma;
+        colors[i] = fromHct(cell.get_hue(), chroma, tone);
         const double angle = cell.get_hue() * std::numbers::pi / 180.0;
         x += cell.get_chroma() * std::cos(angle);
         y += cell.get_chroma() * std::sin(angle);
@@ -125,7 +127,7 @@ QList<QColor> PlayerPalette::computeColors() const
     double hue = std::atan2(y, x) * 180.0 / std::numbers::pi;
     if (hue < 0)
         hue += 360.0;
-    const bool neutral = chromaSum / kGridCells < kNeutralChroma;
+    const bool neutral = m_palette.monochrome || chromaSum / kGridCells < kNeutralChroma;
     const double contentChroma = neutral ? 0.0 : levels.contentChroma;
     colors[Content] = fromHct(hue, contentChroma, levels.content);
     colors[ContentVariant] = fromHct(hue, contentChroma, levels.contentVariant);
@@ -134,9 +136,10 @@ QList<QColor> PlayerPalette::computeColors() const
     const mcu::Hct main = valid && !m_palette.dominant.isEmpty()
                               ? toHct(m_palette.dominant.constFirst())
                               : mcu::Hct(0, 0, 50);
-    colors[Solid] =
-        fromHct(main.get_hue(), main.get_chroma() * levels.gridChroma, levels.solidTone);
-    colors[Shadow] = fromHct(darkest.get_hue(), darkest.get_chroma(), levels.shadowTone);
+    const double solidChroma = m_palette.monochrome ? 0.0 : main.get_chroma() * levels.gridChroma;
+    colors[Solid] = fromHct(main.get_hue(), solidChroma, levels.solidTone);
+    colors[Shadow] = fromHct(darkest.get_hue(), m_palette.monochrome ? 0.0 : darkest.get_chroma(),
+                             levels.shadowTone);
     return colors;
 }
 

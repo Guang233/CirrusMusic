@@ -16,6 +16,8 @@ namespace cirrus::ui
 //  dominant: up to 5 most common quantized colors
 //  grid:     the cover averaged down to 5 x 5, row-major: where its colors are, for
 //            the player background (docs/ui/pages/player.md §3.2)
+//  monochrome: mostly black and white (little of it has real color): the seed is a
+//            neutral gray and the player drops the grid's chroma (player.md §3.1)
 class CoverPalette
 {
     Q_GADGET
@@ -25,6 +27,7 @@ class CoverPalette
     Q_PROPERTY(QList<QColor> accents MEMBER accents CONSTANT)
     Q_PROPERTY(QList<QColor> dominant MEMBER dominant CONSTANT)
     Q_PROPERTY(QList<QColor> grid MEMBER grid CONSTANT)
+    Q_PROPERTY(bool monochrome MEMBER monochrome CONSTANT)
 
   public:
     bool valid = false;
@@ -32,6 +35,7 @@ class CoverPalette
     QList<QColor> accents;
     QList<QColor> dominant;
     QList<QColor> grid;
+    bool monochrome = false;
 
     static constexpr int kGridSize = 5;
 };

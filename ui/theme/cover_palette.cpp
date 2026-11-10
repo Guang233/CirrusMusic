@@ -1,6 +1,7 @@
 #include "cover_palette.h"
 #include "logging/log.h"
 
+#include "cpp/cam/hct.h"
 #include "cpp/quantize/celebi.h"
 #include "cpp/score/score.h"
 
@@ -9,6 +10,7 @@
 #include <QLoggingCategory>
 
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 namespace cirrus::ui
@@ -18,6 +20,12 @@ namespace
 constexpr int kDecodeEdge = 128; // MD3 recommends ~112-128 px for quantization
 constexpr int kQuantizeColors = 128;
 constexpr int kDominantColors = 5;
+// A pixel with real color, and how much of the cover must have it not to count as black
+// and white. MD3's scoring picks a colorful minority (a small green patch on a black and
+// white cover, 2026-11-10) and a tinted gray passes its chroma 5 cut; the player turned
+// such covers green.
+constexpr double kColorfulChroma = 15.0;
+constexpr double kColorfulShare = 0.10;
 } // namespace
 
 CoverPalette extractCoverPalette(const QString& path)
@@ -72,6 +80,19 @@ CoverPalette extractCoverPalette(QImage image)
     for (mcu::Argb argb : ranked)
         palette.accents << QColor::fromRgb(argb);
     palette.seed = palette.accents.constFirst();
+
+    std::uint64_t total = 0, colorful = 0;
+    double tone = 0;
+    for (const auto& [argb, count] : quantized.color_to_count) {
+        const mcu::Hct hct(argb);
+        total += count;
+        tone += hct.get_tone() * count;
+        if (hct.get_chroma() >= kColorfulChroma)
+            colorful += count;
+    }
+    palette.monochrome = total == 0 || double(colorful) / double(total) < kColorfulShare;
+    if (palette.monochrome) // the cover's mean tone, no hue: the monochrome scheme
+        palette.seed = QColor::fromRgb(mcu::Hct(0, 0, total ? tone / double(total) : 50).ToInt());
 
     std::vector<std::pair<mcu::Argb, uint32_t>> byCount(quantized.color_to_count.begin(),
                                                         quantized.color_to_count.end());

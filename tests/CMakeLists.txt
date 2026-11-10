@@ -337,6 +337,12 @@ qt_add_executable(tst_cover_checks unit/cover_checks_test.cpp)
 target_link_libraries(tst_cover_checks PRIVATE cirrus_resource_cache Qt6::Test Qt6::Gui)
 add_test(NAME cover_checks COMMAND tst_cover_checks)
 
+# The cover palette's black-and-white rule (a plain C++ check of ui/theme, not a QML test).
+qt_add_executable(tst_cover_palette unit/cover_palette_test.cpp)
+target_include_directories(tst_cover_palette PRIVATE ${PROJECT_SOURCE_DIR}/ui/theme)
+target_link_libraries(tst_cover_palette PRIVATE cirrus_ui_theme cirrus_mcu Qt6::Test Qt6::Gui)
+add_test(NAME cover_palette COMMAND tst_cover_palette)
+
 qt_add_executable(tst_resource_cache_store unit/resource_cache_store_test.cpp)
 target_link_libraries(tst_resource_cache_store PRIVATE cirrus_resource_cache Qt6::Test)
 add_test(NAME resource_cache_store COMMAND tst_resource_cache_store)

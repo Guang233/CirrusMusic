@@ -33,7 +33,7 @@ SettingsGroup {
                 text: qsTr("流光")
             }, {
                 value: 3,
-                text: qsTr("静态流光")
+                text: qsTr("静态")
             }, {
                 value: 1,
                 text: qsTr("模糊封面")
