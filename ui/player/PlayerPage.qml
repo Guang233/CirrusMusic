@@ -824,6 +824,12 @@ FocusScope {
                 id: queueSheet
                 title: qsTr("播放队列")
                 shown: page.sheet === 1
+                actions: IconButton {
+                    visible: App.player.mode === Playback.Queue && App.player.queue.count > 0
+                    glyph: Symbols.clear_all
+                    text: qsTr("清空播放队列")
+                    onClicked: clearQueueDialog.open()
+                }
                 PlayerQueue {
                     id: queuePanel
                     anchors.fill: parent
@@ -1031,5 +1037,14 @@ FocusScope {
             }
         }
         event.accepted = true;
+    }
+
+    Dialog {
+        id: clearQueueDialog
+        title: qsTr("清空播放队列？")
+        supportingText: qsTr("正在播放的歌也会停下。")
+        acceptText: qsTr("清空")
+        rejectText: qsTr("取消")
+        onAccepted: App.player.clearQueue()
     }
 }

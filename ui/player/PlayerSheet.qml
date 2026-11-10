@@ -15,6 +15,8 @@ Rectangle {
     property bool shown
     readonly property Item closeButton: close
     default property alias content: body.data
+    // Buttons in the title row, left of the close button.
+    property alias actions: actionRow.data
 
     signal closeRequested
 
@@ -57,6 +59,13 @@ Rectangle {
         glyph: Symbols.close
         text: qsTr("关闭")
         onClicked: root.closeRequested()
+    }
+    Row {
+        id: actionRow
+        anchors.right: close.left
+        anchors.rightMargin: 4
+        anchors.verticalCenter: heading.verticalCenter
+        spacing: 4
     }
     Item {
         id: body

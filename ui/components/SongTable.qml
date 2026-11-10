@@ -920,6 +920,20 @@ Item {
                     App.player.playSongs(songMenu.keys, 0, table.origin, table.originId);
             }
         }
+        MenuItem {
+            visible: !table.voices
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.queue_play_next
+            text: qsTr("下一首播放")
+            onTriggered: App.player.addSongs(songMenu.keys, true, table.origin, table.originId)
+        }
+        MenuItem {
+            visible: !table.voices
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.add_to_queue
+            text: qsTr("加到播放队列")
+            onTriggered: App.player.addSongs(songMenu.keys, false, table.origin, table.originId)
+        }
         MenuSeparator {
             visible: !table.voices
         }

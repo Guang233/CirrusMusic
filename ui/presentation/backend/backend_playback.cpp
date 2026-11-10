@@ -10,6 +10,7 @@
 #include "infrastructure/runtime/backend_runtime.h"
 #include "infrastructure/storage/listening_state_service.h"
 
+#include <QSet>
 #include <QSettings>
 #include <QTimer>
 
@@ -350,7 +351,10 @@ void BackendPlayback::keep(qint64 now)
 {
     // The backend stopped it: a session change (signing in or out) retires the queue and
     // stops playback. Keep where it was, and play on once the change is over if it was
-    // playing. The user removed the last song: keep that song, from its start.
+    // playing. The user removed the last song: keep that song, from its start. The user
+    // cleared the queue: nothing to keep.
+    if (m_clearing)
+        return;
     Kept kept;
     kept.current = m_state.current;
     kept.durationMs = m_state.durationMs;
@@ -823,6 +827,69 @@ void BackendPlayback::removeAt(int index)
     if (playing && last && !m_entries.isEmpty() && m_entries.first() != entry)
         if (const auto order = m_session->playOrder(); !order.isEmpty())
             m_session->select(order.first());
+}
+
+bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOrigin& origin)
+{
+    if (!m_session || m_state.mode == playback::PersonalFm)
+        return false;
+    QList<domain::SongId> ids;
+    QStringList valid;
+    for (const QString& key : keys)
+        if (domain::validMusicId(key)) {
+            ids.append(domain::SongId{key});
+            valid << key;
+        }
+    if (ids.isEmpty())
+        return false;
+    qCInfo(lcUi) << log::event("player.add") << log::field("count", ids.size())
+                 << log::field("next", next) << log::field("origin", playback::Origin(origin.kind));
+    if (m_state.queue.isEmpty()) {
+        startQueue(valid, 0, QList<PlayOrigin>(valid.size(), origin));
+        return true;
+    }
+    if (showingKept()) {
+        // Held over a session change: into what plays on once it is over.
+        Kept& kept = *m_kept;
+        const qsizetype at = next ? kept.index + 1 : kept.keys.size();
+        for (qsizetype i = 0; i < valid.size(); ++i) {
+            kept.keys.insert(at + i, valid.at(i));
+            kept.origins.insert(std::min(at + i, kept.origins.size()), origin);
+        }
+        update();
+        return true;
+    }
+    loadOrigins();
+    QSet<QUuid> before;
+    for (const auto& entry : m_session->queue().entries)
+        before.insert(entry.id);
+    if (!m_session->append(ids, next)) {
+        qCWarning(lcUi) << log::event("player.add_refused");
+        return false;
+    }
+    if (origin.kind != playback::NoOrigin) {
+        for (const auto& entry : m_session->queue().entries)
+            if (!before.contains(entry.id))
+                m_origins.insert(entry.id, origin);
+        saveOrigins();
+    }
+    return true;
+}
+
+void BackendPlayback::clearQueue()
+{
+    if (!m_session || m_state.mode != playback::Queue)
+        return;
+    qCInfo(lcUi) << log::event("player.clear") << log::field("count", m_state.queue.size());
+    m_kept.reset();
+    m_clearing = true; // the stop it makes is the user's
+    m_session->clear();
+    m_clearing = false;
+    m_kept.reset();
+    loadOrigins();
+    m_origins.clear();
+    saveOrigins();
+    update();
 }
 
 void BackendPlayback::move(int from, int to)

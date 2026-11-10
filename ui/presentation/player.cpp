@@ -143,6 +143,28 @@ void Player::playSongs(const QStringList& keys, int index, int origin, const QSt
         m_source->playSongs(keys, index, PlayOrigin{origin, originId});
 }
 
+void Player::addSongs(const QStringList& keys, bool next, int origin, const QString& originId)
+{
+    if (!m_source || keys.isEmpty())
+        return;
+    if (m_snapshot.mode == playback::PersonalFm) {
+        emit notice(tr("私人 FM 不能加入队列"));
+        return;
+    }
+    const bool playing = !m_snapshot.queue.isEmpty();
+    if (m_source->addSongs(keys, next, PlayOrigin{origin, originId}) && playing)
+        emit notice(next ? (keys.size() > 1 ? tr("%1 首歌将在这首之后播放").arg(keys.size())
+                                            : tr("将在这首之后播放"))
+                         : (keys.size() > 1 ? tr("已把 %1 首歌加到播放队列").arg(keys.size())
+                                            : tr("已加到播放队列")));
+}
+
+void Player::clearQueue()
+{
+    if (m_source && m_snapshot.mode == playback::Queue)
+        m_source->clearQueue();
+}
+
 void Player::playVoices(const QStringList& keys, int index)
 {
     if (canPlayVoices() && index >= 0 && index < keys.size())

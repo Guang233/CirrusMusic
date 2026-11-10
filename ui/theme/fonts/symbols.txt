@@ -135,3 +135,6 @@ fullscreen
 fullscreen_exit
 tune
 bug_report
+queue_play_next
+add_to_queue
+clear_all

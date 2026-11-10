@@ -259,6 +259,12 @@ class PlaybackSource
     // playing song goes on with the next one; moving puts the entry at `to`.
     virtual void removeAt(int index) = 0;
     virtual void move(int from, int to) = 0;
+    // Adds songs right after the playing one (`next`) or at the end; with nothing in
+    // the queue they play. False in Personal FM (its queue can't be edited) or when the
+    // queue can't take them.
+    virtual bool addSongs(const QStringList& keys, bool next, const PlayOrigin& origin = {}) = 0;
+    // Empties the queue and stops (Queue mode).
+    virtual void clearQueue() = 0;
     virtual void setVolume(double volume) = 0;
     // Volume normalization (a setting; the fake plays nothing to normalize).
     virtual void setNormalization(bool on) { Q_UNUSED(on); }

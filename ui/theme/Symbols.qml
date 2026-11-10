@@ -124,6 +124,9 @@ QtObject {
     readonly property string fullscreen_exit: "\ue5d1"
     readonly property string tune: "\ue429"
     readonly property string bug_report: "\ue868"
+    readonly property string queue_play_next: "\ue066"
+    readonly property string add_to_queue: "\ue05c"
+    readonly property string clear_all: "\ue0b8"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -246,6 +249,9 @@ QtObject {
         "fullscreen",
         "fullscreen_exit",
         "tune",
-        "bug_report"
+        "bug_report",
+        "queue_play_next",
+        "add_to_queue",
+        "clear_all"
     ]
 }

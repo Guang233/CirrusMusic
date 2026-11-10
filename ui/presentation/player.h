@@ -96,6 +96,11 @@ class Player : public QObject
     // Edits the queue (mode Queue): the rows change at once, the source follows.
     Q_INVOKABLE void removeAt(int index);
     Q_INVOKABLE void moveQueue(int from, int to);
+    // Adds `keys` right after the playing song (`next`) or at the end, as playSongs()
+    // takes them; with an empty queue they play. Personal FM refuses (a notice says why).
+    Q_INVOKABLE void addSongs(const QStringList& keys, bool next, int origin = 0,
+                              const QString& originId = QString());
+    Q_INVOKABLE void clearQueue();
     // Details for queue rows [first, last] (clamped), e.g. the rows on screen.
     Q_INVOKABLE void ensureQueueLoaded(int first, int last);
     Q_INVOKABLE void setVolume(double volume);

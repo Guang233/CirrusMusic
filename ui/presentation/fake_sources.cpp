@@ -1982,6 +1982,38 @@ class FakePlayback : public QObject, public PlaybackSource
         notify();
     }
 
+    bool addSongs(const QStringList& keys, bool next, const PlayOrigin& origin = {}) override
+    {
+        if (m_state.mode == playback::PersonalFm || keys.isEmpty())
+            return false;
+        if (m_sequence.isEmpty()) {
+            playSongs(keys, 0, origin);
+            return true;
+        }
+        int at = next ? m_pos + 1 : int(m_sequence.size());
+        for (const QString& key : keys) {
+            m_queue << key;
+            m_sequence.insert(at++, int(m_queue.size()) - 1);
+        }
+        updateNavigation();
+        notify();
+        return true;
+    }
+
+    void clearQueue() override
+    {
+        if (m_state.mode != playback::Queue)
+            return;
+        m_end.stop();
+        m_load.stop();
+        m_queue.clear();
+        m_sequence.clear();
+        m_pos = 0;
+        m_state = PlaybackSnapshot{
+            .volume = m_state.volume, .order = m_state.order, .repeat = m_state.repeat};
+        notify();
+    }
+
     void move(int from, int to) override
     {
         if (m_state.mode != playback::Queue || from < 0 || from >= m_sequence.size() || to < 0 ||
