@@ -30,6 +30,16 @@ namespace
 // Embedded by the Cirrus.Samples module.
 const QString kSamples = QStringLiteral(":/qt/qml/Cirrus/Samples/");
 
+// The fake users: commenters ("u-N"), repliers ("r-N") and fans ("fan-N"), each with a
+// user page (FakeCatalog::user).
+const char* const kUserNames[] = {"海边的旧仓库", "不睡觉的猫", "Mori",       "通勤三号线",
+                                  "晚风收藏家",   "阿柚",       "Echo_42",    "听歌的土豆",
+                                  "雨天备忘录",   "北纬三十度", "一颗小行星", "Lumen 的歌迷",
+                                  "夜班列车长",   "Kai",        "半杯冰美式"};
+const char* const kReplyNames[] = {"晚风收藏家", "Mori", "阿柚", "Kai", "半杯冰美式"};
+const char* const kUserAvatars[] = {"sunset", "ocean", "forest", "neon", ""};
+const QString kFakeAccountKey = QStringLiteral("fake-account");
+
 // Replies after the controlled delay, unless canceled or `context` is gone first.
 // The failure to inject is decided when the request starts; requests that pages don't
 // show as states (search suggestions, trending keywords) leave it for the next one.
@@ -1094,7 +1104,148 @@ class FakeCatalog : public QObject, public CatalogSource
             });
     }
 
+    // Any key is a user: the account, a commenter, replier or fan. "u-13" (Kai) is a
+    // musician; "u-4" hides the ranking, "u-6" the follows and fans.
+    Request user(const QString& key, Reply<UserInfo> reply) override
+    {
+        return replyLater<UserInfo>(this, m_controls, std::move(reply),
+                                    [this, key]() { return Outcome<UserInfo>{userOf(key)}; });
+    }
+
+    Request userPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) override
+    {
+        return replyLater<QList<CollectionItem>>(this, m_controls, std::move(reply), [this, key]() {
+            QList<CollectionItem> items;
+            if (m_controls->empty())
+                return Outcome<QList<CollectionItem>>{items};
+            if (key == kFakeAccountKey) {
+                for (const QString& playlist : m_account->created) {
+                    items << m_account->playlistItem(playlist, *m_samples);
+                    items.last().created = true;
+                }
+                for (const QString& playlist : m_account->saved) {
+                    items << m_samples->playlistItem(playlist);
+                    items.last().created = false;
+                }
+                return Outcome<QList<CollectionItem>>{items};
+            }
+            const QStringList& all = m_samples->playlistOrder;
+            const auto seed = userSeed(key);
+            const int created = int(seed % 4), saved = int((seed >> 8) % 6);
+            for (int i = 0; i < created + saved && !all.isEmpty(); ++i) {
+                items << m_samples->playlistItem(all.at(int((seed >> 16) + i) % all.size()));
+                items.last().created = i < created;
+            }
+            return Outcome<QList<CollectionItem>>{items};
+        });
+    }
+
+    Request userRanking(const QString& key, bool allTime, Reply<UserRanking> reply) override
+    {
+        return replyLater<UserRanking>(this, m_controls, std::move(reply), [=, this]() {
+            UserRanking ranking;
+            ranking.hidden = !userOf(key).rankingOpen;
+            if (ranking.hidden || m_controls->empty())
+                return Outcome<UserRanking>{ranking};
+            QStringList keys = m_samples->songOrder;
+            std::mt19937 random(quint32(userSeed(key)) + (allTime ? 1 : 0));
+            std::shuffle(keys.begin(), keys.end(), random);
+            for (const QString& song : keys.mid(0, allTime ? 30 : 10))
+                ranking.songs << m_samples->songs[song];
+            return Outcome<UserRanking>{ranking};
+        });
+    }
+
+    Request userFollows(const QString& key, PageRequest page, Reply<UserList> reply) override
+    {
+        return replyLater<UserList>(this, m_controls, std::move(reply), [=, this]() {
+            UserList list;
+            list.hidden = key == QStringLiteral("u-6");
+            if (list.hidden)
+                return Outcome<UserList>{list};
+            QList<UserItem> all;
+            if (!m_controls->empty())
+                for (int i = 0; i < int(std::size(kUserNames)); ++i)
+                    if (QStringLiteral("u-%1").arg(i) != key)
+                        all << itemOf(userOf(QStringLiteral("u-%1").arg(i)));
+            list.page = slice(all, page);
+            return Outcome<UserList>{list};
+        });
+    }
+
+    Request userFans(const QString& key, qint64 before, int limit, Reply<UserList> reply) override
+    {
+        return replyLater<UserList>(this, m_controls, std::move(reply), [=, this]() {
+            UserList list;
+            list.hidden = key == QStringLiteral("u-6");
+            if (list.hidden)
+                return Outcome<UserList>{list};
+            // Followed a day apart, newest first; the cursor is the last one's time.
+            const int count = m_controls->empty() ? 0 : int(userOf(key).fans);
+            const int offset = before == 0 ? 0 : int((kFanEpoch - before) / kFanStep) + 1;
+            for (int i = offset; i < std::min(count, offset + limit); ++i)
+                list.page.items << itemOf(userOf(QStringLiteral("fan-%1").arg(i)));
+            list.page.total = count;
+            list.page.hasMore = offset + limit < count;
+            if (!list.page.items.isEmpty() && *list.page.hasMore)
+                list.page.next = kFanEpoch - qint64(offset + list.page.items.size() - 1) * kFanStep;
+            return Outcome<UserList>{list};
+        });
+    }
+
   private:
+    static constexpr qint64 kFanEpoch = 1'780'000'000'000;
+    static constexpr qint64 kFanStep = 86'400'000;
+
+    [[nodiscard]] static quint64 userSeed(const QString& key)
+    {
+        quint64 seed = 11;
+        for (QChar c : key)
+            seed = seed * 131 + c.unicode();
+        return seed * 0x9E37'79B9'7F4A'7C15ull >> 8;
+    }
+
+    [[nodiscard]] UserInfo userOf(const QString& key) const
+    {
+        UserInfo info;
+        info.key = key;
+        const auto seed = userSeed(key);
+        const int index = key.section(QLatin1Char('-'), 1).toInt();
+        if (key == kFakeAccountKey) {
+            info.nickname = FakeAccount::kNickname;
+            info.avatarKey = QStringLiteral("pastel");
+        } else if (key.startsWith(QLatin1String("u-"))) {
+            info.nickname = QString::fromUtf8(kUserNames[index % std::size(kUserNames)]);
+            info.avatarKey = QString::fromLatin1(kUserAvatars[index % std::size(kUserAvatars)]);
+        } else if (key.startsWith(QLatin1String("r-"))) {
+            info.nickname = QString::fromUtf8(kReplyNames[index % std::size(kReplyNames)]);
+        } else {
+            info.nickname = QString::fromUtf8(kUserNames[seed % std::size(kUserNames)]) +
+                            QString::number(index);
+            info.avatarKey = QString::fromLatin1(kUserAvatars[seed % std::size(kUserAvatars)]);
+        }
+        static const char* const signatures[] = {"", "耳机是另一个世界的入口。", "只听喜欢的歌。",
+                                                 "",
+                                                 "白天上班，晚上写歌，周末去看演出。"
+                                                 "最近在学吉他，进度很慢，但很开心。"};
+        info.signature = QString::fromUtf8(signatures[seed % std::size(signatures)]);
+        info.level = int(seed % 10) + 1;
+        info.follows = qint64((seed >> 4) % 300);
+        info.fans = key == QStringLiteral("u-13") ? 34'210 : qint64((seed >> 12) % 90);
+        info.playlists = qint64((seed % 4) + ((seed >> 8) % 6));
+        info.artistKey = key == QStringLiteral("u-13") && !m_samples->artistOrder.isEmpty()
+                             ? m_samples->artistOrder.first()
+                             : QString();
+        info.rankingOpen = key != QStringLiteral("u-4");
+        info.followed = m_controls->signedIn() && index % 3 == 0 && key != kFakeAccountKey;
+        return info;
+    }
+
+    [[nodiscard]] static UserItem itemOf(const UserInfo& info)
+    {
+        return {info.key, info.nickname, info.avatarKey, info.signature, info.followed};
+    }
+
     static constexpr int kTopSongs = 50;
     static constexpr int kChartSongs = 20;
     static constexpr int kChartPreviews = 3;
@@ -1711,7 +1862,7 @@ class FakeSession : public QObject, public SessionSource
     {
         const bool signedIn = m_controls->account() == account::SignedIn;
         m_state.status = account::Status(m_controls->account());
-        m_state.accountKey = signedIn ? QStringLiteral("fake-account") : QString();
+        m_state.accountKey = signedIn ? kFakeAccountKey : QString();
         m_state.nickname = signedIn ? FakeAccount::kNickname : QString();
         m_state.avatarKey = signedIn ? QStringLiteral("pastel") : QString();
         notify();
@@ -2349,7 +2500,7 @@ class FakeComments : public QObject, public CommentSource
 
   private:
     static constexpr int kRecommendedHot = 5;
-    static inline const QString kAccountKey = QStringLiteral("fake-account");
+    static inline const QString kAccountKey = kFakeAccountKey;
 
     [[nodiscard]] static QString id(const CommentTarget& target)
     {
@@ -2389,10 +2540,7 @@ class FakeComments : public QObject, public CommentSource
     // Every comment of a target, newest first, before the account's changes.
     [[nodiscard]] QList<CommentInfo> generated(const CommentTarget& target) const
     {
-        static const char* const names[] = {
-            "海边的旧仓库", "不睡觉的猫",   "Mori",       "通勤三号线", "晚风收藏家",
-            "阿柚",         "Echo_42",      "听歌的土豆", "雨天备忘录", "北纬三十度",
-            "一颗小行星",   "Lumen 的歌迷", "夜班列车长", "Kai",        "半杯冰美式"};
+        const auto& names = kUserNames;
         static const char* const lines[] = {"这首歌陪我走过了很多个下班的夜晚。",
                                             "前奏一出来就想起那年夏天。",
                                             "第二段副歌的和声太好听了，循环了一整天。",
@@ -2423,8 +2571,7 @@ class FakeComments : public QObject, public CommentSource
                 const int author = int(random() % std::size(names));
                 c.authorKey = QStringLiteral("u-%1").arg(author);
                 c.authorName = QString::fromUtf8(names[author]);
-                static const char* const avatars[] = {"sunset", "ocean", "forest", "neon", ""};
-                c.avatarKey = QString::fromLatin1(avatars[author % std::size(avatars)]);
+                c.avatarKey = QString::fromLatin1(kUserAvatars[author % std::size(kUserAvatars)]);
             }
             if (i % 23 != 11) {
                 QString text;
@@ -2453,7 +2600,7 @@ class FakeComments : public QObject, public CommentSource
     // A comment's replies, oldest first; some reply to an earlier one.
     [[nodiscard]] static QList<CommentInfo> repliesOf(const CommentInfo& parent)
     {
-        static const char* const names[] = {"晚风收藏家", "Mori", "阿柚", "Kai", "半杯冰美式"};
+        const auto& names = kReplyNames;
         static const char* const lines[] = {"同感！",       "我也是从这个歌单来的。",
                                             "哈哈哈真的",   "说得太好了",
                                             "加一，循环中", "第一次听就喜欢上了"};

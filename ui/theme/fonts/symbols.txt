@@ -95,6 +95,7 @@ filter_none
 # Account and settings
 login
 logout
+lock
 qr_code_2
 settings
 dark_mode

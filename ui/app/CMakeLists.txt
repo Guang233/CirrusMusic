@@ -19,6 +19,7 @@ qt_add_qml_module(appCirrusMusic
         PlaylistOrderPage.qml
         AlbumPage.qml
         ArtistPage.qml
+        UserPage.qml
         PodcastPage.qml
         CommentsPage.qml
         TabState.qml

@@ -80,6 +80,13 @@ class BackendCatalog : public QObject, public CatalogSource
     // This month's chart, its week or month group.
     Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) override;
 
+    // Users (backend_users.cpp, docs/api/user-profile-reads.md).
+    Request user(const QString& key, Reply<UserInfo> reply) override;
+    Request userPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) override;
+    Request userRanking(const QString& key, bool allTime, Reply<UserRanking> reply) override;
+    Request userFollows(const QString& key, PageRequest page, Reply<UserList> reply) override;
+    Request userFans(const QString& key, qint64 before, int limit, Reply<UserList> reply) override;
+
   private:
     MusicRequests* m_requests;
     // The signed-in account's key (a playlist of its own), empty for guests.

@@ -87,6 +87,16 @@ class CatalogSource
     virtual Request newAlbums(int area, PageRequest page,
                               Reply<ResultPage<CollectionItem>> reply) = 0;
     virtual Request albumChart(int area, bool monthly, Reply<QList<CollectionItem>> reply) = 0;
+
+    // Users (docs/ui/pages/user.md); guests may read them.
+    virtual Request user(const QString& key, Reply<UserInfo> reply) = 0;
+    // The playlists the user made and saved, all at once (`created` tells which).
+    virtual Request userPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
+    virtual Request userRanking(const QString& key, bool allTime, Reply<UserRanking> reply) = 0;
+    virtual Request userFollows(const QString& key, PageRequest page, Reply<UserList> reply) = 0;
+    // Fans, newest first: `before` is the previous page's `next` (0 for the first page).
+    virtual Request userFans(const QString& key, qint64 before, int limit,
+                             Reply<UserList> reply) = 0;
 };
 
 // The signed-in account's library; every request fails with SignedOut for guests.

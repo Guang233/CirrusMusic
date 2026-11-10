@@ -205,6 +205,43 @@ template <class T> struct ResultPage {
     std::optional<qint64> next;
 };
 
+// A user's page (docs/ui/pages/user.md): any account, a musician's too.
+struct UserInfo {
+    QString key;
+    QString nickname;
+    QString avatarKey; // a cover key, may be empty
+    QString signature;
+    int level = -1;          // -1 when unknown
+    qint64 follows = -1;     // -1 when unknown
+    qint64 fans = -1;        // -1 when unknown
+    qint64 playlists = -1;   // -1 when unknown
+    QString artistKey;       // a musician's artist page; empty for others
+    bool rankingOpen = true; // others may see the listening ranking
+    // Followed by the signed-in account.
+    bool followed = false;
+};
+
+// A row of a user's follows or fans.
+struct UserItem {
+    QString key;
+    QString nickname;
+    QString avatarKey;
+    QString signature;
+    bool followed = false; // by the signed-in account
+};
+
+// A page of follows or fans, or `hidden` when the user doesn't show them.
+struct UserList {
+    ResultPage<UserItem> page;
+    bool hidden = false;
+};
+
+// A user's listening ranking, most played first, or `hidden` when not shown to others.
+struct UserRanking {
+    QList<SongInfo> songs;
+    bool hidden = false;
+};
+
 // Playlist categories for discover (docs/ui/pages/discover.md §3.1): the trending ones,
 // all of them by group (语种, 风格…), and those that have premium playlists.
 struct PlaylistCategories {

@@ -88,6 +88,7 @@ QtObject {
     readonly property string filter_none: "\ue3e0"
     readonly property string login: "\uea77"
     readonly property string logout: "\ue9ba"
+    readonly property string lock: "\ue899"
     readonly property string qr_code_2: "\ue00a"
     readonly property string settings: "\ue8b8"
     readonly property string dark_mode: "\ue51c"
@@ -214,6 +215,7 @@ QtObject {
         "filter_none",
         "login",
         "logout",
+        "lock",
         "qr_code_2",
         "settings",
         "dark_mode",

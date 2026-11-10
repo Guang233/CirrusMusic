@@ -58,6 +58,10 @@ Item {
     property bool findable: true
     // The play button: its text and what it plays (the shown order when null).
     property string playText: qsTr("播放全部")
+    // The play button (header and compact bar); pages that aren't a song list leave it out.
+    property bool showPlay: true
+    // The action row (play, actionsContent, find); a page with nothing in it hides it.
+    property bool showActions: true
     property SongListModel playSource: null
     // The widths of the action skeletons, play all first.
     property list<int> actionSkeletons: [116]
@@ -102,8 +106,10 @@ Item {
     readonly property bool canPlay: (playSource ? playSource.count > 0 : hasSongs)
                                     && (!playsVoices || App.player.canPlayVoices)
     // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
-    readonly property real compactProgress: headerActions
-        ? Math.max(0, Math.min(1, (songTable.scrolled - headerActions.y - headerActions.height
+    // Without the action row, the tabs take its place.
+    readonly property Item compactAnchor: showActions ? headerActions : headerTabs
+    readonly property real compactProgress: compactAnchor
+        ? Math.max(0, Math.min(1, (songTable.scrolled - compactAnchor.y - compactAnchor.height
                                    + 96) / 56)) : 0
     // The header's tabs have scrolled under the compact bar: the pinned copy shows.
     readonly property bool tabsPinned: tabsContent !== null && headerTabs !== null
@@ -341,11 +347,13 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 height: 40
+                visible: page.showActions
                 Component.onCompleted: page.headerActions = actions
 
                 Row {
                     spacing: 8
                     Button {
+                        visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
                         glyph: Symbols.play_arrow
@@ -441,11 +449,11 @@ Item {
                 width: 32
                 height: 32
                 anchors.verticalCenter: parent.verticalCenter
-                radius: Theme.shape.small
+                radius: page.roundCover ? width / 2 : Theme.shape.small
             }
             Text {
                 x: compactCover.x + compactCover.width + 12
-                width: compactPlay.x - x - 12
+                width: (compactPlay.visible ? compactPlay.x : parent.width) - x - 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: page.title
                 elide: Text.ElideRight
@@ -455,6 +463,7 @@ Item {
             IconButton {
                 id: compactPlay
                 x: (compactFind.visible ? compactFind.x : parent.width) - width - 12
+                visible: page.showPlay
                 anchors.verticalCenter: parent.verticalCenter
                 enabled: page.canPlay
                 variant: Md.Filled

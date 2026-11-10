@@ -134,6 +134,14 @@ Item {
         });
     }
 
+    // A user's page (docs/ui/pages/user.md).
+    function openUser(key: string) {
+        shell.go(userPage, {
+            shell: shell,
+            userKey: key
+        });
+    }
+
     // The comments of a song, playlist or album (CommentsPageModel.Target); the
     // header shows `title`, `subtitle` and the cover the opening page knows.
     function openComments(target: int, key: string, title: string, subtitle: string,
@@ -360,6 +368,10 @@ Item {
     Component {
         id: artistPage
         ArtistPage {}
+    }
+    Component {
+        id: userPage
+        UserPage {}
     }
     Component {
         id: podcastPage
