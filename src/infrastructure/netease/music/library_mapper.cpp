@@ -11,6 +11,12 @@ namespace
 {
 using namespace mapping;
 bool absent(const QJsonValue& value) { return value.isNull() || value.isUndefined(); }
+// Which check a response failed; the gateway logs the failure itself (music.invalid).
+MusicFailure invalidBecause(const char* reason, qsizetype row = -1)
+{
+    rejectedBecause(reason, row);
+    return MusicFailure{MusicError::InvalidResponse};
+}
 // The provider's playlist kind for liked songs (candidate, from the reference's usage).
 constexpr qint64 LibraryLikedSongsSpecialType = 5;
 bool number(const QJsonValue& value, std::optional<qint64>& out)
@@ -89,28 +95,45 @@ MusicResult mapLibraryResponse(const MusicQuery& query, const QJsonObject& objec
         const auto values = object.value(QStringLiteral("playlist"));
         MyPlaylistsPage page;
         page.query = *q;
-        if (!values.isArray() || values.toArray().size() > q->page.limit ||
-            !pageInfo(object, true, values.toArray().size(), page.total, page.hasMore))
-            return invalid;
-        for (const auto value : values.toArray()) {
+        if (!values.isArray())
+            return invalidBecause("playlist");
+        // With more to come the service sends one row past the limit (101 for 100,
+        // measured 2026-11-10): the next page's first, left for that page.
+        auto rows = values.toArray();
+        const bool extra = rows.size() == q->page.limit + 1;
+        if (extra)
+            rows.removeLast();
+        if (rows.size() > q->page.limit)
+            return invalidBecause("rows");
+        if (!pageInfo(object, true, rows.size(), page.total, page.hasMore))
+            return invalidBecause("page");
+        if (extra)
+            page.hasMore = true;
+        qsizetype i = -1;
+        for (const auto value : std::as_const(rows)) {
+            ++i;
             if (!value.isObject())
-                return invalid;
+                return invalidBecause("row", i);
             const auto row = value.toObject();
             LibraryPlaylist p;
             p.id = {providerId(row.value(QStringLiteral("id")))};
-            if (p.id.value.isEmpty() || !textField(row.value(QStringLiteral("name"))) ||
-                !number(row.value(QStringLiteral("trackCount")), p.trackCount) ||
-                !boolean(row.value(QStringLiteral("subscribed")), p.subscribed))
-                return invalid;
+            if (p.id.value.isEmpty())
+                return invalidBecause("id", i);
+            if (!textField(row.value(QStringLiteral("name"))))
+                return invalidBecause("name", i);
+            if (!number(row.value(QStringLiteral("trackCount")), p.trackCount))
+                return invalidBecause("track_count", i);
+            if (!boolean(row.value(QStringLiteral("subscribed")), p.subscribed))
+                return invalidBecause("subscribed", i);
             const auto creator = row.value(QStringLiteral("creator"));
             if (!absent(creator)) {
                 if (!creator.isObject())
-                    return invalid;
+                    return invalidBecause("creator", i);
                 const auto raw = creator.toObject().value(QStringLiteral("userId"));
                 if (!unknownId(raw)) {
                     const auto id = providerId(raw);
                     if (id.isEmpty())
-                        return invalid;
+                        return invalidBecause("creator_id", i);
                     p.creatorId = id;
                 }
             }
@@ -118,7 +141,7 @@ MusicResult mapLibraryResponse(const MusicQuery& query, const QJsonObject& objec
             // one is its library's "我喜欢的音乐". Any other kind is a plain playlist here.
             std::optional<qint64> specialType;
             if (!number(row.value(QStringLiteral("specialType")), specialType))
-                return invalid;
+                return invalidBecause("special_type", i);
             if (specialType && *specialType != LibraryLikedSongsSpecialType)
                 p.accountLikedSongs = false;
             else if (specialType && p.creatorId)

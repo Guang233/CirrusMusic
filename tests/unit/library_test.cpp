@@ -183,13 +183,25 @@ class LibraryTest : public QObject
     }
     void hardLimitsNoTruncation()
     {
-        for (int kind : {0, 2, 3}) {
+        for (int kind : {2, 3}) {
             const QJsonArray rows{QJsonObject{{"id", 1}}, QJsonObject{{"id", 2}}};
-            QJsonObject response{{"code", 200}, {kind == 0 ? "playlist" : "data", rows}};
+            QJsonObject response{{"code", 200}, {"data", rows}};
             QVERIFY(std::holds_alternative<MusicFailure>(
                 mapMusicResponse(query(kind, "1", {1, 0}), response)));
             QVERIFY(!std::holds_alternative<MusicFailure>(mapMusicResponse(query(kind), response)));
         }
+        // Playlists: with more to come the service sends one row past the limit (measured
+        // 2026-11-10), the next page's first; it is left out and means more. Two past is
+        // not a page.
+        const QJsonArray rows{QJsonObject{{"id", 1}}, QJsonObject{{"id", 2}},
+                              QJsonObject{{"id", 3}}};
+        const auto page = std::get<MyPlaylistsPage>(mapMusicResponse(
+            query(0, "1", {2, 0}), {{"code", 200}, {"playlist", rows}, {"more", false}}));
+        QCOMPARE(page.playlists.size(), 2);
+        QCOMPARE(page.playlists.last().id.value, QString("2"));
+        QCOMPARE(page.hasMore, std::optional<bool>(true));
+        QVERIFY(std::holds_alternative<MusicFailure>(
+            mapMusicResponse(query(0, "1", {1, 0}), {{"code", 200}, {"playlist", rows}})));
         QJsonArray ids;
         for (int i = 1; i <= LikedSongIds::MaximumIds; ++i)
             ids.append(i);
