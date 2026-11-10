@@ -170,7 +170,7 @@ qCWarning(lcNet).noquote() << event("request.failed")
 | --- | --- |
 | 应用 | `app.start`（会话头）、`app.single_instance`、`app.gpu`、`app.exit`、`app.previous_session_unclean`、退出各阶段耗时、退出超时（D6） |
 | 后端运行时 | 工作线程启动和停止、`backend.ready`/`backend.start_failed`（原因）、命令队列满、关闭耗时 |
-| 网络 | 每个请求一条 `request.done` 或 `request.failed`：请求号、逻辑路径、协议、HTTP 状态、Qt 网络错误名、耗时、响应大小、retry-after；被阻止的重定向；超时 |
+| 网络 | 每个请求一条 `request.done` 或 `request.failed`：请求号、逻辑路径、协议、HTTP 状态、Qt 网络错误名、耗时、响应大小、retry-after；被阻止的重定向；超时；读操作的连接断开重发 `request.retry`（第几次、延迟） |
 | 接口 | 业务码不为成功、错误映射结果、契约不符（字段名）、限流 |
 | 鉴权 | 匿名注册的结果与节流、二维码状态迁移（不含内容）、会话阶段变化、换号（散列）、登出 |
 | 密钥环 | 读、写、删的结果和错误类别 |

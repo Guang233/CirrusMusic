@@ -305,3 +305,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
   - 写操作经 `CommentWrites` 分派器，规则与第 7 步的 `CollectionWrites` 相同：一次一条、按顺序，记下发起时的账号，换号不发，页面关掉写入照常完成。结果对照：Acknowledged 成功；Unknown 是"可能没成功"；`TokenUnavailable`（发表、回复要先拿的 v3 令牌没拿到，没有发出）按拒绝处理；业务码 405 显示为操作频繁。日志 `ui.backend comment_write.done`／`failed`／`dropped`／`refused`／`invalid`，只记操作类别和结果。
   - 游客实测（离屏，临时钩子打开一首热门歌的评论页，已撤掉并确认程序照常开在首页）：推荐排序请求 20 条服务端回 26 条，原映射按"不超过 limit"整页拒绝（`music.invalid_why reason=comments_over_limit`，这次给评论映射器也加了原因）；改为新版列表最多 100 条（[comment-reads.md](../api/comment-reads.md)），评论页翻页时按 key 去掉已显示的。之后：推荐第一页 26 条、翻页共 119 条到底；展开楼层读到 11 条回复；最新排序 20 条、翻页 40 条。
   - 维护者登录实测（2026-11-10）：点赞、取消点赞成功。发表每次都被服务端拒绝：业务码 250，`data.dialog` 是"风险提示：抱歉，评论发布失败，请稍后重试"，"查看详情"指向在线客服（临时钩子把这几项打到终端，已撤掉）；同一账号用官方客户端能发，所以是风控不认 Cirrus 的请求，账号本身没有问题。v3 令牌是直接向易盾要的，不带设备采集数据，风控显然不接受；参考项目能用的另一条路（v2）要在浏览器环境里运行易盾网页 SDK，Cirrus 只能为此内嵌 Chromium（QtWebEngine），维护者决定不做。**发表和回复先隐藏**（评论页 `canWrite`，[comments.md §10](pages/comments.md)），后端代码保留；删除不需要令牌，还没实测。另外，每次启动后第一次发表都在新连接的第一个流上被断开（`HTTP/2 protocol error`），和之前暂缓的"网络连接失败"是同一现象。
+- **连接被断开（2026-11-10）**：日志里这类失败都是新建连接上的第一个请求，约 150 ms 后被关掉（Qt：HTTP/2 stream 1 "連線已關閉"／`RemoteHostClosed`），多在闲置几分钟后，也有刚请求过的；流量经本机 mihomo TUN。2026-11-09 加的 HTTP/1.1 立即重发成功 7 次、又被断开 4 次。改为：
+  - 读操作立即用 HTTP/1.1 重发后仍被断开，**隔 1 秒再发一次**（共最多两次重发，日志 `net request.retry attempt= delay_ms=`）；等待时取消立即结束。写操作、上报照旧不重发。
+  - `retriesLostConnection()` 补上第 7–9 步以后接的读操作（评论与楼层、音乐库、最近播放、发现页、相似推荐、百科、日推历史、账号信息等）。仍不重发：匿名注册、登录、扫码、一起听、私人 FM（每次读取都会往下推进）。
+  - `tst_http_transport`：两次断开后隔 1 秒成功、三次断开才失败、等待时取消。真实环境下的效果看之后的日志（`attempt=2` 之后是否成功）。
+
