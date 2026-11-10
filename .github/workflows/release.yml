@@ -1,0 +1,128 @@
+# Pushing a tag vX.Y.Z builds the packages and puts them in a draft GitHub release
+# (docs/tasks/release.md §7). The maintainer reviews the draft and publishes it.
+# The tag must match project(VERSION) in CMakeLists.txt and have a CHANGELOG.md section.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.11.2
+  QT_MODULES: qtmultimedia qtshadertools qtimageformats
+
+jobs:
+  check:
+    name: Version check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: version
+        run: |
+          version=$(sed -nE 's/^project\(CirrusMusic VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)
+          if [[ "v$version" != "$GITHUB_REF_NAME" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match project version $version"
+            exit 1
+          fi
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # Tests run on the tagged commit before anything is packaged.
+  ci:
+    needs: check
+    uses: ./.github/workflows/ci.yml
+
+  linux:
+    name: Linux packages
+    needs: ci
+    runs-on: ubuntu-22.04
+    env:
+      DEPS: ${{ github.workspace }}/../deps
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: packaging/linux/install-build-deps.sh
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Cache FFmpeg and QtKeychain
+        id: deps
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPS }}
+          key: deps-linux-ubuntu22.04-${{ hashFiles('packaging/deps/*.sh') }}
+
+      - name: Build FFmpeg and QtKeychain
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: |
+          packaging/deps/build-ffmpeg.sh "$DEPS"
+          packaging/deps/build-qtkeychain.sh "$DEPS" "$QT_ROOT_DIR"
+
+      - name: deb and AppImage
+        run: packaging/linux/build-packages.sh "$QT_ROOT_DIR" "$DEPS" dist deb appimage
+
+      - name: Check the desktop metadata
+        run: |
+          desktop-file-validate build/package-linux/deb/usr/share/applications/com.guang233.Cirrus.desktop
+          # Ubuntu 22.04's appstream (0.15) predates some current tags: report, don't fail.
+          appstreamcli validate --no-net \
+            build/package-linux/deb/usr/share/metainfo/com.guang233.Cirrus.metainfo.xml ||
+            echo "::warning::appstreamcli reported problems in the metainfo"
+
+      - name: Sources of the bundled libraries
+        run: packaging/deps/fetch-sources.sh dist/sources
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist/
+          if-no-files-found: error
+
+  windows:
+    needs: ci
+    uses: ./.github/workflows/windows.yml
+    with:
+      package: true
+
+  release:
+    name: Draft release
+    needs: [check, linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          mkdir -p dist
+          find artifacts -maxdepth 2 -type f -exec mv {} dist/ \;
+          tar -C artifacts/linux -cf dist/Cirrus-$VERSION-library-sources.tar sources
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "Cirrus $VERSION" --notes-file notes.md dist/*
