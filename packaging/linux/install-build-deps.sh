@@ -5,7 +5,7 @@
 set -euo pipefail
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-    g++-12 ninja-build nasm patchelf pkg-config file dpkg-dev \
+    g++-12 ccache ninja-build nasm patchelf pkg-config file dpkg-dev \
     libssl-dev zlib1g-dev libsecret-1-dev \
     libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev \
     libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
