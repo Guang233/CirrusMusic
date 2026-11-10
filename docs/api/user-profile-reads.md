@@ -32,6 +32,7 @@
 
 - **UserProfile**：`profile.userId` 必须是请求的 uid；`nickname` 必须有。`avatarUrl` 和 `signature` 可选，`null` 当作空。可选数字：`level`（顶层）、`follows`、`followeds`、`playlistCount`。可选布尔：`followed`、`peopleCanSeeMyPlayRecord`（→ `rankingOpen`）。`profile.artistId` 不是 0 的才算音乐人（→ `artist`）。
 - **UserList**：关注读 `follow[]`，粉丝读 `followeds[]`，每行字段同上。另有 `more`；粉丝还有 `size`（总数）。粉丝每行要有正的 `time`，并且新的在前；`nextCursor` 是最后一行的 `time`。
+- **多出的一行**：歌单后面还有时，服务端给 limit + 1 行（实测 101 行），多的那行是下一页的第一个。`MyPlaylists` 的映射（两边共用）把它去掉并记作还有更多；多出两行以上照样拒绝。界面层的 `userPlaylists` 按偏移一页页读，最多 1000 个。
 - **UserPlaylists**、**UserRanking**：响应和账号自己的 `MyPlaylists`、`ListeningRanking` 同形，直接用 `mapLibraryResponse`、`mapCloudHistoryResponse`，被查看的用户放在 account 的位置。创建的和收藏的歌单靠 `creatorId == uid` 区分。`accountLikedSongs` 指的是对方的"喜欢的音乐"。
 - **不公开**：在 gateway 里转成 `UserProfilePage{query, UserProfileHidden{}}`，不算失败。关注、粉丝看 code 400，排行看 code -2。用户详情没有"不公开"，404 照常是 `ProviderRejected`，带 providerCode。
 - facade（`BackendFacade::userProfile`）用 `matchingUserProfilePage` 核对查询种类、uid 和内容种类。

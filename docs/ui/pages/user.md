@@ -2,7 +2,7 @@
 
 **维护者已定（2026-11-10）**：
 - 内容：创建和收藏的歌单、听歌排行、关注和粉丝列表、关注和取消关注。
-- 入口：评论的头像和昵称、歌单的创建者、歌手页上的"用户主页"。不加"我的主页"入口（U3）；自己的主页从自己的评论等处照样能进。
+- 入口：评论的头像和昵称、歌单的创建者、歌手页上的"用户主页"。~~不加"我的主页"入口（U3）~~ → 维护者 2026-11-10 改定：点侧栏自己的头像进自己的主页；右键（菜单键）是"我的主页"和"退出登录"（退出登录在设置里也有）。
 - 不标用户类型（没有"用户／音乐人"那一行）；U1、U2、U4 按建议。
 - 网易云的"动态"不做（范围决定，见 [14-roadmap §6](../../14-roadmap-and-backlog.md)）。
 
@@ -17,7 +17,7 @@
 | 内容 | 接口 | 实测字段 |
 | --- | --- | --- |
 | 头部 | `/api/v1/user/detail/{uid}`（Weapi） | `profile.{userId, nickname, avatarUrl, signature, follows, followeds, playlistCount, followed}`，顶层 `level`。`peopleCanSeeMyPlayRecord`：听歌排行是否公开（事先就知道，不用去碰 -2）。不存在的 uid：code 404 |
-| 歌单 | `/api/user/playlist`（Weapi，`uid` `limit` `offset`） | 和 `MyPlaylists` 同形：`playlist[]`、`more`。创建的和收藏的靠 `creator.userId == uid` 分 |
+| 歌单 | `/api/user/playlist`（Weapi，`uid` `limit` `offset`） | 和 `MyPlaylists` 同形：`playlist[]`、`more`。创建的和收藏的靠 `creator.userId == uid` 分。**后面还有时多给一行**（limit 100 给 101 行，那一行是下一页的第一个；维护者实测超过 100 个歌单的用户整页被拒，2026-11-10 修）；用户页一页页读到底，最多 1000 个 |
 | 关注 | `/api/user/getfollows/{uid}`（Weapi，`offset` `limit` `order`） | `follow[]`：`userId` `nickname` `avatarUrl` `signature` `followed`；`more`。偏移分页 |
 | 粉丝 | `/api/user/getfolloweds`（**Eapi，路径不带 uid**；`userId` `time` `limit` `offset=0` `getcounts`） | `followeds[]` 同上，多一个 `time`（关注时间，毫秒）；`size` 是粉丝总数；`more`。下一页的 `time` 是上一页最后一个人的 `time`。带 uid 的路径（参考项目现在的写法）不管参数，总是前 30 个 |
 | 关注、粉丝不公开 | | code 400，`message`"用户隐私无权限查看"（五个人里有一个），按"不公开"显示 |
@@ -104,5 +104,5 @@
 | --- | --- | --- |
 | U1 | 歌单标签的两段，创建的和收藏的是否分开成两个标签？ | **已定：**一个标签两段 |
 | U2 | 签名放哪里？ | **已定：**头部一行，超出时"更多"开阅读对话框（同歌单简介） |
-| U3 | 自己的主页从哪里进？ | **已定：**不加专门的入口 |
+| U3 | 自己的主页从哪里进？ | **已定（2026-11-10 改）：**点侧栏自己的头像；右键菜单有"我的主页"和"退出登录" |
 | U4 | 粉丝很多时，粉丝数显示到多少？ | **已定：**与播放量一样用 `App.format.count`（"3.4万"） |
