@@ -93,7 +93,7 @@
 1. ~~**实测字段**~~（2026-11-10 完成，见 §1；钩子 `build/research-scripts/user-probe-hook.patch`，已撤）：用户详情（普通用户和一个音乐人各一）、用户歌单、关注、粉丝、听歌排行（一个公开、一个不公开）、歌手详情里的用户字段。确认游客能读哪些、字段名和分页方式，回写 §1。
 2. ~~**后端读取**~~（2026-11-10 完成）：五个读操作和映射、`tst_user_profile`、[docs/api/user-profile-reads.md](../../api/user-profile-reads.md)。
 3. ~~**用户页**~~（2026-11-10 完成）：`UserPage.qml`，模型 `UserPageModel`（头部）、`UserPlaylistsModel`、`UserRankingModel`、`UserPeopleModel`（关注、粉丝；粉丝按服务端游标翻页）。数据源 `CatalogSource::user…`（后端 `backend_users.cpp`，假数据源里的评论者都有主页：`u-13` 是音乐人，`u-4` 不公开排行，`u-6` 不公开关注和粉丝）。`SongCollectionPage` 加了 `showPlay`、`showActions`、`compactActionsContent`；圆形封面的页面紧凑条里也是圆头像（歌手页也跟着变了）。游客身份下用真实后端截图验证：音乐人（排行、关注不公开）、普通用户（歌单、排行、粉丝翻页、滚动后的紧凑条）。
-4. ~~**关注写操作**~~（2026-11-10 代码完成，**等维护者登录实测**）：`UserFollow` 变更走收藏分派器（`/api/user/follow/{uid}`、`/api/user/delfollow/{uid}`），头部、紧凑条和列表行的关注按钮；乐观更新，失败回滚并提示。服务端对关注的回应（成功码、会不会风控）还没见过。
+4. ~~**关注写操作**~~（2026-11-10 代码完成，**等维护者登录实测**）：`UserFollow` 变更走收藏分派器（`/api/user/follow/{uid}`、`/api/user/delfollow/{uid}`），头部、紧凑条和列表行的关注按钮；乐观更新，失败回滚并提示。维护者实测 5 次都被拒（250"风险提示：您操作太快啦"，Eapi 是 −460），见 [user-profile-reads.md §5](../../api/user-profile-reads.md)，等隔一段时间再对比。
 5. ~~**入口**~~（2026-11-10 完成）：评论的头像和昵称（手形光标）、评论菜单"查看用户主页"；歌单页头部的创建者（Text 按钮）；歌手页的"用户主页"（歌手详情新映射 `data.user.userId`）。
 
 **与设计的出入**：用户不存在时（code 404）显示通用的失败状态，没有单独的"找不到这个用户"——界面层的失败类型分不出 404，而入口都来自真实用户，暂不值得为它加一类。

@@ -51,7 +51,11 @@
 | UserUnfollow | follow（t≠1） | `/api/user/delfollow/{uid}` | Weapi | 空 |
 
 - 路径里带 uid，所以合同在 `user_profile_operation.cpp`（`collectionOperationContract` 不带参数）；变更是 `domain::UserFollow`，走 `CollectionMutation`／收藏 gateway，规则和收藏相同：要账号 Cookie、不重发、code 200 才 Acknowledged，其余 Rejected（带 providerCode），没看到回应是 Unknown。
-- **未实测**：成功的回应和风控（像评论那样）都还没见过，等维护者登录试。
+- **实测（2026-11-10，维护者账号，被关注的是一个评论区用户）**：维护者在界面上点了两次，诊断钩子又试了三次（`build/research-scripts/follow-diag-hook.patch`，已撤），共 5 次，都没成功：
+  - Weapi（参考项目的写法）：业务码 250，`message`"关注异常"，顶层 `dialog`。第三次的 `dialog` 拿到了：标题"风险提示"，副标题"您操作太快啦，请稍后再试"，按钮"查看详情"。
+  - Eapi（PC 客户端档案）：业务码 −460，"检测到您的网络环境存在风险，请稍后再试"。
+  - Weapi 加上红心那样的 `os=pc; appver` Cookie（§1a 的修法）：仍然是 250，"您操作太快啦"。这一项没保留在代码里。
+  - 结论未定："操作太快"可能是真的频率限制（20 分钟里点了 5 次），也可能是评论那样的风控换了个说法（评论的 250 也带"风险提示"对话框）。下一步：隔一段时间后在官方客户端关注一次做对比，再在 Cirrus 里试一次，不连着重试。
 - 测试：`tst_user_profile` 的 `followWrites`（合同、payload、要账号、不重发）。
 
 ## 6. 歌手 → 用户
