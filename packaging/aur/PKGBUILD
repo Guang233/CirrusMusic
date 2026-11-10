@@ -1,0 +1,33 @@
+# Maintainer: guang233
+# Builds Cirrus from a release tag against Arch's own Qt and libraries
+# (docs/tasks/release.md §4.3). Not uploaded yet: the repository is still private.
+# Cirrus uses Qt's private Wayland client API, so it needs a rebuild whenever qt6-base
+# or qt6-wayland moves to a new minor version.
+pkgname=cirrus
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Third-party NetEase Cloud Music client'
+arch=('x86_64')
+url='https://github.com/Guang233/CirrusMusic'
+license=('LicenseRef-unknown') # set once the maintainer picks the project license
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'qt6-imageformats'
+         'qtkeychain-qt6' 'ffmpeg' 'openssl' 'zlib' 'hicolor-icon-theme')
+makedepends=('cmake' 'ninja' 'qt6-shadertools' 'qt6-tools' 'git')
+optdepends=('gnome-keyring: keep the sign-in in a keyring'
+            'kwallet: keep the sign-in in KWallet')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP') # replaced with the tag's checksum when publishing
+
+build() {
+  cmake -S "CirrusMusic-$pkgver" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF \
+    -DCIRRUS_BUILD_GALLERY=OFF \
+    -DCIRRUS_EXECUTABLE=cirrus
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
