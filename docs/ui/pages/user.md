@@ -10,19 +10,23 @@
 
 ## 1. 后端
 
-后端现在只有**当前账号自己**的读取（自己的歌单 `MyPlaylists`、听歌排行 `ListeningRanking`），没有任何"看别人"的接口，全部要新加。接口按参考项目（api-enhanced，MIT）的路径，字段要先实测（§7 第 1 步）：
+后端原来只有**当前账号自己**的读取（自己的歌单 `MyPlaylists`、听歌排行 `ListeningRanking`），"看别人"的接口是新加的（`ApiOperation::UserDetail` … `UserRanking`，`user_profile_operation.cpp`）。接口按参考项目（api-enhanced，MIT）的路径。
 
-| 内容 | 接口 | 说明 |
+**实测（2026-11-10，游客身份，一个音乐人和几个评论区的普通用户）**：五个读取**游客都能读**，只受对方的隐私设置限制。
+
+| 内容 | 接口 | 实测字段 |
 | --- | --- | --- |
-| 头像、昵称、签名、等级、关注数、粉丝数、歌单数、是否已关注 | `/api/v1/user/detail/{uid}`（Weapi） | 参考文档写"登录后调用"，游客能不能读要实测 |
-| 创建的歌单、收藏的歌单 | `/api/user/playlist`，`uid` 换成对方 | 和 `MyPlaylists` 同一个接口；那边绑定当前账号，这里放开任意 uid（只读） |
-| 关注列表 | `/api/user/getfollows/{uid}`，偏移分页 | |
-| 粉丝列表 | `/api/user/getfolloweds/{uid}`，按时间游标分页 | 粉丝可能几十万，只能一页页往下翻 |
-| 听歌排行（最近一周、所有时间） | `/api/v1/play/record`，`uid`＋`type` | 和 `ListeningRanking` 同一个接口；对方不公开时服务端拒绝（错误码待实测），按"不公开"显示 |
-| 关注、取消关注 | `/api/user/follow/{uid}`、`/api/user/delfollow/{uid}`（Weapi） | 写操作，要登录；走和收藏一样的分派器（`CollectionWrites` 的规则：一次一条、换号不发、Unknown 提示"可能没有成功"）。可能碰到风控（像评论那样），实测再看 |
-| 用户 ↔ 歌手 | 用户详情里的歌手 ID；歌手详情里的用户 ID | **字段名待实测**（印象中是 `profile.artistId` 和歌手头部信息里的 `user`），没有就不显示跳转 |
+| 头部 | `/api/v1/user/detail/{uid}`（Weapi） | `profile.{userId, nickname, avatarUrl, signature, follows, followeds, playlistCount, followed}`，顶层 `level`。`peopleCanSeeMyPlayRecord`：听歌排行是否公开（事先就知道，不用去碰 -2）。不存在的 uid：code 404 |
+| 歌单 | `/api/user/playlist`（Weapi，`uid` `limit` `offset`） | 和 `MyPlaylists` 同形：`playlist[]`、`more`。创建的和收藏的靠 `creator.userId == uid` 分 |
+| 关注 | `/api/user/getfollows/{uid}`（Weapi，`offset` `limit` `order`） | `follow[]`：`userId` `nickname` `avatarUrl` `signature` `followed`；`more`。偏移分页 |
+| 粉丝 | `/api/user/getfolloweds`（**Eapi，路径不带 uid**；`userId` `time` `limit` `offset=0` `getcounts`） | `followeds[]` 同上，多一个 `time`（关注时间，毫秒）；`size` 是粉丝总数；`more`。下一页的 `time` 是上一页最后一个人的 `time`。带 uid 的路径（参考项目现在的写法）不管参数，总是前 30 个 |
+| 关注、粉丝不公开 | | code 400，`message`"用户隐私无权限查看"（五个人里有一个），按"不公开"显示 |
+| 听歌排行 | `/api/v1/play/record`（Weapi，`uid` `type`） | 和 `ListeningRanking` 同形（`weekData`／`allData`）。别人的条目 `playCount` 是 0，只有 `score`（比例条用它）。不公开：code -2，`msg`"无权限访问" |
+| 用户 → 歌手 | 用户详情 | `profile.artistId`（音乐人才有；普通用户缺或 0） |
+| 歌手 → 用户 | 歌手详情（`/api/artist/head/info/get`） | `data.user.userId` |
+| 关注、取消关注 | `/api/user/follow/{uid}`、`/api/user/delfollow/{uid}`（Weapi） | 写操作，未实测（第 4 步）。要登录；走和收藏一样的分派器（`CollectionWrites` 的规则：一次一条、换号不发、Unknown 提示"可能没有成功"）。可能碰到风控（像评论那样） |
 
-后端改动按 [HANDOFF](../../HANDOFF.md) 的约定：新的 `ApiOperation`、严格映射（多出的行截断、缺的可选字段为空，不整页拒绝）、`music.invalid_why` 原因日志、读操作打开断连重发。
+后端读取见 [docs/api/user-profile-reads.md](../../api/user-profile-reads.md)（`BackendFacade::userProfile`，不公开是 `UserProfileHidden`，不算失败）。
 
 ## 2. 版式
 
@@ -62,6 +66,7 @@
 
 - 用户列表：圆形头像、昵称、签名（一行，次要文字）、右侧关注按钮（已登录且不是自己时）。点行进那个人的用户页。
 - 滚到底分页加载（`LoadMoreFooter`）。
+- 对方不公开（code 400）：空状态"TA 没有公开关注列表"／"TA 没有公开粉丝列表"，图标 `lock`。
 - 列表里的关注按钮和头部的是同一个写操作。
 
 ## 4. 入口
@@ -85,8 +90,8 @@
 
 ## 7. 实现步骤
 
-1. **实测字段**（游客身份，几次只读请求，临时钩子，不提交）：用户详情（普通用户和一个音乐人各一）、用户歌单、关注、粉丝、听歌排行（一个公开、一个不公开）、歌手详情里的用户字段。确认游客能读哪些、字段名和分页方式，回写 §1。
-2. **后端读取**：五个读操作和映射、测试、文档（`docs/api/` 新开一页）。
+1. ~~**实测字段**~~（2026-11-10 完成，见 §1；钩子 `build/research-scripts/user-probe-hook.patch`，已撤）：用户详情（普通用户和一个音乐人各一）、用户歌单、关注、粉丝、听歌排行（一个公开、一个不公开）、歌手详情里的用户字段。确认游客能读哪些、字段名和分页方式，回写 §1。
+2. ~~**后端读取**~~（2026-11-10 完成）：五个读操作和映射、`tst_user_profile`、[docs/api/user-profile-reads.md](../../api/user-profile-reads.md)。
 3. **用户页**：页面、模型（`UserPageModel`：头部、四个标签各自的模型）、Gallery 不需要（页面用假数据源也能打开）。
 4. **关注写操作**：后端写操作＋分派器，按钮和列表里的关注；维护者登录实测。
 5. **入口**：评论、歌单创建者、歌手页。

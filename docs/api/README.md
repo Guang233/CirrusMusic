@@ -26,6 +26,7 @@
 | [inventory.json](inventory.json) | 全部 440 个模块的机器可读决定，含排除理由和源码观察 |
 | [upstream-lock.json](upstream-lock.json) | 固定版本、module tree、公共文件校验值与许可来源 |
 | [protocol-migration.md](protocol-migration.md) | 不依赖 Node 的请求、加密、Cookie、上传等 C++ 替代边界 |
+| [user-profile-reads.md](user-profile-reads.md) | 任意用户的主页：详情／歌单／关注／粉丝（Eapi 时间游标）／听歌排行 5 读取，游客可读；不公开转 UserProfileHidden；112ops |
 | [discovery-browse-reads.md](discovery-browse-reads.md) | 新碟／艺人／相似9Weapi，原read16、seed SongId／年月显式，month/week optional分组／相似歌曲100有界未知分页批；106ops/49登记，复杂百科门禁仍G，不自动下游／UI |
 | [discovery-public-response-verification.md](discovery-public-response-verification.md) | 11次native公开metadata，301即停；原mapper2差异已合成修正，188／22affected1190＋thread18，5fresh0／14objects6998逐对象依赖禁入0，旧165／1167历史不累加，未修后重发实网 |
 | [daily-recommended-playlists.md](daily-recommended-playlists.md) | 独立原账号每日推荐歌单，空Weapi／recommend100／1MiB与纯文本宽ID；同token私有scope与read16，62／affected753＋thread14；83ops／45登记，仅合成、无日期cache／自动下游 |
