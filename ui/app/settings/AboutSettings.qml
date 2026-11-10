@@ -7,11 +7,32 @@ import Cirrus.Controls
 SettingsGroup {
     id: group
 
-    // The open source parts and fonts, with their licenses (third_party/, ui/theme/fonts/).
+    // The open source parts and fonts, with their licenses (third_party/, ui/theme/fonts/;
+    // the full list with texts: packaging/THIRD-PARTY-NOTICES.md).
     readonly property var components: [{
             name: "Qt",
             license: "LGPL-3.0",
             use: qsTr("应用框架")
+        }, {
+            name: "FFmpeg",
+            license: "LGPL-2.1",
+            use: qsTr("音频解码")
+        }, {
+            name: "QtKeychain",
+            license: "BSD-3-Clause",
+            use: qsTr("保存登录状态")
+        }, {
+            name: "OpenSSL",
+            license: "Apache-2.0",
+            use: qsTr("加密")
+        }, {
+            name: "zlib",
+            license: "Zlib",
+            use: qsTr("解压缩")
+        }, {
+            name: "QR Code generator",
+            license: "MIT",
+            use: qsTr("登录二维码")
         }, {
             name: qsTr("小米 MiSans"),
             license: qsTr("MiSans 字体知识产权许可协议"),
