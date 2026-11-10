@@ -89,6 +89,8 @@ class Session : public QObject
     Q_PROPERTY(bool signedIn READ signedIn NOTIFY changed)
     Q_PROPERTY(QString nickname READ nickname NOTIFY changed)
     Q_PROPERTY(QString avatarKey READ avatarKey NOTIFY changed)
+    // The signed-in account's key (its user id); empty for guests.
+    Q_PROPERTY(QString accountKey READ accountKey NOTIFY changed)
     Q_PROPERTY(cirrus::ui::QrLogin* qrLogin READ qrLogin CONSTANT)
     Q_PROPERTY(cirrus::ui::FormLogin* formLogin READ formLogin CONSTANT)
 

@@ -212,6 +212,14 @@ Request BackendLibrary::setArtistFollowed(const QString& key, bool followed, Rep
                  std::move(reply), followed);
 }
 
+Request BackendLibrary::setUserFollowed(const QString& key, bool followed, Reply<bool> reply)
+{
+    const domain::UserFollow change{key, followed ? domain::CollectionAction::Collect
+                                                  : domain::CollectionAction::Remove};
+    return write({[change](BackendFacade&) { return domain::CollectionChange(change); }},
+                 std::move(reply), followed);
+}
+
 Request BackendLibrary::likedSongKeys(Reply<QStringList> reply)
 {
     return read<domain::LikedSongIds>(

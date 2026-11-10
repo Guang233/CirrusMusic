@@ -30,11 +30,11 @@ SongCollectionPage {
     }
     roundCover: true
     showPlay: false
-    showActions: pageModel.artistKey !== ""
+    showActions: !pageModel.own || pageModel.artistKey !== ""
     sortable: false
     findable: false
     ranked: true
-    actionSkeletons: pageModel.artistKey !== "" ? [104] : []
+    actionSkeletons: [104]
     // Only with songs: an empty or hidden ranking is the tab's state below.
     showSongs: currentTab === 1 && pageModel.ranking.songs.count > 0
     showBody: currentTab !== 1 || pageModel.ranking.state !== LoadState.Ready
@@ -46,6 +46,13 @@ SongCollectionPage {
     // "TA" for others, nothing for one's own page.
     function their(other: string, own: string): string {
         return pageModel.own ? own : other;
+    }
+
+    function toggleFollowed(): void {
+        if (!App.session.signedIn)
+            page.shell.openLogin();
+        else
+            pageModel.followed = !pageModel.followed;
     }
 
     function countLabel(label: string, count: real): string {
@@ -103,6 +110,7 @@ SongCollectionPage {
 
     UserPageModel {
         id: pageModel
+        onNotice: message => page.shell.notify(message)
         onStateChanged: {
             if (pageModel.state === LoadState.Ready)
                 page.showTab();
@@ -213,6 +221,7 @@ SongCollectionPage {
 
     actionsContent: Row {
         spacing: 8
+        FollowButton {}
         Button {
             visible: pageModel.artistKey !== ""
             variant: Md.Text
@@ -220,6 +229,19 @@ SongCollectionPage {
             text: qsTr("歌手主页")
             onClicked: page.shell.openArtist(pageModel.artistKey)
         }
+    }
+
+    compactActionsContent: FollowButton {
+        size: Md.Small
+    }
+
+    // Follow or unfollow; not on one's own page. Guests are asked to sign in.
+    component FollowButton: Button {
+        visible: !pageModel.own && pageModel.state === LoadState.Ready
+        variant: Md.Tonal
+        glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
+        text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
+        onClicked: page.toggleFollowed()
     }
 
     tabsContent: Item {
@@ -317,7 +339,7 @@ SongCollectionPage {
             }
             People {
                 visible: page.currentTab === 2
-                model: pageModel.follows.items
+                people: pageModel.follows
             }
 
             TabState {
@@ -329,7 +351,7 @@ SongCollectionPage {
             }
             People {
                 visible: page.currentTab === 3
-                model: pageModel.fans.items
+                people: pageModel.fans
             }
         }
     }
@@ -355,14 +377,22 @@ SongCollectionPage {
         }
     }
 
-    // Users as rows: avatar, nickname, signature; a row opens that user's page.
+    // Users as rows: avatar, nickname, signature, and a follow button for the signed-in
+    // account (not on its own row); a row opens that user's page.
     component People: Column {
-        id: people
-        property alias model: rows.model
+        id: list
+        required property UserPeopleModel people
         width: Math.min(parent ? parent.width : 0, 720)
         spacing: 2
+        Connections {
+            target: list.people
+            function onNotice(message: string) {
+                page.shell.notify(message);
+            }
+        }
         Repeater {
             id: rows
+            model: list.people.items
             delegate: ListItem {
                 id: row
                 required property int index
@@ -370,7 +400,8 @@ SongCollectionPage {
                 required property string nickname
                 required property string avatarKey
                 required property string signature
-                width: people.width
+                required property bool followed
+                width: list.width
                 segmented: true
                 first: index === 0
                 last: index === rows.count - 1
@@ -384,7 +415,21 @@ SongCollectionPage {
                     glyph: Symbols.person
                     coverKey: row.avatarKey
                 }
+                trailing: App.session.signedIn && row.key !== App.session.accountKey
+                          ? rowFollow : null
                 onClicked: page.shell.openUser(row.key)
+
+                Component {
+                    id: rowFollow
+                    Button {
+                        size: Md.XSmall
+                        variant: row.followed ? Md.Tonal : Md.Filled
+                        text: row.followed ? qsTr("已关注") : qsTr("关注")
+                        Accessible.name: (row.followed ? qsTr("取消关注 %1") : qsTr("关注 %1"))
+                                         .arg(row.nickname)
+                        onClicked: list.people.setFollowed(row.index, !row.followed)
+                    }
+                }
             }
         }
     }

@@ -11,6 +11,15 @@ namespace cirrus::ui
 namespace
 {
 constexpr int kPeoplePage = 30;
+
+QString followNotice(const Outcome<bool>& outcome, bool followed)
+{
+    const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
+    return signedOut             ? UserPageModel::tr("登录后才能关注")
+           : maybeSaved(outcome) ? UserPageModel::tr("可能没有保存成功，刷新看看")
+           : followed            ? UserPageModel::tr("没能关注，请稍后再试")
+                                 : UserPageModel::tr("没能取消关注，请稍后再试");
+}
 } // namespace
 
 void UserListModel::reset(const QList<UserItem>& items)
@@ -29,6 +38,23 @@ void UserListModel::append(const QList<UserItem>& items)
     m_items.append(items);
     endInsertRows();
     emit countChanged();
+}
+
+int UserListModel::rowOf(const QString& key) const
+{
+    for (qsizetype row = 0; row < m_items.size(); ++row)
+        if (m_items.at(row).key == key)
+            return int(row);
+    return -1;
+}
+
+void UserListModel::setFollowed(int row, bool followed)
+{
+    if (row < 0 || row >= m_items.size() || m_items.at(row).followed == followed)
+        return;
+    m_items[row].followed = followed;
+    const auto at = index(row);
+    emit dataChanged(at, at, {FollowedRole});
 }
 
 int UserListModel::rowCount(const QModelIndex& parent) const
@@ -85,6 +111,27 @@ void UserPeopleModel::ensureLoaded()
         reload();
 }
 
+void UserPeopleModel::setFollowed(int row, bool followed)
+{
+    const UserItem item = m_items->itemAt(row);
+    if (item.key.isEmpty() || item.followed == followed)
+        return;
+    m_items->setFollowed(row, followed);
+    const QString key = item.key;
+    m_followRequests[key] = App::instance()->librarySource()->setUserFollowed(
+        key, followed, [this, key, followed](Outcome<bool> outcome) {
+            const auto request = m_followRequests.find(key);
+            if (request != m_followRequests.end()) {
+                request->second.release();
+                m_followRequests.erase(request);
+            }
+            if (outcome.value)
+                return;
+            m_items->setFollowed(m_items->rowOf(key), !followed);
+            emit notice(followNotice(outcome, followed));
+        });
+}
+
 void UserPeopleModel::setHidden(bool hidden)
 {
     if (hidden == m_hidden)
@@ -95,6 +142,7 @@ void UserPeopleModel::setHidden(bool hidden)
 
 void UserPeopleModel::clear()
 {
+    m_followRequests.clear();
     resetPaging();
     m_cursor = 0;
     m_items->reset({});
@@ -264,19 +312,45 @@ bool UserPageModel::own() const
     return !m_key.isEmpty() && m_key == App::instance()->session()->accountKey();
 }
 
+void UserPageModel::setFollowed(bool followed)
+{
+    if (followed == m_info.followed || m_info.key.isEmpty())
+        return;
+    m_info.followed = followed;
+    emit followedChanged();
+    m_followRequest = App::instance()->librarySource()->setUserFollowed(
+        m_key, followed, [this, followed](Outcome<bool> outcome) {
+            m_followRequest.release();
+            if (outcome.value) {
+                // The fan count moves with it, as the service will count it.
+                if (m_info.fans >= 0) {
+                    m_info.fans = std::max<qint64>(0, m_info.fans + (followed ? 1 : -1));
+                    emit headerChanged();
+                }
+                return;
+            }
+            m_info.followed = !followed;
+            emit followedChanged();
+            emit notice(followNotice(outcome, followed));
+        });
+}
+
 Request UserPageModel::load()
 {
     return App::instance()->catalog()->user(m_key, handle<UserInfo>([this](UserInfo info) {
                                                 m_info = std::move(info);
                                                 emit headerChanged();
+                                                emit followedChanged();
                                                 return false; // a user always has a page
                                             }));
 }
 
 void UserPageModel::clear()
 {
+    m_followRequest.cancel();
     m_info = {};
     emit headerChanged();
+    emit followedChanged();
 }
 
 } // namespace cirrus::ui

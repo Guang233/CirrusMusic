@@ -6,6 +6,8 @@
 
 #include <QAbstractListModel>
 
+#include <map>
+
 namespace cirrus::ui
 {
 
@@ -34,6 +36,10 @@ class UserListModel : public QAbstractListModel
 
     void reset(const QList<UserItem>& items);
     void append(const QList<UserItem>& items);
+    [[nodiscard]] UserItem itemAt(int row) const { return m_items.value(row); }
+    // The row of `key`'s user, -1 when not listed.
+    [[nodiscard]] int rowOf(const QString& key) const;
+    void setFollowed(int row, bool followed);
 
     int rowCount(const QModelIndex& parent = {}) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -63,9 +69,14 @@ class UserPeopleModel : public PagedModel
     [[nodiscard]] bool hidden() const { return m_hidden; }
     void setUserKey(const QString& key);
     Q_INVOKABLE void ensureLoaded();
+    // Follows or unfollows the user of `row` (optimistic; reverted with a `notice` on
+    // failure).
+    Q_INVOKABLE void setFollowed(int row, bool followed);
 
   signals:
     void hiddenChanged();
+    // A short message for the user (a failed follow).
+    void notice(const QString& message);
 
   protected:
     Request load() override { return loadFirst(); }
@@ -81,6 +92,7 @@ class UserPeopleModel : public PagedModel
     bool m_hidden = false;
     qint64 m_cursor = 0;
     UserListModel* m_items;
+    std::map<QString, Request> m_followRequests; // by user key
 };
 
 // The playlists a user made and saved, two lists from one read.
@@ -170,7 +182,9 @@ class UserPageModel : public LoadableModel
     Q_PROPERTY(QString artistKey READ artistKey NOTIFY headerChanged)
     // The signed-in account's own page.
     Q_PROPERTY(bool own READ own NOTIFY ownChanged)
-    Q_PROPERTY(bool followed READ followed NOTIFY headerChanged)
+    // Followed by the account. Setting it follows or unfollows (optimistic; reverted
+    // with a `notice` on failure).
+    Q_PROPERTY(bool followed READ followed WRITE setFollowed NOTIFY followedChanged)
     Q_PROPERTY(cirrus::ui::UserPlaylistsModel* playlists READ playlists CONSTANT)
     Q_PROPERTY(cirrus::ui::UserRankingModel* ranking READ ranking CONSTANT)
     Q_PROPERTY(cirrus::ui::UserPeopleModel* follows READ follows CONSTANT)
@@ -191,6 +205,7 @@ class UserPageModel : public LoadableModel
     [[nodiscard]] QString artistKey() const { return m_info.artistKey; }
     [[nodiscard]] bool own() const;
     [[nodiscard]] bool followed() const { return m_info.followed; }
+    void setFollowed(bool followed);
     [[nodiscard]] UserPlaylistsModel* playlists() const { return m_playlists; }
     [[nodiscard]] UserRankingModel* ranking() const { return m_ranking; }
     [[nodiscard]] UserPeopleModel* follows() const { return m_follows; }
@@ -200,6 +215,8 @@ class UserPageModel : public LoadableModel
     void userKeyChanged();
     void headerChanged();
     void ownChanged();
+    void followedChanged();
+    void notice(const QString& message);
 
   protected:
     Request load() override;
@@ -212,6 +229,7 @@ class UserPageModel : public LoadableModel
     UserRankingModel* m_ranking;
     UserPeopleModel* m_follows;
     UserPeopleModel* m_fans;
+    Request m_followRequest;
 };
 
 } // namespace cirrus::ui

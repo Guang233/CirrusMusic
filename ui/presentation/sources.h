@@ -117,6 +117,8 @@ class LibrarySource
                                          Reply<bool> reply) = 0;
     // Follows or unfollows an artist; replies with the new state.
     virtual Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) = 0;
+    // Follows or unfollows a user; replies with the new state.
+    virtual Request setUserFollowed(const QString& key, bool followed, Reply<bool> reply) = 0;
     // The songs the account likes, newest first.
     virtual Request likedSongKeys(Reply<QStringList> reply) = 0;
     // The account's "我喜欢的音乐" playlist (a playlist like any other).

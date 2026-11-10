@@ -34,6 +34,7 @@ class BackendLibrary : public QObject, public LibrarySource
     Request setAlbumSubscribed(const QString& key, bool subscribed, Reply<bool> reply) override;
     Request setPodcastSubscribed(const QString& key, bool subscribed, Reply<bool> reply) override;
     Request setArtistFollowed(const QString& key, bool followed, Reply<bool> reply) override;
+    Request setUserFollowed(const QString& key, bool followed, Reply<bool> reply) override;
     Request likedSongKeys(Reply<QStringList> reply) override;
     Request likedPlaylist(Reply<CollectionItem> reply) override;
     Request libraryCollections(collection::Kind kind, PageRequest page,

@@ -202,6 +202,8 @@ struct FakeAccount {
     QHash<QString, Edit> edits;
     // Playlists created in this run, by key: their titles.
     QHash<QString, QString> made;
+    // Users followed (true) or unfollowed in this run.
+    QHash<QString, bool> userFollows;
 
     // Playlists that only the account has (not in the samples).
     [[nodiscard]] bool accountOnly(const QString& key) const
@@ -1237,7 +1239,8 @@ class FakeCatalog : public QObject, public CatalogSource
                              ? m_samples->artistOrder.first()
                              : QString();
         info.rankingOpen = key != QStringLiteral("u-4");
-        info.followed = m_controls->signedIn() && index % 3 == 0 && key != kFakeAccountKey;
+        info.followed = m_controls->signedIn() && key != kFakeAccountKey &&
+                        m_account->userFollows.value(key, index % 3 == 0);
         return info;
     }
 
@@ -1525,6 +1528,20 @@ class FakeLibrary : public QObject, public LibrarySource
             m_account->followedArtists.removeAll(key);
             if (followed)
                 m_account->followedArtists.prepend(key);
+            outcome.value = followed;
+            return outcome;
+        });
+    }
+
+    Request setUserFollowed(const QString& key, bool followed, Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [=, this]() {
+            Outcome<bool> outcome;
+            if (!m_controls->signedIn()) {
+                outcome.failure = Failure{failure::SignedOut, std::nullopt};
+                return outcome;
+            }
+            m_account->userFollows.insert(key, followed);
             outcome.value = followed;
             return outcome;
         });

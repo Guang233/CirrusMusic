@@ -62,6 +62,8 @@ Item {
     property bool showPlay: true
     // The action row (play, actionsContent, find); a page with nothing in it hides it.
     property bool showActions: true
+    // Shown in the compact bar, left of its play button and find field.
+    property Component compactActionsContent: null
     property SongListModel playSource: null
     // The widths of the action skeletons, play all first.
     property list<int> actionSkeletons: [116]
@@ -453,12 +455,20 @@ Item {
             }
             Text {
                 x: compactCover.x + compactCover.width + 12
-                width: (compactPlay.visible ? compactPlay.x : parent.width) - x - 12
+                width: (compactActions.item ? compactActions.x
+                        : compactPlay.visible ? compactPlay.x : parent.width) - x - 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: page.title
                 elide: Text.ElideRight
                 color: Theme.color.onSurface
                 font: Theme.type.titleMedium.font
+            }
+            Loader {
+                id: compactActions
+                x: (compactPlay.visible ? compactPlay.x
+                    : compactFind.visible ? compactFind.x : parent.width) - width - 12
+                anchors.verticalCenter: parent.verticalCenter
+                sourceComponent: page.compactActionsContent
             }
             IconButton {
                 id: compactPlay

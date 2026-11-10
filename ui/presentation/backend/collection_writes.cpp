@@ -31,6 +31,8 @@ const char* changeName(const domain::CollectionChange& change)
                 return "artist";
             else if constexpr (std::is_same_v<C, PodcastSubscription>)
                 return "podcast";
+            else if constexpr (std::is_same_v<C, UserFollow>)
+                return "user";
             else if constexpr (std::is_same_v<C, PlaylistCreate>)
                 return "playlist_create";
             else if constexpr (std::is_same_v<C, PlaylistRename>)
