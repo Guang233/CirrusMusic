@@ -64,7 +64,7 @@ std::optional<QList<ArtistCredit>> credits(const QJsonValue& value)
         const auto id = providerId(raw);
         if ((!unknownId(raw) && id.isEmpty()) || !textField(o.value(QStringLiteral("name"))))
             return std::nullopt;
-        list.append({id.isEmpty() ? std::nullopt : std::optional<ArtistId>({id}),
+        list.append({id.isEmpty() ? std::nullopt : std::optional<ArtistId>(ArtistId{id}),
                      o.value(QStringLiteral("name")).toString()});
     }
     return list;

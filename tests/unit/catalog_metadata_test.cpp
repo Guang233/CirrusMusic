@@ -105,8 +105,8 @@ class CatalogMetadataTest : public QObject
     {
         const auto song =
             std::get<SongDetails>(mapMusicResponse(queries()[0], seed(0))).songs.first();
-        QCOMPARE(song.aliases, std::optional<QStringList>({"alias", "alias"}));
-        QCOMPARE(song.translatedTitles, std::optional<QStringList>({"translation"}));
+        QCOMPARE(song.aliases, std::optional<QStringList>(QStringList{"alias", "alias"}));
+        QCOMPARE(song.translatedTitles, std::optional<QStringList>(QStringList{"translation"}));
         QCOMPARE(song.publishedAtMs, std::optional<qint64>(-1));
         QCOMPARE(song.durationMs, std::optional<qint64>(2000));
         const auto album = std::get<AlbumDetails>(mapMusicResponse(queries()[1], seed(1)));
@@ -114,14 +114,14 @@ class CatalogMetadataTest : public QObject
         QCOMPARE(album.album.company, std::optional<QString>("synthetic label"));
         QCOMPARE(album.album.type, std::optional<QString>("EP"));
         QCOMPARE(album.album.subType, std::optional<QString>("synthetic version"));
-        QCOMPARE(album.album.aliases, std::optional<QStringList>({"alias"}));
+        QCOMPARE(album.album.aliases, std::optional<QStringList>(QStringList{"alias"}));
         QVERIFY(album.complete);
         const auto artist = std::get<ArtistDetails>(mapMusicResponse(queries()[2], seed(2)));
         QCOMPARE(artist.description, "synthetic brief");
-        QCOMPARE(artist.translatedNames, std::optional<QStringList>({"translation"}));
+        QCOMPARE(artist.translatedNames, std::optional<QStringList>(QStringList{"translation"}));
         const auto playlist = std::get<PlaylistDetails>(mapMusicResponse(queries()[3], seed(3)));
         QCOMPARE(playlist.description, "synthetic playlist introduction");
-        QCOMPARE(playlist.tags, std::optional<QStringList>({"tag", "tag"}));
+        QCOMPARE(playlist.tags, std::optional<QStringList>(QStringList{"tag", "tag"}));
         QCOMPARE(playlist.creator->publicUserId, std::optional<QString>("9007199254740993"));
         QCOMPARE(playlist.creator->nickname, "synthetic");
         QCOMPARE(playlist.playCount, std::optional<double>(1.5));

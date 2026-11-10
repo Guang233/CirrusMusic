@@ -2193,7 +2193,7 @@ void BackendRuntimeTest::catalogMetadataThroughThread()
     QTRY_COMPARE(done.size(), 1);
     const auto song =
         std::get<SongDetails>(qvariant_cast<MusicResult>(done.last()[2])).songs.first();
-    QCOMPARE(song.aliases, std::optional<QStringList>({"synthetic alias"}));
+    QCOMPARE(song.aliases, std::optional<QStringList>(QStringList{"synthetic alias"}));
     QCOMPARE(song.publishedAtMs, std::optional<qint64>(0));
     QVERIFY(f.albumDetails({"2"}));
     QTRY_COMPARE(done.size(), 2);
@@ -2204,7 +2204,7 @@ void BackendRuntimeTest::catalogMetadataThroughThread()
     QTRY_COMPARE(done.size(), 3);
     const auto artist = std::get<ArtistDetails>(qvariant_cast<MusicResult>(done.last()[2]));
     QCOMPARE(artist.description, "synthetic brief");
-    QCOMPARE(artist.aliases, std::optional<QStringList>({"synthetic alias"}));
+    QCOMPARE(artist.aliases, std::optional<QStringList>(QStringList{"synthetic alias"}));
     QVERIFY(f.playlistDetails({"4"}));
     QTRY_COMPARE(done.size(), 4);
     const auto playlist = std::get<PlaylistDetails>(qvariant_cast<MusicResult>(done.last()[2]));

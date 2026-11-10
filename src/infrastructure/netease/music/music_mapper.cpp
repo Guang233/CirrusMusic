@@ -88,7 +88,7 @@ std::optional<Song> songFrom(const QJsonObject& object)
         if (!textField(name) || (id.isEmpty() && !unknownId(rawId)))
             return std::nullopt;
         song.artists.append(
-            {id.isEmpty() ? std::nullopt : std::optional<ArtistId>({id}), name.toString()});
+            {id.isEmpty() ? std::nullopt : std::optional<ArtistId>(ArtistId{id}), name.toString()});
     }
     const auto album = object.contains(QStringLiteral("al"))
                            ? object.value(QStringLiteral("al"))
@@ -105,8 +105,9 @@ std::optional<Song> songFrom(const QJsonObject& object)
             !cover.userInfo().isEmpty() ||
             (cover.scheme() != QStringLiteral("https") && cover.scheme() != QStringLiteral("http")))
             cover = QUrl{};
-        song.album = AlbumReference{id.isEmpty() ? std::nullopt : std::optional<AlbumId>({id}),
-                                    title.toString(), cover};
+        song.album =
+            AlbumReference{id.isEmpty() ? std::nullopt : std::optional<AlbumId>(AlbumId{id}),
+                           title.toString(), cover};
     } else if (!album.isUndefined() && !album.isNull())
         return std::nullopt;
     const auto duration = object.contains(QStringLiteral("dt"))
