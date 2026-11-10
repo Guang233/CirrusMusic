@@ -33,6 +33,7 @@ target_sources(cirrus_domain INTERFACE
     domain/music/catalog_types.h
     domain/music/discovery_types.h
     domain/music/discovery_browse_types.h
+    domain/music/user_profile_types.h
     domain/music/cloud_history_types.h
     domain/music/chart_types.h
     domain/music/playlist_discovery_types.h
@@ -252,6 +253,8 @@ add_library(cirrus_netease_api STATIC
     infrastructure/netease/api/api_operation.h
     infrastructure/netease/api/discovery_browse_operation.cpp
     infrastructure/netease/api/discovery_browse_operation.h
+    infrastructure/netease/api/user_profile_operation.cpp
+    infrastructure/netease/api/user_profile_operation.h
     infrastructure/netease/api/together_operation.cpp
     infrastructure/netease/api/together_operation.h
     infrastructure/netease/api/comment_operation.cpp
@@ -385,6 +388,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/discovery_browse_mapper.h
     infrastructure/netease/music/song_wiki_text_mapper.cpp
     infrastructure/netease/music/song_wiki_text_mapper.h
+    infrastructure/netease/music/user_profile_mapper.cpp
+    infrastructure/netease/music/user_profile_mapper.h
     infrastructure/netease/music/catalog_mapper.cpp
     infrastructure/netease/music/catalog_mapper.h
     infrastructure/netease/music/introduction_mapper.cpp

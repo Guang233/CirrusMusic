@@ -18,6 +18,7 @@
 #include "recommendation_history_mapper.h"
 #include "search_assist_mapper.h"
 #include "song_wiki_text_mapper.h"
+#include "user_profile_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -170,6 +171,8 @@ application::MusicResult mapMusicResponse(const application::MusicQuery& query,
         return mapSongWikiTextResponse(*wiki, object);
     if (const auto* browse = std::get_if<DiscoveryBrowseQuery>(&query))
         return mapDiscoveryBrowseResponse(*browse, object);
+    if (const auto* user = std::get_if<UserProfileQuery>(&query))
+        return mapUserProfileResponse(*user, object);
     if (isSearchAssistQuery(query))
         return mapSearchAssistResponse(query, object);
     if (isCommentQuery(query))

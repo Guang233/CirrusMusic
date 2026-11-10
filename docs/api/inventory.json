@@ -3,8 +3,8 @@
   "upstreamCommit": "a8c781fd64faab17fedfd46e0615a2609307f163",
   "scopeRevision": "2026-09-26-backend-first",
   "counts": {
-    "exclude": 236,
-    "adopt": 164,
+    "exclude": 233,
+    "adopt": 167,
     "defer": 40
   },
   "categories": {
@@ -5956,10 +5956,10 @@
     },
     {
       "id": "follow",
-      "decision": "exclude",
-      "category": "excluded_other",
-      "phase": null,
-      "rationale": "不属于已批准的歌曲客户端范围（社交、账号资料编辑／绑定、活动或其他扩展）；不因上游存在就迁移。",
+      "decision": "adopt",
+      "category": "account",
+      "phase": "M2",
+      "rationale": "维护者 2026-11-10 把用户页纳入范围（docs/ui/pages/user.md）：关注列表、粉丝列表与关注／取消关注；采用表示计划移植，不表示已实现或真实验证。",
       "source": {
         "path": "module/follow.js",
         "sha256": "0b4a55fb6ee44718df68c030f1d695a9aac34d872c34598da2e6390ee61dceca",
@@ -16840,10 +16840,10 @@
     },
     {
       "id": "user_followeds",
-      "decision": "exclude",
-      "category": "excluded_other",
-      "phase": null,
-      "rationale": "不属于已批准的歌曲客户端范围（社交、账号资料编辑／绑定、活动或其他扩展）；不因上游存在就迁移。",
+      "decision": "adopt",
+      "category": "account",
+      "phase": "M2",
+      "rationale": "维护者 2026-11-10 把用户页纳入范围（docs/ui/pages/user.md）：关注列表、粉丝列表与关注／取消关注；采用表示计划移植，不表示已实现或真实验证。",
       "source": {
         "path": "module/user_followeds.js",
         "sha256": "9d8d46a4f8bafcdcb1bce0ba52e9c94d24106e21d575647687147cef7ebf81dd",
@@ -16883,10 +16883,10 @@
     },
     {
       "id": "user_follows",
-      "decision": "exclude",
-      "category": "excluded_other",
-      "phase": null,
-      "rationale": "不属于已批准的歌曲客户端范围（社交、账号资料编辑／绑定、活动或其他扩展）；不因上游存在就迁移。",
+      "decision": "adopt",
+      "category": "account",
+      "phase": "M2",
+      "rationale": "维护者 2026-11-10 把用户页纳入范围（docs/ui/pages/user.md）：关注列表、粉丝列表与关注／取消关注；采用表示计划移植，不表示已实现或真实验证。",
       "source": {
         "path": "module/user_follows.js",
         "sha256": "8e41baedd3c8fa774c6c4611e4231731a3dbc84ebc2bee31feff1bd422550553",

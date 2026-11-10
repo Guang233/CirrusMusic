@@ -347,3 +347,7 @@ qt_add_executable(tst_resource_cache_store unit/resource_cache_store_test.cpp)
 target_link_libraries(tst_resource_cache_store PRIVATE cirrus_resource_cache Qt6::Test)
 add_test(NAME resource_cache_store COMMAND tst_resource_cache_store)
 set_tests_properties(resource_cache_store PROPERTIES TIMEOUT 30)
+
+qt_add_executable(tst_user_profile unit/user_profile_test.cpp support/synthetic_user_profile.h)
+target_link_libraries(tst_user_profile PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME user_profile COMMAND tst_user_profile)

@@ -11,6 +11,7 @@
 #include "domain/music/search_assist_types.h"
 #include "domain/playback/listening_report.h"
 #include "together_operation.h"
+#include "user_profile_operation.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -83,6 +84,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
 {
     if (isDiscoveryBrowseOperation(operation))
         return discoveryBrowseContract(operation);
+    if (isUserProfileOperation(operation))
+        return userProfileContract(operation, parameters);
     if (isTogetherOperation(operation))
         return togetherContract(operation);
     if (isCommentWriteOperation(operation))
@@ -112,6 +115,12 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::SimilarArtists:
     case ApiOperation::SimilarPlaylists:
         return std::nullopt; // closed discovery-browse adapter above
+    case ApiOperation::UserDetail:
+    case ApiOperation::UserPlaylists:
+    case ApiOperation::UserFollows:
+    case ApiOperation::UserFans:
+    case ApiOperation::UserRanking:
+        return std::nullopt; // closed user-profile adapter above
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:
     case ApiOperation::TogetherJoin:
@@ -396,6 +405,11 @@ bool retriesLostConnection(ApiOperation operation)
     case ApiOperation::SimilarSongs:
     case ApiOperation::SimilarArtists:
     case ApiOperation::SimilarPlaylists:
+    case ApiOperation::UserDetail:
+    case ApiOperation::UserPlaylists:
+    case ApiOperation::UserFollows:
+    case ApiOperation::UserFans:
+    case ApiOperation::UserRanking:
         return true;
     // Never: writes and reports; anonymous registration and sign-in (each makes
     // something); the QR key and its check; listening together; personal FM (each
@@ -440,6 +454,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
 {
     if (isDiscoveryBrowseOperation(operation))
         return discoveryBrowsePayload(operation, parameters);
+    if (isUserProfileOperation(operation))
+        return userProfilePayload(operation, parameters);
     if (operation == ApiOperation::SongWikiText) {
         const auto id = parameters.value(QStringLiteral("id"));
         if (parameters.size() != 1 || !id.isString() || !domain::validMusicId(id.toString()))
@@ -806,6 +822,12 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::CellphoneLogin:
     case ApiOperation::EmailLogin:
         break; // strict credential adapter above
+    case ApiOperation::UserDetail:
+    case ApiOperation::UserPlaylists:
+    case ApiOperation::UserFollows:
+    case ApiOperation::UserFans:
+    case ApiOperation::UserRanking:
+        break; // closed user-profile adapter above
     case ApiOperation::LatestAlbums:
     case ApiOperation::NewAlbums:
     case ApiOperation::AlbumCharts:
@@ -931,6 +953,11 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SimilarSongs:
     case ApiOperation::SimilarArtists:
     case ApiOperation::SimilarPlaylists:
+    case ApiOperation::UserDetail:
+    case ApiOperation::UserPlaylists:
+    case ApiOperation::UserFollows:
+    case ApiOperation::UserFans:
+    case ApiOperation::UserRanking:
         return false;
     case ApiOperation::TogetherCreate:
     case ApiOperation::TogetherCheck:

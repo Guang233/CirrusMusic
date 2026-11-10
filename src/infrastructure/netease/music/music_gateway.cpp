@@ -14,6 +14,7 @@
 #include "recent_entity_mapper.h"
 #include "recommendation_history_mapper.h"
 #include "search_assist_mapper.h"
+#include "user_profile_mapper.h"
 
 #include <QJsonArray>
 #include <QSet>
@@ -90,6 +91,10 @@ MusicGateway::MusicGateway(SessionApiClient& client, QObject* parent)
                     finish(id, MusicFailure{MusicError::StaleContext});
                 else if (it->canceled)
                     finish(id, MusicFailure{MusicError::Canceled});
+                else if (const auto* user = std::get_if<domain::UserProfileQuery>(&it->query);
+                         user && result.error == ApiError::None && result.decoded.businessCode &&
+                         userProfileHidden(*user, *result.decoded.businessCode))
+                    finish(id, domain::UserProfilePage{*user, domain::UserProfileHidden{}});
                 else if (result.error != ApiError::None || result.decoded.businessCode != 200)
                     finish(id, failure(result));
                 else
@@ -146,6 +151,11 @@ quint64 MusicGateway::request(domain::SessionToken context, MusicQuery query)
         operation = ApiOperation::PersonalFm;
     } else if (const auto* browse = std::get_if<domain::DiscoveryBrowseQuery>(&query)) {
         const auto request = discoveryBrowseRequest(*browse);
+        Q_ASSERT(request);
+        operation = request->operation;
+        parameters = request->parameters;
+    } else if (const auto* user = std::get_if<domain::UserProfileQuery>(&query)) {
+        const auto request = userProfileRequest(*user);
         Q_ASSERT(request);
         operation = request->operation;
         parameters = request->parameters;

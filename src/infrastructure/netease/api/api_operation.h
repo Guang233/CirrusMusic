@@ -119,7 +119,12 @@ enum class ApiOperation {
     SongWikiText,
     SmsCodeSend,
     CellphoneLogin,
-    EmailLogin
+    EmailLogin,
+    UserDetail,
+    UserPlaylists,
+    UserFollows,
+    UserFans,
+    UserRanking
 };
 
 struct ApiOperationContract {

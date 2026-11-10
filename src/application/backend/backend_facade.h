@@ -203,6 +203,8 @@ class BackendFacade final : public QObject
     [[nodiscard]] quint64 playlistSongs(domain::PlaylistSongsQuery query);
     [[nodiscard]] quint64 discover(domain::DiscoveryBrowseQuery query);
     [[nodiscard]] quint64 songWikiText(domain::SongWikiTextQuery query);
+    // Any user's profile, lists and ranking (docs/api/user-profile-reads.md); guests too.
+    [[nodiscard]] quint64 userProfile(domain::UserProfileQuery query);
     [[nodiscard]] quint64 dailyRecommendations();
     [[nodiscard]] quint64 dailyRecommendationHistoryDates();
     [[nodiscard]] quint64 dailyRecommendationHistorySongs(domain::DailyHistorySongsQuery query);

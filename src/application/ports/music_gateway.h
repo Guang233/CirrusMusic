@@ -18,6 +18,7 @@
 #include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
 #include "domain/music/song_wiki_text_types.h"
+#include "domain/music/user_profile_types.h"
 
 #include <QObject>
 #include <type_traits>
@@ -80,26 +81,25 @@ using MusicQuery = std::variant<
     domain::SongWikiQuery, domain::SearchSuggestionsQuery, domain::HotKeywordsQuery,
     domain::HotKeywordDetailsQuery, domain::DailyRecommendedPlaylistsQuery,
     domain::DailyHistoryDatesQuery, domain::DailyHistorySongsQuery, domain::DiscoveryBrowseQuery,
-    domain::SongWikiTextQuery>;
-using MusicResult =
-    std::variant<domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
-                 domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage,
-                 domain::ArtistAlbumsPage, domain::PlaylistDetails, domain::PlaylistSongsPage,
-                 domain::DailyRecommendations, domain::PersonalFmBatch, domain::MyPlaylistsPage,
-                 domain::LikedSongIds, domain::SavedAlbumsPage, domain::SavedArtistsPage,
-                 domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts,
-                 domain::RecommendedPlaylists, domain::PlaylistListPage,
-                 domain::PremiumPlaylistsPage, domain::PlaylistTags, domain::AlbumSearchPage,
-                 domain::ArtistSearchPage, domain::PlaylistSearchPage, domain::PodcastSearchPage,
-                 domain::VoiceSearchPage, domain::PodcastDetails, domain::PodcastProgramsPage,
-                 domain::ProgramDetails, domain::CloudRecentPlaylists, domain::CloudRecentAlbums,
-                 domain::CloudRecentPodcasts, domain::CloudRecentVoices, domain::CommentsPage,
-                 domain::HotCommentsPage, domain::SortedCommentsPage, domain::CommentFloorPage,
-                 domain::CommentStatistics, domain::SubscribedPodcastsPage, domain::CloudSongsPage,
-                 domain::CloudSongDetails, domain::ArtistIntroduction, domain::SongWikiSummary,
-                 domain::SearchSuggestions, domain::HotKeywords, domain::HotKeywordDetails,
-                 domain::DailyRecommendedPlaylists, domain::DailyHistoryDates,
-                 domain::DailyHistorySongs, domain::DiscoveryBrowsePage, domain::SongWikiText>;
+    domain::SongWikiTextQuery, domain::UserProfileQuery>;
+using MusicResult = std::variant<
+    domain::SongSearchPage, domain::SongDetails, domain::SongLyrics, MusicFailure,
+    domain::AlbumDetails, domain::ArtistDetails, domain::ArtistSongsPage, domain::ArtistAlbumsPage,
+    domain::PlaylistDetails, domain::PlaylistSongsPage, domain::DailyRecommendations,
+    domain::PersonalFmBatch, domain::MyPlaylistsPage, domain::LikedSongIds, domain::SavedAlbumsPage,
+    domain::SavedArtistsPage, domain::CloudRecentSongs, domain::ListeningRanking, domain::Charts,
+    domain::RecommendedPlaylists, domain::PlaylistListPage, domain::PremiumPlaylistsPage,
+    domain::PlaylistTags, domain::AlbumSearchPage, domain::ArtistSearchPage,
+    domain::PlaylistSearchPage, domain::PodcastSearchPage, domain::VoiceSearchPage,
+    domain::PodcastDetails, domain::PodcastProgramsPage, domain::ProgramDetails,
+    domain::CloudRecentPlaylists, domain::CloudRecentAlbums, domain::CloudRecentPodcasts,
+    domain::CloudRecentVoices, domain::CommentsPage, domain::HotCommentsPage,
+    domain::SortedCommentsPage, domain::CommentFloorPage, domain::CommentStatistics,
+    domain::SubscribedPodcastsPage, domain::CloudSongsPage, domain::CloudSongDetails,
+    domain::ArtistIntroduction, domain::SongWikiSummary, domain::SearchSuggestions,
+    domain::HotKeywords, domain::HotKeywordDetails, domain::DailyRecommendedPlaylists,
+    domain::DailyHistoryDates, domain::DailyHistorySongs, domain::DiscoveryBrowsePage,
+    domain::SongWikiText, domain::UserProfilePage>;
 
 inline bool validMusicQuery(const MusicQuery& query)
 {

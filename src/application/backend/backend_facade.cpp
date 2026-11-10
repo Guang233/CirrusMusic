@@ -234,6 +234,10 @@ quint64 BackendFacade::discover(domain::DiscoveryBrowseQuery query)
 {
     return submitMusic(std::move(query));
 }
+quint64 BackendFacade::userProfile(domain::UserProfileQuery query)
+{
+    return submitMusic(std::move(query));
+}
 quint64 BackendFacade::songWikiText(domain::SongWikiTextQuery query)
 {
     if (query.sourceContext() != m_snapshot.token)
@@ -454,6 +458,12 @@ void BackendFacade::deliverMusic(MusicDelivery delivery)
              browse && !std::holds_alternative<MusicFailure>(delivery.result)) {
         const auto* page = std::get_if<domain::DiscoveryBrowsePage>(&delivery.result);
         if (!page || !domain::matchingDiscoveryBrowsePage(*browse, *page))
+            delivery.result = MusicFailure{MusicError::InvalidResponse};
+    }
+    if (const auto* user = std::get_if<domain::UserProfileQuery>(&expected.query);
+        user && !std::holds_alternative<MusicFailure>(delivery.result)) {
+        const auto* page = std::get_if<domain::UserProfilePage>(&delivery.result);
+        if (!page || !domain::matchingUserProfilePage(*user, *page))
             delivery.result = MusicFailure{MusicError::InvalidResponse};
     }
     if (const auto* wiki = std::get_if<domain::SongWikiTextQuery>(&expected.query);
