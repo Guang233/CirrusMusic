@@ -11,6 +11,7 @@
 | 账号 | 头像、昵称；登录／退出登录 | 现有 | `App.session` |
 | 播放 | 音质：标准／极高／无损／Hi-Res | **新增** | 后端 `AudioQuality`（standard／exhigh／lossless／hires），取流时传入，默认 Standard；拿不到所选音质时服务器给可用的最高档（`actualQuality`）。展示层加 `App.settings.audioQuality`，传给播放 |
 | | 输出设备 | 等后端 | `QAudioOutput` 属于后端播放器，界面不能直接换设备 |
+| | 音量均衡 | **已接**（2026-11-10） | 按网易给的响度增益把每首调到 −14 LUFS，`App.settings.normalizeVolume`，默认关（[audio-engine.md §6.5](../../tasks/audio-engine.md)） |
 | | 启动时继续播放 | **已接**（2026-11-08） | 上次的队列和位置总是恢复（integration.md §6 D7）；这一项决定恢复后是否接着播，`App.settings.resumeOnStart`，默认关 |
 | 歌词 | 显示翻译、显示音译 | 现有 | `App.settings` |
 | 外观 | 明暗：跟随系统／亮色／暗色 | 现有 | |
