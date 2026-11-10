@@ -233,6 +233,7 @@ struct FakeAccount {
         page.info.title =
             page.info.liked ? kNickname + QStringLiteral("喜欢的音乐") : made.value(key);
         page.info.creator = kNickname;
+        page.info.creatorKey = kFakeAccountKey;
         page.info.updatedAtMs = QDateTime::currentMSecsSinceEpoch();
         // The service counts plays and saves for every playlist, the account's own too.
         page.info.playCount = page.info.liked ? 1'286 : 0;
@@ -375,6 +376,9 @@ std::shared_ptr<const Samples> loadSamples()
         page.info.title = playlist.value(QLatin1StringView("title")).toString();
         page.info.description = playlist.value(QLatin1StringView("description")).toString();
         page.info.creator = playlist.value(QLatin1StringView("creator")).toString();
+        // A commenter's page stands in for the creator's.
+        page.info.creatorKey =
+            QStringLiteral("u-%1").arg(qHash(page.info.key) % std::size(kUserNames));
         page.info.coverKey = coverKey(playlist.value(QLatin1StringView("cover")));
         fillPlaylistDetails(page.info);
         page.songKeys = strings(playlist.value(QLatin1StringView("songIds")));

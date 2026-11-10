@@ -189,6 +189,14 @@ SongCollectionPage {
             text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
             onClicked: page.toggleFollowed()
         }
+        // A musician's own account (docs/ui/pages/user.md §4).
+        Button {
+            visible: pageModel.userKey !== ""
+            variant: Md.Text
+            glyph: Symbols.person
+            text: qsTr("用户主页")
+            onClicked: page.shell.openUser(pageModel.userKey)
+        }
     }
 
     tabsContent: Item {

@@ -45,6 +45,7 @@ struct PlaylistInfo {
     QString title;
     QString description;
     QString creator;
+    QString creatorKey; // the creator's user page, empty when unknown
     QString coverKey;
     QStringList tags;
     qint64 updatedAtMs = 0; // 0 when unknown
@@ -104,6 +105,8 @@ struct ArtistInfo {
     int albumCount = -1; // -1 when unknown
     // Other names and translations.
     QStringList aliases;
+    // The musician's own user page, empty when unknown.
+    QString userKey;
     // Followed by the signed-in account.
     bool followed = false;
 };

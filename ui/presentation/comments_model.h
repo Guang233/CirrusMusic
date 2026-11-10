@@ -59,6 +59,7 @@ class CommentListModel : public QAbstractListModel
         HasMoreRole,
         LoadingRole,
         FailedRole,
+        AuthorKeyRole, // the author's user page; empty when unknown
     };
     Q_ENUM(Role)
     enum RowType {

@@ -506,6 +506,7 @@ Item {
         required property int rowType
         required property string key
         required property string authorName
+        required property string authorKey
         required property string avatarKey
         required property real timeMs
         required property string text
@@ -528,6 +529,8 @@ Item {
         readonly property real indent: isReply || isEnd ? 56 : 0
         readonly property real avatarSize: isReply ? 32 : 40
         readonly property bool usable: !isEnd && !deleted && !local
+        // The author's page opens from the avatar, the name and the menu.
+        readonly property bool hasAuthor: !isEnd && authorKey !== ""
         // The row itself, not its reply box.
         readonly property bool focused: activeFocus
                                         && !((replyLoader.item as Composer)?.field.activeFocus ?? false)
@@ -548,7 +551,7 @@ Item {
             content.forceLayout();
         }
         function openMenu(): void {
-            commentMenu.openFor(row.index, row.key, row.text, row.mine, actions,
+            commentMenu.openFor(row.index, row.key, row.text, row.mine, row.authorKey, actions,
                                 more.x, more.y + more.height);
         }
 
@@ -635,6 +638,12 @@ Item {
             height: row.avatarSize
             visible: !row.isEnd
             coverKey: row.avatarKey
+            MouseArea {
+                anchors.fill: parent
+                enabled: row.hasAuthor
+                cursorShape: Qt.PointingHandCursor
+                onClicked: page.shell.openUser(row.authorKey)
+            }
         }
 
         Column {
@@ -655,6 +664,12 @@ Item {
                     elide: Text.ElideRight
                     color: Theme.color.onSurface
                     font: Theme.type.titleSmall.font
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: row.hasAuthor
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: page.shell.openUser(row.authorKey)
+                    }
                 }
                 Text {
                     id: when
@@ -909,20 +924,22 @@ Item {
         }
     }
 
-    // Copy, reply (when allowed), delete (the account's own).
+    // Copy, the author's page, reply (when allowed), delete (the account's own).
     Menu {
         id: commentMenu
         property int row: -1
         property string key
         property string text
         property bool mine: false
+        property string author
 
         function openFor(target: int, commentKey: string, body: string, own: bool,
-                         anchor: Item, x: real, y: real): void {
+                         authorKey: string, anchor: Item, x: real, y: real): void {
             row = target;
             key = commentKey;
             text = body;
             mine = own;
+            author = authorKey;
             list.currentIndex = target;
             popup(anchor, x, y);
         }
@@ -931,6 +948,13 @@ Item {
             glyph: Symbols.content_copy
             text: qsTr("复制")
             onTriggered: App.copyText(commentMenu.text)
+        }
+        MenuItem {
+            visible: commentMenu.author !== ""
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.person
+            text: qsTr("查看用户主页")
+            onTriggered: page.shell.openUser(commentMenu.author)
         }
         MenuItem {
             visible: page.canWrite

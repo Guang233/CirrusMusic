@@ -144,6 +144,8 @@ class ArtistPageModel : public LoadableModel
     Q_PROPERTY(QString aliasText READ aliasText NOTIFY headerChanged)
     Q_PROPERTY(QString description READ description NOTIFY headerChanged)
     Q_PROPERTY(QString avatarKey READ avatarKey NOTIFY headerChanged)
+    // The musician's own user page; empty when unknown.
+    Q_PROPERTY(QString userKey READ userKey NOTIFY headerChanged)
     Q_PROPERTY(int albumCount READ albumCount NOTIFY headerChanged) // -1 when unknown
     // "单曲 86 · 专辑 40", leaving out unknown counts.
     Q_PROPERTY(QString countText READ countText NOTIFY headerChanged)
@@ -166,6 +168,7 @@ class ArtistPageModel : public LoadableModel
     [[nodiscard]] QString aliasText() const;
     [[nodiscard]] QString description() const { return m_info.description; }
     [[nodiscard]] QString avatarKey() const { return m_info.avatarKey; }
+    [[nodiscard]] QString userKey() const { return m_info.userKey; }
     [[nodiscard]] int albumCount() const { return m_info.albumCount; }
     [[nodiscard]] QString countText() const;
     [[nodiscard]] bool followed() const { return m_info.followed; }

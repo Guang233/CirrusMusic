@@ -23,6 +23,8 @@ class PlaylistPageModel : public LoadableModel
     Q_PROPERTY(QString title READ title NOTIFY headerChanged)
     Q_PROPERTY(QString description READ description NOTIFY headerChanged)
     Q_PROPERTY(QString creator READ creator NOTIFY headerChanged)
+    // The creator's user page; empty when unknown.
+    Q_PROPERTY(QString creatorKey READ creatorKey NOTIFY headerChanged)
     Q_PROPERTY(QString coverKey READ coverKey NOTIFY headerChanged)
     Q_PROPERTY(QStringList tags READ tags NOTIFY headerChanged)
     Q_PROPERTY(QString updatedText READ updatedText NOTIFY headerChanged) // empty when unknown
@@ -47,6 +49,7 @@ class PlaylistPageModel : public LoadableModel
     [[nodiscard]] QString title() const { return m_info.title; }
     [[nodiscard]] QString description() const { return m_info.description; }
     [[nodiscard]] QString creator() const { return m_info.creator; }
+    [[nodiscard]] QString creatorKey() const { return m_info.creatorKey; }
     [[nodiscard]] QString coverKey() const { return m_info.coverKey; }
     [[nodiscard]] SongListModel* songs() const { return m_songs; }
     [[nodiscard]] QStringList tags() const { return m_info.tags; }

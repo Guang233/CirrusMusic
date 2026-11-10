@@ -153,12 +153,28 @@ SongCollectionPage {
                 onClicked: editDialog.open()
             }
         }
-        Text {
+        // The creator (opens their user page), then when it was updated.
+        Row {
             width: parent.width
-            text: [pageModel.creator, pageModel.updatedText].filter(s => s !== "").join(" · ")
-            elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
-            font: Theme.type.bodyMedium.font
+            spacing: 4
+            Button {
+                id: creatorButton
+                visible: pageModel.creator !== "" && pageModel.creatorKey !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                variant: Md.Text
+                size: Md.XSmall
+                text: pageModel.creator
+                onClicked: page.shell.openUser(pageModel.creatorKey)
+            }
+            Text {
+                width: parent.width - (creatorButton.visible ? creatorButton.width + 4 : 0)
+                anchors.verticalCenter: parent.verticalCenter
+                text: [creatorButton.visible ? "" : pageModel.creator, pageModel.updatedText]
+                      .filter(s => s !== "").join(" · ")
+                elide: Text.ElideRight
+                color: Theme.color.onSurfaceVariant
+                font: Theme.type.bodyMedium.font
+            }
         }
         Extras {
             width: parent.width

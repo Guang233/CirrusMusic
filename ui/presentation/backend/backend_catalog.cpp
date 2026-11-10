@@ -61,6 +61,7 @@ ArtistInfo artistInfoOf(const domain::ArtistDetails& artist)
     info.albumCount = artist.albumCount ? int(*artist.albumCount) : -1;
     info.aliases =
         artist.translatedNames.value_or(QStringList()) + artist.aliases.value_or(QStringList());
+    info.userKey = artist.userId.value_or(QString());
     return info;
 }
 
@@ -270,6 +271,9 @@ Request BackendCatalog::playlist(const QString& key, Reply<PlaylistPage> reply)
             info.title = details->title;
             info.description = details->description;
             info.creator = details->creator ? details->creator->nickname : QString();
+            info.creatorKey = details->creator && details->creator->publicUserId
+                                  ? *details->creator->publicUserId
+                                  : QString();
             info.coverKey = coverKey(details->cover);
             info.tags = details->tags.value_or(QStringList());
             info.updatedAtMs = details->updatedAtMs.value_or(0);

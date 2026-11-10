@@ -98,6 +98,8 @@ QVariant CommentListModel::data(const QModelIndex& index, int role) const
         return info.authorName;
     case AvatarKeyRole:
         return info.avatarKey;
+    case AuthorKeyRole:
+        return info.authorKey;
     case TimeMsRole:
         return info.timeMs;
     case TextRole:
@@ -153,7 +155,8 @@ QHash<int, QByteArray> CommentListModel::roleNames() const
             {ExpandedRole, "expanded"},
             {HasMoreRole, "hasMore"},
             {LoadingRole, "loading"},
-            {FailedRole, "failed"}};
+            {FailedRole, "failed"},
+            {AuthorKeyRole, "authorKey"}};
 }
 
 namespace
