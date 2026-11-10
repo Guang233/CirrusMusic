@@ -73,7 +73,13 @@ qt_add_qml_module(appCirrusMusic
         desktop.h
         desktop.cpp
     RESOURCES
-        icons/cirrus-music.svg
+        icons/cirrus-16.png
+        icons/cirrus-24.png
+        icons/cirrus-32.png
+        icons/cirrus-48.png
+        icons/cirrus-64.png
+        icons/cirrus-128.png
+        icons/cirrus-256.png
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

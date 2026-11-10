@@ -5,10 +5,15 @@
 namespace cirrus::ui
 {
 
-// Placeholder app icon (window and tray) until the app identity is decided (UQ-06).
+// The app icon (window, tray): bitmaps rendered by tools/ui/make_icon.py, since its
+// soft cloud filters need a full SVG renderer.
 [[nodiscard]] inline QIcon appIcon()
 {
-    return QIcon(QStringLiteral(":/qt/qml/CirrusMusic/icons/cirrus-music.svg"));
+    QIcon icon;
+    for (int size : {16, 24, 32, 48, 64, 128, 256})
+        icon.addFile(QStringLiteral(":/qt/qml/CirrusMusic/icons/cirrus-%1.png").arg(size),
+                     QSize(size, size));
+    return icon;
 }
 
 } // namespace cirrus::ui

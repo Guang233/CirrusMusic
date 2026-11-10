@@ -47,8 +47,9 @@ SettingsGroup {
             Image {
                 width: 40
                 height: 40
-                sourceSize: Qt.size(80, 80)
-                source: "qrc:/qt/qml/CirrusMusic/icons/cirrus-music.svg"
+                source: "qrc:/qt/qml/CirrusMusic/icons/cirrus-128.png"
+                smooth: true
+                mipmap: true
             }
         }
     }
