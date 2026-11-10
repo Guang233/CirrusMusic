@@ -130,6 +130,7 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
                     m_state.formBusy = false;
                     m_state.accountKey.clear();
                     m_state.nickname.clear();
+                    m_state.avatarKey.clear();
                     if (m_attempt == Attempt::Qr && m_state.qrPhase != account::QrExpired &&
                         m_state.qrPhase != account::QrFailed)
                         m_state.qrPhase = account::NoQr;
@@ -165,6 +166,7 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
             [this](domain::SessionToken, const domain::AccountIdentity& identity) {
                 m_state.accountKey = identity.accountId;
                 m_state.nickname = identity.nickname;
+                m_state.avatarKey = identity.avatar.toString(); // a cover key (backend_mapping)
                 m_state.formError.clear();
                 applyBackend();
             });

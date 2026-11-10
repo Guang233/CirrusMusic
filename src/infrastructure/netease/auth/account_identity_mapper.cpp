@@ -44,6 +44,13 @@ std::optional<domain::AccountIdentity> mapAccountIdentity(const QJsonObject& obj
         !nickname.toString().isValidUtf16() || nickname.toString().contains(QChar::Null)) {
         return std::nullopt;
     }
-    return domain::AccountIdentity{id, nickname.toString()};
+    // Optional: a malformed address is dropped, not a failure.
+    const auto avatarText = profile.value(QStringLiteral("avatarUrl")).toString();
+    QUrl avatar(avatarText, QUrl::StrictMode);
+    if (avatarText.size() > 2048 || !avatar.isValid() || avatar.host().isEmpty() ||
+        !avatar.userInfo().isEmpty() || avatar.hasFragment() ||
+        (avatar.scheme() != QStringLiteral("https") && avatar.scheme() != QStringLiteral("http")))
+        avatar = QUrl();
+    return domain::AccountIdentity{id, nickname.toString(), avatar};
 }
 } // namespace cirrus::netease

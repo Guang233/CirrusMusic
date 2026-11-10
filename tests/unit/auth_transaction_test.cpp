@@ -55,6 +55,7 @@ class AuthTransactionTest : public QObject
   private slots:
     void identitySchema_data();
     void identitySchema();
+    void identityAvatar();
     void endToEndOffline_data();
     void endToEndOffline();
     void failuresRollback_data();
@@ -129,6 +130,27 @@ void AuthTransactionTest::identitySchema()
     QCOMPARE(identity.has_value(), !expected.isEmpty());
     if (identity)
         QCOMPARE(identity->accountId, expected);
+}
+
+void AuthTransactionTest::identityAvatar()
+{
+    const auto with = [](const char* avatar) {
+        return mapAccountIdentity(
+            QJsonDocument::fromJson(
+                QByteArray(R"({"account":{"id":101},"profile":{"userId":101,"nickname":"N",)") +
+                avatar + "}}")
+                .object());
+    };
+    auto identity = with(R"("avatarUrl":"https://p1.music.126.net/a/b.jpg")");
+    QVERIFY(identity);
+    QCOMPARE(identity->avatar, QUrl("https://p1.music.126.net/a/b.jpg"));
+    // Optional: absent or malformed leaves it empty, the identity still maps.
+    for (const char* odd : {R"("avatarUrl":null)", R"("avatarUrl":"javascript:x")",
+                            R"("avatarUrl":"https://u@p1.music.126.net/a.jpg")", R"("x":1)"}) {
+        identity = with(odd);
+        QVERIFY(identity);
+        QVERIFY(identity->avatar.isEmpty());
+    }
 }
 
 void AuthTransactionTest::endToEndOffline_data()

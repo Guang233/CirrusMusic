@@ -3,6 +3,7 @@
 
 #include <QMetaType>
 #include <QString>
+#include <QUrl>
 #include <QUuid>
 
 namespace cirrus::domain
@@ -22,6 +23,7 @@ CIRRUS_LOG_ENUM(SessionPhase, Guest, Authenticating, Committing, Authenticated, 
 struct AccountIdentity {
     QString accountId;
     QString nickname;
+    QUrl avatar; // the profile picture's address, empty when none; display metadata only
     friend bool operator==(const AccountIdentity&, const AccountIdentity&) = default;
 };
 
