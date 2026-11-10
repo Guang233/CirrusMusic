@@ -125,15 +125,23 @@ std::optional<Comment> comment(const QJsonObject& o, const CommentTarget& target
 }
 bool rows(const QJsonValue& v, const CommentTarget& target, int limit, QList<Comment>& out)
 {
-    if (!v.isArray() || v.toArray().size() > limit)
+    if (!v.isArray()) {
+        rejectedBecause("comments");
         return false;
+    }
+    if (v.toArray().size() > limit) {
+        rejectedBecause("comments_over_limit", v.toArray().size());
+        return false;
+    }
+    qsizetype i = 0;
     for (const auto x : v.toArray()) {
-        if (!x.isObject())
+        const auto c = x.isObject() ? comment(x.toObject(), target) : std::nullopt;
+        if (!c) {
+            rejectedBecause("comment", i);
             return false;
-        const auto c = comment(x.toObject(), target);
-        if (!c)
-            return false;
+        }
         out.append(*c);
+        ++i;
     }
     return true;
 }
@@ -288,13 +296,24 @@ MusicResult mapCommentResponse(const MusicQuery& query, const QJsonObject& objec
     if (const auto* q = std::get_if<SortedCommentsQuery>(&query)) {
         SortedCommentsPage p;
         p.query = *q;
-        if (!echo(object, q->target) || !echo(data, q->target) ||
-            !rows(data.value("comments"), q->target, q->limit, p.comments) ||
-            !number(data.value("totalCount"), p.total) ||
-            (p.total && *p.total < p.comments.size()) ||
-            !boolean(data.value("hasMore"), p.hasMore) ||
-            !text(data.value("cursor"), p.providerCursor))
+        if (!echo(object, q->target) || !echo(data, q->target)) {
+            rejectedBecause("target");
             return invalid;
+        }
+        // Not bounded by the page size: recommended pages carry a few more (26 for 20,
+        // 2026-11-10); 100 is this client's guard.
+        if (!rows(data.value("comments"), q->target, 100, p.comments))
+            return invalid;
+        if (!number(data.value("totalCount"), p.total) ||
+            (p.total && *p.total < p.comments.size())) {
+            rejectedBecause("total");
+            return invalid;
+        }
+        if (!boolean(data.value("hasMore"), p.hasMore) ||
+            !text(data.value("cursor"), p.providerCursor)) {
+            rejectedBecause("paging");
+            return invalid;
+        }
         if (p.providerCursor) {
             if (p.providerCursor->size() > 128)
                 return invalid;
@@ -306,8 +325,10 @@ MusicResult mapCommentResponse(const MusicQuery& query, const QJsonObject& objec
         const int expected = q->order == CommentOrder::Recommended ? 99
                              : q->order == CommentOrder::Hot       ? 2
                                                                    : 3;
-        if (!absent(sort) && sort != QJsonValue(expected))
+        if (!absent(sort) && sort != QJsonValue(expected)) {
+            rejectedBecause("sort_type", sort.toInt(-1));
             return invalid;
+        }
         p.nextBefore = lastTime(p.comments);
         return p;
     }

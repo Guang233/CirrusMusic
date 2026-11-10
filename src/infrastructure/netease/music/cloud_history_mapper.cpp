@@ -23,8 +23,7 @@ bool number(const QJsonValue& value, std::optional<qint64>& out)
 // Which check a response failed; the gateway logs the failure itself (music.invalid).
 MusicFailure invalidBecause(const char* reason, qsizetype row = -1)
 {
-    qCDebug(lcApi) << log::event("music.invalid_why") << log::field("reason", reason)
-                   << log::field("row", row);
+    rejectedBecause(reason, row);
     return MusicFailure{MusicError::InvalidResponse};
 }
 } // namespace

@@ -54,7 +54,7 @@ Guest／Authenticated 原上下文均可提交资源读取，不另要求 MUSIC_
 | --- | --- |
 | CommentsPage | root.comments 必须数组；可选 hotComments／topComments 数组（各≤100），total／more |
 | HotCommentsPage | root.hotComments 必须数组；total／more 可选，不借 root.comments 兜底 |
-| SortedCommentsPage | root.data 对象内 comments 必须数组；totalCount／hasMore／cursor 可选，返回 sortType 若有必须匹配查询 |
+| SortedCommentsPage | root.data 对象内 comments 必须数组（**不以 pageSize 为上限**：2026-11-10 游客实测推荐排序请求 20 条回 26 条，原映射整页拒绝；改为最多 100 条，本产品防护上限）；totalCount／hasMore／cursor 可选，返回 sortType 若有必须匹配查询 |
 | CommentFloorPage | root.data 对象内 comments 必须数组；ownerComment 若有必须匹配 parent；可选 parentCommentId 回显、totalCount／hasMore／time |
 | CommentStatistics | root.data 必须数组，每项 resourceId 必须属于请求且不重复；可选 commentCount／likedCount／shareCount／musicianSaidCount、commentCountDesc、liked／commentUpgraded |
 
