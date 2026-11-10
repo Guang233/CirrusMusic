@@ -201,6 +201,19 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         a.description = o.value(QStringLiteral("briefDesc")).toString();
         a.portrait = image(o.contains(QStringLiteral("cover")) ? o.value(QStringLiteral("cover"))
                                                                : o.value(QStringLiteral("avatar")));
+        // data.user (measured 2026-11-10): the musician's account; absent for others.
+        const auto user =
+            object.value(QStringLiteral("data")).toObject().value(QStringLiteral("user"));
+        if (user.isObject()) {
+            const auto raw = user.toObject().value(QStringLiteral("userId"));
+            if (!unknownId(raw)) {
+                const auto id = providerId(raw);
+                if (id.isEmpty())
+                    return invalid;
+                a.userId = id;
+            }
+        } else if (!user.isNull() && !user.isUndefined())
+            return invalid;
         return a;
     }
     if (const auto* q = std::get_if<ArtistSongsQuery>(&query)) {

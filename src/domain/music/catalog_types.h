@@ -66,6 +66,8 @@ struct ArtistDetails {
     QUrl portrait;
     std::optional<qint64> songCount, albumCount;
     std::optional<QStringList> aliases, translatedNames;
+    // The musician's own account (its user page), when the artist has one.
+    std::optional<QString> userId;
 };
 struct ArtistSongsPage {
     ArtistSongsQuery query;

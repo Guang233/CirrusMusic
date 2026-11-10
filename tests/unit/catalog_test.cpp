@@ -113,6 +113,19 @@ class CatalogTest : public QObject
         const auto a = std::get<ArtistDetails>(r);
         QCOMPARE(a.songCount, std::optional<qint64>(4));
         QVERIFY(a.portrait.isEmpty());
+        QVERIFY(!a.userId); // data.user without a userId: no account
+        // A musician's account (data.user.userId); a malformed one rejects the page.
+        const auto musician = std::get<ArtistDetails>(mapMusicResponse(
+            ArtistQuery{{"1"}},
+            json(
+                R"({"code":200,"data":{"artist":{"id":1,"name":"a"},"user":{"userId":37179178}}})")));
+        QCOMPARE(musician.userId, std::optional<QString>("37179178"));
+        QVERIFY(std::holds_alternative<MusicFailure>(mapMusicResponse(
+            ArtistQuery{{"1"}},
+            json(R"({"code":200,"data":{"artist":{"id":1,"name":"a"},"user":{"userId":"x"}}})"))));
+        QVERIFY(std::holds_alternative<MusicFailure>(mapMusicResponse(
+            ArtistQuery{{"1"}},
+            json(R"({"code":200,"data":{"artist":{"id":1,"name":"a"},"user":7}})"))));
         const auto songs = std::get<ArtistSongsPage>(
             mapMusicResponse(ArtistSongsQuery{{"1"}, {2, 10}}, json(R"({"code":200,"songs":[]})")));
         QVERIFY(!songs.hasMore);
