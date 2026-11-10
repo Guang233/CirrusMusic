@@ -43,7 +43,8 @@ struct TransportRequest {
     QByteArray commentV3Token; // only two closed XEAPI comment paths, not arbitrary headers
     OfficialDestination destination = OfficialDestination::Default;
     // Reads only: a connection that closed before any response (HTTP/2 "connection
-    // closed", remote host closed) is tried once more over HTTP/1.1. Never for writes.
+    // closed", remote host closed) is tried again over HTTP/1.1, at once and, closed
+    // again, a second later. Never for writes.
     bool retryLostConnection = false;
 };
 
@@ -63,7 +64,7 @@ struct TransportResult {
 
 // Thread-affine async POST transport. It does not sign, decrypt, parse
 // provider codes or persist credentials. No automatic cookies/auth/redirects. The
-// only retry is TransportRequest::retryLostConnection's single one, for reads.
+// only retries are TransportRequest::retryLostConnection's, for reads.
 class HttpTransport : public QObject
 {
     Q_OBJECT

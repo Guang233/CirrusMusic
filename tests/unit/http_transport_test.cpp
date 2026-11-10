@@ -2,6 +2,7 @@
 
 #include "../support/fake_http.h"
 
+#include <QElapsedTimer>
 #include <QSignalSpy>
 #include <QtTest>
 
@@ -20,7 +21,7 @@ class HttpTransportTest : public QObject
     void invalidRequest();
     void outOfOrder();
     void destruction();
-    void lostConnectionRetriedOnceForReads();
+    void lostConnectionResentForReads();
     void explicitHeaders();
     void invalidHeaders_data();
     void invalidHeaders();
@@ -267,7 +268,7 @@ void HttpTransportTest::responseCookieLimits()
     QVERIFY(result(spy).body.isEmpty());
 }
 
-void HttpTransportTest::lostConnectionRetriedOnceForReads()
+void HttpTransportTest::lostConnectionResentForReads()
 {
     const auto lost = [] {
         Plan plan{"", 0};
@@ -296,7 +297,47 @@ void HttpTransportTest::lostConnectionRetriedOnceForReads()
             !fake->requests.at(1).attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool());
         QCOMPARE(fake->bodies.at(1), fake->bodies.at(0));
     }
-    // Lost twice: the failure, no third try.
+    // Lost twice: a second later once more, over HTTP/1.1.
+    {
+        auto manager = std::make_unique<FakeManager>();
+        auto* fake = manager.get();
+        fake->plans = {lost(), lost(), Plan{"fine"}};
+        HttpTransport transport(std::move(manager));
+        QSignalSpy spy(&transport, &HttpTransport::completed);
+        auto read = request();
+        read.retryLostConnection = true;
+        QElapsedTimer clock;
+        clock.start();
+        (void)transport.post(read);
+        QTRY_COMPARE(fake->requests.size(), 2);
+        QTest::qWait(500);
+        QCOMPARE(fake->requests.size(), 2); // not yet
+        QCOMPARE(spy.size(), 0);
+        QTRY_COMPARE(spy.size(), 1);
+        QVERIFY(clock.elapsed() >= 1000);
+        QCOMPARE(result(spy).error, TransportError::None);
+        QCOMPARE(result(spy).body, QByteArray("fine"));
+        QCOMPARE(fake->requests.size(), 3);
+        QVERIFY(
+            !fake->requests.at(2).attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool());
+        QCOMPARE(fake->bodies.at(2), fake->bodies.at(0));
+    }
+    // Lost three times: the failure, no fourth try.
+    {
+        auto manager = std::make_unique<FakeManager>();
+        auto* fake = manager.get();
+        fake->plans = {lost(), lost(), lost(), Plan{"never"}};
+        HttpTransport transport(std::move(manager));
+        QSignalSpy spy(&transport, &HttpTransport::completed);
+        auto read = request();
+        read.retryLostConnection = true;
+        (void)transport.post(read);
+        QTRY_COMPARE(spy.size(), 1);
+        QCOMPARE(result(spy).error, TransportError::Network);
+        QTest::qWait(20);
+        QCOMPARE(fake->requests.size(), 3);
+    }
+    // Canceled while waiting for the second resend: canceled at once, never sent.
     {
         auto manager = std::make_unique<FakeManager>();
         auto* fake = manager.get();
@@ -305,10 +346,16 @@ void HttpTransportTest::lostConnectionRetriedOnceForReads()
         QSignalSpy spy(&transport, &HttpTransport::completed);
         auto read = request();
         read.retryLostConnection = true;
-        (void)transport.post(read);
+        const auto id = transport.post(read);
+        QTRY_COMPARE(fake->requests.size(), 2);
+        QTest::qWait(20);
+        transport.cancel(id);
         QTRY_COMPARE(spy.size(), 1);
-        QCOMPARE(result(spy).error, TransportError::Network);
+        QCOMPARE(spy.at(0).at(0).toULongLong(), id);
+        QCOMPARE(result(spy).error, TransportError::Canceled);
+        QTest::qWait(1200);
         QCOMPARE(fake->requests.size(), 2);
+        QCOMPARE(spy.size(), 1);
     }
     // Not marked (writes): never again.
     {

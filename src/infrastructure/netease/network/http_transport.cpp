@@ -68,6 +68,13 @@ bool validXeapiHeaders(const TransportRequest& request)
     return true;
 }
 
+// A read whose connection closed before any response is sent again: at once over
+// HTTP/1.1, then, closed again, once more a second later (2026-11-10: behind a TUN
+// proxy fresh connections to NetEase are closed, and the immediate resend too, about
+// one time in three; a second later it goes through).
+constexpr int kLostConnectionResends = 2;
+constexpr int kSecondResendDelayMs = 1000;
+
 } // namespace
 
 struct HttpTransport::Pending {
@@ -81,9 +88,10 @@ struct HttpTransport::Pending {
     // For the log: the operation's path (no query), never the URL or the body.
     QString path;
     Protocol protocol = Protocol::Eapi;
-    // retryLostConnection: the request to send again, once.
+    // retryLostConnection: the request to send again, and how many times it was.
     std::optional<TransportRequest> again;
-    bool retried = false;
+    int resends = 0;
+    bool waiting = false; // between a lost connection and the delayed resend
 };
 
 HttpTransport::HttpTransport(QObject* parent)
@@ -159,10 +167,10 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         return;
     }
     pending->xeapi = request.protocol == Protocol::Xeapi;
-    if (request.retryLostConnection && !pending->retried)
+    if (request.retryLostConnection && pending->resends < kLostConnectionResends)
         pending->again = request;
     QNetworkRequest wire(*url);
-    if (pending->retried) // the HTTP/2 connection was lost: this time over HTTP/1.1
+    if (pending->resends > 0) // the HTTP/2 connection was lost: this time over HTTP/1.1
         wire.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     wire.setHeader(QNetworkRequest::ContentTypeHeader,
                    QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
@@ -238,6 +246,10 @@ void HttpTransport::terminate(quint64 id, TransportError error)
     pending->forcedError = error;
     if (pending->reply) {
         pending->reply->abort();
+    } else if (pending->waiting) {
+        // Waiting to be sent again: done now rather than when the delay is up (the
+        // delayed start then finds nothing).
+        QTimer::singleShot(0, this, [this, id] { finish(id); });
     }
     // A pre-start cancellation is completed by the queued start callback.
 }
@@ -257,25 +269,32 @@ void HttpTransport::finish(quint64 id)
     if (pending->timer) {
         pending->timer->stop();
     }
-    // A read whose connection closed before any response: once more, over HTTP/1.1
-    // (2026-11-09: the player-URL host closed fresh HTTP/2 connections after idling).
+    // A read whose connection closed before any response: again, over HTTP/1.1
+    // (kLostConnectionResends).
     if (pending->again && pending->forcedError == TransportError::None && pending->reply &&
         pending->body.isEmpty() && pending->reply->bytesAvailable() == 0 &&
         pending->reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 0 &&
         (pending->reply->error() == QNetworkReply::ProtocolFailure ||
          pending->reply->error() == QNetworkReply::RemoteHostClosedError)) {
+        const int delayMs = pending->resends == 0 ? 0 : kSecondResendDelayMs;
         qCWarning(lcNet) << log::event("request.retry") << log::field("req", id)
                          << log::field("path", pending->path)
                          << log::field("qt", pending->reply->error())
+                         << log::field("attempt", pending->resends + 1)
+                         << log::field("delay_ms", delayMs)
                          << log::field("ms", pending->elapsed.elapsed());
         auto request = *std::exchange(pending->again, std::nullopt);
-        pending->retried = true;
+        ++pending->resends;
+        pending->waiting = true;
         pending->reply->disconnect(this);
         pending->reply->deleteLater(); // its timer goes with it
         pending->reply.clear();
         m_pending.insert(id, pending);
-        QTimer::singleShot(0, this,
-                           [this, id, request = std::move(request)] { start(id, request); });
+        QTimer::singleShot(delayMs, this, [this, id, request = std::move(request)] {
+            if (const auto waiting = m_pending.value(id))
+                waiting->waiting = false;
+            start(id, request);
+        });
         return;
     }
     drain(pending);

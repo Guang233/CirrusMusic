@@ -134,7 +134,8 @@ struct ApiOperationContract {
 operationContract(ApiOperation operation, const QJsonObject& parameters = {});
 [[nodiscard]] bool requiresAccountCookie(ApiOperation operation);
 // Reads whose request may be sent again when its connection closed before any response
-// (TransportRequest::retryLostConnection). Listed one by one: writes never are.
+// (TransportRequest::retryLostConnection). Listed one by one: writes never are, nor
+// reads that make or move something (anonymous registration, personal FM).
 [[nodiscard]] bool retriesLostConnection(ApiOperation operation);
 [[nodiscard]] bool validQrKey(QStringView key);
 [[nodiscard]] std::optional<QJsonObject> operationPayload(ApiOperation operation,

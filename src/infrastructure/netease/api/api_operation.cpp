@@ -347,7 +347,59 @@ bool retriesLostConnection(ApiOperation operation)
     case ApiOperation::HotKeywords:
     case ApiOperation::Charts:
     case ApiOperation::RecommendedPlaylists:
+    case ApiOperation::AccountIdentity:
+    case ApiOperation::MyPlaylists:
+    case ApiOperation::LikedSongIds:
+    case ApiOperation::SavedAlbums:
+    case ApiOperation::SavedArtists:
+    case ApiOperation::RecentSongs:
+    case ApiOperation::ListeningRanking:
+    case ApiOperation::ChartsWithPreviews:
+    case ApiOperation::PlaylistList:
+    case ApiOperation::PremiumPlaylists:
+    case ApiOperation::PlaylistCatalogue:
+    case ApiOperation::HotPlaylistTags:
+    case ApiOperation::PremiumPlaylistTags:
+    case ApiOperation::SearchPodcasts:
+    case ApiOperation::SearchVoices:
+    case ApiOperation::PodcastDetails:
+    case ApiOperation::PodcastPrograms:
+    case ApiOperation::ProgramDetails:
+    case ApiOperation::RecentPlaylists:
+    case ApiOperation::RecentAlbums:
+    case ApiOperation::RecentPodcasts:
+    case ApiOperation::RecentVoices:
+    case ApiOperation::SongComments:
+    case ApiOperation::AlbumComments:
+    case ApiOperation::PlaylistComments:
+    case ApiOperation::ProgramComments:
+    case ApiOperation::HotComments:
+    case ApiOperation::SortedComments:
+    case ApiOperation::CommentFloor:
+    case ApiOperation::CommentInfo:
+    case ApiOperation::SubscribedPodcasts:
+    case ApiOperation::CloudSongs:
+    case ApiOperation::CloudSongDetails:
+    case ApiOperation::ArtistIntroduction:
+    case ApiOperation::SongWikiSummary:
+    case ApiOperation::SongWikiText:
+    case ApiOperation::HotKeywordDetails:
+    case ApiOperation::DailyRecommendedPlaylists:
+    case ApiOperation::DailyHistoryDates:
+    case ApiOperation::DailyHistorySongs:
+    case ApiOperation::LatestAlbums:
+    case ApiOperation::NewAlbums:
+    case ApiOperation::AlbumCharts:
+    case ApiOperation::ArtistBrowse:
+    case ApiOperation::PopularArtists:
+    case ApiOperation::ArtistTopSongs:
+    case ApiOperation::SimilarSongs:
+    case ApiOperation::SimilarArtists:
+    case ApiOperation::SimilarPlaylists:
         return true;
+    // Never: writes and reports; anonymous registration and sign-in (each makes
+    // something); the QR key and its check; listening together; personal FM (each
+    // read moves it on).
     default:
         return false;
     }
