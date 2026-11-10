@@ -246,6 +246,11 @@ Request CommentsPageModel::loadPage(PageRequest page)
     }
     return source->comments(m_target, comment::Sort(m_sort), m_next, page.limit,
                             [this, more = handleMore<CommentInfo>([this](QList<CommentInfo> items) {
+                                       // Pages may overlap (the service's recommended
+                                       // pages carry extra comments): each shows once.
+                                       items.removeIf([this](const CommentInfo& info) {
+                                           return m_rows->indexOfComment(info.key) >= 0;
+                                       });
                                        m_rows->insert(m_rows->rowCount(), commentRows(items));
                                    })](Outcome<CommentPage> outcome) {
                                 Outcome<ResultPage<CommentInfo>> paged;

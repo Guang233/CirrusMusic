@@ -10,6 +10,10 @@ qt_add_library(cirrus_presentation_backend STATIC
     backend_catalog.h
     backend_catalog.cpp
     backend_discover.cpp
+    backend_comments.h
+    backend_comments.cpp
+    comment_writes.h
+    comment_writes.cpp
     backend_library.h
     backend_library.cpp
     backend_mapping.h

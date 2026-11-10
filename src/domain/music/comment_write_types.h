@@ -1,5 +1,6 @@
 #pragma once
 #include "comment_types.h"
+#include "logging/log.h"
 #include <QMetaType>
 #include <QUuid>
 namespace cirrus::domain
@@ -67,6 +68,7 @@ struct CommentMutation {
     }
 };
 enum class CommentWriteOutcome { NotSent, Acknowledged, Rejected, Unknown };
+CIRRUS_LOG_ENUM(CommentWriteOutcome, NotSent, Acknowledged, Rejected, Unknown)
 enum class CommentWriteError {
     None,
     InvalidRequest,
@@ -82,6 +84,9 @@ enum class CommentWriteError {
     ProviderRejected,
     TokenUnavailable
 };
+CIRRUS_LOG_ENUM(CommentWriteError, None, InvalidRequest, AuthenticationRequired, StaleContext,
+                Canceled, Busy, Network, Timeout, RateLimited, ProtocolFailure, InvalidResponse,
+                ProviderRejected, TokenUnavailable)
 enum class CommentWriteStep { Unobserved, Token, Writing };
 struct CommentWriteResult {
     QUuid eventId;

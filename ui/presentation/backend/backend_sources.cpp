@@ -1,6 +1,7 @@
 #include "backend_sources.h"
 
 #include "backend_catalog.h"
+#include "backend_comments.h"
 #include "backend_host.h"
 #include "backend_images.h"
 #include "backend_library.h"
@@ -25,6 +26,8 @@ Sources makeBackendSources(BackendHost& host)
     sources.session = std::make_unique<BackendSession>(host.runtime());
     // Steps 4, 5 and 8: search, details, home and discover.
     sources.catalog = std::make_unique<BackendCatalog>(host.runtime());
+    // Step 9: comments.
+    sources.comments = std::make_unique<BackendComments>(host.runtime());
     // Step 6: playback and lyrics.
     auto playback = std::make_unique<BackendPlayback>(host.runtime(), *sources.catalog);
     // The listening reports take each song's origin from it (integration.md §6.1).
