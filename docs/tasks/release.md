@@ -76,7 +76,7 @@ packaging/linux/build-packages.sh <Qt 前缀> <deps> <输出目录> [deb] [appim
 
 MSVC（VS 2022）、Qt `win64_msvc2022_64`、vcpkg（`packaging/windows/vcpkg.json`，固定 baseline）、QtKeychain 用同一个脚本在 Git Bash 里编。安装时 Qt 的部署脚本调 windeployqt，`CIRRUS_RUNTIME_DIRS` 里的 DLL 和 MSVC 运行库（app-local，不用另装 vc_redist）一起放到 `Cirrus.exe` 旁边。Inno Setup 脚本：`packaging/windows/cirrus.iss`（`AppId` 永不改；有简体中文语言文件时用中文界面）。
 
-- **从没在 Windows 上编过**。SMTC、单实例、IPC、日志的 Windows 代码都没验证，第一轮大概率要修编译错误，只能推到 GitHub 上跑 CI（手动触发，勾选 Windows）。
+- **能编译，还没运行过**（2026-11-11 CI 第一次通过，MSVC 2022，约 80 分钟）。为此改过：material-color-utilities 的 C 复合字面量、`M_PI`、ARGB 字面量（该库 README 的本地修改 4、5）；Qt 6.11 的 Windows 包换了仓库目录结构，aqtinstall 3.3.0 找不到，暂用它 master 上的固定提交（`windows.yml`，等 3.3.0 之后的正式版发布再改回）。SMTC、单实例、IPC、日志的 Windows 代码只是编过，行为没验证；安装包和 zip 要到发布工作流才会打。
 - 安装包不签名：第一次运行 SmartScreen 会拦，要点"更多信息 → 仍要运行"。代码签名证书以后再说。
 
 ## 6. 合规
@@ -122,4 +122,5 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
   - 不设 `LD_LIBRARY_PATH`、`QT_PLUGIN_PATH` 启动（临时放入 offscreen 插件，测试 XDG 目录）：加载的是包里的 Qt、两份 FFmpeg（61 和 63）、QtKeychain、SQLite 驱动、Wayland 和 xcb 平台插件，系统的只有 OpenSSL、libsecret；日志没有错误。
   - Qt 的部署脚本默认只带 xcb 平台插件：要显式包含 `qwayland`。插件按文件名（去掉 lib 和后缀）指定，不是 CMake 目标名。
   - 桌面文件过了 `desktop-file-validate`，AppStream 过了 `appstreamcli validate`（只剩 ID 含大写的 pedantic 提示）。
-- 未运行：deb（本机没有 dpkg）、AppImage（linuxdeploy 是下载的二进制，留给 CI）、Windows 全部、两个工作流。第一次推送后按 CI 日志修。
+- CI（2026-11-11）：Linux 编译、qmllint、测试通过（排除 §7.1 的测试）。GCC 12 比本机的 GCC 16 严格，`std::optional<T>({x})` 要写成 `std::optional<T>(T{x})`。Windows 只编译，通过。
+- 未运行：deb、AppImage、Windows 安装包和 zip（都在发布工作流里，还没推过标签）。
