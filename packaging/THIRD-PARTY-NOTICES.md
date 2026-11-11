@@ -26,7 +26,7 @@ Linux or next to `Cirrus.exe` on Windows).
 Which libraries a package carries:
 
 - **deb, AppImage, Windows installer and zip** carry Qt, both FFmpeg builds and
-  QtKeychain. The Windows packages also carry OpenSSL, zlib and the Microsoft Visual C++
+  QtKeychain (on Windows linked into `Cirrus.exe`). The Windows packages also carry OpenSSL, zlib and the Microsoft Visual C++
   runtime. On Linux, OpenSSL, zlib and libsecret come from the system (the AppImage may
   carry them).
 - **AUR and other source builds** use the system's libraries.

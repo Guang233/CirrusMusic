@@ -41,7 +41,7 @@ Dock 图标：Wayland 下合成器按 app ID 找同名桌面文件里的图标�
 | Qt 6.11.2 | Qt 官方二进制（CI 用 install-qt-action/aqtinstall），模块 qtmultimedia、qtshadertools、qtimageformats | Linux 版在 RHEL 9.6 上编译，要 glibc 2.34 |
 | FFmpeg 9.0.2（Linux） | `packaging/deps/build-ffmpeg.sh` 从源码编 | 共享库、LGPL、只有 MP3 和 FLAC 的解封装与解码（解码器只开这两种），约 2 MB |
 | FFmpeg 9.0.2（Windows） | vcpkg `ffmpeg`，特性 avcodec、avformat、swresample | 不开 gpl、nonfree |
-| QtKeychain 0.17.0 | `packaging/deps/build-qtkeychain.sh`，针对随包的 Qt 编 | 发行版的 QtKeychain 是针对它们自己的旧 Qt 编的，不能用 |
+| QtKeychain 0.17.0 | `packaging/deps/build-qtkeychain.sh`，针对随包的 Qt 编 | 发行版的 QtKeychain 是针对它们自己的旧 Qt 编的，不能用。Windows 上静态链接：windeployqt 把所有 `qt6*.dll` 当成 Qt 模块，遇到 `qt6keychain.dll` 会失败 |
 | OpenSSL 3、zlib | Linux：系统的（deb 依赖 `libssl3`）；Windows：vcpkg | |
 
 **两份 FFmpeg**：Qt Multimedia 自带 FFmpeg 7.1（`libavcodec.so.61`），它的音频输出后端要用；我们的解码器用自己编的 9.0（`libavcodec.so.63`）。大版本不同，库名不同，两份同时在 `lib/` 里、同时加载也不冲突。不改用 Qt 的那份：Qt 不带它的头文件，Windows 上也没有导入库。

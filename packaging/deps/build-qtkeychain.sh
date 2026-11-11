@@ -5,7 +5,7 @@
 #   packaging/deps/build-qtkeychain.sh <prefix> <qt prefix>
 #
 # Linux needs libsecret's headers (libsecret-1-dev) and patchelf; Windows runs this in
-# Git Bash inside an MSVC developer environment. Versions and checksums: versions.sh.
+# Git Bash inside an MSVC developer environment and builds a static library. Versions and checksums: versions.sh.
 set -euo pipefail
 
 source "$(dirname "$0")/versions.sh"
@@ -21,7 +21,13 @@ trap 'rm -rf "$work"' EXIT
 fetch "$QTKEYCHAIN_URL" "$QTKEYCHAIN_SHA256" "$work/qtkeychain.tar.gz"
 tar -xzf "$work/qtkeychain.tar.gz" -C "$work"
 
+# Windows: static. windeployqt takes any qt6*.dll for a Qt module and fails on
+# qt6keychain.dll; linked into Cirrus.exe there is no such DLL (BSD-3-Clause allows it).
+shared=ON
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) shared=OFF ;; esac
+
 cmake -S "$work/qtkeychain-$VERSION" -B "$work/build" -G Ninja \
+    -DBUILD_SHARED_LIBS=$shared \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_PREFIX_PATH="$qt" \
     -DCMAKE_INSTALL_PREFIX="$prefix" \
