@@ -81,7 +81,12 @@ jobs:
 
       - name: Check the desktop metadata
         run: |
-          desktop-file-validate build/package-linux/deb/usr/share/applications/com.guang233.Cirrus.desktop
+          # Ubuntu 22.04's desktop-file-validate (0.26) predates SingleMainWindow (desktop
+          # entry spec 1.5); any other error still fails.
+          out=$(desktop-file-validate \
+            build/package-linux/deb/usr/share/applications/com.guang233.Cirrus.desktop 2>&1) || true
+          echo "$out"
+          if grep -v '"SingleMainWindow"' <<< "$out" | grep -q 'error:'; then exit 1; fi
           # Ubuntu 22.04's appstream (0.15) predates some current tags: report, don't fail.
           appstreamcli validate --no-net \
             build/package-linux/deb/usr/share/metainfo/com.guang233.Cirrus.metainfo.xml ||
