@@ -35,6 +35,11 @@ add_library(cirrus_mcu STATIC
     cirrus/temperature.cc
 )
 target_compile_features(cirrus_mcu PUBLIC cxx_std_17)
+# M_PI (cpp/dynamiccolor/material_dynamic_colors.cc) is not standard; MSVC defines it
+# only on request.
+if(MSVC)
+    target_compile_definitions(cirrus_mcu PRIVATE _USE_MATH_DEFINES)
+endif()
 # Upstream includes are rooted at this directory ("cpp/...").
 target_include_directories(cirrus_mcu SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties(cirrus_mcu PROPERTIES POSITION_INDEPENDENT_CODE ON)

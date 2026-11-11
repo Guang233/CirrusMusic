@@ -8,12 +8,15 @@
 
 ## 本地修改
 
-共四处修改，均在代码中以 `Cirrus:` 注释标出：
+共五处修改，均在代码中以 `Cirrus:` 注释标出：
 
 1. `cpp/quantize/wsmeans.cc`：为不引入 Abseil，`absl::flat_hash_map<Argb, int>` 改为 `std::unordered_map<Argb, int>`，删除对应 include。上游注释给出的耗时差异约 10.2 ms 对 8.0 ms（112×112 像素、128 色），在后台线程中可以接受。
 2. `cpp/utils/utils.cc`：同上，`HexFromArgb` 由 `absl::StrCat(absl::Hex(argb))` 改为 `snprintf("%x")`，输出格式相同（小写、无前导零）。
 3. `cpp/temperature/temperature_cache.h`：补上缺失的 `#include <optional>`（上游依赖其构建环境的传递包含，GCC 下无法编译）。
 4. `cpp/cam/hct_solver.cc`、`cpp/utils/utils.cc`、`cpp/cam/viewing_conditions.h`：C 复合字面量 `(Vec3){...}`、`(ViewingConditions){...}` 改为 C++ 列表初始化 `Vec3{...}`，结果相同（MSVC 在 C++ 下拒绝前者，报 C4576）。
+5. `cpp/score/score.h`：`ScoreOptions::fallback_color_argb` 的初值 `0xff4285f4` 超出 `int`，加 `static_cast<int>`，值相同（MSVC 报 C2397）。
+
+`M_PI` 不在源码里改：`CMakeLists.txt` 在 MSVC 下为本库定义 `_USE_MATH_DEFINES`。
 
 ## 2025 规范的 C++ 移植（`cirrus/`）
 
