@@ -78,8 +78,10 @@ if(CIRRUS_DEPLOY_QT)
             EXCLUDE_PLUGIN_TYPES designer qmltooling egldeviceintegrations)
     elseif(WIN32)
         # windeployqt aborts on plugins Windows does not have (qwayland), so the Linux
-        # list stays out. Verbose: a failure then says where it stopped.
+        # list stays out. Verbose: a failure then says where it stopped. The MSVC runtime
+        # goes next to the exe (InstallRequiredSystemLibraries below), not vc_redist.exe.
         list(APPEND cirrus_deploy_options
+            NO_COMPILER_RUNTIME
             EXCLUDE_PLUGIN_TYPES designer qmltooling
             DEPLOY_TOOL_OPTIONS --verbose 2)
     endif()
@@ -99,8 +101,10 @@ if(CIRRUS_DEPLOY_QT)
             file(GET_RUNTIME_DEPENDENCIES
                 EXECUTABLES \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/$<TARGET_FILE_NAME:appCirrusMusic>\"
                 DIRECTORIES ${CIRRUS_RUNTIME_DIRS}
-                PRE_EXCLUDE_REGEXES [[^api-ms-]] [[^ext-ms-]] [[^Qt6]]
-                POST_EXCLUDE_REGEXES [[.*[Ss]ystem32/.*]] [[.*[Ww]indows/.*]]
+                PRE_EXCLUDE_REGEXES [[^api-ms-]] [[^ext-ms-]] [[^[Qq][Tt]6]]
+                # Only the system's own directory (vcpkg's DLLs are in x64-windows/bin);
+                # '.' stands for either path separator.
+                POST_EXCLUDE_REGEXES \"^[A-Za-z]:.[Ww][Ii][Nn][Dd][Oo][Ww][Ss].\"
                 RESOLVED_DEPENDENCIES_VAR cirrus_deps
                 UNRESOLVED_DEPENDENCIES_VAR cirrus_missing)
             foreach(dep IN LISTS cirrus_deps)

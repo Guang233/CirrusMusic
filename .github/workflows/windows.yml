@@ -116,6 +116,13 @@ jobs:
           export PATH="$(cygpath -u "$VCPKG_INSTALLED")/x64-windows/bin:$PATH"
           cmake --install build --prefix "$STAGE"
           ls "$STAGE"
+          # Every library Cirrus.exe takes from vcpkg must be in the package.
+          missing=0
+          for dll in "$VCPKG_INSTALLED"/x64-windows/bin/{avcodec,avformat,avutil,swresample,libcrypto,zlib}*.dll; do
+            [[ -f "$STAGE/$(basename "$dll")" ]] || { echo "::error::missing $(basename "$dll")"; missing=1; }
+          done
+          [[ -f "$STAGE/vcruntime140.dll" ]] || { echo "::error::missing the MSVC runtime"; missing=1; }
+          exit_code=$missing; [[ $exit_code == 0 ]] || exit 1
           mkdir -p dist
           7z a -tzip "dist/Cirrus-$VERSION-windows-x64.zip" "$STAGE" > /dev/null
 
