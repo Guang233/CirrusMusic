@@ -103,8 +103,9 @@ jobs:
           -DCMAKE_INSTALL_BINDIR=.
           -DCIRRUS_RUNTIME_DIRS="$DEPS/bin;$VCPKG_INSTALLED/x64-windows/bin"
 
+      # -k 0: report every compile error of a run, not only the first few.
       - name: Build
-        run: cmake --build build --parallel 4
+        run: cmake --build build --parallel 4 -- -k 0
 
       - name: Install tree
         if: inputs.package
