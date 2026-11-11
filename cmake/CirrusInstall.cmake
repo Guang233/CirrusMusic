@@ -66,17 +66,28 @@ endif()
 
 if(CIRRUS_DEPLOY_QT)
     # Translations: the UI is Chinese-only and uses no Qt dialogs that need them.
+    # Plugins are named by file, without lib and suffix. Cirrus only uses SQLite; the
+    # other SQL drivers need client libraries nobody has.
+    set(cirrus_deploy_options
+        EXCLUDE_PLUGINS qsqlodbc qsqloci qsqlibase qsqlpsql qsqlmysql qsqlmimer)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        # Qt picks xcb as the default platform; Wayland sessions need their own. QML
+        # debugging, Designer and embedded (EGLFS) plugins are not for a desktop app.
+        list(APPEND cirrus_deploy_options
+            INCLUDE_PLUGINS qwayland
+            EXCLUDE_PLUGIN_TYPES designer qmltooling egldeviceintegrations)
+    elseif(WIN32)
+        # windeployqt aborts on plugins Windows does not have (qwayland), so the Linux
+        # list stays out. Verbose: a failure then says where it stopped.
+        list(APPEND cirrus_deploy_options
+            EXCLUDE_PLUGIN_TYPES designer qmltooling
+            DEPLOY_TOOL_OPTIONS --verbose 2)
+    endif()
     qt_generate_deploy_qml_app_script(
         TARGET appCirrusMusic
         OUTPUT_SCRIPT cirrus_deploy_script
         NO_TRANSLATIONS
-        # Qt picks xcb as the default platform; Wayland sessions need their own.
-        # (Plugins are named by file, without lib and suffix.)
-        INCLUDE_PLUGINS qwayland
-        # Cirrus only uses SQLite; the other drivers need client libraries nobody has.
-        EXCLUDE_PLUGINS qsqlodbc qsqloci qsqlibase qsqlpsql qsqlmysql qsqlmimer
-        # QML debugging, Designer and embedded (EGLFS) plugins are not for a desktop app.
-        EXCLUDE_PLUGIN_TYPES designer qmltooling egldeviceintegrations
+        ${cirrus_deploy_options}
     )
     install(SCRIPT "${cirrus_deploy_script}")
 
