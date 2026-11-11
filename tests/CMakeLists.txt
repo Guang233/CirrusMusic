@@ -1,4 +1,6 @@
 find_package(Qt6 REQUIRED COMPONENTS Test Sql)
+# For tests that include openssl_primitives.h (cirrus_netease_protocol links it privately).
+find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 
 qt_add_executable(tst_netease_protocol
     unit/netease_protocol_test.cpp
@@ -84,7 +86,7 @@ add_test(NAME backend_facade COMMAND tst_backend_facade)
 set_tests_properties(backend_facade PROPERTIES TIMEOUT 15)
 
 qt_add_executable(tst_backend_runtime unit/backend_runtime_test.cpp)
-target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test Qt6::Gui)
+target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test Qt6::Gui OpenSSL::Crypto)
 add_test(NAME backend_runtime COMMAND tst_backend_runtime)
 set_tests_properties(backend_runtime PROPERTIES TIMEOUT 30)
 
@@ -263,7 +265,7 @@ add_test(NAME search_assist COMMAND tst_search_assist)
 set_tests_properties(search_assist PROPERTIES TIMEOUT 30)
 
 qt_add_executable(tst_comment_writes unit/comment_writes_test.cpp support/comment_write_support.h)
-target_link_libraries(tst_comment_writes PRIVATE cirrus_netease_music Qt6::Test)
+target_link_libraries(tst_comment_writes PRIVATE cirrus_netease_music Qt6::Test OpenSSL::Crypto)
 add_test(NAME comment_writes COMMAND tst_comment_writes)
 set_tests_properties(comment_writes PROPERTIES TIMEOUT 45)
 
@@ -282,7 +284,7 @@ set_tests_properties(podcast_reads PROPERTIES TIMEOUT 30)
 option(CIRRUS_TEST_ENTITY_SEARCH "Build tst_entity_search (known not to compile)" OFF)
 if(CIRRUS_TEST_ENTITY_SEARCH)
     qt_add_executable(tst_entity_search unit/entity_search_test.cpp)
-    target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test)
+    target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test OpenSSL::Crypto)
     add_test(NAME entity_search COMMAND tst_entity_search)
     set_tests_properties(entity_search PROPERTIES TIMEOUT 25)
 endif()
