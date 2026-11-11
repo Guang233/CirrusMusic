@@ -10,10 +10,6 @@ on:
 permissions:
   contents: read
 
-env:
-  QT_VERSION: 6.11.2
-  QT_MODULES: qtmultimedia qtshadertools qtimageformats
-
 jobs:
   check:
     name: Version check
@@ -41,58 +37,8 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   linux:
-    name: Linux packages
     needs: ci
-    runs-on: ubuntu-22.04
-    env:
-      DEPS: ${{ github.workspace }}/../deps
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: System packages
-        run: packaging/linux/install-build-deps.sh
-
-      - uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: linux
-          target: desktop
-          arch: linux_gcc_64
-          modules: ${{ env.QT_MODULES }}
-          cache: true
-
-      - name: Cache FFmpeg and QtKeychain
-        id: deps
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.DEPS }}
-          key: deps-linux-ubuntu22.04-${{ hashFiles('packaging/deps/*.sh') }}
-
-      - name: Build FFmpeg and QtKeychain
-        if: steps.deps.outputs.cache-hit != 'true'
-        run: |
-          packaging/deps/build-ffmpeg.sh "$DEPS"
-          packaging/deps/build-qtkeychain.sh "$DEPS" "$QT_ROOT_DIR"
-
-      - name: deb and AppImage
-        run: packaging/linux/build-packages.sh "$QT_ROOT_DIR" "$DEPS" dist deb appimage
-
-      - name: Check the desktop metadata
-        run: |
-          desktop-file-validate build/package-linux/deb/usr/share/applications/com.guang233.Cirrus.desktop
-          # Ubuntu 22.04's appstream (0.15) predates some current tags: report, don't fail.
-          appstreamcli validate --no-net \
-            build/package-linux/deb/usr/share/metainfo/com.guang233.Cirrus.metainfo.xml ||
-            echo "::warning::appstreamcli reported problems in the metainfo"
-
-      - name: Sources of the bundled libraries
-        run: packaging/deps/fetch-sources.sh dist/sources
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: linux
-          path: dist/
-          if-no-files-found: error
+    uses: ./.github/workflows/linux-packages.yml
 
   windows:
     needs: ci

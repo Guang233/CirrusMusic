@@ -1,6 +1,8 @@
 # Builds and tests every push to master and every pull request (docs/tasks/release.md §7).
 # Linux always; Windows only when asked (Run workflow, or the release workflow), since its
-# runner minutes count double on a private repository.
+# runner minutes count double on a private repository. "Build packages" (Run workflow)
+# also makes the deb, AppImage, Windows installer and zip as run artifacts, without a
+# release: for trying the packages.
 name: CI
 
 on:
@@ -11,6 +13,10 @@ on:
     inputs:
       windows:
         description: Also build on Windows
+        type: boolean
+        default: false
+      package:
+        description: Build packages (Linux and Windows) as artifacts, no release
         type: boolean
         default: false
   workflow_call:
@@ -129,5 +135,13 @@ jobs:
 
   windows:
     name: Windows build
-    if: inputs.windows
+    if: inputs.windows || inputs.package
     uses: ./.github/workflows/windows.yml
+    with:
+      package: ${{ inputs.package == true }}
+
+  linux-packages:
+    name: Linux packages
+    needs: linux
+    if: inputs.package
+    uses: ./.github/workflows/linux-packages.yml

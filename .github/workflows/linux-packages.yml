@@ -1,0 +1,103 @@
+# Linux packages (deb, AppImage) and the sources of the bundled libraries, uploaded as the
+# artifact "linux". Called by the release workflow and by CI's "Build packages" option
+# (docs/tasks/release.md §7).
+name: Linux packages
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.11.2
+  QT_MODULES: qtmultimedia qtshadertools qtimageformats
+
+jobs:
+  linux:
+    name: Linux packages
+    runs-on: ubuntu-22.04
+    env:
+      DEPS: ${{ github.workspace }}/../deps
+      CCACHE_DIR: ${{ github.workspace }}/../ccache
+      CCACHE_MAXSIZE: 500M
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      # build-packages.sh configures its own build; CMake reads the launchers from here.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: packaging/linux/install-build-deps.sh
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      # Same key as CI, so a package build reuses CI's FFmpeg and QtKeychain.
+      - name: Restore FFmpeg and QtKeychain
+        id: deps
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.DEPS }}
+          key: deps-linux-ubuntu22.04-${{ hashFiles('packaging/deps/*.sh') }}
+
+      - name: Build FFmpeg and QtKeychain
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: |
+          packaging/deps/build-ffmpeg.sh "$DEPS"
+          packaging/deps/build-qtkeychain.sh "$DEPS" "$QT_ROOT_DIR"
+
+      - name: Save FFmpeg and QtKeychain
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.DEPS }}
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+
+      # The package build has its own configuration (no tests, no gallery), so its own cache.
+      - name: Restore compiler cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-linux-package-${{ github.sha }}
+          restore-keys: ccache-linux-package-
+
+      - name: deb and AppImage
+        run: packaging/linux/build-packages.sh "$QT_ROOT_DIR" "$DEPS" dist deb appimage
+
+      - name: Save compiler cache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-linux-package-${{ github.sha }}
+
+      - name: Check the desktop metadata
+        run: |
+          desktop-file-validate build/package-linux/deb/usr/share/applications/com.guang233.Cirrus.desktop
+          # Ubuntu 22.04's appstream (0.15) predates some current tags: report, don't fail.
+          appstreamcli validate --no-net \
+            build/package-linux/deb/usr/share/metainfo/com.guang233.Cirrus.metainfo.xml ||
+            echo "::warning::appstreamcli reported problems in the metainfo"
+
+      - name: Check the deb
+        run: |
+          deb=$(ls dist/*.deb)
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb" | grep -E 'usr/bin/cirrus|opt/cirrus/bin/cirrus|applications/'
+
+      - name: Sources of the bundled libraries
+        run: packaging/deps/fetch-sources.sh dist/sources
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist/
+          if-no-files-found: error

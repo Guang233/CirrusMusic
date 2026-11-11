@@ -94,8 +94,9 @@ MSVC（VS 2022）、Qt `win64_msvc2022_64`、vcpkg（`packaging/windows/vcpkg.js
 
 | 文件 | 何时 | 做什么 |
 | --- | --- | --- |
-| `.github/workflows/ci.yml` | 推到 master、PR、手动 | Linux：编译应用、gallery、测试（`BUILD_TESTING` 打开），qmllint，ctest（offscreen，`dbus-run-session`）。手动运行时可勾选 Windows：只编译 |
-| `.github/workflows/windows.yml` | 被另外两个调用 | Windows 编译；发布时再装出目录、打 zip 和安装包 |
+| `.github/workflows/ci.yml` | 推到 master、PR、手动 | Linux：编译应用、gallery、测试（`BUILD_TESTING` 打开），qmllint，ctest（offscreen，`dbus-run-session`）。手动运行时可勾选 Windows（只编译）或"Build packages"（Linux 和 Windows 都打包，放在这次运行的产物里，不建 Release，用来试包） |
+| `.github/workflows/windows.yml` | 被另外两个调用 | Windows 编译；打包时再装出目录、打 zip 和安装包 |
+| `.github/workflows/linux-packages.yml` | 被另外两个调用 | 打 deb 和 AppImage，校验桌面文件和 deb，附库的源码 |
 | `.github/workflows/release.yml` | 推 `v*` 标签 | 检查标签和版本号、CHANGELOG 一致 → 跑一遍 CI → Linux 打 deb 和 AppImage、校验桌面文件 → Windows 打包 → 创建**草稿** Release，附上全部产物、库源码和 SHA256SUMS |
 
 FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈希），Qt 由 install-qt-action 缓存。仓库私有时 Windows 运行器按 2 倍计分钟，所以日常 CI 不跑 Windows。
