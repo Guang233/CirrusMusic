@@ -203,7 +203,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 - 正常程序close保留记忆，signOut才删除账号；事件循环持续到Facade.stopped，密钥环不回调时只报告closeDelayed，不强杀或虚报擦除。Runtime只移动空Worker壳，资源在线程内创建。
 - service 必须先于其引用的 SessionCoordinator 销毁；正常装配让 gateway/client 覆盖 service 生命周期。不要假设给多个对象设置同一 QObject parent 就保证正确析构顺序。
 - 凭据不进入应用层、QML、普通配置或日志；UUID 收据不能持久化。大数值 ID 不安全时拒绝，不浮点舍入补救；不同作用域 MUSIC_U 冲突不猜选。
-- 日志（[logging.md](tasks/logging.md) §9）：分类只在 `src/logging/categories.h` 声明；新日志用 `log::event`／`log::field`（枚举用 `CIRRUS_LOG_ENUM` 起名）；每个对外边界的失败在作决定的那层记一次 warning，状态迁移记 info，细节记 debug；URL、请求体、响应体、凭据、用户输入不进日志（地址用 `log::host`，路径用 `log::path`，账号用 `log::account`）；音频实时线程和信号处理器里不写日志。`tst_log_canary` 检查秘密不进日志，新增对外边界时补进去。
+- 日志（[logging.md](tasks/logging.md) §9）：分类只在 `src/logging/categories.h` 声明；新日志用 `log::event`／`log::field`（枚举用 `CIRRUS_LOG_ENUM` 起名）；每个对外边界的失败在作决定的那层记一次 warning，状态迁移记 info，细节记 debug；URL、请求体、响应体、凭据、用户输入不进日志（地址用 `log::host`，路径用 `log::path`，账号用 `log::account`）；音频实时线程和信号处理器里不写日志。`tst_log_canary` 检查秘密不进日志，新增对外边界时补进去。第二版（[logging-v2.md](tasks/logging-v2.md)）：debug 一直进内存里的飞行记录器，出 warning 时连同前 30 秒写进文件，所以 debug 不写在每帧、每个音频块这类高频路径上；正常成功的高频结果记 debug 并用 `log::Durations` 定期汇总（如 `api.stats`）；可选字段用 `log::fieldIf`。
 - 后端先行，UI 最后。每日推荐歌曲独立建模；私人 FM／一起听及维护者新增播客／声音消费端范围纳入；视频/MV、云贝/云豆、动态、云小编、创作者上传／审核工作台排除。PodcastId／VoiceId不强转PlaylistId／SongId。不引入第三方音源解锁。
 
 ## 5. 接下来做什么，什么时候需要询问

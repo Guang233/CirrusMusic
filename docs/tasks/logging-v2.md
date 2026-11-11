@@ -1,7 +1,7 @@
 # 日志与诊断改造（第二版）
 
 - 日期：2026-11-11
-- 状态：**方向已定**（维护者 2026-11-11，§8 的 LQ7–LQ10），实施中（§9）
+- 状态：**方向已定**（维护者 2026-11-11，§8 的 LQ7–LQ10）；V1–V5 已完成（§10），V6 关联 ID 和 Windows 崩溃堆栈未做
 - 基础：[logging.md](logging.md)（第一版：处理器、写文件线程、轮转、脱敏、`event`/`field`）。第一版的框架保留，本文只改**记什么**和**诊断包里有什么**；第一版里与本文冲突的地方以本文为准。
 - 起因：维护者 2026-11-11 反馈，用户发来的诊断包没用，最常见的是**界面异常**。
 
@@ -24,8 +24,8 @@
 ## 2. 飞行记录器（P1）
 
 - `cirrus.*` 的 debug **一直开着**，但默认**不写文件**：处理器把 debug 记录放进内存环形缓冲（最近 2 MiB，约一万多行，正常使用约 10–20 分钟）。
-- 遇到下面这些情况，把环里**还没写过的** debug 记录连同原时间戳一起写进文件，前后各加一行 `log.context begin|end reason=… count=N`：
-  - 一条 warning 或 critical（任何分类）：只写这条之前 30 秒内的，最多 500 条；10 秒内多条 warning 合并成一次。
+- 遇到下面这些情况，把环里**还没写过的** debug 记录连同原时间戳一起写进文件，前后各加一行 `log.context_begin`／`log.context_end reason=… count=N`：
+  - 一条 warning 或 critical（任何分类）：只写这条之前 30 秒内的，最多 500 条；每条记录只写一次，接连几条 warning 只带出它们之间的新记录。更早没写过的留在环里，等标记或导出时再写。
   - 用户点"记下刚才的问题"（§4.4）、导出诊断包：整个环。
 - 文件里 info 及以上照常实时写；context 块里的 debug 行时间早于块前面的几行，查看工具（§7）按时间排回去。
 - "详细日志"开关保留（24 小时），开着时 debug 也实时写文件，给需要长时间复现的情况用。
@@ -60,23 +60,24 @@ I main cirrus.ui.nav nav.section page=LibraryPage section=library
 
 ### 4.2 对话框和提示
 
-- `Cirrus.Controls` 的 `Dialog` 打开和关闭时记 `ui.dialog opened|closed name=<objectName>`；产品里的对话框都设 `objectName`（没设的记文件名）。
+- 对话框和菜单打开时会拿到键盘焦点：`Diagnostics` 盯着窗口的焦点项，往上找到它所在的弹窗（弹窗内容项的 QObject 父对象就是弹窗本身），记 `ui.popup name=LoginDialog open=true|false`。名字取 `objectName`，没设时取 QML 类型名；不用改每个对话框。
 - 弹出提示（snackbar）记**稳定编号**，不记文字（LQ8）：`ui.notice id=playlist.remove_failed source=PlaylistPage`。编号在发出提示的 C++ 里定义（`ui/presentation/notice.h`），一个编号对应一种文案；带歌单名之类参数的文案也只记编号。
 
 ### 4.3 界面上下文
 
-- 日志库加一个全局上下文 `log::setContext(key, value)`（只接受短标识）。展示层把当前页面、播放页是否打开、当前对话框放进去。
-- 来自 QML 和 Qt 的 warning（`default`、`qml`、`js`、`qt.*` 分类）自动带上当前上下文：`… TypeError: Cannot read property 'items' of null ctx.page=DiscoverPage ctx.dialog=-`。
-- `LoadableModel` 的失败带上是哪一个：`model.failed model=ShelfModel name=newAlbums …`、`model=PlaylistPageModel key=…`。每个模型有一个 `logName`（类型名去掉命名空间）和可选的 `logKey`。
+- 日志库加一个全局上下文 `log::setContext(key, value)`（只接受短标识）。展示层放进 `page`（当前页面）、`popup`（当前弹窗）、`player`（播放页打开时为 `open`）。
+- **每条** warning 都自动带上当前上下文：`… ctx.page=DiscoverPage ctx.popup=LoginDialog`。
+- QML 引擎的警告不再直接打到终端：`Diagnostics::watch(QQmlEngine*)` 接过来记成 `cirrus.ui.qml qml.warning file=Cirrus/Components/CoverArt.qml line=121 msg=…`；后端已经记过的封面失败（`cover is unavailable`）只进飞行记录器。
+- `LoadableModel` 的失败带上是哪一个：`model.failed model=ShelfModel ids=shelf:0 …`、`model=PlaylistPageModel ids=playlistKey:123`。`ids` 由反射自动取模型自己的属性，只取 `…Key`（`user…Key` 散列）和 `shelf`、`feed`、`date`、`tab`、`target`、`kind`、`category`，不用每个模型单独写。导航记录 `nav.page` 的 `ids` 用同样的规则，取自页面创建时的参数。
 
 ### 4.4 "记下刚才的问题"
 
 - 入口：设置 → 诊断里一行按钮；快捷键 Ctrl+Alt+Shift+D（不会误按，也不和输入框冲突）。
 - 做的事：
-  1. 写一条 `user.mark n=<本次运行第几个>`；
+  1. 写一条 `user.mark n=<本次运行第几个>`（info，不触发 warning 的 30 秒截取，第 3 步写整个环）；
   2. 写一份**界面状态快照**（LQ7：不截图）：`ui.state` 一条，内容有页面栈（每层的 page 和 key）、当前页面、窗口尺寸、是否最大化或全屏、屏幕尺寸、缩放比例、刷新率、主题模式、配色来源、字体来源、侧边栏是否展开、播放页是否打开和视图、焦点所在控件的类型和 objectName、正在显示的对话框；
   3. 把飞行记录器整个写进文件（`log.context reason=mark`）；
-  4. 弹出提示"已记下这一刻，导出诊断包时会一起带上"，带"导出"按钮。
+  4. 弹出提示"已记下这一刻，导出诊断包时会一起带上"（Snackbar 还没有动作按钮，第一版不带"导出"）。
 - 导出诊断包时也自动做第 2、3 步（`reason=export`），不加 `user.mark`。
 
 ## 5. 诊断包（P5、P7）
@@ -94,9 +95,9 @@ cirrus-diagnostics-20261111-1403.zip
 `summary.txt`（所有值经过与日志相同的脱敏）：
 
 - 应用：版本、提交、构建类型、安装方式（开发构建、AppImage、Flatpak、deb/rpm、Arch 包、Windows 安装版或便携版、macOS 包，按可执行文件位置和环境变量判断）。
-- 系统：系统和内核、架构、桌面环境（`XDG_CURRENT_DESKTOP`、`XDG_SESSION_TYPE`）、QPA、渲染后端和 GPU 名称与驱动（`QRhi::driverInfo()`，首帧后记一次 `app.gpu`）、各屏幕的尺寸、缩放、刷新率、语言和时区。
+- 系统：系统和内核、架构、桌面环境（`XDG_CURRENT_DESKTOP`、`XDG_SESSION_TYPE`）、QPA、渲染后端和 GPU（首帧时在渲染线程取，记一次 `app.gpu`；OpenGL 记 `GL_RENDERER`，其他图形接口只记接口名，`QRhi::driverInfo()` 要私有模块所以没用）、各屏幕的尺寸、缩放、刷新率、语言和 UTC 偏移（不记时区名）。
 - 网络：系统代理类型（无、HTTP、SOCKS，以及来自环境变量还是系统设置），不记主机和端口；在线状态。
-- 音频：输出后端、设备是否默认设备、采样率和格式；不记设备名（可能带人名）。
+- 音频：第一版没做（展示层不链接 Multimedia）；设备变化在引擎的 `engine.device_changed` 里有。
 - 账号：未登录、游客、已登录；不记任何 ID。
 - 设置：`AppSettings` 里的每一项，排除搜索历史；自定义字体只记"有几个文件"、字体名照记。
 - 存储：数据库、音频缓存、资源缓存的大小。
@@ -104,18 +105,18 @@ cirrus-diagnostics-20261111-1403.zip
 
 ### 5.2 导出框
 
-- 新增两个输入：问题描述（多行）、大概什么时候（"刚才""今天早些时候""更早"，或具体时间）。描述原样放进 `description.txt`，不进日志。
+- 新增一个多行输入："发生了什么、大概什么时候（可不填）"。原样放进 `description.txt`，不进日志（日志只记有没有写）。
 - 默认勾选：本次运行、上一次运行、任何含 `user.mark` 或异常退出的会话；更早的不勾。
 - 预览：`summary.txt` 可以展开看全文（11 §5 的"导出前能看到包含什么"）。
 
 ### 5.3 崩溃堆栈（LQ9）
 
-- Linux 和 macOS：致命信号处理器里用 `backtrace()` + `backtrace_symbols_fd()`（启动时先调一次 `backtrace`，让它在信号处理器之外完成加载），写到预先打开的 `crash-<会话>.txt`，只有模块和偏移，不含内存内容。
-- Windows：`SetUnhandledExceptionFilter`，`RtlCaptureStackBackTrace` 加模块基址算偏移，写到预先打开的文件。
+- Linux 和 macOS：致命信号处理器里只用异步信号安全的调用（启动时先调一次 `backtrace`，让它在信号处理器之外完成加载）：`open` 出 `crash-<会话>.txt`，写信号号、各帧地址、`/proc/self/maps` 里的可执行段（macOS 没有，只有地址），最后才写 `backtrace_symbols_fd()` 能给出的导出符号名。不含内存内容。
+- Windows：`SetUnhandledExceptionFilter`，`RtlCaptureStackBackTrace` 加模块基址算偏移。**还没做**：本机不能编译 Windows，先不写没验证过的代码；Windows 目前只有下次启动的"上次异常退出"。
 - `std::set_terminate`：记未捕获异常的类型名。
 - 信号处理器里不能脱敏，所以原始文件**不直接进诊断包**：下次启动时读出来、把路径换成占位，转成日志里的 `app.crash` 和 `app.crash_frame i=0 module=libCirrusUi.so offset=0x1a2b3c` 几行（warning），然后删掉原始文件。
-- 会话头加 `build_id`（Linux 读自身 ELF 的 GNU build-id，Windows 用 PE 时间戳加大小，macOS 用 LC_UUID）。
-- 还原：发布构建保留调试符号（CI 的 artifact，不进安装包），`tools/logs/symbolize.py` 用 `llvm-symbolizer` 或 `addr2line` 按 build_id 还原函数名和行号。
+- 会话头加 `build_id`（Linux 读自身 ELF 的 GNU build-id；Windows、macOS 还没做）。
+- 还原：`tools/logs/cirrus_log.py symbolize <包> --search <同一构建的二进制目录>` 用 `addr2line` 还原函数名和行号。发布构建目前不留调试符号（`build-packages.sh` 安装时去掉）；CI 把带符号的二进制存成 artifact 还没做，要改 workflow，等维护者决定。
 
 ## 6. 关联 ID（P4，后做）
 
@@ -128,7 +129,7 @@ cirrus-diagnostics-20261111-1403.zip
 
 - `summary <zip|dir>`：会话列表、异常退出、标记、warning 排行。
 - `timeline <zip|dir> [--around mark|HH:MM:SS] [--window 60s] [--cat ui]`：多个文件合并、按时间排序（含 context 块），在标记或指定时间前后截取。
-- `symbolize`：见 5.3。
+- `symbolize <zip|dir> --search <dir>`：见 5.3。
 
 ## 8. 待决问题
 
@@ -154,4 +155,30 @@ cirrus-diagnostics-20261111-1403.zip
 
 ## 10. 实施记录
 
-（暂无）
+**V1 飞行记录器与降噪（2026-11-11，`8df1dc9`）**
+- `logger.cpp`：`cirrus.*` debug 常开；非详细模式下进 2 MiB 环，warning 时带出前 30 秒（最多 500 条），`log::writeContext(reason)` 写整个环；每条只写一次。`log::setContext`，每条 warning 带 `ctx.*`。
+- `log::fieldIf`、`log::nameOf`、`log::Durations`（`src/logging/durations.*`）。
+- 降噪：`api.done` → debug + 每 5 分钟和退出时 `api.stats`；`load.resolved`、`preload.*`、`load.ended`、`engine.load/ready/ended/next_opened/advanced`、`audio.open/prefetch/url_needed/cached`、`queue.begin/advance`、`report.settled/send` → debug；`load.ready` 带歌曲、音质、试听；`request.failed` 没有值的 `status`、`retry_after` 不写。
+- QML 引擎警告改由 `Diagnostics::watch(QQmlEngine*)` 记（见 §4.3）。新分类 `cirrus.ui.qml`、`cirrus.ui.nav`。
+- 验证：`tst_logging` 新增 `optionalFieldsAndDurations`、`flightRecorder`；`log_canary`、`session_api_client`、`http_transport`、`listening_reporter`、`playback` 通过（没跑全量，按改动范围选）。离屏启动一次：warning 前带出了 context 块。
+
+**V2 用户视角（2026-11-11，`5bd375f`）**
+- `App.diagnostics`：`pageShown`（`AppShell` 的 `PageStack.onCurrentItemChanged`）、`playerShown`（`Main.qml`）、`notice(id)`、`mark()`、`watch(QQuickWindow*)`（弹窗、焦点、窗口）、`typeName`、`ids`。
+- 提示编号：`noticed(id, text)`（`ui/presentation/notice.h`），C++ 里 32 处发出点、56 个分支都包上了；QML 里 3 处用 `App.diagnostics.notice`。
+- "记下刚才的问题"：设置 → 诊断第一行，和全局快捷键 Ctrl+Alt+Shift+D。
+- 验证：离屏启动看到 `nav.page page=HomePage`、`model.failed model=ShelfModel ids=shelf:0`、warning 带 `ctx.page`；临时钩子触发标记，日志里依次是 `user.mark`、`ui.state`（页面栈、窗口、屏幕、缩放、主题、设置）、46 条 context 记录；钩子已撤。qmllint：改动前后都是 23 条，全是原有的 `id-shadows-member` 之类（Qt 6.12 的 qmllint 新规则），没有新增。弹窗记录没在离屏下实测（不能点），弹窗与父对象的关系用一个独立小程序验证过。
+
+**V3 诊断包（2026-11-11，`4529e0d`）**
+- `log::writeArchive(target, files, extras)`：日志放在 `logs/` 下，另加生成的文件。`Diagnostics::summary(names)`、`exportTo(target, names, description)`；`files` 多了 `suggested`；`app.gpu`。
+- `ExportLogsDialog`：默认只勾建议的，描述输入框，"查看摘要"展开预览。
+- 验证：`tst_logging` 的打包测试检查 `logs/` 和额外文件，Python `zipfile.testzip()` 通过；临时钩子导出一个包，`summary.txt`、`description.txt`、建议的 6 个文件都在，摘要里没有路径、主机、ID；对话框离屏截图正常。
+
+**V4 查看工具（2026-11-11，`bbcdc98`）**：`tools/logs/cirrus_log.py summary|timeline`，在测试日志上试过 `--around mark`、`--level`、`--cat`。
+
+**V5 崩溃堆栈（2026-11-11）**：`src/logging/crash.*`（信号处理器、`std::terminate` 记异常类型、下次启动的 `app.crash`/`app.crash_frame`、`build_id`），`cirrus_log.py symbolize`。**这部分代码被另一个同时进行的会话的提交 `a463a24`（feat(cache) …）一起带进去了**，提交信息对不上，没有改写历史。验证：`tst_logging::crashStack` 在子进程里 `raise(SIGSEGV)`，下次 `report()` 记出 16 帧、无路径、原始文件已删；`symbolize` 把第 4 帧还原到 `logging_test.cpp:254`。
+
+**没做 / 留给以后**
+- V6 关联 ID（§6）。
+- Windows 崩溃堆栈、Windows/macOS 的 `build_id`；CI 保留调试符号。
+- 摘要里的音频设备信息；Snackbar 的"导出"动作按钮。
+- 详细日志开关保留，但文案改成"问题要很久才出现时打开"。

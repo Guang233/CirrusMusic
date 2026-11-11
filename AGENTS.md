@@ -6,7 +6,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 
 - Reply in Chinese.
 - The agent's focus is the UI. Backend code may be changed when a task needs it (the maintainer lifted the UI-only rule on 2026-11-01); follow the backend's own docs and conventions (`docs/HANDOFF.md`) and report unrelated backend problems (e.g. the `tst_entity_search` build failure below) to the maintainer.
-- Logging (backend and UI): use the categories in `src/logging/categories.h` and `log::event`/`log::field` from `src/logging/log.h`; never log URLs, bodies, credentials or user text. Conventions: `docs/tasks/logging.md` §9.
+- Logging (backend and UI): use the categories in `src/logging/categories.h` and `log::event`/`log::field` (`log::fieldIf` for optional values) from `src/logging/log.h`; never log URLs, bodies, credentials or user text. Debug records always go to the in-memory flight recorder and reach the file around warnings, so keep debug out of per-frame/per-buffer paths. A snackbar notice from C++ goes through `noticed("area.what", tr(...))` (`ui/presentation/notice.h`), from QML through `App.diagnostics.notice(id)`. Conventions: `docs/tasks/logging.md` §9 and `docs/tasks/logging-v2.md`; read logs and packages with `tools/logs/cirrus_log.py`.
 - Keep verification proportional to the change; skip tests that are not needed.
 - Open design questions (UQ-xx in `docs/ui/README.md` §14) are decided by the maintainer: ask, then record the decision there.
 - Current progress and the next step are at the top of `docs/ui/README.md` §12.
