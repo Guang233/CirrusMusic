@@ -46,7 +46,8 @@ ViewingConditions CreateViewingConditions(const double white_point[3],
 
 ViewingConditions DefaultWithBackgroundLstar(const double background_lstar);
 
-static const ViewingConditions kDefaultViewingConditions = (ViewingConditions){
+// Cirrus: was the C compound literal (ViewingConditions){...} (MSVC C4576).
+static const ViewingConditions kDefaultViewingConditions = ViewingConditions{
     11.725676537,
     50.000000000,
     2.000000000,
