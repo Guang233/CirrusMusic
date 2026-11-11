@@ -1,7 +1,7 @@
 # 日志与诊断改造（第二版）
 
 - 日期：2026-11-11
-- 状态：**方向已定**（维护者 2026-11-11，§8 的 LQ7–LQ10）；V1–V5 已完成（§10），V6 关联 ID 和 Windows 崩溃堆栈未做
+- 状态：**方向已定**（维护者 2026-11-11，§8 的 LQ7–LQ10）；V1–V5 已完成（§10）；维护者看过后要求错误能定位、环境更全、导出结构参考大型软件，见 §11、§12（2026-11-11 已实现）；V6 关联 ID 和 Windows 崩溃堆栈未做
 - 基础：[logging.md](logging.md)（第一版：处理器、写文件线程、轮转、脱敏、`event`/`field`）。第一版的框架保留，本文只改**记什么**和**诊断包里有什么**；第一版里与本文冲突的地方以本文为准。
 - 起因：维护者 2026-11-11 反馈，用户发来的诊断包没用，最常见的是**界面异常**。
 
@@ -81,6 +81,8 @@ I main cirrus.ui.nav nav.section page=LibraryPage section=library
 - 导出诊断包时也自动做第 2、3 步（`reason=export`），不加 `user.mark`。
 
 ## 5. 诊断包（P5、P7）
+
+> 第一版的 `summary.txt` 已被 §12 的分文件结构取代，本节的内容分散到 §12 各文件。
 
 ### 5.1 内容
 
@@ -177,8 +179,46 @@ cirrus-diagnostics-20261111-1403.zip
 
 **V5 崩溃堆栈（2026-11-11）**：`src/logging/crash.*`（信号处理器、`std::terminate` 记异常类型、下次启动的 `app.crash`/`app.crash_frame`、`build_id`），`cirrus_log.py symbolize`。**这部分代码被另一个同时进行的会话的提交 `a463a24`（feat(cache) …）一起带进去了**，提交信息对不上，没有改写历史。验证：`tst_logging::crashStack` 在子进程里 `raise(SIGSEGV)`，下次 `report()` 记出 16 帧、无路径、原始文件已删；`symbolize` 把第 4 帧还原到 `logging_test.cpp:254`。
 
+**§11 错误定位、§12 诊断包结构（2026-11-11，`b5b9c41`、`76d3da4`）**
+- 验证：`tst_logging`（新增 `log::message` 清洗、`crashes/` 文件）、`log_canary`（签名地址不进 `detail`）、`http_transport`、`session_api_client`、`cover_checks` 通过。离屏导出两次（另设 `XDG_RUNTIME_DIR`，避开维护者正在运行的实例）：zip 校验通过，各文件内容如上；网络检查在本机显示经代理 `127.0.0.1:7890` 全部可达、直连全部超时，DNS 是代理 TUN 的 198.18.x 假 IP——这正是之前 `ProxyConnectionRefused` 那类问题需要的信息。离屏下没有 GPU 和音频设备（软件渲染、换了运行目录连不上 PulseAudio），这两份要在桌面上看。
+
 **没做 / 留给以后**
 - V6 关联 ID（§6）。
 - Windows 崩溃堆栈、Windows/macOS 的 `build_id`；CI 保留调试符号。
 - 摘要里的音频设备信息；Snackbar 的"导出"动作按钮。
 - 详细日志开关保留，但文案改成"问题要很久才出现时打开"。
+
+## 11. 错误要能定位（维护者 2026-11-11 反馈后）
+
+维护者看了 V1–V5 后指出：错误不能只写一个 `NetworkError`，要能看出在哪里、为什么出错。
+
+- **代码位置**：顶层 CMake 打开 `QT_MESSAGELOGCONTEXT`（发布构建也带），处理器给每条 warning/critical 加 `src=<目录>/<文件>:<行> fn=<类>::<函数>`（文件只留最后两段，函数去掉返回类型、参数和外层命名空间）。QML 警告自带 `file=`/`line=`，不再加。
+- **网络请求失败** `cirrus.net request.failed`：除错误类别外，另记 Qt 的原话 `detail`（经 `log::message()`：其中的 URL 只留主机，最长 300 字）、`method`、`host`、实际走的 `proxy`（与 QNetworkAccessManager 用同一个代理工厂，只记类型和地址，不记凭据）、`phase`（`connect` 没收到任何回应／`response` 有状态码／`body` 收到一部分）、`received` 字节、超时时的 `timeout_ms`、第几次 `attempt`、HTTP 原因短语 `reason`、TLS 错误 `tls`、系统报告的网络可达性 `reach`。重发记录 `request.retry` 也带 `detail`、`host`、`proxy`。
+- **接口失败** `cirrus.api api.failed`／`api.done`：带传输层请求号 `req`（和 `request.*` 对得上）、业务码 `code`、服务端自己的说明 `msg`（如"操作频繁"，同样经 `log::message()`）。
+- **封面下载失败** `cirrus.cache cover.failed`：带 Qt 错误、`detail`、HTTP 状态、类型不对时的 `type`、已收字节；超时带 `timeout_ms`。
+- **崩溃**：除日志里的 `app.crash`（带崩溃那次的 `build_id`）外，另存 `crashes/<会话>.txt`（模块加偏移的表，最多 10 份），进诊断包。
+- 原因从下层传到界面层（`model.failed` 直接带上 `request.failed` 的细节）要改多层值类型，仍是 V6；现在靠 `req` 和飞行记录器带出的前 30 秒记录串起来。
+
+## 12. 诊断包结构（参考 IntelliJ IDEA 的 Collect Logs and Diagnostic Data、Firefox about:support）
+
+```
+cirrus-diagnostics-20261111-1403.zip
+├── README.txt        包里有什么、怎么读（cirrus_log.py）、不包含什么；各会话的起止、是否正常结束、标记、warning 前十
+├── about.txt         应用名、版本、提交、构建类型、build_id、安装方式、参数（路径换成占位）、PID、启动时间、运行时长；编译器、C++ 标准、编译与运行的 Qt、Qt 构建信息、TLS 后端与库版本
+├── system.txt        系统、内核、架构、ABI、桌面、会话类型、QPA、系统深浅色；CPU 型号与线程数；内存总量/可用/交换、进程 RSS/峰值/线程数；数据、缓存、配置、日志所在分区的剩余与文件系统；语言、UTC 偏移；每块屏幕（名称、型号、几何、物理尺寸、缩放、DPI、刷新率、色深）；窗口
+├── graphics.txt      图形接口、相关设置与环境变量（CIRRUS_GPU、QSG_RHI_BACKEND、DRI_PRIME、__NV_PRIME_RENDER_OFFLOAD…）；RHI 后端、设备名、设备/厂商 ID、类型（独显/核显）；OpenGL 时另有 GL_VENDOR/RENDERER/VERSION、GLSL、上下文版本、采样、交换方式
+├── audio.txt         默认输出设备，每个输出设备的描述、首选格式、采样率与声道范围、支持的样本格式
+├── network.txt       导出时现场检查（约 6 秒）：应用/系统代理、代理环境变量（去掉凭据）；网络后端、可达性、传输介质、是否计费、是否强制门户；TLS；对 interface/music/interface3.music.163.com、p1/m701.music.126.net 各做 DNS 解析（耗时、地址）和 HTTPS 请求（经代理、直连各一次：状态码、耗时、HTTP/2，失败时 Qt 的错误名和原话）
+├── environment.txt   影响 Qt、显卡、桌面、音频、代理的环境变量（白名单；家目录换成 ~，代理去掉凭据）
+├── modules.txt       已加载的库和插件（Linux）
+├── state.txt         页面栈、弹窗、播放页；账号状态；播放状态、歌曲 ID、位置、队列位置、音量；网络状态；缓存与日志占用
+├── settings.txt      全部设置（列表只记条数）
+├── description.txt   用户写的描述（有才放）
+├── crashes/          崩溃报告（§11）
+└── logs/             选中的日志文件
+```
+
+- 导出改成异步：选好保存位置后先做网络检查，再写 zip，完成后 `App.diagnostics.exportFinished(ok)`；期间设置页显示"正在收集…"。
+- 导出框"查看报告"展开的是除日志和 network.txt 以外的全部文件（`App.diagnostics.preview()`）。
+- GPU 通过 RHI 取（`QQuickWindow::rhi()->driverInfo()`，需要 `Qt6::GuiPrivate`；找不到这个模块的构建里只写 OpenGL 自己报的信息，定义 `CIRRUS_HAVE_RHI` 区分）；首帧时记一条 `app.gpu backend=… device=…`。
+- 隐私：不含账号或他人 ID、标题、搜索词、用户写的文字（描述除外）、本机路径（换成 `<data>`、`~`）、代理凭据。音频设备描述和屏幕型号照记（排查需要；是设备型号，不是个人内容）。
