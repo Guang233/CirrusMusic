@@ -98,6 +98,11 @@ class LoggingTest : public QObject
         QCOMPARE(log::host(QUrl("https://M10.music.126.net/a/b.flac?vuutv=secret")).value,
                  "m10.music.126.net");
         QCOMPARE(log::host(QUrl()).value, "-");
+        QCOMPARE(log::message("Error transferring https://u:p@m701.music.126.net/2026/a1b2/x.flac"
+                              "?vuutv=secret - server replied: Forbidden")
+                     .value,
+                 "Error transferring https://m701.music.126.net/… - server replied: Forbidden");
+        QCOMPARE(log::message("Proxy connection refused").value, "Proxy connection refused");
         log::setPathRoots(
             {{"<cache>", "/home/u/.cache/Cirrus"}, {"<audio>", "/home/u/.cache/Cirrus/audio"}});
         QCOMPARE(log::path("/home/u/.cache/Cirrus/audio/12.flac").value, "<audio>/12.flac");
@@ -148,11 +153,15 @@ class LoggingTest : public QObject
         for (const QString& line : lines)
             QVERIFY2(record.match(line).hasMatch(), qPrintable(line));
         QVERIFY(lines.value(1).endsWith("cirrus.playback held n=1"));
-        QVERIFY(lines.value(2).endsWith(" W main    cirrus.net request.failed req=7"));
-        QVERIFY(lines.value(3).endsWith("default two\\nlines"));
-        QVERIFY2(lines.value(4).endsWith("see https://interface.music.163.com/eapi/x?… now"),
+        // Warnings say where in the code they were written.
+        QVERIFY2(lines.value(2).contains(" W main    cirrus.net request.failed req=7 "
+                                         "src=unit/logging_test.cpp:"),
+                 qPrintable(lines.value(2)));
+        QVERIFY(lines.value(2).endsWith(" fn=LoggingTest::sessionFile"));
+        QVERIFY(lines.value(3).contains("default two\\nlines src="));
+        QVERIFY2(lines.value(4).contains("see https://interface.music.163.com/eapi/x?… now src="),
                  qPrintable(lines.value(4)));
-        QVERIFY(lines.value(5).endsWith("~/private/file"));
+        QVERIFY(lines.value(5).contains("~/private/file src="));
         QVERIFY(lines.value(6).endsWith(" D main    cirrus.media shown"));
         QVERIFY(lines.last().endsWith("cirrus.app app.exit"));
         const QString all = lines.join(u'\n');
@@ -219,8 +228,11 @@ class LoggingTest : public QObject
         QVERIFY(f.open(QIODevice::ReadOnly));
         QStringList lines = QString::fromUtf8(f.readAll()).split(u'\n', Qt::SkipEmptyParts);
         static const QRegularExpression prefix("^\\S+ [DIWCF] \\S+\\s+");
-        for (QString& line : lines)
+        static const QRegularExpression source(" src=\\S+ fn=\\S+");
+        for (QString& line : lines) {
             line.remove(prefix); // without time, level and thread
+            line.remove(source); // and where in this file (sessionFile() checks it)
+        }
         const QStringList expected = {
             "cirrus.playback info",
             "cirrus.log log.context_begin reason=warning count=1",
@@ -294,7 +306,7 @@ class LoggingTest : public QObject
         log::flush();
         const auto recent = log::recent();
         QVERIFY(std::any_of(recent.cbegin(), recent.cend(), [](const QString& line) {
-            return line.endsWith(
+            return line.contains(
                 "app.previous_session_unclean file=cirrus-20261108-100000-12.log signal=11");
         }));
         log::shutdown();

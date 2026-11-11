@@ -7,8 +7,13 @@
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QHttpHeaders>
+#include <QNetworkInformation>
+#include <QNetworkProxy>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#if QT_CONFIG(ssl)
+#include <QSslError>
+#endif
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
@@ -75,6 +80,34 @@ bool validXeapiHeaders(const TransportRequest& request)
 constexpr int kLostConnectionResends = 2;
 constexpr int kSecondResendDelayMs = 1000;
 
+// The proxy Qt picks for `host` (the same factory QNetworkAccessManager asks), for a
+// failure's record: type and address, never credentials.
+QString proxyFor(const QString& host, int port)
+{
+    QUrl url;
+    url.setScheme(QStringLiteral("https"));
+    url.setHost(host);
+    url.setPort(port);
+    const auto proxies = QNetworkProxyFactory::proxyForQuery(QNetworkProxyQuery(url));
+    if (proxies.isEmpty() || proxies.first().type() == QNetworkProxy::NoProxy)
+        return QStringLiteral("none");
+    const QNetworkProxy& proxy = proxies.first();
+    const char* type = proxy.type() == QNetworkProxy::Socks5Proxy ? "socks5"
+                       : proxy.type() == QNetworkProxy::HttpProxy ? "http"
+                                                                  : "other";
+    return QStringLiteral("%1://%2:%3")
+        .arg(QLatin1StringView(type), proxy.hostName())
+        .arg(proxy.port());
+}
+
+// Where a request that got no answer failed, as far as the reply tells.
+const char* phaseOf(const TransportResult& result, qint64 received)
+{
+    if (result.httpStatus != 0)
+        return "response";
+    return received > 0 ? "body" : "connect";
+}
+
 } // namespace
 
 struct HttpTransport::Pending {
@@ -92,6 +125,11 @@ struct HttpTransport::Pending {
     std::optional<TransportRequest> again;
     int resends = 0;
     bool waiting = false; // between a lost connection and the delayed resend
+    // For a failure's record (logging-v2 §11): where it went and what Qt said on the way.
+    QString host;
+    int port = 443;
+    int timeoutMs = 0;
+    QStringList tls; // TLS errors Qt reported, in its words
 };
 
 HttpTransport::HttpTransport(QObject* parent)
@@ -167,6 +205,9 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
         return;
     }
     pending->xeapi = request.protocol == Protocol::Xeapi;
+    pending->host = url->host();
+    pending->port = url->port(443);
+    pending->timeoutMs = request.timeoutMs;
     if (request.retryLostConnection && pending->resends < kLostConnectionResends)
         pending->again = request;
     QNetworkRequest wire(*url);
@@ -205,6 +246,14 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
             [this, id] { terminate(id, TransportError::Timeout); });
     connect(reply, &QNetworkReply::readyRead, this, [this, id] { consume(id); });
     connect(reply, &QNetworkReply::finished, this, [this, id] { finish(id); });
+#if QT_CONFIG(ssl)
+    connect(reply, &QNetworkReply::sslErrors, this, [this, id](const QList<QSslError>& errors) {
+        if (const auto pending = m_pending.value(id))
+            for (const QSslError& error : errors)
+                if (pending->tls.size() < 4)
+                    pending->tls.append(error.errorString());
+    });
+#endif
     pending->timer->start(request.timeoutMs);
     // Also support injected replies which have already finished synchronously.
     if (reply->isFinished()) {
@@ -278,8 +327,10 @@ void HttpTransport::finish(quint64 id)
          pending->reply->error() == QNetworkReply::RemoteHostClosedError)) {
         const int delayMs = pending->resends == 0 ? 0 : kSecondResendDelayMs;
         qCWarning(lcNet) << log::event("request.retry") << log::field("req", id)
-                         << log::field("path", pending->path)
+                         << log::field("path", pending->path) << log::field("host", pending->host)
                          << log::field("qt", pending->reply->error())
+                         << log::field("detail", log::message(pending->reply->errorString()))
+                         << log::field("proxy", proxyFor(pending->host, pending->port))
                          << log::field("attempt", pending->resends + 1)
                          << log::field("delay_ms", delayMs)
                          << log::field("ms", pending->elapsed.elapsed());
@@ -298,6 +349,12 @@ void HttpTransport::finish(quint64 id)
         return;
     }
     drain(pending);
+    const qint64 received = pending->body.size();
+    QString detail, reason;
+    if (pending->reply) {
+        detail = pending->reply->errorString();
+        reason = pending->reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
+    }
     TransportResult result;
     result.error = pending->forcedError;
     result.body = std::move(pending->body);
@@ -352,16 +409,33 @@ void HttpTransport::finish(quint64 id)
         qCDebug(lcNet) << log::event("request.canceled") << log::field("req", id)
                        << log::field("path", pending->path)
                        << log::field("ms", pending->elapsed.elapsed());
-    else
-        qCWarning(lcNet) << log::event("request.failed") << log::field("req", id)
-                         << log::field("path", pending->path)
-                         << log::field("proto", pending->protocol)
-                         << log::field("err", result.error)
-                         << log::field("qt", QNetworkReply::NetworkError(result.networkError))
-                         << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
-                         << log::field("ms", pending->elapsed.elapsed()) << log::field("h2", h2)
-                         << log::fieldIf(!result.retryAfter.isEmpty(), "retry_after",
-                                         QString::fromLatin1(result.retryAfter));
+    else {
+        // Everything that says why (logging-v2 §11): Qt's own words, where it went and
+        // through which proxy, how far it got, and the network's state.
+        const auto* information = QNetworkInformation::instance();
+        qCWarning(lcNet)
+            << log::event("request.failed") << log::field("req", id)
+            << log::field("path", pending->path) << log::field("proto", pending->protocol)
+            << log::field("err", result.error)
+            << log::field("qt", QNetworkReply::NetworkError(result.networkError))
+            << log::fieldIf(result.networkError != 0 || result.error == TransportError::Network,
+                            "detail", log::message(detail))
+            << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
+            << log::fieldIf(!reason.isEmpty(), "reason", log::message(reason))
+            << log::field("method", "POST") << log::field("host", pending->host)
+            << log::field("proxy", proxyFor(pending->host, pending->port))
+            << log::field("phase", phaseOf(result, received)) << log::field("received", received)
+            << log::field("ms", pending->elapsed.elapsed())
+            << log::fieldIf(result.error == TransportError::Timeout, "timeout_ms",
+                            pending->timeoutMs)
+            << log::field("attempt", pending->resends + 1) << log::field("h2", h2)
+            << log::fieldIf(!pending->tls.isEmpty(), "tls", log::message(pending->tls.join(u"; ")))
+            << log::fieldIf(information != nullptr, "reach",
+                            information ? information->reachability()
+                                        : QNetworkInformation::Reachability::Unknown)
+            << log::fieldIf(!result.retryAfter.isEmpty(), "retry_after",
+                            QString::fromLatin1(result.retryAfter));
+    }
     emit completed(id, result);
 }
 

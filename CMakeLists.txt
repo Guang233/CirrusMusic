@@ -9,6 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Multimedia)
 
 qt_standard_project_setup(REQUIRES 6.10)
+# Every log record knows its file, line and function, release builds too: warnings and
+# errors carry src= and fn= (docs/tasks/logging-v2.md §11).
+add_compile_definitions(QT_MESSAGELOGCONTEXT)
 
 include(CTest)
 add_subdirectory(src)

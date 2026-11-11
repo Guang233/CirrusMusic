@@ -245,6 +245,33 @@ void writeContext(State& s, const char* reason, qint64 sinceMs, qsizetype limit)
     enqueue(s, format(QtInfoMsg, "cirrus.log", QStringLiteral("log.context_end") + fields), true);
 }
 
+// Where a warning was written (logging-v2 §11), with a leading space: the source file's
+// last two path parts and line, and the function without its return type, parameters
+// and outer namespaces. Empty when Qt did not say (its own records in a release Qt).
+QString sourceFields(const QMessageLogContext& context)
+{
+    if (!context.file || !context.line)
+        return {};
+    QString file = QString::fromUtf8(context.file);
+    file.replace(u'\\', u'/');
+    if (const qsizetype last = file.lastIndexOf(u'/'); last > 0)
+        if (const qsizetype before = file.lastIndexOf(u'/', last - 1); before >= 0)
+            file = file.mid(before + 1);
+    QString text = QStringLiteral(" src=") + file + u':' + QString::number(context.line);
+    if (context.function) {
+        QString function = QString::fromUtf8(context.function);
+        if (const qsizetype paren = function.indexOf(u'('); paren > 0)
+            function.truncate(paren);
+        if (const qsizetype space = function.lastIndexOf(u' '); space >= 0)
+            function = function.mid(space + 1);
+        const QStringList parts = function.split(QStringLiteral("::"));
+        function = parts.mid(qMax<qsizetype>(0, parts.size() - 2)).join(QStringLiteral("::"));
+        if (!function.isEmpty())
+            text += QStringLiteral(" fn=") + function;
+    }
+    return text;
+}
+
 // The context added to every warning (logging-v2 §4.3), with a leading space.
 QString contextFields()
 {
@@ -367,9 +394,14 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
     const QByteArrayView category = context.category ? context.category : "default";
     const bool urgent = type == QtCriticalMsg || type == QtFatalMsg;
     const bool warning = urgent || type == QtWarningMsg;
-    // A warning says where the user was (the page, a dialog).
-    QByteArray line = warning ? format(type, category, message + contextFields())
-                              : format(type, category, message); // outside the lock
+    // A warning says where in the code it was written (the QML engine's give their own
+    // file and line) and where the user was (the page, a popup).
+    QByteArray line =
+        warning
+            ? format(type, category,
+                     message + (category == "cirrus.ui.qml" ? QString() : sourceFields(context)) +
+                         contextFields())
+            : format(type, category, message); // outside the lock
     {
         QMutexLocker lock(&s.mutex);
         const qint64 now = s.clock.elapsed();
@@ -517,6 +549,18 @@ Host host(const QUrl& url)
 {
     const QString h = url.host().toLower();
     return {h.isEmpty() ? QStringLiteral("-") : h};
+}
+
+Message message(const QString& text)
+{
+    static const QRegularExpression url(
+        QStringLiteral(R"(([A-Za-z][A-Za-z0-9+.\-]*://)(?:[^\s/@]*@)?([^\s/?#"'<>]+)[^\s"'<>]*)"));
+    QString out = text;
+    out.replace(url, QStringLiteral("\\1\\2/…"));
+    out = out.simplified();
+    if (out.size() > 300)
+        out = out.left(300) + u'…';
+    return {out.isEmpty() ? QStringLiteral("-") : out};
 }
 
 Path path(const QString& localPath)

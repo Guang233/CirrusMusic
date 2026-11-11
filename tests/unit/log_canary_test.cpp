@@ -7,6 +7,7 @@
 #include "logging/logger.h"
 
 #include <QCryptographicHash>
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -16,6 +17,7 @@
 // The log never carries a secret (docs/tasks/logging.md §5): credentials, signed
 // addresses, bodies and account ids marked CANARY go through the real code paths, in
 // detail mode, and none of them may appear in the session's file.
+using namespace Qt::StringLiterals;
 using namespace cirrus;
 using namespace cirrus::domain;
 using namespace cirrus::netease;
@@ -79,7 +81,10 @@ class LogCanaryTest : public QObject
 
         const QString text = logged();
         QVERIFY2(!text.contains(u"CANARY"), qPrintable(text));
-        QVERIFY(text.contains(u"cirrus.api api.done path=/api/login/qrcode/unikey code=200"));
+        QVERIFY(QRegularExpression(
+                    u"cirrus.api api.done req=\\d+ path=/api/login/qrcode/unikey code=200"_s)
+                    .match(text)
+                    .hasMatch());
         QVERIFY(text.contains(u"cirrus.net request.failed"));
         QVERIFY(text.contains(u"qt=ProtocolFailure"));
         QVERIFY(text.contains(u"cirrus.api api.failed"));

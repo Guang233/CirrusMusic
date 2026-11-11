@@ -119,15 +119,20 @@ struct Region {
 
 void install(const QString& path)
 {
+#ifdef Q_OS_UNIX
+    // The path follows each session; the handlers are installed once.
+    const QByteArray native = QFile::encodeName(path);
+    if (native.size() >= qsizetype(sizeof g_path))
+        return;
+    std::memcpy(g_path, native.constData(), size_t(native.size()) + 1);
+#else
+    Q_UNUSED(path);
+#endif
     static bool done = false;
     if (std::exchange(done, true))
         return;
     std::set_terminate(onTerminate);
 #ifdef Q_OS_UNIX
-    const QByteArray native = QFile::encodeName(path);
-    if (native.size() >= qsizetype(sizeof g_path))
-        return;
-    std::memcpy(g_path, native.constData(), size_t(native.size()) + 1);
     void* warm[1];
     backtrace(warm, 1); // loads what backtrace() needs now, not in the handler
     struct sigaction action{};

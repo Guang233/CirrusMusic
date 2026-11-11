@@ -528,6 +528,16 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
     m_transportIds.remove(pending.transportId);
     const auto candidateReceipt = result.credentialReceipt;
     const auto code = result.decoded.businessCode;
+    // The provider's own explanation of a code other than 200 ("操作频繁"), for the log
+    // only: taken before failed results are emptied below.
+    QString providerMessage;
+    if (code && *code != 200)
+        for (const char* key : {"message", "msg"})
+            if (const QJsonValue v = result.decoded.object.value(QLatin1StringView(key));
+                v.isString()) {
+                providerMessage = v.toString();
+                break;
+            }
     if (!accepts(pending.context)) {
         result = {ApiError::StaleContext};
     } else if (pending.forcedError != ApiError::None) {
@@ -568,22 +578,30 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
         qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
     switch (result.error) {
     case ApiError::None:
-        qCDebug(lcApi) << log::event("api.done") << log::field("path", path)
+        qCDebug(lcApi) << log::event("api.done") << log::field("req", pending.transportId)
+                       << log::field("path", path)
                        << log::field("code", code ? QString::number(*code) : QStringLiteral("-"))
+                       << log::fieldIf(!providerMessage.isEmpty(), "msg",
+                                       log::message(providerMessage))
                        << log::field("ms", ms);
         break;
     case ApiError::Canceled:
     case ApiError::StaleContext:
     case ApiError::Transport:
-        qCDebug(lcApi) << log::event("api.ended") << log::field("path", path)
-                       << log::field("err", result.error)
+        qCDebug(lcApi) << log::event("api.ended") << log::field("req", pending.transportId)
+                       << log::field("path", path) << log::field("err", result.error)
                        << log::field("transport", result.transportError) << log::field("ms", ms);
         break;
     default:
-        qCWarning(lcApi) << log::event("api.failed") << log::field("path", path)
-                         << log::field("err", result.error)
-                         << log::field("decode", result.decoded.error)
-                         << log::field("status", result.httpStatus) << log::field("ms", ms);
+        qCWarning(lcApi) << log::event("api.failed") << log::field("req", pending.transportId)
+                         << log::field("path", path) << log::field("err", result.error)
+                         << log::fieldIf(result.error == ApiError::Decode, "decode",
+                                         result.decoded.error)
+                         << log::fieldIf(code.has_value(), "code", code.value_or(0))
+                         << log::fieldIf(!providerMessage.isEmpty(), "msg",
+                                         log::message(providerMessage))
+                         << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
+                         << log::field("ms", ms);
         break;
     }
     emit completed(id, pending.context, std::move(result));

@@ -52,9 +52,15 @@ struct Path { // a local path under a known root (<data>/…, <cache>/…) or it
 struct Account { // an account id hashed with this installation's key
     QString value;
 };
+struct Message { // a library's own words (an error string), any URL in it cut to its host
+    QString value;
+};
 Host host(const QUrl& url);
 Path path(const QString& localPath);
 Account account(QStringView id);
+// What Qt or a library says went wrong, safe to log: https://h/p?q in it becomes
+// https://h/…, and it is cut at 300 characters. Never for user text.
+Message message(const QString& text);
 
 namespace detail
 {
@@ -79,7 +85,7 @@ template <typename T> QString value(const T& v)
     else if constexpr (std::is_floating_point_v<U>)
         return QString::number(v, 'g', 6);
     else if constexpr (std::is_same_v<U, Host> || std::is_same_v<U, Path> ||
-                       std::is_same_v<U, Account>)
+                       std::is_same_v<U, Account> || std::is_same_v<U, Message>)
         return quoted(v.value);
     else if constexpr (std::is_same_v<U, QUuid>)
         return v.toString(QUuid::WithoutBraces);
