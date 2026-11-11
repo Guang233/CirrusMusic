@@ -126,4 +126,8 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
   - Qt 的部署脚本默认只带 xcb 平台插件：要显式包含 `qwayland`。插件按文件名（去掉 lib 和后缀）指定，不是 CMake 目标名。
   - 桌面文件过了 `desktop-file-validate`，AppStream 过了 `appstreamcli validate`（只剩 ID 含大写的 pedantic 提示）。
 - CI（2026-11-11）：Linux 编译、qmllint、测试通过（排除 §7.1 的测试）。GCC 12 比本机的 GCC 16 严格，`std::optional<T>({x})` 要写成 `std::optional<T>(T{x})`。Windows 只编译，通过。macOS 试验（2026-11-11，`macos-15`，Apple Silicon）：应用、gallery、测试编译通过，qmllint 通过；测试原先只有两个缺 OpenSSL 头文件路径（已修），排除上面的测试后的结果见当次运行。
-- 未运行：deb、AppImage、Windows 安装包和 zip（都在发布工作流里，还没推过标签）。
+- 打包（2026-11-11，CI 手动运行勾选 "Build packages"，运行 43023950276）：四种包都打出来了：deb 约 52 MB、AppImage 约 79 MB，Windows 安装包和 zip 合计约 135 MB。deb 的 `Depends` 只有系统库，要求 glibc ≥ 2.35。为此改过：
+  - AppImage：不设空的 `LDAI_UPDATE_INFORMATION`（linuxdeploy 把空值当格式错误）。
+  - 桌面文件校验：Ubuntu 22.04 的 `desktop-file-validate` 不认 `SingleMainWindow`（规范 1.5），只放过这一条。
+  - Windows：windeployqt 把所有 `qt6*.dll` 当成 Qt 模块，遇到 `qt6keychain.dll` 先报错、再崩溃，所以 Windows 上静态链接 QtKeychain；`qwayland` 等只在 Linux 才有的部署选项不传给它（否则它会崩溃，`0xc0000409`）；排除系统 DLL 时只排除 `C:\Windows`（原来的写法把 vcpkg 的 `x64-windows/bin` 也排除了）；不带 `vc_redist.x64.exe`（运行库已放在 exe 旁边）。CI 检查 vcpkg 的 6 个 DLL（FFmpeg、`libcrypto-3-x64.dll`、`z.dll`）和 MSVC 运行库都在包里。
+- 还没做：在真实系统上安装、运行这些包（Ubuntu/Debian、其他发行版的 AppImage、Windows 10/11）；推标签走一遍完整的发布工作流。
