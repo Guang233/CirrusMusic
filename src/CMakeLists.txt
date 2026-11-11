@@ -13,6 +13,8 @@ endif()
 add_library(cirrus_logging STATIC
     logging/categories.cpp
     logging/categories.h
+    logging/crash.cpp
+    logging/crash.h
     logging/durations.cpp
     logging/durations.h
     logging/log.h
@@ -280,10 +282,16 @@ add_library(cirrus_storage STATIC
     infrastructure/storage/database_worker.h
     infrastructure/storage/installation_store.cpp
     infrastructure/storage/installation_store.h
+    infrastructure/storage/private_files.cpp
+    infrastructure/storage/private_files.h
 )
 target_compile_features(cirrus_storage PUBLIC cxx_std_20)
 target_include_directories(cirrus_storage PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(cirrus_storage PUBLIC Qt6::Sql cirrus_logging)
+if(WIN32)
+    target_compile_definitions(cirrus_storage PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(cirrus_storage PRIVATE advapi32) # private_files.cpp: ACLs, tokens
+endif()
 
 # Optional Runtime composition uses the existing database executor; Core has no SQL dependency.
 add_library(cirrus_listening_state STATIC
@@ -429,7 +437,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CIRRUS_FFMPEG REQUIRED IMPORTED_TARGET
     libavformat libavcodec libavutil libswresample)
 target_link_libraries(cirrus_media PUBLIC cirrus_application Qt6::Network Qt6::Multimedia
-    PRIVATE PkgConfig::CIRRUS_FFMPEG)
+    PRIVATE PkgConfig::CIRRUS_FFMPEG cirrus_storage)
 
 # Composition stays out of application/domain and is not linked into the template UI.
 add_library(cirrus_backend STATIC

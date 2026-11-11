@@ -1,4 +1,5 @@
 #include "audio_store.h"
+#include "infrastructure/storage/private_files.h"
 #include "logging/log.h"
 #include "media_source_policy.h"
 #include <QCryptographicHash>
@@ -16,12 +17,6 @@
 #include <QThreadPool>
 #include <algorithm>
 #include <chrono>
-#ifdef Q_OS_LINUX
-#include <cerrno>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace cirrus::media
 {
@@ -42,63 +37,9 @@ bool validMd5(const QByteArray& md5)
            });
 }
 
-#ifdef Q_OS_LINUX
-// The same rules as the resource cache: ours, 0700, no group/world-writable ancestor.
-bool privateDirectory(const QString& dir)
-{
-    if (getuid() != geteuid() || dir.isEmpty() || !QDir::isAbsolutePath(dir) ||
-        QDir::cleanPath(dir) != dir)
-        return false;
-    struct stat info{};
-    auto bytes = QFile::encodeName(dir);
-    if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) || info.st_uid != geteuid() ||
-        (info.st_mode & 0777) != 0700)
-        return false;
-    auto ancestor = QFileInfo(dir).absolutePath();
-    while (true) {
-        bytes = QFile::encodeName(ancestor);
-        if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) ||
-            (info.st_uid != 0 && info.st_uid != geteuid()) || (info.st_mode & 0022))
-            return false;
-        if (ancestor == QStringLiteral("/"))
-            break;
-        ancestor = QFileInfo(ancestor).absolutePath();
-    }
-    return true;
-}
-bool makePrivateDirectory(const QString& dir)
-{
-    if (!QFileInfo::exists(dir)) {
-        const auto bytes = QFile::encodeName(dir);
-        if (::mkdir(bytes.constData(), 0700) != 0 && errno != EEXIST)
-            return false;
-    }
-    return privateDirectory(dir);
-}
-// A regular file of ours (0600, one link), never through a symlink.
-std::unique_ptr<QFile> openPrivateFile(const QString& path)
-{
-    const auto bytes = QFile::encodeName(path);
-    const int fd = ::open(bytes.constData(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
-    if (fd < 0)
-        return {};
-    struct stat info{};
-    if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode) || info.st_uid != geteuid() ||
-        (info.st_mode & 0777) != 0600 || info.st_nlink != 1) {
-        ::close(fd);
-        return {};
-    }
-    auto file = std::make_unique<QFile>(path);
-    if (!file->open(fd, QIODevice::ReadWrite, QFileDevice::AutoCloseHandle)) {
-        ::close(fd);
-        return {};
-    }
-    return file;
-}
-#else
-bool makePrivateDirectory(const QString&) { return false; }
-std::unique_ptr<QFile> openPrivateFile(const QString&) { return {}; }
-#endif
+// The same rules as the resource cache (storage/private_files.h).
+using storage::makePrivateDirectory;
+using storage::openPrivateFile;
 
 QByteArray packBits(const std::vector<bool>& bits)
 {

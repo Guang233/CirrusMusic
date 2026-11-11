@@ -1,4 +1,5 @@
 #include "resource_cache_store.h"
+#include "infrastructure/storage/private_files.h"
 #include "resource_cache_codec.h"
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -11,14 +12,8 @@
 #include <QUuid>
 #include <QVariant>
 #include <algorithm>
-#include <cerrno>
 #include <deque>
 #include <functional>
-#ifdef Q_OS_LINUX
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 
 namespace cirrus::cache
 {
@@ -26,55 +21,30 @@ using namespace domain;
 namespace
 {
 constexpr qint64 Tag = 1128485425; // cache file-format tag, NOT a product/release identity
+bool sameFile(const QString& a, const QString& b)
+{
+#ifdef Q_OS_WIN
+    return a.compare(b, Qt::CaseInsensitive) == 0;
+#else
+    return a == b;
+#endif
+}
+// The root is private and canonical; the store and its SQLite side files are private
+// regular files and never the main database (storage/private_files.h).
 bool safePath(const QString& root, const QString& path, const QString& mainPath)
 {
-#ifdef Q_OS_LINUX
-    if (getuid() != geteuid() || getgid() != getegid() || root.isEmpty() ||
-        !QDir::isAbsolutePath(root) || QDir::cleanPath(root) != root ||
-        QFileInfo(root).canonicalFilePath() != root ||
-        QFileInfo(path).absoluteFilePath() == QFileInfo(mainPath).absoluteFilePath() ||
+    if (!storage::isPrivateDirectory(root) ||
+        !sameFile(QFileInfo(root).canonicalFilePath(), root) ||
+        sameFile(QFileInfo(path).absoluteFilePath(), QFileInfo(mainPath).absoluteFilePath()) ||
         (QFileInfo(path).exists() &&
-         QFileInfo(path).canonicalFilePath() == QFileInfo(mainPath).canonicalFilePath()))
+         sameFile(QFileInfo(path).canonicalFilePath(), QFileInfo(mainPath).canonicalFilePath())))
         return false;
-    struct stat info{};
-    auto bytes = QFile::encodeName(root);
-    if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) || info.st_uid != geteuid() ||
-        (info.st_mode & 0777) != 0700)
-        return false;
-    auto ancestor = QFileInfo(root).absolutePath();
-    while (true) {
-        bytes = QFile::encodeName(ancestor);
-        if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) ||
-            (info.st_uid != 0 && info.st_uid != geteuid()) || (info.st_mode & 0022))
-            return false;
-        if (ancestor == QStringLiteral("/"))
-            break;
-        ancestor = QFileInfo(ancestor).absolutePath();
-    }
     for (const auto& suffix : {QString(), QStringLiteral("-journal"), QStringLiteral("-wal"),
                                QStringLiteral("-shm"), QStringLiteral(".lock")}) {
-        bytes = QFile::encodeName(path + suffix);
-        if (!lstat(bytes.constData(), &info)) {
-            if (!S_ISREG(info.st_mode) || info.st_uid != geteuid() ||
-                (info.st_mode & 0777) != 0600 || info.st_nlink != 1)
-                return false;
-        } else if (errno != ENOENT)
+        if (!storage::isPrivateFileOrAbsent(path + suffix))
             return false;
     }
-    bytes = QFile::encodeName(path);
-    const int fd = ::open(bytes.constData(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
-    if (fd < 0)
-        return false;
-    const bool good = fstat(fd, &info) == 0 && S_ISREG(info.st_mode) && info.st_uid == geteuid() &&
-                      (info.st_mode & 0777) == 0600 && info.st_nlink == 1;
-    ::close(fd);
-    return good;
-#else
-    Q_UNUSED(root);
-    Q_UNUSED(path);
-    Q_UNUSED(mainPath);
-    return false;
-#endif
+    return storage::openPrivateFile(path) != nullptr;
 }
 bool sql(QSqlDatabase& db, const QString& statement)
 {

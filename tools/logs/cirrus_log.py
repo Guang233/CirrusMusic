@@ -4,12 +4,15 @@
   cirrus_log.py summary  <zip|dir|file>...
   cirrus_log.py timeline <zip|dir|file>... [--around mark|HH:MM:SS|ISO time]
                          [--before 120] [--after 30] [--cat cirrus.ui] [--level W]
+  cirrus_log.py symbolize <zip|dir|file>... --search <dir with the build's binaries>...
 
 `summary` prints the package's summary.txt and description.txt, then each session: when it
 ran, whether it ended, its marks and its most frequent warnings. `timeline` merges every
 record of every file in time order, with the flight recorder's debug records (written
 later, in log.context blocks) back where they happened; --around keeps the records near
-each user.mark or near a time.
+each user.mark or near a time. `symbolize` turns each app.crash's frames (module and
+offset, §5.3) into functions and lines with addr2line, from the binaries of the same build
+(the app.start record's build_id says which) with their debug symbols.
 """
 
 import argparse
@@ -17,7 +20,10 @@ import collections
 import datetime
 import io
 import pathlib
+import os
 import re
+import shutil
+import subprocess
 import sys
 import zipfile
 
@@ -132,6 +138,81 @@ def timeline(args):
         print(r.line)
 
 
+FIELD = re.compile(r'(\w+)=("(?:[^"\\]|\\.)*"|\S+)')
+
+
+def fields(rest):
+    return {key: value.strip('"') for key, value in FIELD.findall(rest)}
+
+
+def find_module(name, dirs, cache):
+    if name not in cache:
+        cache[name] = None
+        for root in dirs:
+            for path in pathlib.Path(root).rglob(name):
+                if path.is_file():
+                    cache[name] = path
+                    break
+            if cache[name]:
+                break
+    return cache[name]
+
+
+def addr2line(path, offsets):
+    """{offset: ["function at file:line", ...]} (inlined frames first)."""
+    out = subprocess.run(["addr2line", "-a", "-f", "-C", "-i", "-e", str(path), *offsets],
+                         capture_output=True, text=True, check=False).stdout.splitlines()
+    result, current, i = {}, None, 0
+    while i < len(out):
+        if out[i].startswith("0x"):
+            current = offsets[len(result)] if len(result) < len(offsets) else out[i]
+            result[current] = []
+            i += 1
+            continue
+        function = out[i]
+        where = out[i + 1] if i + 1 < len(out) else "??"
+        result[current].append(f"{function} at {where}")
+        i += 2
+    return result
+
+
+def symbolize(args):
+    if not shutil.which("addr2line"):
+        sys.exit("symbolize needs addr2line (binutils)")
+    logs, _ = read_inputs(args.inputs)
+    recs = sorted(records(logs), key=lambda r: (r.time, r.order))
+    builds = {fields(r.rest).get("build_id") for r in recs if r.event == "app.start"}
+    builds.discard(None)
+    if builds:
+        print(f"build_id in the logs: {', '.join(sorted(builds))}")
+    crashes = []
+    for r in recs:
+        if r.event == "app.crash":
+            crashes.append((r, []))
+        elif r.event == "app.crash_frame" and crashes:
+            crashes[-1][1].append(fields(r.rest))
+    if not crashes:
+        print("no app.crash in the logs")
+        return
+    cache = {}
+    for crash, frames in crashes:
+        print(f"\n{crash.time:%Y-%m-%d %H:%M:%S} app.crash{crash.rest}")
+        by_module = collections.defaultdict(list)
+        for frame in frames:
+            by_module[frame.get("module", "?")].append(frame.get("offset", "0x0"))
+        names = {}
+        for module, offsets in by_module.items():
+            path = find_module(module, args.search, cache)
+            if path:
+                for offset, lines in addr2line(path, offsets).items():
+                    names[(module, offset)] = lines
+        for frame in frames:
+            module, offset = frame.get("module", "?"), frame.get("offset", "0x0")
+            lines = [line for line in names.get((module, offset), []) if not line.startswith("??")]
+            what = "; ".join(lines) or frame.get("symbol") or "?"
+            print(f"  #{frame.get('i', '?'):>2} {module}+{offset}  {what}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -148,6 +229,11 @@ def main():
     t.add_argument("--cat", help="only categories starting with this (cirrus.ui)")
     t.add_argument("--level", choices=list(LEVELS), help="this level and above")
     t.set_defaults(run=timeline)
+    y = commands.add_parser("symbolize", help="crash frames to functions and lines")
+    y.add_argument("inputs", nargs="+")
+    y.add_argument("--search", nargs="+", required=True, metavar="DIR",
+                   help="where the build's binaries (with debug symbols) are")
+    y.set_defaults(run=symbolize)
     args = parser.parse_args()
     try:
         args.run(args)

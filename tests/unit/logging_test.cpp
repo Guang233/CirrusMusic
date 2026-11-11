@@ -1,3 +1,4 @@
+#include "logging/crash.h"
 #include "logging/durations.h"
 #include "logging/log.h"
 #include "logging/logger.h"
@@ -9,6 +10,12 @@
 #include <QThread>
 #include <QUrl>
 #include <QtTest>
+
+#include <csignal>
+#ifdef Q_OS_LINUX
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 namespace demo
 {
@@ -232,6 +239,48 @@ class LoggingTest : public QObject
         };
         QCOMPARE(lines.mid(1), expected); // after the header
     }
+
+#ifdef Q_OS_LINUX
+    // A crash in a child process leaves its stack; the next run logs it as module and
+    // offset records, without paths, and removes the raw file.
+    void crashStack()
+    {
+        QTemporaryDir dir;
+        const QString raw = dir.filePath("crash-cirrus-20261111-120000-42.txt");
+        const pid_t child = fork();
+        if (child == 0) {
+            log::crash::install(raw);
+            std::raise(SIGSEGV);
+            _exit(0);
+        }
+        int status = 0;
+        QCOMPARE(waitpid(child, &status, 0), child);
+        QVERIFY(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV);
+        QVERIFY(QFile::exists(raw));
+
+        log::install(false);
+        QVERIFY(log::start(options(dir)));
+        log::crash::report(dir.path());
+        log::flush();
+        const QString all = readAll(dir.filePath("logs"));
+        log::shutdown();
+        QVERIFY(!QFile::exists(raw));
+        if (qEnvironmentVariableIsSet("CIRRUS_KEEP_CRASH")) {
+            QFile keep(qEnvironmentVariable("CIRRUS_KEEP_CRASH"));
+            QVERIFY(keep.open(QIODevice::WriteOnly));
+            keep.write(all.toUtf8());
+        }
+        QVERIFY2(all.contains("cirrus.app app.crash session=cirrus-20261111-120000-42 signal=11 "
+                              "frames="),
+                 qPrintable(all));
+        QVERIFY(all.contains("app.crash_frame i=0 module="));
+        QVERIFY(
+            all.contains(QStringLiteral("module=%1")
+                             .arg(QFileInfo(QCoreApplication::applicationFilePath()).fileName())));
+        QVERIFY(!all.contains(QCoreApplication::applicationDirPath()));
+        QVERIFY(QRegularExpression("build_id=[0-9a-f]{16,}").match(all).hasMatch());
+    }
+#endif
 
     void previousSessionThatDidNotEnd()
     {

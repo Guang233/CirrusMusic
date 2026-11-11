@@ -1,4 +1,5 @@
 #include "logger.h"
+#include "crash.h"
 #include "log.h"
 
 #include <QCoreApplication>
@@ -27,11 +28,6 @@
 #include <limits>
 #include <thread>
 
-#ifdef Q_OS_UNIX
-#include <csignal>
-#include <unistd.h>
-#endif
-
 namespace cirrus::log
 {
 namespace
@@ -48,9 +44,6 @@ constexpr qsizetype kRingBytes = 2 * 1024 * 1024;
 constexpr qint64 kWarningContextMs = 30000; // a warning brings the debug records this far back
 constexpr qsizetype kWarningContextLimit = 500;
 const QRegularExpression kFileName(QStringLiteral(R"(^(cirrus-\d{8}-\d{6}-\d+)(?:-(\d+))?\.log$)"));
-
-// The file descriptor the crash handler writes to; -1 when no file is open.
-std::atomic<int> g_crashFd{-1};
 
 struct RingEntry {
     qint64 ms; // State::clock
@@ -277,7 +270,7 @@ void prune(State& s);
 // With `fileMutex` held.
 bool openPart(State& s, int part)
 {
-    g_crashFd.store(-1);
+    crash::logFd.store(-1);
     s.file.close();
     s.part = part;
     const QString name =
@@ -287,7 +280,7 @@ bool openPart(State& s, int part)
         return false;
     s.file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     s.written = s.file.size();
-    g_crashFd.store(s.file.handle());
+    crash::logFd.store(s.file.handle());
     writeHeader(s);
     return true;
 }
@@ -437,6 +430,8 @@ void writeHeader(State& s)
     add("arch", QSysInfo::currentCpuArchitecture());
     add("locale", QLocale::system().name());
     add("pid", QString::number(QCoreApplication::applicationPid()));
+    if (const QString id = crash::buildId(); !id.isEmpty())
+        add("build_id", id);
     add("part", QString::number(s.part));
     if (!s.options.header.isEmpty())
         text += u' ' + s.options.header;
@@ -489,42 +484,6 @@ void prune(State& s)
     }
 }
 
-#ifdef Q_OS_UNIX
-// Async-signal-safe: one write to the open file, then the default action.
-void onFatalSignal(int signal)
-{
-    const int fd = g_crashFd.load();
-    if (fd >= 0) {
-        char text[32] = "fatal signal ";
-        int n = 13;
-        char digits[12];
-        int d = 0;
-        for (int v = signal; v > 0 && d < 11; v /= 10)
-            digits[d++] = char('0' + v % 10);
-        while (d > 0)
-            text[n++] = digits[--d];
-        text[n++] = '\n';
-        [[maybe_unused]] const auto written = ::write(fd, text, size_t(n));
-    }
-    std::signal(signal, SIG_DFL);
-    std::raise(signal);
-}
-
-void installCrashHandler()
-{
-    static bool done = false;
-    if (std::exchange(done, true))
-        return;
-    struct sigaction action{};
-    action.sa_handler = onFatalSignal;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = SA_RESETHAND;
-    for (int signal : {SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT})
-        sigaction(signal, &action, nullptr);
-}
-#else
-void installCrashHandler() {}
-#endif
 } // namespace
 
 QStringList detail::splitNames(const char* names)
@@ -685,7 +644,11 @@ bool start(const FileOptions& options)
         s.started = true;
         prune(s);
     }
-    installCrashHandler();
+    {
+        QMutexLocker fileLock(&s.fileMutex);
+        crash::install(QDir(options.directory)
+                           .filePath(QStringLiteral("crash-") + s.prefix + QStringLiteral(".txt")));
+    }
     if (!unclean.isEmpty()) {
         const auto parts = unclean.split(u' ');
         if (parts.size() > 1)
@@ -694,6 +657,7 @@ bool start(const FileOptions& options)
         else
             qCWarning(lcApp) << event("app.previous_session_unclean") << field("file", parts[0]);
     }
+    crash::report(options.directory); // a stack the crash before left
     return true;
 }
 
@@ -742,7 +706,7 @@ void shutdown()
     qInstallMessageHandler(s.previous);
     {
         QMutexLocker fileLock(&s.fileMutex);
-        g_crashFd.store(-1);
+        crash::logFd.store(-1);
         s.file.close();
         s.started = false;
         s.held.clear();

@@ -33,10 +33,6 @@ bool ResourceCacheWorker::live(const CacheJob& job) const
 void ResourceCacheWorker::submit(CacheJob job)
 {
     Q_ASSERT(QThread::currentThread() == thread());
-#ifndef Q_OS_LINUX
-    emit completed(failure(job.id, CacheError::Unsupported));
-    return;
-#endif
     if (!job.id || m_jobs.contains(job.id) || m_jobs.size() >= CacheJobsInFlight || m_closed ||
         job.revision < m_revision) {
         emit completed(failure(job.id, CacheError::Busy));
