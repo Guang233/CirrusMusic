@@ -1,6 +1,7 @@
 # Builds and tests every push to master and every pull request (docs/tasks/release.md §7).
 # Linux always; Windows only when asked (Run workflow, or the release workflow), since its
-# runner minutes count double on a private repository. "Build packages" (Run workflow)
+# runner minutes count double on a private repository. macOS (a trial, build and tests,
+# no package) only when asked: its minutes count ten times. "Build packages" (Run workflow)
 # also makes the deb, AppImage, Windows installer and zip as run artifacts, without a
 # release: for trying the packages.
 name: CI
@@ -13,6 +14,10 @@ on:
     inputs:
       windows:
         description: Also build on Windows
+        type: boolean
+        default: false
+      macos:
+        description: Also build and test on macOS (trial, no package)
         type: boolean
         default: false
       package:
@@ -139,6 +144,11 @@ jobs:
     uses: ./.github/workflows/windows.yml
     with:
       package: ${{ inputs.package == true }}
+
+  macos:
+    name: macOS build
+    if: inputs.macos
+    uses: ./.github/workflows/macos.yml
 
   linux-packages:
     name: Linux packages

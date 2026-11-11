@@ -1,0 +1,73 @@
+# macOS build and tests, called by CI when asked (docs/tasks/release.md §7). A trial: no
+# package yet (this round ships no macOS build). Apple Silicon runner, Qt from the Qt
+# installer, FFmpeg and OpenSSL from Homebrew, QtKeychain from packaging/deps/.
+name: macOS
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.11.2
+  QT_MODULES: qtmultimedia qtshadertools qtimageformats
+
+jobs:
+  macos:
+    name: macOS build and tests
+    runs-on: macos-15
+    env:
+      DEPS: ${{ github.workspace }}/../deps
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+          # Same aqtinstall as windows.yml: the 3.3.0 release cannot find Qt 6.11's repository
+          # layout on Windows; use the fixed master here too until a release ships.
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@5a49f2b391ae8ee1d3c0dd87f8b33c1d49a4deb7
+
+      # coreutils: sha256sum for packaging/deps/versions.sh.
+      - name: Homebrew packages
+        run: |
+          brew install --quiet ninja pkgconf coreutils ffmpeg openssl@3
+          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+
+      - name: Cache QtKeychain
+        id: deps
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPS }}
+          key: deps-macos-${{ env.QT_VERSION }}-${{ hashFiles('packaging/deps/*.sh') }}
+
+      - name: QtKeychain
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: packaging/deps/build-qtkeychain.sh "$DEPS" "$QT_ROOT_DIR"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$DEPS"
+
+      # -k 0: report every compile error of a run, not only the first few.
+      - name: Build (app, gallery, tests)
+        run: cmake --build build --parallel 4 -- -k 0
+
+      - name: QML lint
+        run: cmake --build build --target all_qmllint
+
+      # Same exclusions as ci.yml (§7.1).
+      - name: Tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: >
+          ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
+          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
