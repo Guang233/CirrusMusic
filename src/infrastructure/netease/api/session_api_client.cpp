@@ -1,6 +1,7 @@
 #include "session_api_client.h"
 #include "comment_write_operation.h"
 #include "infrastructure/netease/protocol/comment_v3_policy.h"
+#include "logging/durations.h"
 #include "logging/log.h"
 
 #include "infrastructure/netease/protocol/eapi_request_profile.h"
@@ -56,6 +57,12 @@ QByteArray anonymousTokenFrom(const QUrl& origin, const QList<QByteArray>& setCo
         }
     }
     return found;
+}
+
+SessionApiClient::~SessionApiClient()
+{
+    if (!m_stats.empty())
+        qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
 }
 
 SessionApiClient::SessionApiClient(QString deviceId, QObject* parent)
@@ -544,10 +551,26 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
                              : pending.contract.logicalPath;
     const qint64 ms = pending.elapsed.elapsed();
     switch (result.error) {
+    case ApiError::Canceled:
+    case ApiError::StaleContext:
+        break;
     case ApiError::None:
-        qCInfo(lcApi) << log::event("api.done") << log::field("path", path)
-                      << log::field("code", code ? QString::number(*code) : QStringLiteral("-"))
-                      << log::field("ms", ms);
+        m_stats.add(ms, path);
+        break;
+    case ApiError::Transport:
+        m_stats.add(ms, path, log::nameOf(result.transportError));
+        break;
+    default:
+        m_stats.add(ms, path, log::nameOf(result.error));
+        break;
+    }
+    if (m_stats.due())
+        qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
+    switch (result.error) {
+    case ApiError::None:
+        qCDebug(lcApi) << log::event("api.done") << log::field("path", path)
+                       << log::field("code", code ? QString::number(*code) : QStringLiteral("-"))
+                       << log::field("ms", ms);
         break;
     case ApiError::Canceled:
     case ApiError::StaleContext:

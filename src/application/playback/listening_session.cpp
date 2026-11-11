@@ -149,9 +149,9 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     m_starting = true;
     const auto id = m_backend.playSong(entry->song, quality, intent);
     m_starting = false;
-    qCInfo(lcPlayback) << log::event("queue.begin") << log::field("song", entry->song.value)
-                       << log::field("intent", intent) << log::field("automatic", automatic)
-                       << log::field("fm", fm) << log::field("command", id);
+    qCDebug(lcPlayback) << log::event("queue.begin") << log::field("song", entry->song.value)
+                        << log::field("intent", intent) << log::field("automatic", automatic)
+                        << log::field("fm", fm) << log::field("command", id);
     if (!acceptLoadCommand(id, revision)) {
         qCWarning(lcPlayback) << log::event("queue.begin_refused")
                               << log::field("reason", "command") << log::field("command", id);
@@ -681,8 +681,8 @@ void ListeningSession::adoptAdvance()
 void ListeningSession::advance(bool naturalEnd)
 {
     // After an end (natural) or a failure (skips at most 5 entries in a row).
-    qCInfo(lcPlayback) << log::event("queue.advance") << log::field("natural", naturalEnd)
-                       << log::field("skipped", m_autoVisited.size());
+    qCDebug(lcPlayback) << log::event("queue.advance") << log::field("natural", naturalEnd)
+                        << log::field("skipped", m_autoVisited.size());
     if (naturalEnd)
         m_autoVisited.clear();
     const auto count = m_queue.snapshot().entries.size();

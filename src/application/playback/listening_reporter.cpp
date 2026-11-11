@@ -117,12 +117,12 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
 void ListeningReporter::send(const Prepared& prepared, const StoredListeningRecord& row)
 {
     const auto& report = prepared.report;
-    qCInfo(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
-                     << log::field("action", report.action) << log::field("song", row.song.value)
-                     << log::field("record_end", row.end) << log::field("end", report.end)
-                     << log::field("played_ms", row.playedMs)
-                     << log::field("origin", prepared.origin)
-                     << log::field("source", report.source);
+    qCDebug(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
+                      << log::field("action", report.action) << log::field("song", row.song.value)
+                      << log::field("record_end", row.end) << log::field("end", report.end)
+                      << log::field("played_ms", row.playedMs)
+                      << log::field("origin", prepared.origin)
+                      << log::field("source", report.source);
     if (const auto id = m_facade.reportListening(report))
         m_inFlight.insert(id);
     else

@@ -32,9 +32,20 @@ void shutdown();
 // Waits until the records logged so far are written (tests, before export).
 void flush();
 
-// Debug records of the cirrus.* categories (§7). QT_LOGGING_RULES still wins.
+// Debug records of the cirrus.* categories go to the file as they come (§7). When off they
+// go to the flight recorder (docs/tasks/logging-v2.md §2): kept in memory, and written to
+// the file with the 30 seconds before each warning, or all of them by writeContext().
+// QT_LOGGING_RULES still wins.
 void setVerbose(bool verbose);
 bool verbose();
+// Writes the flight recorder's records not in the file yet (a user's mark, an export),
+// between log.context_begin and log.context_end lines naming `reason`.
+void writeContext(const char* reason);
+
+// Where the user is (logging-v2 §4.3), added to every warning as ctx.<key>=<value>:
+// setContext("page", "AlbumPage"). Short identifiers only, never user text; an empty value removes
+// the key.
+void setContext(const char* key, const QString& value);
 
 // Where `app`'s logs go (§6): $XDG_STATE_HOME/<app>/logs on Linux (~/.local/state),
 // ~/Library/Logs/<app> on macOS, %LOCALAPPDATA%/<app>/logs on Windows.

@@ -24,6 +24,7 @@
 #include <atomic>
 #include <cstdio>
 #include <deque>
+#include <limits>
 #include <thread>
 
 #ifdef Q_OS_UNIX
@@ -41,10 +42,21 @@ constexpr qsizetype kRecentLimit = 2000;
 constexpr int kRepeatAllowed = 20;       // the same record this often within the window, then
 constexpr qint64 kRepeatWindowMs = 1000; // the rest of the run is counted, not written
 constexpr qsizetype kValueLimit = 200;
+// The flight recorder (docs/tasks/logging-v2.md §2): debug records kept in memory, written
+// to the file only around a warning, a user's mark or an export.
+constexpr qsizetype kRingBytes = 2 * 1024 * 1024;
+constexpr qint64 kWarningContextMs = 30000; // a warning brings the debug records this far back
+constexpr qsizetype kWarningContextLimit = 500;
 const QRegularExpression kFileName(QStringLiteral(R"(^(cirrus-\d{8}-\d{6}-\d+)(?:-(\d+))?\.log$)"));
 
 // The file descriptor the crash handler writes to; -1 when no file is open.
 std::atomic<int> g_crashFd{-1};
+
+struct RingEntry {
+    quint64 seq;
+    qint64 ms; // State::clock
+    QByteArray line;
+};
 
 struct State {
     // The queue and everything the handler touches.
@@ -52,6 +64,10 @@ struct State {
     QWaitCondition wake;
     std::deque<QByteArray> queue;
     std::deque<QByteArray> recent;
+    std::deque<RingEntry> ring;
+    qsizetype ringBytes = 0;
+    quint64 ringSeq = 0;
+    quint64 writtenSeq = 0; // ring records up to this one are in the file already
     qint64 dropped = 0;
     QByteArray lastCategory;
     QString lastMessage;
@@ -83,6 +99,7 @@ struct State {
     QMutex valuesMutex;
     QList<std::pair<QString, QString>> roots; // longest first
     QByteArray accountKey;
+    QList<std::pair<QByteArray, QString>> context; // setContext(), in the order first set
 };
 
 State& state()
@@ -180,9 +197,14 @@ QByteArray notice(const char* name, qint64 count)
                   QString::fromLatin1(name) + QStringLiteral(" count=") + QString::number(count));
 }
 
-// With `mutex` held.
-void enqueue(State& s, QByteArray line)
+// With `mutex` held. `context`: a flight recorder record, which the bounded ring already
+// limits and which stays out of recent().
+void enqueue(State& s, QByteArray line, bool context = false)
 {
+    if (context) {
+        s.queue.push_back(std::move(line));
+        return;
+    }
     if (qsizetype(s.queue.size()) >= kQueueLimit) {
         ++s.dropped;
         return;
@@ -194,6 +216,48 @@ void enqueue(State& s, QByteArray line)
     if (qsizetype(s.recent.size()) > kRecentLimit)
         s.recent.pop_front();
     s.queue.push_back(std::move(line));
+}
+
+// With `mutex` held.
+void keep(State& s, qint64 ms, QByteArray line)
+{
+    s.ringBytes += line.size();
+    s.ring.push_back({++s.ringSeq, ms, std::move(line)});
+    while (s.ringBytes > kRingBytes && !s.ring.empty()) {
+        s.ringBytes -= s.ring.front().line.size();
+        s.ring.pop_front();
+    }
+}
+
+// With `mutex` held. Queues the ring's records not written yet, from `sinceMs` on, at most
+// `limit` (the newest), between log.context begin and end lines.
+void writeContext(State& s, const char* reason, qint64 sinceMs, qsizetype limit)
+{
+    auto first = std::find_if(s.ring.begin(), s.ring.end(), [&s, sinceMs](const RingEntry& e) {
+        return e.seq > s.writtenSeq && e.ms >= sinceMs;
+    });
+    const qsizetype count = std::min<qsizetype>(std::distance(first, s.ring.end()), limit);
+    if (count == 0)
+        return;
+    first = s.ring.end() - count;
+    const QString fields = QStringLiteral(" reason=") + QString::fromLatin1(reason) +
+                           QStringLiteral(" count=") + QString::number(count);
+    enqueue(s, format(QtInfoMsg, "cirrus.log", QStringLiteral("log.context_begin") + fields), true);
+    for (auto it = first; it != s.ring.end(); ++it)
+        enqueue(s, it->line, true);
+    enqueue(s, format(QtInfoMsg, "cirrus.log", QStringLiteral("log.context_end") + fields), true);
+    s.writtenSeq = s.ring.back().seq;
+}
+
+// The context added to every warning (logging-v2 §4.3), with a leading space.
+QString contextFields()
+{
+    auto& s = state();
+    QMutexLocker lock(&s.valuesMutex);
+    QString text;
+    for (const auto& [key, value] : std::as_const(s.context))
+        text += QStringLiteral(" ctx.") + QString::fromLatin1(key) + u'=' + quoted(value);
+    return text;
 }
 
 // With `mutex` held.
@@ -306,11 +370,19 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
     auto& s = state();
     const QByteArrayView category = context.category ? context.category : "default";
     const bool urgent = type == QtCriticalMsg || type == QtFatalMsg;
-    QByteArray line = format(type, category, message); // outside the lock
+    const bool warning = urgent || type == QtWarningMsg;
+    // A warning says where the user was (the page, a dialog).
+    QByteArray line = warning ? format(type, category, message + contextFields())
+                              : format(type, category, message); // outside the lock
     {
         QMutexLocker lock(&s.mutex);
-        const bool same = s.lastCategory == category && s.lastMessage == message;
         const qint64 now = s.clock.elapsed();
+        if (type == QtDebugMsg && !s.verbose) {
+            keep(s, now, std::move(line));
+            inside = false;
+            return;
+        }
+        const bool same = s.lastCategory == category && s.lastMessage == message;
         if (!urgent && same && s.suppressing) {
             ++s.suppressed;
             inside = false;
@@ -332,6 +404,8 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
             inside = false;
             return;
         }
+        if (warning)
+            writeContext(s, "warning", now - kWarningContextMs, kWarningContextLimit);
         enqueue(s, std::move(line));
     }
     if (urgent)
@@ -622,6 +696,32 @@ bool start(const FileOptions& options)
 
 void flush() { drain(); }
 
+void writeContext(const char* reason)
+{
+    auto& s = state();
+    {
+        QMutexLocker lock(&s.mutex);
+        writeContext(s, reason, std::numeric_limits<qint64>::min(),
+                     std::numeric_limits<qsizetype>::max());
+    }
+    s.wake.wakeOne();
+}
+
+void setContext(const char* key, const QString& value)
+{
+    auto& s = state();
+    QMutexLocker lock(&s.valuesMutex);
+    const auto it = std::find_if(s.context.begin(), s.context.end(),
+                                 [key](const auto& entry) { return entry.first == key; });
+    if (value.isEmpty()) {
+        if (it != s.context.end())
+            s.context.erase(it);
+    } else if (it != s.context.end())
+        it->second = value;
+    else
+        s.context.append({QByteArray(key), value});
+}
+
 void shutdown()
 {
     auto& s = state();
@@ -646,6 +746,9 @@ void shutdown()
     }
     QMutexLocker lock(&s.mutex);
     s.recent.clear();
+    s.ring.clear();
+    s.ringBytes = 0;
+    s.writtenSeq = s.ringSeq;
     s.lastCategory.clear();
     s.lastMessage.clear();
     s.installed = false;
@@ -658,11 +761,11 @@ void setVerbose(bool verbose)
         QMutexLocker lock(&s.mutex);
         s.verbose = verbose;
     }
-    // Qt Wayland's text-input warns "Trying to disable … but 0x0 is focused" on every
-    // focus change (a Qt bug, harmless): it filled most of a session's log.
-    const QString quiet = QStringLiteral("*.debug=false\nqt.qpa.wayland.textinput.warning=false");
-    QLoggingCategory::setFilterRules(verbose ? quiet + QStringLiteral("\ncirrus.*.debug=true")
-                                             : quiet);
+    // Our debug records always come: to the file when verbose, else to the flight
+    // recorder. Qt Wayland's text-input warns "Trying to disable … but 0x0 is focused" on
+    // every focus change (a Qt bug, harmless): it filled most of a session's log.
+    QLoggingCategory::setFilterRules(QStringLiteral("*.debug=false\ncirrus.*.debug=true\n"
+                                                    "qt.qpa.wayland.textinput.warning=false"));
 }
 
 bool verbose()

@@ -18,3 +18,5 @@ Q_DECLARE_LOGGING_CATEGORY(lcPlatform)  // cirrus.platform: MPRIS, SMTC, Now Pla
 Q_DECLARE_LOGGING_CATEGORY(lcUi)        // cirrus.ui: presentation layer, models
 Q_DECLARE_LOGGING_CATEGORY(lcUiBackend) // cirrus.ui.backend: the backend host
 Q_DECLARE_LOGGING_CATEGORY(lcUiTheme)   // cirrus.ui.theme: fonts, palettes, covers
+Q_DECLARE_LOGGING_CATEGORY(lcUiQml)     // cirrus.ui.qml: the QML engine's warnings
+Q_DECLARE_LOGGING_CATEGORY(lcUiNav)     // cirrus.ui.nav: pages, dialogs, notices, marks

@@ -5,6 +5,7 @@
 #include "backend_sources.h"
 #include "cirrus_commit.h"
 #include "desktop.h"
+#include "diagnostics.h"
 #include "gpu_preference.h"
 #include "logging/log.h"
 #include "logging/logger.h"
@@ -196,6 +197,7 @@ int main(int argc, char* argv[])
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
+    presentation->diagnostics()->watch(&engine);
     engine.addImageProvider(QStringLiteral("cover"), presentation->makeCoverProvider());
     engine.addImageProvider(QStringLiteral("qr"), presentation->makeQrProvider());
     engine.setInitialProperties({{QStringLiteral("titleBar"), int(titleBar)}});

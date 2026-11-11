@@ -358,9 +358,10 @@ void HttpTransport::finish(quint64 id)
                          << log::field("proto", pending->protocol)
                          << log::field("err", result.error)
                          << log::field("qt", QNetworkReply::NetworkError(result.networkError))
-                         << log::field("status", result.httpStatus)
+                         << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
                          << log::field("ms", pending->elapsed.elapsed()) << log::field("h2", h2)
-                         << log::field("retry_after", QString::fromLatin1(result.retryAfter));
+                         << log::fieldIf(!result.retryAfter.isEmpty(), "retry_after",
+                                         QString::fromLatin1(result.retryAfter));
     emit completed(id, result);
 }
 

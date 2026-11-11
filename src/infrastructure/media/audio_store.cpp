@@ -420,15 +420,15 @@ AudioStore::Download* AudioStore::create(const MediaSource& source, PlaybackErro
     }
     // What playback starts from (docs/tasks/logging.md §8): how much is on disk already.
     const auto have = std::count(state->have.cbegin(), state->have.cend(), true);
-    qCInfo(lcMedia) << log::event("audio.open") << log::field("dl", d->id)
-                    << log::field("bytes", source.size) << log::field("format", source.format)
-                    << log::field("cached_pct",
-                                  state->have.empty()
-                                      ? 0
-                                      : int(have * 100 / qsizetype(state->have.size())))
-                    << log::field("verified", d->verifiedComplete)
-                    << log::field("temporary", d->base.isEmpty())
-                    << log::field("host", log::host(source.url));
+    qCDebug(lcMedia) << log::event("audio.open") << log::field("dl", d->id)
+                     << log::field("bytes", source.size) << log::field("format", source.format)
+                     << log::field("cached_pct",
+                                   state->have.empty()
+                                       ? 0
+                                       : int(have * 100 / qsizetype(state->have.size())))
+                     << log::field("verified", d->verifiedComplete)
+                     << log::field("temporary", d->base.isEmpty())
+                     << log::field("host", log::host(source.url));
     d->state = std::move(state);
     m_downloads.insert(d->id, d);
     saveMeta(*d); // records the use (eviction order)
@@ -444,8 +444,8 @@ void AudioStore::prefetch(const MediaSource& source, qint64 bytes)
     if (!d)
         return;
     d->prefetchLimit = std::min(source.size, bytes);
-    qCInfo(lcMedia) << log::event("audio.prefetch") << log::field("dl", d->id)
-                    << log::field("bytes", d->prefetchLimit);
+    qCDebug(lcMedia) << log::event("audio.prefetch") << log::field("dl", d->id)
+                     << log::field("bytes", d->prefetchLimit);
     QTimer::singleShot(0, this, [this, id = d->id] {
         if (auto d = m_downloads.value(id))
             schedule(*d);
@@ -766,7 +766,7 @@ void AudioStore::needUrl(Download& d)
     }
     if (d.waitingUrl)
         return;
-    qCInfo(lcMedia) << log::event("audio.url_needed") << log::field("dl", d.id);
+    qCDebug(lcMedia) << log::event("audio.url_needed") << log::field("dl", d.id);
     d.waitingUrl = true;
     d.refreshTimer.setSingleShot(true);
     d.refreshTimer.setInterval(m_options.refreshTimeoutMs);
@@ -842,8 +842,8 @@ void AudioStore::verified(QString base, qint64 size, QByteArray md5, bool good)
             d->base.clear();
         return;
     }
-    qCInfo(lcMedia) << log::event("audio.cached") << log::field("dl", d ? d->id : 0)
-                    << log::field("bytes", size);
+    qCDebug(lcMedia) << log::event("audio.cached") << log::field("dl", d ? d->id : 0)
+                     << log::field("bytes", size);
     if (d) {
         d->verifiedComplete = true;
         saveMeta(*d);

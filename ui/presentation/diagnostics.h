@@ -7,6 +7,8 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+class QQmlEngine;
+
 namespace cirrus::ui
 {
 
@@ -53,6 +55,11 @@ class Diagnostics : public QObject
     Q_INVOKABLE static QString packageName();
     // Removes the files of earlier sessions.
     Q_INVOKABLE void clear();
+
+    // Takes over the engine's warnings (logging-v2 §3): cirrus.ui.qml qml.warning with the
+    // file and line, and the page the user was on. A cover the backend already logged as
+    // failed is only a debug record.
+    void watch(QQmlEngine* engine);
 
   signals:
     void verboseChanged();

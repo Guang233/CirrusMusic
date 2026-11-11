@@ -29,6 +29,8 @@ struct Text {
 };
 inline QDebug operator<<(QDebug d, const Text& t)
 {
+    if (t.text.isEmpty()) // fieldIf() without a value: nothing, not even a space
+        return d;
     QDebugStateSaver saver(d);
     d.noquote() << t.text;
     return d;
@@ -99,6 +101,16 @@ template <typename T> Text field(const char* key, const T& value)
     return {QString::fromLatin1(key) + u'=' + detail::value(value)};
 }
 
+// A value as field() writes it, e.g. an enum's name for log::Durations.
+template <typename T> QString nameOf(const T& value) { return detail::value(value); }
+
+// A field only when there is something to say: fieldIf(!retryAfter.isEmpty(), "retry_after",
+// retryAfter) writes nothing at all otherwise.
+template <typename T> Text fieldIf(bool present, const char* key, const T& value)
+{
+    return present ? field(key, value) : Text{};
+}
+
 // Fields put together, for a record whose level is chosen at run time:
 //   const auto fields = log::join({log::field("id", id), log::field("err", error)});
 //   if (ok) qCInfo(lc) << log::event("x.done") << fields; else qCWarning(lc) << ...;
@@ -106,6 +118,8 @@ inline Text join(std::initializer_list<Text> parts)
 {
     QString text;
     for (const Text& part : parts) {
+        if (part.text.isEmpty())
+            continue;
         if (!text.isEmpty())
             text += u' ';
         text += part.text;

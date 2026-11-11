@@ -1,3 +1,4 @@
+#include "logging/durations.h"
 #include "logging/log.h"
 #include "logging/logger.h"
 
@@ -154,6 +155,82 @@ class LoggingTest : public QObject
                  QFileDevice::Permissions{});
         QCOMPARE(QFileInfo(file).permissions() & (QFileDevice::ReadGroup | QFileDevice::ReadOther),
                  QFileDevice::Permissions{});
+    }
+
+    void optionalFieldsAndDurations()
+    {
+        QVERIFY(text(log::fieldIf(false, "retry_after", QStringLiteral("5"))).isEmpty());
+        QCOMPARE(text(log::fieldIf(true, "status", 503)), "status=503");
+        QCOMPARE(
+            text(log::join({log::field("a", 1), log::fieldIf(false, "b", 2), log::field("c", 3)})),
+            "a=1 c=3");
+        QString out;
+        QDebug(&out).noquote() << log::event("x") << log::fieldIf(false, "b", 2)
+                               << log::field("c", 3);
+        QCOMPARE(out, "x c=3 "); // one space each (the log's handler drops the last one)
+
+        log::Durations stats(0);
+        QVERIFY(!stats.due());
+        stats.add(10, QStringLiteral("/api/a"));
+        stats.add(30, QStringLiteral("/api/b"), QStringLiteral("Network"));
+        stats.add(20, QStringLiteral("/api/a"));
+        QVERIFY(stats.due());
+        const QString summary = text(stats.take());
+        QVERIFY2(summary.startsWith("n=3 failed=1 errors=Network:1 p50_ms=20 p95_ms=30 "
+                                    "max_ms=30 slowest=/api/b window_s="),
+                 qPrintable(summary));
+        QVERIFY(stats.empty());
+        QVERIFY(!stats.due());
+    }
+
+    // Debug records wait in memory, and come to the file before a warning (the last 30 s)
+    // or all at once (a mark); a warning carries where the user was.
+    void flightRecorder()
+    {
+        QTemporaryDir dir;
+        log::install(false);
+        QVERIFY(log::start(options(dir)));
+        qCDebug(lcMedia) << log::event("before") << log::field("n", 1);
+        qCInfo(lcPlayback) << log::event("info");
+        qCWarning(lcNet) << log::event("failed");
+        qCWarning(lcNet) << log::event("failed_again"); // nothing new to bring
+        qCDebug(lcMedia) << log::event("between");
+        log::setContext("page", QStringLiteral("AlbumPage"));
+        log::setContext("dialog", QStringLiteral("LoginDialog"));
+        log::setContext("dialog", QString());
+        qWarning("from qt");
+        log::setContext("page", QString());
+        qCDebug(lcMedia) << log::event("marked");
+        log::writeContext("mark");
+        log::writeContext("mark"); // nothing new: no empty block
+        qCDebug(lcMedia) << log::event("never");
+        log::flush();
+        const QString file = log::currentFile();
+        log::shutdown();
+
+        QFile f(file);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QStringList lines = QString::fromUtf8(f.readAll()).split(u'\n', Qt::SkipEmptyParts);
+        static const QRegularExpression prefix("^\\S+ [DIWCF] \\S+\\s+");
+        for (QString& line : lines)
+            line.remove(prefix); // without time, level and thread
+        const QStringList expected = {
+            "cirrus.playback info",
+            "cirrus.log log.context_begin reason=warning count=1",
+            "cirrus.media before n=1",
+            "cirrus.log log.context_end reason=warning count=1",
+            "cirrus.net failed",
+            "cirrus.net failed_again",
+            "cirrus.log log.context_begin reason=warning count=1",
+            "cirrus.media between",
+            "cirrus.log log.context_end reason=warning count=1",
+            "default from qt ctx.page=AlbumPage",
+            "cirrus.log log.context_begin reason=mark count=1",
+            "cirrus.media marked",
+            "cirrus.log log.context_end reason=mark count=1",
+            "cirrus.app app.exit",
+        };
+        QCOMPARE(lines.mid(1), expected); // after the header
     }
 
     void previousSessionThatDidNotEnd()

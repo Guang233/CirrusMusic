@@ -6,6 +6,8 @@
 
 #include <QDesktopServices>
 #include <QLocale>
+#include <QQmlEngine>
+#include <QQmlError>
 #include <QVariantMap>
 
 namespace cirrus::ui
@@ -97,6 +99,7 @@ void Diagnostics::openFolder() const
 
 bool Diagnostics::exportTo(const QUrl& target, const QStringList& names)
 {
+    log::writeContext("export");
     log::flush(); // what was logged up to now is in the files
     refresh();
     QStringList paths;
@@ -133,6 +136,34 @@ void Diagnostics::clear()
     const qint64 freed = log::clearOld();
     qCInfo(lcLog) << log::event("log.cleared") << log::field("bytes", freed);
     refresh();
+}
+
+void Diagnostics::watch(QQmlEngine* engine)
+{
+    engine->setOutputWarningsToStandardError(false);
+    connect(engine, &QQmlEngine::warnings, this, [](const QList<QQmlError>& errors) {
+        for (const QQmlError& error : errors) {
+            // qrc:/qt/qml/Cirrus/Components/CoverArt.qml -> Cirrus/Components/CoverArt.qml
+            QString file = error.url().path();
+            if (const qsizetype at = file.indexOf(QStringLiteral("/qt/qml/")); at >= 0)
+                file = file.mid(at + 8);
+            else
+                file =
+                    log::path(error.url().isLocalFile() ? error.url().toLocalFile() : file).value;
+            const auto fields = log::join(
+                {log::field("file", file.isEmpty() ? QStringLiteral("-") : file),
+                 log::field("line", error.line()), log::field("msg", error.description())});
+            // CoverProvider's text for a cover the backend could not get (cover.failed).
+            if (error.description().endsWith(u": cover is unavailable"))
+                qCDebug(lcUiQml) << log::event("qml.warning") << fields;
+            else if (error.messageType() == QtCriticalMsg || error.messageType() == QtFatalMsg)
+                qCCritical(lcUiQml) << log::event("qml.error") << fields;
+            else if (error.messageType() == QtWarningMsg)
+                qCWarning(lcUiQml) << log::event("qml.warning") << fields;
+            else
+                qCInfo(lcUiQml) << log::event("qml.message") << fields;
+        }
+    });
 }
 
 } // namespace cirrus::ui

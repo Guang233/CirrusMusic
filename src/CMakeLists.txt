@@ -13,6 +13,8 @@ endif()
 add_library(cirrus_logging STATIC
     logging/categories.cpp
     logging/categories.h
+    logging/durations.cpp
+    logging/durations.h
     logging/log.h
     logging/log_archive.cpp
     logging/logger.cpp

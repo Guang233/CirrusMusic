@@ -303,12 +303,12 @@ void AudioEngine::load(MediaSource source, LoadToken token)
     m_active = true;
     m_source = std::move(source);
     m_clock.start();
-    qCInfo(lcMedia) << log::event("engine.load") << log::field("token", token.generation)
-                    << log::field("format", m_source.format)
-                    << log::field("preview", m_source.preview.has_value())
-                    << log::field("gain_db", m_source.gainDb
-                                                 ? QString::number(*m_source.gainDb, 'f', 1)
-                                                 : QStringLiteral("-"));
+    qCDebug(lcMedia) << log::event("engine.load") << log::field("token", token.generation)
+                     << log::field("format", m_source.format)
+                     << log::field("preview", m_source.preview.has_value())
+                     << log::field("gain_db", m_source.gainDb
+                                                  ? QString::number(*m_source.gainDb, 'f', 1)
+                                                  : QStringLiteral("-"));
     PlaybackError error{};
     m_stream = m_store.open(m_source, &error);
     if (!m_stream) {
@@ -442,9 +442,9 @@ void AudioEngine::opened(LoadToken token, qint64 durationMs)
     }
     m_durationMs = durationMs;
     m_ready = true;
-    qCInfo(lcMedia) << log::event("engine.ready") << log::field("token", token.generation)
-                    << log::field("duration_ms", durationMs)
-                    << log::field("open_ms", m_clock.elapsed());
+    qCDebug(lcMedia) << log::event("engine.ready") << log::field("token", token.generation)
+                     << log::field("duration_ms", durationMs)
+                     << log::field("open_ms", m_clock.elapsed());
     m_ticker.start();
     send({token, Kind::Duration, {}, durationMs});
     if (!m_active || token != m_token)
@@ -539,7 +539,7 @@ void AudioEngine::ended()
     if (!m_active || m_ended)
         return;
     m_ended = true;
-    qCInfo(lcMedia) << log::event("engine.ended") << log::field("token", m_token.generation);
+    qCDebug(lcMedia) << log::event("engine.ended") << log::field("token", m_token.generation);
     m_ticker.stop();
     m_meter.breakInterval();
     m_playing = false;
@@ -594,9 +594,9 @@ void AudioEngine::openNext()
         m_next.reset();
         return;
     }
-    qCInfo(lcMedia) << log::event("engine.next_opened")
-                    << log::field("token", m_next->token.generation)
-                    << log::field("left_ms", m_durationMs - position());
+    qCDebug(lcMedia) << log::event("engine.next_opened")
+                     << log::field("token", m_next->token.generation)
+                     << log::field("left_ms", m_durationMs - position());
     std::lock_guard guard(m_producer->lock);
     m_producer->nextStream = m_next->stream;
     m_producer->nextFormat = m_next->source.format.toLower();
@@ -646,8 +646,8 @@ void AudioEngine::advance(qint64 durationMs, quint64 boundary)
     m_meter.reset();
     m_published.reset();
     const auto token = m_token;
-    qCInfo(lcMedia) << log::event("engine.advanced") << log::field("token", token.generation)
-                    << log::field("duration_ms", durationMs);
+    qCDebug(lcMedia) << log::event("engine.advanced") << log::field("token", token.generation)
+                     << log::field("duration_ms", durationMs);
     send({token, Kind::Advanced});
     if (!m_active || token != m_token)
         return;

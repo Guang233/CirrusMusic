@@ -134,15 +134,16 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
         parameters.insert(QStringLiteral("time"), report.playedSeconds);
         parameters.insert(QStringLiteral("end"), endName(report.end));
     }
-    qCInfo(lcReport) << log::event("report.send") << log::field("id", id)
-                     << log::field("event", report.eventId) << log::field("action", report.action)
-                     << log::field("song", report.song.value) << log::field("source", report.source)
-                     << log::field("source_id",
-                                   report.source == ListeningReportSource::Search
-                                       ? QStringLiteral("len:%1").arg(report.sourceId.size())
-                                       : report.sourceId)
-                     << log::field("seconds", report.playedSeconds)
-                     << log::field("end", report.end);
+    qCDebug(lcReport) << log::event("report.send") << log::field("id", id)
+                      << log::field("event", report.eventId) << log::field("action", report.action)
+                      << log::field("song", report.song.value)
+                      << log::field("source", report.source)
+                      << log::field("source_id",
+                                    report.source == ListeningReportSource::Search
+                                        ? QStringLiteral("len:%1").arg(report.sourceId.size())
+                                        : report.sourceId)
+                      << log::field("seconds", report.playedSeconds)
+                      << log::field("end", report.end);
     const auto apiId = m_client->submit(
         context, play ? ApiOperation::ListeningPlay : ApiOperation::ListeningStart, parameters);
     m_pending[id].apiId = apiId;

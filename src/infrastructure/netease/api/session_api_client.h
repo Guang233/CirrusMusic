@@ -5,6 +5,8 @@
 #include "infrastructure/netease/session/session_cookie_store.h"
 #include "xeapi_key_ring.h"
 
+#include "logging/durations.h"
+
 #include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
@@ -58,6 +60,7 @@ class SessionApiClient final : public QObject
     explicit SessionApiClient(QString deviceId, QObject* parent = nullptr);
     explicit SessionApiClient(std::unique_ptr<HttpTransport> transport, QString deviceId,
                               QObject* parent = nullptr);
+    ~SessionApiClient() override;
     [[nodiscard]] bool advanceTo(const domain::SessionToken& context);
     [[nodiscard]] bool accepts(const domain::SessionToken& context) const;
     [[nodiscard]] quint64 submit(domain::SessionToken context, ApiOperation operation,
@@ -123,6 +126,7 @@ class SessionApiClient final : public QObject
     domain::SessionToken m_receiptContext;
     std::shared_ptr<SessionCookieStore> m_receiptCookies;
     QElapsedTimer m_receiptAge;
+    log::Durations m_stats; // api.stats, in place of a record for each success
 };
 
 } // namespace cirrus::netease
