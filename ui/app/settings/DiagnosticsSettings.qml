@@ -46,8 +46,8 @@ SettingsGroup {
     ActionSetting {
         text: qsTr("导出诊断包")
         supportingText: qsTr("把日志打包，反馈问题时附上")
-        actionText: qsTr("导出")
-        actionEnabled: App.diagnostics.available
+        actionText: App.diagnostics.exporting ? qsTr("正在收集…") : qsTr("导出")
+        actionEnabled: App.diagnostics.available && !App.diagnostics.exporting
         onTriggered: exportDialog.start()
     }
     ActionSetting {
@@ -66,7 +66,14 @@ SettingsGroup {
 
     ExportLogsDialog {
         id: exportDialog
-        onExported: ok => {
+    }
+    Connections {
+        target: App.diagnostics
+        function onExportingChanged() {
+            if (App.diagnostics.exporting)
+                group.shell.notify(qsTr("正在收集诊断信息，检查网络连接要几秒"));
+        }
+        function onExportFinished(ok: bool) {
             App.diagnostics.notice(ok ? "log.exported" : "log.export_failed");
             group.shell.notify(ok ? qsTr("已导出诊断包") : qsTr("没能导出诊断包"));
         }

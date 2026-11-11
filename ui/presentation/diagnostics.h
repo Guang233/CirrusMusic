@@ -8,6 +8,9 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include "diagnostic_report.h"
+#include "logging/logger.h"
+
 class QQmlEngine;
 class QQuickWindow;
 
@@ -35,6 +38,7 @@ class Diagnostics : public QObject
     Q_PROPERTY(QVariantList files READ files NOTIFY filesChanged)
     // Bytes in files of earlier sessions (what clear() removes).
     Q_PROPERTY(qint64 oldBytes READ oldBytes NOTIFY filesChanged)
+    Q_PROPERTY(bool exporting READ exporting NOTIFY exportingChanged)
 
   public:
     static constexpr qint64 VerboseMs = 24LL * 60 * 60 * 1000;
@@ -47,19 +51,20 @@ class Diagnostics : public QObject
     [[nodiscard]] QString verboseEnds() const;
     [[nodiscard]] qint64 bytes() const { return m_bytes; }
     [[nodiscard]] qint64 oldBytes() const { return m_oldBytes; }
+    [[nodiscard]] bool exporting() const { return m_exporting; }
     [[nodiscard]] QVariantList files() const { return m_files; }
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void openFolder() const;
-    // Writes summary.txt, the user's description (when there is one) and the named files
-    // (from `files`) into a zip at `target`; false when it could not. A name not in the
-    // list is refused.
-    Q_INVOKABLE bool exportTo(const QUrl& target, const QStringList& names,
+    // Writes the package (docs/tasks/logging-v2.md §12) to a zip at `target`: README,
+    // about, system, graphics, audio, network (checked now, a few seconds), environment,
+    // modules, state, settings, the user's description, crashes/ and the named log files
+    // (from `files`) under logs/. Then `exportFinished`. A name not in the list is refused.
+    Q_INVOKABLE void exportTo(const QUrl& target, const QStringList& names,
                               const QString& description = {});
-    // summary.txt for the named files (logging-v2 §5.1), shown before exporting: the
-    // app, the system, the network and audio setup, the account's state, the settings,
-    // and each session's start, end, warnings and marks. No paths, hosts or ids.
-    Q_INVOKABLE QString summary(const QStringList& names) const;
+    // The package's text files for the named logs as they would be now, for the user to
+    // read before exporting (network.txt is only made when exporting).
+    Q_INVOKABLE QString preview(const QStringList& names) const;
     // A file name for the package: cirrus-diagnostics-20261109-1403.zip.
     Q_INVOKABLE static QString packageName();
     // Removes the files of earlier sessions.
@@ -98,10 +103,14 @@ class Diagnostics : public QObject
     void verboseChanged();
     void filesChanged();
     void marked();
+    void exportingChanged();
+    void exportFinished(bool ok);
 
   private:
     void applyVerbose();
     void logState(const char* reason) const;
+    [[nodiscard]] report::UiState uiState() const;
+    [[nodiscard]] QList<log::ArchiveEntry> reports() const;
     void focusMoved();
 
     AppSettings* m_settings;
@@ -111,8 +120,11 @@ class Diagnostics : public QObject
     qint64 m_oldBytes = 0;
     QVariantList m_files;
     QStringList m_paths; // of m_files, same order
+    QStringList m_names; // of m_files, same order
     QPointer<QQuickWindow> m_window;
-    QString m_gpu;       // GL_RENDERER, set once on the render thread before any read
+    QString m_graphics; // graphics.txt's device part, from the render thread
+    QDateTime m_started = QDateTime::currentDateTime();
+    bool m_exporting = false;
     QStringList m_pages; // HomePage>AlbumPage:123, bottom first
     QString m_popup;
     bool m_player = false;

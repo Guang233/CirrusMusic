@@ -277,6 +277,13 @@ class LoggingTest : public QObject
         const QString all = readAll(dir.filePath("logs"));
         log::shutdown();
         QVERIFY(!QFile::exists(raw));
+        QFile kept(dir.filePath("crashes/cirrus-20261111-120000-42.txt"));
+        QVERIFY(kept.open(QIODevice::ReadOnly));
+        const QString table = QString::fromUtf8(kept.readAll());
+        QVERIFY2(table.startsWith("session: cirrus-20261111-120000-42\nsignal: 11\n"),
+                 qPrintable(table));
+        QVERIFY(table.contains("\n# 0 "));
+        QVERIFY(!table.contains(QCoreApplication::applicationDirPath()));
         if (qEnvironmentVariableIsSet("CIRRUS_KEEP_CRASH")) {
             QFile keep(qEnvironmentVariable("CIRRUS_KEEP_CRASH"));
             QVERIFY(keep.open(QIODevice::WriteOnly));

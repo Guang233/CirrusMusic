@@ -1,9 +1,12 @@
 find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick)
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
+# The diagnostic package names the GPU through the RHI (semi-public, in GuiPrivate) when
+# there is one (ui/presentation/CMakeLists.txt). Found here so the executables linking
+# the static modules see these targets.
+find_package(Qt6 QUIET COMPONENTS GuiPrivate)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Cirrus.Window uses Qt's private Wayland client API (ui/window/CMakeLists.txt).
-    # Found here so the executables linking the static module see these targets.
-    set(QT_NO_PRIVATE_MODULE_WARNING ON)
-    find_package(Qt6 QUIET COMPONENTS GuiPrivate WaylandClientPrivate)
+    find_package(Qt6 QUIET COMPONENTS WaylandClientPrivate)
 endif()
 
 # One output tree for every UI QML module so qmllint and tooling resolve imports.

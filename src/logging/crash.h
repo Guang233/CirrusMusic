@@ -16,7 +16,8 @@ extern std::atomic<int> logFd;
 // `path`, which must not look like a log file (crash-<session>.txt).
 void install(const QString& path);
 
-// Logs and removes the crash files that earlier runs left in `directory`.
+// Logs and removes the crash files that earlier runs left in `directory`, and keeps each
+// as crashes/<session>.txt there (module and offset per frame; the newest ten).
 void report(const QString& directory);
 
 // This build's identity for the symbols that turn offsets back into names: the GNU

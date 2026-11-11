@@ -6,11 +6,11 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // Picks the log files for a diagnostic package (docs/tasks/logging.md §7, logging-v2
-// §5.2): every file listed with its size and time; ticked are this run, the one before,
-// and any with a mark or that did not end. The user may say what happened, and see
-// summary.txt before it goes in. 导出 asks where to save the zip. No account, cache or
-// settings files go in; the summary lists the settings' values.
-//   ExportLogsDialog { id: exportDialog; onExported: ok => … }   exportDialog.start()
+// §5.2, §12): every file listed with its size and time; ticked are this run, the one
+// before, and any with a mark or that did not end. The user may say what happened, and
+// read the package's reports before they go in. 导出 asks where to save the zip; the
+// package is then made in the background (App.diagnostics.exportFinished).
+//   ExportLogsDialog { id: exportDialog }   exportDialog.start()
 Dialog {
     id: dialog
 
@@ -20,8 +20,6 @@ Dialog {
                                                      .filter(name => dialog.chosen[name])
 
     property bool showSummary: false
-
-    signal exported(bool ok)
 
     function start(): void {
         App.diagnostics.refresh();
@@ -41,7 +39,7 @@ Dialog {
     }
 
     title: qsTr("导出诊断包")
-    supportingText: qsTr("包含日志和一份环境摘要（系统、设置、网络方式），不含账号、缓存和歌单内容。")
+    supportingText: qsTr("包含日志，以及系统、显卡、音频、网络（导出时会检查一次各服务器的连接）和设置的报告；不含账号、缓存和歌单内容。")
     acceptText: qsTr("导出")
     acceptEnabled: names.length > 0
     rejectText: qsTr("取消")
@@ -108,14 +106,14 @@ Dialog {
     }
     Button {
         variant: Md.Text
-        text: dialog.showSummary ? qsTr("收起摘要") : qsTr("查看摘要")
+        text: dialog.showSummary ? qsTr("收起报告") : qsTr("查看报告")
         onClicked: dialog.showSummary = !dialog.showSummary
     }
     SelectableText {
         width: parent.width
         visible: dialog.showSummary
         activeFocusOnTab: true
-        text: dialog.showSummary ? App.diagnostics.summary(dialog.names) : ""
+        text: dialog.showSummary ? App.diagnostics.preview(dialog.names) : ""
         font: Theme.type.bodySmall.font
         color: ColorScope.scheme.onSurfaceVariant
     }
@@ -127,7 +125,6 @@ Dialog {
         defaultSuffix: "zip"
         nameFilters: [qsTr("Zip 文件 (*.zip)")]
         selectedFile: App.diagnostics.packageName()
-        onAccepted: dialog.exported(App.diagnostics.exportTo(selectedFile, dialog.names,
-                                                             description.text))
+        onAccepted: App.diagnostics.exportTo(selectedFile, dialog.names, description.text)
     }
 }

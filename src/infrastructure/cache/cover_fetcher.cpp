@@ -29,6 +29,7 @@ struct CoverFetcher::Pending {
     QTimer* timer = nullptr;
     QElapsedTimer elapsed;
     qint64 ttlMs = 0;
+    log::Text why; // what the reply said when it failed, for cover.failed
 };
 CoverFetcher::CoverFetcher(QObject* parent) : QObject(parent)
 {
@@ -180,8 +181,11 @@ void CoverFetcher::finish(quint64 id, CacheError error)
         return;
     pending->timer->stop();
     pending->timer->deleteLater();
-    if (error == CacheError::None && pending->elapsed.elapsed() >= 15000)
+    if (error == CacheError::None && pending->elapsed.elapsed() >= 15000) {
         error = CacheError::Timeout;
+        pending->why = log::join(
+            {log::field("timeout_ms", 15000), log::field("received", pending->bytes.size())});
+    }
     if (pending->reply) {
         auto* reply = pending->reply.data();
         reply->disconnect(this);
@@ -194,12 +198,20 @@ void CoverFetcher::finish(quint64 id, CacheError error)
             // The image hosts send JPEG covers as the nonstandard "image/jpg", and WebP
             // uploads under that label too; the bytes' real format is checked by
             // rejection() (WebP only when Qt's WebP plugin is there).
-            if (reply->error() != QNetworkReply::NoError ||
-                reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 200 ||
-                (type != "image/jpeg" && type != "image/jpg" && type != "image/png" &&
-                 type != "image/webp"))
+            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            const bool image = type == "image/jpeg" || type == "image/jpg" || type == "image/png" ||
+                               type == "image/webp";
+            if (reply->error() != QNetworkReply::NoError || status != 200 || !image) {
                 error = CacheError::Network;
-            else
+                pending->why = log::join(
+                    {log::field("qt", reply->error()),
+                     log::fieldIf(reply->error() != QNetworkReply::NoError, "detail",
+                                  log::message(reply->errorString())),
+                     log::fieldIf(status != 0, "status", status),
+                     log::fieldIf(status == 200 && !image, "type",
+                                  type.isEmpty() ? QStringLiteral("-") : QString::fromLatin1(type)),
+                     log::field("received", pending->bytes.size())});
+            } else
                 pending->ttlMs = retention(*reply, pending->elapsed.elapsed());
         }
         if (!reply->isFinished())
@@ -260,7 +272,7 @@ void CoverFetcher::complete(const std::shared_ptr<Pending>& pending, CacheError 
         qCWarning(lcCache) << log::event("cover.failed") << log::field("id", id)
                            << log::field("err", error)
                            << log::field("host", log::host(pending->job.coverUrl))
-                           << log::field("ms", pending->elapsed.elapsed());
+                           << log::field("ms", pending->elapsed.elapsed()) << pending->why;
     emit completed(id, error, std::move(bytes), ttlMs);
 }
 void CoverFetcher::cancel(quint64 id)

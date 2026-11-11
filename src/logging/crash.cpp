@@ -188,8 +188,21 @@ void report(const QString& directory)
             }
         }
         file.close();
+        // The crashed session's build, from its log's first record, for symbolizing.
+        QString build;
+        if (QFile log(QDir(directory).filePath(name.captured(1) + QStringLiteral(".log")));
+            log.open(QIODevice::ReadOnly)) {
+            static const QRegularExpression id(QStringLiteral(R"(build_id=([0-9a-f]+))"));
+            build = id.match(QString::fromUtf8(log.readLine())).captured(1);
+        }
         qCWarning(lcApp) << event("app.crash") << field("session", name.captured(1))
-                         << field("signal", signal) << field("frames", frames.size());
+                         << field("signal", signal) << field("frames", frames.size())
+                         << fieldIf(!build.isEmpty(), "build_id", build);
+        // crashes/<session>.txt for the diagnostic package: the same, as a table.
+        QString report = QStringLiteral("session: %1\nsignal: %2\nbuild_id: %3\n\n")
+                             .arg(name.captured(1))
+                             .arg(signal)
+                             .arg(build.isEmpty() ? QStringLiteral("-") : build);
         for (qsizetype i = 0; i < frames.size(); ++i) {
             const quint64 address = frames[i];
             const auto region =
@@ -197,17 +210,33 @@ void report(const QString& directory)
                     return address >= r.start && address < r.end;
                 });
             const bool known = region != regions.cend();
-            qCInfo(lcApp) << event("app.crash_frame") << field("i", i)
-                          << field("module", known ? region->module : QStringLiteral("?"))
-                          << field("offset", QStringLiteral("0x") +
-                                                 QString::number(known ? address - region->start +
-                                                                             region->offset
-                                                                       : address,
-                                                                 16))
+            const QString module = known ? region->module : QStringLiteral("?");
+            const QString offset =
+                QStringLiteral("0x") +
+                QString::number(known ? address - region->start + region->offset : address, 16);
+            qCInfo(lcApp) << event("app.crash_frame") << field("i", i) << field("module", module)
+                          << field("offset", offset)
                           << fieldIf(!symbols.value(i).isEmpty(), "symbol", symbols.value(i));
+            report += QStringLiteral("#%1 %2+%3 %4\n")
+                          .arg(i, 2)
+                          .arg(module, offset, symbols.value(i))
+                          .trimmed() +
+                      u'\n';
+        }
+        QDir(directory).mkpath(QStringLiteral("crashes"));
+        if (QFile out(QDir(directory).filePath(QStringLiteral("crashes/") + name.captured(1) +
+                                               QStringLiteral(".txt")));
+            out.open(QIODevice::WriteOnly)) {
+            out.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+            out.write(report.toUtf8());
         }
         QFile::remove(info.filePath());
     }
+    // The newest ten crash reports stay.
+    const auto kept = QDir(directory + QStringLiteral("/crashes"))
+                          .entryInfoList({QStringLiteral("*.txt")}, QDir::Files, QDir::Time);
+    for (qsizetype i = 10; i < kept.size(); ++i)
+        QFile::remove(kept[i].filePath());
 }
 
 QString buildId()

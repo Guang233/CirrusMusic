@@ -57,6 +57,8 @@ qt_add_qml_module(cirrus_presentation
         cache_status.cpp
         diagnostics.h
         diagnostics.cpp
+        diagnostic_report.h
+        diagnostic_report.cpp
         notice.h
         comments_model.h
         comments_model.cpp
@@ -91,7 +93,12 @@ qt_add_qml_module(cirrus_presentation
 target_compile_features(cirrus_presentation PUBLIC cxx_std_20)
 # main.cpp installs the sources (app.h, fake_sources.h).
 target_include_directories(cirrus_presentation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_presentation PUBLIC Qt6::Quick PRIVATE cirrus_logging Qt6::Network)
+target_link_libraries(cirrus_presentation PUBLIC Qt6::Quick PRIVATE cirrus_logging Qt6::Network
+    Qt6::Multimedia) # diagnostic_report.cpp: audio outputs
+if(TARGET Qt6::GuiPrivate) # diagnostic_report.cpp: the GPU through the RHI
+    target_link_libraries(cirrus_presentation PRIVATE Qt6::GuiPrivate)
+    target_compile_definitions(cirrus_presentation PRIVATE CIRRUS_HAVE_RHI)
+endif()
 
 # The backend sources: a separate target, so this one never links the backend.
 add_subdirectory(backend)
