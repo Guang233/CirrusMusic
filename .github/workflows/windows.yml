@@ -109,8 +109,13 @@ jobs:
 
       - name: Install tree
         if: inputs.package
+        # windeployqt resolves every DLL Cirrus.exe needs, through PATH: QtKeychain,
+        # FFmpeg, OpenSSL and zlib are not in Qt's directory. (Git Bash's PATH uses
+        # /d/... paths; the D:/... form would split at the colon.)
         run: |
+          export PATH="$(cygpath -u "$DEPS")/bin:$(cygpath -u "$VCPKG_INSTALLED")/x64-windows/bin:$PATH"
           cmake --install build --prefix "$STAGE"
+          ls "$STAGE"
           mkdir -p dist
           7z a -tzip "dist/Cirrus-$VERSION-windows-x64.zip" "$STAGE" > /dev/null
 

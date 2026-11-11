@@ -100,7 +100,7 @@ make_appimage() {
     while IFS= read -r d; do deps_only+=(--deploy-deps-only "$d"); done < <(
         find "$appdir/usr/plugins" "$appdir/usr/qml" -name '*.so' -printf '%h\n' | sort -u)
     (cd "$build" && APPIMAGE_EXTRACT_AND_RUN=1 LDAI_OUTPUT="$out/Cirrus-$version-$arch.AppImage" \
-        LDAI_UPDATE_INFORMATION="" ARCH=$arch \
+        ARCH=$arch \
         "$tools/linuxdeploy" --appdir "$appdir" \
             --executable "$appdir/usr/bin/cirrus" \
             --desktop-file "$appdir/usr/share/applications/com.guang233.Cirrus.desktop" \
