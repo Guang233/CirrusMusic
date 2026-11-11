@@ -62,9 +62,15 @@ struct LogFile {
 QList<LogFile> files();
 // Removes every file but this session's; the bytes freed.
 qint64 clearOld();
-// Writes `files` (paths from files()) into a zip at `target`, deflated; false when a file
-// can't be read or the target can't be written (nothing half-written is left).
-bool writeArchive(const QString& target, const QStringList& files);
+// Writes `extras` and `files` (paths from files(), under logs/) into a zip at `target`,
+// deflated; false when a file can't be read or the target can't be written (nothing
+// half-written is left).
+struct ArchiveEntry {
+    QString name; // in the zip: "summary.txt"
+    QByteArray data;
+};
+bool writeArchive(const QString& target, const QStringList& files,
+                  const QList<ArchiveEntry>& extras = {});
 
 QString directory();   // empty before start()
 QString currentFile(); // the file written now

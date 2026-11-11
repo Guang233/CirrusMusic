@@ -5,9 +5,11 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// Picks the log files for a diagnostic package (docs/tasks/logging.md §7): every file
-// listed with its size and time, all ticked; 导出 asks where to save the zip. Only logs
-// go in: no account, settings or cache.
+// Picks the log files for a diagnostic package (docs/tasks/logging.md §7, logging-v2
+// §5.2): every file listed with its size and time; ticked are this run, the one before,
+// and any with a mark or that did not end. The user may say what happened, and see
+// summary.txt before it goes in. 导出 asks where to save the zip. No account, cache or
+// settings files go in; the summary lists the settings' values.
 //   ExportLogsDialog { id: exportDialog; onExported: ok => … }   exportDialog.start()
 Dialog {
     id: dialog
@@ -17,14 +19,18 @@ Dialog {
     readonly property var names: App.diagnostics.files.map(f => f.name)
                                                      .filter(name => dialog.chosen[name])
 
+    property bool showSummary: false
+
     signal exported(bool ok)
 
     function start(): void {
         App.diagnostics.refresh();
         const all = {};
         for (const f of App.diagnostics.files)
-            all[f.name] = true;
+            all[f.name] = f.suggested;
         chosen = all;
+        description.text = "";
+        showSummary = false;
         open();
     }
 
@@ -35,7 +41,7 @@ Dialog {
     }
 
     title: qsTr("导出诊断包")
-    supportingText: qsTr("只含日志，不含账号、设置和缓存。")
+    supportingText: qsTr("包含日志和一份环境摘要（系统、设置、网络方式），不含账号、缓存和歌单内容。")
     acceptText: qsTr("导出")
     acceptEnabled: names.length > 0
     rejectText: qsTr("取消")
@@ -90,6 +96,30 @@ Dialog {
         }
     }
 
+    Item {
+        width: 1
+        height: 16
+    }
+    TextArea {
+        id: description
+        width: parent.width
+        maximumLines: 5
+        placeholderText: qsTr("发生了什么、大概什么时候（可不填）")
+    }
+    Button {
+        variant: Md.Text
+        text: dialog.showSummary ? qsTr("收起摘要") : qsTr("查看摘要")
+        onClicked: dialog.showSummary = !dialog.showSummary
+    }
+    SelectableText {
+        width: parent.width
+        visible: dialog.showSummary
+        activeFocusOnTab: true
+        text: dialog.showSummary ? App.diagnostics.summary(dialog.names) : ""
+        font: Theme.type.bodySmall.font
+        color: ColorScope.scheme.onSurfaceVariant
+    }
+
     D.FileDialog {
         id: saveDialog
         title: qsTr("保存诊断包")
@@ -97,6 +127,7 @@ Dialog {
         defaultSuffix: "zip"
         nameFilters: [qsTr("Zip 文件 (*.zip)")]
         selectedFile: App.diagnostics.packageName()
-        onAccepted: dialog.exported(App.diagnostics.exportTo(selectedFile, dialog.names))
+        onAccepted: dialog.exported(App.diagnostics.exportTo(selectedFile, dialog.names,
+                                                             description.text))
     }
 }

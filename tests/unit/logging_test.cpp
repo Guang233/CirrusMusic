@@ -331,12 +331,14 @@ class LoggingTest : public QObject
         QVERIFY(!list.last().current);
         QCOMPARE(list.last().name, "cirrus-20261108-100000-12.log");
         const QString zip = dir.filePath("out.zip");
-        QVERIFY(log::writeArchive(zip, {list.first().path, list.last().path}));
+        QVERIFY(log::writeArchive(zip, {list.first().path, list.last().path},
+                                  {{"summary.txt", "app: test\n"}}));
         QFile f(zip);
         QVERIFY(f.open(QIODevice::ReadOnly));
         const QByteArray bytes = f.readAll();
         QVERIFY(bytes.startsWith("PK\x03\x04"));
-        QVERIFY(bytes.contains("cirrus-20261108-100000-12.log"));
+        QVERIFY(bytes.contains("logs/cirrus-20261108-100000-12.log"));
+        QVERIFY(bytes.contains("summary.txt"));
         QVERIFY(bytes.contains("PK\x05\x06"));
         QVERIFY(bytes.size() < list.last().bytes); // deflated
         QVERIFY(!log::writeArchive(dir.filePath("bad.zip"), {dir.filePath("missing.log")}));

@@ -30,7 +30,8 @@ class Diagnostics : public QObject
     // When detailed logging turns off: "14:03", "明天 14:03"; empty when off.
     Q_PROPERTY(QString verboseEnds READ verboseEnds NOTIFY verboseChanged)
     Q_PROPERTY(qint64 bytes READ bytes NOTIFY filesChanged)
-    // Newest first: {name, bytes, modified (ms since epoch), current}.
+    // Newest first: {name, bytes, modified (ms since epoch), current, suggested}; suggested:
+    // this session, the one before, and any with a mark or that did not end (§5.2).
     Q_PROPERTY(QVariantList files READ files NOTIFY filesChanged)
     // Bytes in files of earlier sessions (what clear() removes).
     Q_PROPERTY(qint64 oldBytes READ oldBytes NOTIFY filesChanged)
@@ -50,9 +51,15 @@ class Diagnostics : public QObject
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void openFolder() const;
-    // Writes the named files (from `files`) into a zip at `target`; false when it
-    // could not. A name not in the list is refused.
-    Q_INVOKABLE bool exportTo(const QUrl& target, const QStringList& names);
+    // Writes summary.txt, the user's description (when there is one) and the named files
+    // (from `files`) into a zip at `target`; false when it could not. A name not in the
+    // list is refused.
+    Q_INVOKABLE bool exportTo(const QUrl& target, const QStringList& names,
+                              const QString& description = {});
+    // summary.txt for the named files (logging-v2 §5.1), shown before exporting: the
+    // app, the system, the network and audio setup, the account's state, the settings,
+    // and each session's start, end, warnings and marks. No paths, hosts or ids.
+    Q_INVOKABLE QString summary(const QStringList& names) const;
     // A file name for the package: cirrus-diagnostics-20261109-1403.zip.
     Q_INVOKABLE static QString packageName();
     // Removes the files of earlier sessions.
@@ -105,6 +112,7 @@ class Diagnostics : public QObject
     QVariantList m_files;
     QStringList m_paths; // of m_files, same order
     QPointer<QQuickWindow> m_window;
+    QString m_gpu;       // GL_RENDERER, set once on the render thread before any read
     QStringList m_pages; // HomePage>AlbumPage:123, bottom first
     QString m_popup;
     bool m_player = false;

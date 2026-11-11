@@ -45,7 +45,8 @@ std::optional<QByteArray> deflateRaw(const QByteArray& data)
 }
 } // namespace
 
-bool writeArchive(const QString& target, const QStringList& files)
+bool writeArchive(const QString& target, const QStringList& files,
+                  const QList<ArchiveEntry>& extras)
 {
     struct Entry {
         QByteArray name;
@@ -53,28 +54,33 @@ bool writeArchive(const QString& target, const QStringList& files)
         quint16 time = 0, date = 0;
     };
     QSaveFile out(target);
-    if (files.isEmpty() || !out.open(QIODevice::WriteOnly))
+    if ((files.isEmpty() && extras.isEmpty()) || !out.open(QIODevice::WriteOnly))
         return false;
-    QList<Entry> entries;
-    quint32 offset = 0;
+    QList<ArchiveEntry> contents = extras;
+    QList<QDateTime> times(extras.size(), QDateTime::currentDateTime());
     for (const QString& path : files) {
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly))
             return false;
-        const QByteArray data = file.readAll();
+        contents.append({QStringLiteral("logs/") + QFileInfo(path).fileName(), file.readAll()});
+        times.append(QFileInfo(path).lastModified());
+    }
+    QList<Entry> entries;
+    quint32 offset = 0;
+    for (qsizetype i = 0; i < contents.size(); ++i) {
+        const QByteArray& data = contents[i].data;
         const auto packed = deflateRaw(data);
         if (!packed)
             return false;
         Entry e;
-        e.name = QFileInfo(path).fileName().toUtf8();
+        e.name = contents[i].name.toUtf8();
         e.crc =
             quint32(crc32(0, reinterpret_cast<const Bytef*>(data.constData()), uInt(data.size())));
         e.size = quint32(data.size());
         e.packed = quint32(packed->size());
         e.offset = offset;
-        const QDateTime modified = QFileInfo(path).lastModified();
-        const QDate d = modified.date();
-        const QTime t = modified.time();
+        const QDate d = times[i].date();
+        const QTime t = times[i].time();
         e.time = quint16((t.hour() << 11) | (t.minute() << 5) | (t.second() / 2));
         e.date = quint16(((qMax(d.year(), 1980) - 1980) << 9) | (d.month() << 5) | d.day());
         QByteArray header;
