@@ -64,10 +64,11 @@ jobs:
       - name: QML lint
         run: cmake --build build --target all_qmllint
 
-      # Same exclusions as ci.yml (§7.1).
+      # Same exclusions as ci.yml (§7.1), plus resource_cache_store and log_canary: the
+      # resource and audio caches are Linux only (Unsupported elsewhere).
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
+          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store|resource_cache_store|log_canary)$"

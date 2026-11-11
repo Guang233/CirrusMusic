@@ -142,6 +142,10 @@ void SecretsTest::keychainWithoutBackendHasNoPlaintextFallback()
 {
     // No session bus: every secure backend is unreachable. The adapter must fail
     // rather than silently writing QtKeychain's plaintext QSettings fallback.
+#ifndef Q_OS_LINUX
+    QSKIP("the backend is cut off through D-Bus, Linux only; elsewhere this would write "
+          "the real keychain");
+#endif
     QStandardPaths::setTestModeEnabled(true);
     const auto config = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
     QDir(config).removeRecursively();

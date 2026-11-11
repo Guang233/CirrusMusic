@@ -107,6 +107,7 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
 - `tst_entity_search` 不能编译（2c164a7 起，`entity_search_test.cpp:42` 的 `detail` 有歧义）：放在 `CIRRUS_TEST_ENTITY_SEARCH`（默认 OFF）后面，本地全量构建也因此能通过了。
 - `backend_runtime`、`playback_observation`、`playback_observation_feed`、`linux_observation_service` 已知失败：CI 的 ctest 用 `-E` 排除。本地照常跑、照常失败。
 - `audio_store` 的 `interruptWakesOneRead` 不稳定（2026-11-10 第一次 CI 发现；本机单独跑 6 次失败 3 次）：测试先读第 4 块再 `interrupt()`，期望读还在等数据；但读请求有时比开头的下载先到，缓存直接从那里下载，第一个数据块就满足了这次读，返回数据而不是 FAILED。也先在 CI 里排除整个 `audio_store`。
+- macOS（`macos.yml`）另外排除 `resource_cache_store` 和 `log_canary`（`audioDownloads` 等 `audio.cached`）：资源缓存和音频缓存的私有目录检查只在 Linux 实现，别的平台返回 Unsupported/Storage（`resource_cache_store.cpp`、`resource_cache_worker.cpp`、`audio_store.cpp` 的 `Q_OS_LINUX`）。要在 macOS 上用缓存得先移植这部分。`secrets` 的 `keychainWithoutBackendHasNoPlaintextFallback` 靠断开 D-Bus 来切断后端，只在 Linux 上跑；别的平台会写真实钥匙串（macOS CI 上卡到超时），所以在 Linux 以外 QSKIP。
 - 修好以后从这里和 `ci.yml` 里去掉。
 
 ### 7.2 发一个版本
@@ -124,5 +125,5 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
   - 不设 `LD_LIBRARY_PATH`、`QT_PLUGIN_PATH` 启动（临时放入 offscreen 插件，测试 XDG 目录）：加载的是包里的 Qt、两份 FFmpeg（61 和 63）、QtKeychain、SQLite 驱动、Wayland 和 xcb 平台插件，系统的只有 OpenSSL、libsecret；日志没有错误。
   - Qt 的部署脚本默认只带 xcb 平台插件：要显式包含 `qwayland`。插件按文件名（去掉 lib 和后缀）指定，不是 CMake 目标名。
   - 桌面文件过了 `desktop-file-validate`，AppStream 过了 `appstreamcli validate`（只剩 ID 含大写的 pedantic 提示）。
-- CI（2026-11-11）：Linux 编译、qmllint、测试通过（排除 §7.1 的测试）。GCC 12 比本机的 GCC 16 严格，`std::optional<T>({x})` 要写成 `std::optional<T>(T{x})`。Windows 只编译，通过。
+- CI（2026-11-11）：Linux 编译、qmllint、测试通过（排除 §7.1 的测试）。GCC 12 比本机的 GCC 16 严格，`std::optional<T>({x})` 要写成 `std::optional<T>(T{x})`。Windows 只编译，通过。macOS 试验（2026-11-11，`macos-15`，Apple Silicon）：应用、gallery、测试编译通过，qmllint 通过；测试原先只有两个缺 OpenSSL 头文件路径（已修），排除上面的测试后的结果见当次运行。
 - 未运行：deb、AppImage、Windows 安装包和 zip（都在发布工作流里，还没推过标签）。
