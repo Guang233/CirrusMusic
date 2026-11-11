@@ -1,4 +1,5 @@
 #include "playlist_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "formatter.h"
@@ -71,9 +72,11 @@ void PlaylistPageModel::setSubscribed(bool subscribed)
             m_info.subscribed = !subscribed;
             emit subscribedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut    ? tr("登录后才能收藏歌单")
-                        : subscribed ? tr("没能收藏歌单，请稍后再试")
-                                     : tr("没能取消收藏，请稍后再试"));
+            emit notice(
+                signedOut ? noticed("playlist.subscribe_signed_out", tr("登录后才能收藏歌单"))
+                : subscribed
+                    ? noticed("playlist.subscribe_failed", tr("没能收藏歌单，请稍后再试"))
+                    : noticed("playlist.unsubscribe_failed", tr("没能取消收藏，请稍后再试")));
         });
 }
 
@@ -112,12 +115,15 @@ void PlaylistPageModel::removeSongs(const QStringList& keys)
             m_writeRequest.release();
             if (outcome.value) {
                 emit libraryChanged();
-                emit notice(keys.size() == 1 ? tr("已从歌单移除")
-                                             : tr("已从歌单移除 %1 首").arg(keys.size()));
+                emit notice(keys.size() == 1
+                                ? noticed("playlist.remove_songs_done", tr("已从歌单移除"))
+                                : noticed("playlist.remove_songs_done",
+                                          tr("已从歌单移除 %1 首").arg(keys.size())));
                 return;
             }
             restoreSongs(before, songs);
-            emit notice(failureMessage(outcome, tr("没能从歌单移除，请稍后再试")));
+            emit notice(noticed("playlist.remove_songs_failed",
+                                failureMessage(outcome, tr("没能从歌单移除，请稍后再试"))));
         });
 }
 
@@ -135,13 +141,14 @@ void PlaylistPageModel::updateInfo(const QString& title, const QString& descript
             m_writeRequest.release();
             if (outcome.value) {
                 emit libraryChanged();
-                emit notice(tr("已保存歌单信息"));
+                emit notice(noticed("playlist.info_saved", tr("已保存歌单信息")));
                 return;
             }
             m_info.title = before.title;
             m_info.description = before.description;
             emit headerChanged();
-            emit notice(failureMessage(outcome, tr("没能保存歌单信息，请稍后再试")));
+            emit notice(noticed("playlist.info_failed",
+                                failureMessage(outcome, tr("没能保存歌单信息，请稍后再试"))));
         });
 }
 
@@ -155,11 +162,12 @@ void PlaylistPageModel::deletePlaylist()
             m_writeRequest.release();
             if (outcome.value) {
                 emit libraryChanged();
-                emit notice(tr("已删除歌单「%1」").arg(title));
+                emit notice(noticed("playlist.deleted", tr("已删除歌单「%1」").arg(title)));
                 emit deleted();
                 return;
             }
-            emit notice(failureMessage(outcome, tr("没能删除歌单，请稍后再试")));
+            emit notice(noticed("playlist.delete_failed",
+                                failureMessage(outcome, tr("没能删除歌单，请稍后再试"))));
         });
 }
 

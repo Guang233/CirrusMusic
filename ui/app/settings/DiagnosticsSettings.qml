@@ -5,8 +5,9 @@ import Cirrus.Controls
 import Cirrus.Presentation
 import CirrusMusic
 
-// The app's log (docs/tasks/logging.md §7, settings.md S11): detailed logging for a day,
-// the folder, a package to send with a problem, and clearing earlier sessions' files.
+// The app's log (docs/tasks/logging.md §7, settings.md S11): noting a problem's moment
+// (logging-v2 §4.4), detailed logging for a day, the folder, a package to send with a
+// problem, and clearing earlier sessions' files.
 SettingsGroup {
     id: group
 
@@ -19,11 +20,17 @@ SettingsGroup {
     // The page shows the files as of opening it.
     Component.onCompleted: App.diagnostics.refresh()
 
+    ActionSetting {
+        text: qsTr("记下刚才的问题")
+        supportingText: qsTr("出问题后马上记下，任何地方都可以按 Ctrl+Alt+Shift+D")
+        actionText: qsTr("记下")
+        onTriggered: App.diagnostics.mark()
+    }
     SwitchSetting {
         text: qsTr("详细日志")
         supportingText: App.diagnostics.verboseEnds !== ""
                         ? qsTr("%1 自动关闭").arg(App.diagnostics.verboseEnds)
-                        : qsTr("排查问题时打开，24 小时后自动关闭")
+                        : qsTr("问题要很久才出现时打开，24 小时后自动关闭")
         value: App.diagnostics.verbose
         onSwitched: value => App.diagnostics.verbose = value
     }
@@ -52,12 +59,16 @@ SettingsGroup {
         actionEnabled: App.diagnostics.oldBytes > 0
         onTriggered: {
             App.diagnostics.clear();
+            App.diagnostics.notice("log.cleared");
             group.shell.notify(qsTr("已清除旧日志"));
         }
     }
 
     ExportLogsDialog {
         id: exportDialog
-        onExported: ok => group.shell.notify(ok ? qsTr("已导出诊断包") : qsTr("没能导出诊断包"))
+        onExported: ok => {
+            App.diagnostics.notice(ok ? "log.exported" : "log.export_failed");
+            group.shell.notify(ok ? qsTr("已导出诊断包") : qsTr("没能导出诊断包"));
+        }
     }
 }

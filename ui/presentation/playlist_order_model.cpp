@@ -1,4 +1,5 @@
 #include "playlist_order_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "formatter.h"
@@ -28,7 +29,8 @@ PlaylistOrderModel::PlaylistOrderModel(QObject* parent)
         if (m_pendingSort >= 0 && m_details->waiting() == 0 && !m_songs->allLoaded()) {
             m_pendingSort = -1;
             emit sortPendingChanged();
-            emit notice(tr("没能取回全部歌曲信息，请稍后再试"));
+            emit notice(
+                noticed("playlist_order.details_failed", tr("没能取回全部歌曲信息，请稍后再试")));
         }
     });
 }
@@ -149,14 +151,16 @@ void PlaylistOrderModel::save()
                 m_savedOrder = order;
                 updateChanged();
                 App::instance()->library()->notifyPlaylistChanged(m_key);
-                emit notice(tr("已保存歌曲顺序"));
+                emit notice(noticed("playlist_order.saved", tr("已保存歌曲顺序")));
                 emit saved();
                 return;
             }
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut             ? tr("登录已失效，请重新登录")
-                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                                              : tr("没能保存歌曲顺序，请稍后再试"));
+            emit notice(
+                signedOut ? noticed("playlist_order.signed_out", tr("登录已失效，请重新登录"))
+                : maybeSaved(outcome)
+                    ? noticed("playlist_order.save_unknown", tr("可能没有保存成功，刷新看看"))
+                    : noticed("playlist_order.save_failed", tr("没能保存歌曲顺序，请稍后再试")));
         });
     emit savingChanged();
 }

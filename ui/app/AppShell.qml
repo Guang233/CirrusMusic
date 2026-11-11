@@ -408,6 +408,10 @@ Item {
             id: stack
             anchors.fill: parent
             clip: true
+            // The trail in the log: which page, with which ids (logging-v2 §4.1).
+            onCurrentItemChanged: if (currentItem)
+                                      App.diagnostics.pageShown(currentItem, depth,
+                                                                entries[entries.length - 1].properties)
         }
 
         Repeater {

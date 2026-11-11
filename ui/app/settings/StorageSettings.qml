@@ -141,6 +141,7 @@ SettingsGroup {
         rejectText: qsTr("取消")
         onAccepted: {
             App.settings.searchHistory = [];
+            App.diagnostics.notice("search.history_cleared");
             group.shell.notify(qsTr("已清除搜索历史"));
         }
     }

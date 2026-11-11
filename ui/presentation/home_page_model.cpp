@@ -1,4 +1,5 @@
 #include "home_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "collection_list_model.h"
@@ -178,7 +179,8 @@ void DailySongsPageModel::loadHistoryDates()
             emit historyChanged();
             emit historyFailed();
             const bool rejected = outcome.failure && outcome.failure->kind == failure::Rejected;
-            emit notice(rejected ? tr("历史日推暂时不可用") : tr("没能获取历史日推"));
+            emit notice(rejected ? noticed("daily.history_unavailable", tr("历史日推暂时不可用"))
+                                 : noticed("daily.history_failed", tr("没能获取历史日推")));
         });
     emit historyChanged();
 }

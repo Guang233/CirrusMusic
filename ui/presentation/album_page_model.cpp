@@ -1,4 +1,5 @@
 #include "album_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "formatter.h"
@@ -89,10 +90,12 @@ void AlbumPageModel::setSubscribed(bool subscribed)
             m_page.info.subscribed = !subscribed;
             emit subscribedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut             ? tr("登录后才能收藏专辑")
-                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                        : subscribed          ? tr("没能收藏专辑，请稍后再试")
-                                              : tr("没能取消收藏，请稍后再试"));
+            emit notice(signedOut ? noticed("album.subscribe_signed_out", tr("登录后才能收藏专辑"))
+                        : maybeSaved(outcome)
+                            ? noticed("album.subscribe_unknown", tr("可能没有保存成功，刷新看看"))
+                        : subscribed
+                            ? noticed("album.subscribe_failed", tr("没能收藏专辑，请稍后再试"))
+                            : noticed("album.unsubscribe_failed", tr("没能取消收藏，请稍后再试")));
         });
 }
 

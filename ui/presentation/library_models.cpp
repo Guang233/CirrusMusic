@@ -1,4 +1,5 @@
 #include "library_models.h"
+#include "notice.h"
 
 #include "app.h"
 #include "collection_list_model.h"
@@ -152,9 +153,11 @@ void LibraryOverviewModel::createPlaylist(const QString& title)
             if (!outcome.value) {
                 const bool signedOut =
                     outcome.failure && outcome.failure->kind == failure::SignedOut;
-                emit notice(signedOut             ? tr("登录后才能新建歌单")
-                            : maybeSaved(outcome) ? tr("可能没有新建成功，刷新看看")
-                                                  : tr("没能新建歌单，请稍后再试"));
+                emit notice(
+                    signedOut ? noticed("playlist.create_signed_out", tr("登录后才能新建歌单"))
+                    : maybeSaved(outcome)
+                        ? noticed("playlist.create_unknown", tr("可能没有新建成功，刷新看看"))
+                        : noticed("playlist.create_failed", tr("没能新建歌单，请稍后再试")));
                 return;
             }
             if (m_playlists->state() != loadstate::Idle)

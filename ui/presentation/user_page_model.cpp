@@ -1,4 +1,5 @@
 #include "user_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "collection_list_model.h"
@@ -128,7 +129,7 @@ void UserPeopleModel::setFollowed(int row, bool followed)
             if (outcome.value)
                 return;
             m_items->setFollowed(m_items->rowOf(key), !followed);
-            emit notice(followNotice(outcome, followed));
+            emit notice(noticed("user.follow", followNotice(outcome, followed)));
         });
 }
 
@@ -331,7 +332,7 @@ void UserPageModel::setFollowed(bool followed)
             }
             m_info.followed = !followed;
             emit followedChanged();
-            emit notice(followNotice(outcome, followed));
+            emit notice(noticed("user.follow", followNotice(outcome, followed)));
         });
 }
 

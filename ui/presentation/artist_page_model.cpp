@@ -1,4 +1,5 @@
 #include "artist_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "collection_list_model.h"
@@ -234,10 +235,12 @@ void ArtistPageModel::setFollowed(bool followed)
             m_info.followed = !followed;
             emit followedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut             ? tr("登录后才能关注歌手")
-                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                        : followed            ? tr("没能关注，请稍后再试")
-                                              : tr("没能取消关注，请稍后再试"));
+            emit notice(signedOut ? noticed("artist.follow_signed_out", tr("登录后才能关注歌手"))
+                        : maybeSaved(outcome)
+                            ? noticed("artist.follow_unknown", tr("可能没有保存成功，刷新看看"))
+                        : followed
+                            ? noticed("artist.follow_failed", tr("没能关注，请稍后再试"))
+                            : noticed("artist.unfollow_failed", tr("没能取消关注，请稍后再试")));
         });
 }
 

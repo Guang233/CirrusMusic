@@ -57,6 +57,7 @@ qt_add_qml_module(cirrus_presentation
         cache_status.cpp
         diagnostics.h
         diagnostics.cpp
+        notice.h
         comments_model.h
         comments_model.cpp
         paged_model.h

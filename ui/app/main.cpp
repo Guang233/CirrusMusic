@@ -210,6 +210,7 @@ int main(int argc, char* argv[])
     // Hidden in the tray, the window gives back its GPU device and scene graph, so a
     // discrete GPU can power down during hours of background playback.
     if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0))) {
+        presentation->diagnostics()->watch(window);
         window->setPersistentGraphics(false);
         window->setPersistentSceneGraph(false);
 #ifdef CIRRUS_UI_SMTC

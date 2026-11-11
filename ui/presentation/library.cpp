@@ -1,4 +1,5 @@
 #include "library.h"
+#include "notice.h"
 
 #include "session.h"
 #include "sources.h"
@@ -72,7 +73,7 @@ void Library::setLiked(const QString& songKey, bool liked)
     if (songKey.isEmpty() || liked == isLiked(songKey))
         return;
     if (!m_session->signedIn()) {
-        emit notice(tr("登录后才能喜欢歌曲"));
+        emit notice(noticed("song.like_signed_out", tr("登录后才能喜欢歌曲")));
         return;
     }
     setLikedLocally(songKey, liked);
@@ -86,9 +87,10 @@ void Library::setLiked(const QString& songKey, bool liked)
                 return;
             }
             setLikedLocally(songKey, !liked);
-            emit notice(maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                        : liked             ? tr("没能喜欢这首歌，请稍后再试")
-                                            : tr("没能取消喜欢，请稍后再试"));
+            emit notice(maybeSaved(outcome)
+                            ? noticed("song.like_unknown", tr("可能没有保存成功，刷新看看"))
+                        : liked ? noticed("song.like_failed", tr("没能喜欢这首歌，请稍后再试"))
+                                : noticed("song.unlike_failed", tr("没能取消喜欢，请稍后再试")));
         });
 }
 
@@ -102,10 +104,13 @@ void Library::addToPlaylist(const QString& playlistKey, const QString& title,
             m_writes[playlistKey].release();
             if (outcome.value) {
                 emit playlistChanged(playlistKey);
-                emit notice(tr("已收藏到「%1」").arg(title));
+                emit notice(noticed("playlist.add_songs_done", tr("已收藏到「%1」").arg(title)));
             } else {
-                emit notice(maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                                                : tr("没能收藏到「%1」，请稍后再试").arg(title));
+                emit notice(
+                    maybeSaved(outcome)
+                        ? noticed("playlist.add_songs_unknown", tr("可能没有保存成功，刷新看看"))
+                        : noticed("playlist.add_songs_failed",
+                                  tr("没能收藏到「%1」，请稍后再试").arg(title)));
             }
         });
 }
@@ -124,9 +129,10 @@ void Library::createPlaylistWith(const QString& title, const QStringList& songKe
         }
         if (!outcome.value) {
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut             ? tr("登录后才能新建歌单")
-                        : maybeSaved(outcome) ? tr("可能没有新建成功，刷新看看")
-                                              : tr("没能新建歌单，请稍后再试"));
+            emit notice(signedOut ? noticed("playlist.create_signed_out", tr("登录后才能新建歌单"))
+                        : maybeSaved(outcome)
+                            ? noticed("playlist.create_unknown", tr("可能没有新建成功，刷新看看"))
+                            : noticed("playlist.create_failed", tr("没能新建歌单，请稍后再试")));
             return;
         }
         emit playlistChanged(*outcome.value); // the rail lists it

@@ -1,4 +1,5 @@
 #include "podcast_page_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "song_list_model.h"
@@ -104,10 +105,13 @@ void PodcastPageModel::setSubscribed(bool subscribed)
             m_info.subscribed = !subscribed;
             emit subscribedChanged();
             const bool signedOut = outcome.failure && outcome.failure->kind == failure::SignedOut;
-            emit notice(signedOut             ? tr("登录后才能收藏播客")
-                        : maybeSaved(outcome) ? tr("可能没有保存成功，刷新看看")
-                        : subscribed          ? tr("没能收藏，请稍后再试")
-                                              : tr("没能取消收藏，请稍后再试"));
+            emit notice(
+                signedOut ? noticed("podcast.subscribe_signed_out", tr("登录后才能收藏播客"))
+                : maybeSaved(outcome)
+                    ? noticed("podcast.subscribe_unknown", tr("可能没有保存成功，刷新看看"))
+                : subscribed
+                    ? noticed("podcast.subscribe_failed", tr("没能收藏，请稍后再试"))
+                    : noticed("podcast.unsubscribe_failed", tr("没能取消收藏，请稍后再试")));
         });
 }
 

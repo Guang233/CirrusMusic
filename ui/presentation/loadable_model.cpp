@@ -1,7 +1,9 @@
 #include "loadable_model.h"
+
 #include "logging/log.h"
 
 #include "app.h"
+#include "diagnostics.h"
 #include "network_status.h"
 #include "session.h"
 
@@ -118,7 +120,9 @@ LoadError LoadableModel::describe(const Failure& failure, int* state) const
     case failure::Invalid:
         // A malformed request is our bug, not something the user can fix.
         qCWarning(lcUi) << log::event("model.invalid_request")
-                        << log::field("model", metaObject()->className());
+                        << log::field("model", Diagnostics::typeName(this))
+                        << log::field("ids",
+                                      Diagnostics::ids(this, LoadableModel::staticMetaObject));
         error.message = tr("加载失败");
         break;
     case failure::Unknown:
@@ -136,8 +140,9 @@ void LoadableModel::fail(const Failure& failure)
     // Every page or list that fails to load (docs/tasks/logging.md §8); signed out is
     // what a guest expects, not a fault.
     const auto fields =
-        log::join({log::field("model", metaObject()->className()), log::field("kind", failure.kind),
-                   log::field("refreshing", m_refreshing),
+        log::join({log::field("model", Diagnostics::typeName(this)),
+                   log::field("ids", Diagnostics::ids(this, LoadableModel::staticMetaObject)),
+                   log::field("kind", failure.kind), log::field("refreshing", m_refreshing),
                    log::field("retry_after_ms", failure.retryAfterMs.value_or(0))});
     if (failure.kind == failure::SignedOut)
         qCInfo(lcUi) << log::event("model.failed") << fields;

@@ -1,4 +1,5 @@
 #include "comments_model.h"
+#include "notice.h"
 
 #include "app.h"
 #include "session.h"
@@ -334,8 +335,9 @@ void CommentsPageModel::setLiked(int row, bool liked)
             if (outcome.value)
                 return;
             apply(!liked);
-            emit notice(failureMessage(outcome, liked ? tr("没能点赞，请稍后再试")
-                                                      : tr("没能取消点赞，请稍后再试")));
+            emit notice(noticed("comment.like_failed",
+                                failureMessage(outcome, liked ? tr("没能点赞，请稍后再试")
+                                                              : tr("没能取消点赞，请稍后再试"))));
         });
 }
 
@@ -434,7 +436,8 @@ void CommentsPageModel::publish(const QString& text)
             m_publishing.release();
             emit publishingChanged();
             if (!outcome.value) {
-                emit notice(failureMessage(outcome, tr("没能发表评论，请稍后再试")));
+                emit notice(noticed("comment.publish_failed",
+                                    failureMessage(outcome, tr("没能发表评论，请稍后再试"))));
                 emit published({}, false);
                 return;
             }
@@ -444,7 +447,7 @@ void CommentsPageModel::publish(const QString& text)
             m_rows->insert(0, {row});
             if (total() >= 0)
                 setTotal(total() + 1);
-            emit notice(tr("已发表"));
+            emit notice(noticed("comment.published", tr("已发表")));
             emit published({}, true);
         });
     emit publishingChanged();
@@ -468,7 +471,8 @@ void CommentsPageModel::reply(int row, const QString& text)
             m_publishing.release();
             emit publishingChanged();
             if (!outcome.value) {
-                emit notice(failureMessage(outcome, tr("没能回复，请稍后再试")));
+                emit notice(noticed("comment.reply_failed",
+                                    failureMessage(outcome, tr("没能回复，请稍后再试"))));
                 emit published(replyTo, false);
                 return;
             }
@@ -494,7 +498,7 @@ void CommentsPageModel::reply(int row, const QString& text)
                     m_rows->insert(comment + 1, {local});
                 }
             }
-            emit notice(tr("已回复"));
+            emit notice(noticed("comment.replied", tr("已回复")));
         });
     emit publishingChanged();
 }
@@ -515,8 +519,10 @@ void CommentsPageModel::remove(int row)
                 const bool unknown =
                     outcome.failure && (outcome.failure->kind == failure::Timeout ||
                                         outcome.failure->kind == failure::Unknown);
-                emit notice(unknown ? tr("可能没有删除成功，刷新看看")
-                                    : failureMessage(outcome, tr("没能删除评论，请稍后再试")));
+                emit notice(noticed("comment.delete_failed",
+                                    unknown
+                                        ? tr("可能没有删除成功，刷新看看")
+                                        : failureMessage(outcome, tr("没能删除评论，请稍后再试"))));
                 return;
             }
             for (int i = 0; i < m_rows->rowCount(); ++i) {
@@ -539,7 +545,7 @@ void CommentsPageModel::remove(int row)
                     break;
                 }
             }
-            emit notice(tr("已删除"));
+            emit notice(noticed("comment.deleted", tr("已删除")));
         });
 }
 

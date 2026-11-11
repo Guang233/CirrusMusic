@@ -53,9 +53,9 @@ const QRegularExpression kFileName(QStringLiteral(R"(^(cirrus-\d{8}-\d{6}-\d+)(?
 std::atomic<int> g_crashFd{-1};
 
 struct RingEntry {
-    quint64 seq;
     qint64 ms; // State::clock
     QByteArray line;
+    bool written = false; // in the file already
 };
 
 struct State {
@@ -66,8 +66,6 @@ struct State {
     std::deque<QByteArray> recent;
     std::deque<RingEntry> ring;
     qsizetype ringBytes = 0;
-    quint64 ringSeq = 0;
-    quint64 writtenSeq = 0; // ring records up to this one are in the file already
     qint64 dropped = 0;
     QByteArray lastCategory;
     QString lastMessage;
@@ -222,7 +220,7 @@ void enqueue(State& s, QByteArray line, bool context = false)
 void keep(State& s, qint64 ms, QByteArray line)
 {
     s.ringBytes += line.size();
-    s.ring.push_back({++s.ringSeq, ms, std::move(line)});
+    s.ring.push_back({ms, std::move(line)});
     while (s.ringBytes > kRingBytes && !s.ring.empty()) {
         s.ringBytes -= s.ring.front().line.size();
         s.ring.pop_front();
@@ -230,23 +228,28 @@ void keep(State& s, qint64 ms, QByteArray line)
 }
 
 // With `mutex` held. Queues the ring's records not written yet, from `sinceMs` on, at most
-// `limit` (the newest), between log.context begin and end lines.
+// `limit` (the newest), between log.context_begin and _end lines. Older ones stay for a
+// later mark or export (the file is then not in time order; the time says where they go).
 void writeContext(State& s, const char* reason, qint64 sinceMs, qsizetype limit)
 {
-    auto first = std::find_if(s.ring.begin(), s.ring.end(), [&s, sinceMs](const RingEntry& e) {
-        return e.seq > s.writtenSeq && e.ms >= sinceMs;
-    });
-    const qsizetype count = std::min<qsizetype>(std::distance(first, s.ring.end()), limit);
+    QList<RingEntry*> picked;
+    for (auto it = s.ring.rbegin(); it != s.ring.rend() && picked.size() < limit; ++it) {
+        if (it->ms < sinceMs)
+            break;
+        if (!it->written)
+            picked.append(&*it);
+    }
+    const qsizetype count = picked.size();
     if (count == 0)
         return;
-    first = s.ring.end() - count;
     const QString fields = QStringLiteral(" reason=") + QString::fromLatin1(reason) +
                            QStringLiteral(" count=") + QString::number(count);
     enqueue(s, format(QtInfoMsg, "cirrus.log", QStringLiteral("log.context_begin") + fields), true);
-    for (auto it = first; it != s.ring.end(); ++it)
-        enqueue(s, it->line, true);
+    for (auto it = picked.crbegin(); it != picked.crend(); ++it) {
+        (*it)->written = true;
+        enqueue(s, (*it)->line, true);
+    }
     enqueue(s, format(QtInfoMsg, "cirrus.log", QStringLiteral("log.context_end") + fields), true);
-    s.writtenSeq = s.ring.back().seq;
 }
 
 // The context added to every warning (logging-v2 §4.3), with a leading space.
@@ -748,7 +751,6 @@ void shutdown()
     s.recent.clear();
     s.ring.clear();
     s.ringBytes = 0;
-    s.writtenSeq = s.ringSeq;
     s.lastCategory.clear();
     s.lastMessage.clear();
     s.installed = false;

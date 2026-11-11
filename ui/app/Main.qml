@@ -143,8 +143,27 @@ AppWindow {
         onAddToPlaylistRequested: key => shell.addToPlaylist([key])
         onLoginRequested: shell.openLogin()
         // The focus goes back to the mini player (motion-choreography §2.2).
-        onOpenedChanged: if (!opened)
-                             shell.focusMiniPlayer()
+        onOpenedChanged: {
+            App.diagnostics.playerShown(opened);
+            if (!opened)
+                shell.focusMiniPlayer();
+        }
+    }
+    // "Something just went wrong": noted in the log with the UI's state (logging-v2 §4.4).
+    Shortcut {
+        sequence: "Ctrl+Alt+Shift+D"
+        context: Qt.ApplicationShortcut
+        onActivated: App.diagnostics.mark()
+    }
+    Connections {
+        target: App.diagnostics
+        function onMarked() {
+            const text = qsTr("已记下这一刻，导出诊断包时会一起带上");
+            if (player.opened)
+                player.notify(text);
+            else
+                shell.notify(text);
+        }
     }
     Shortcut {
         sequence: "Ctrl+Shift+F"

@@ -1,4 +1,5 @@
 #include "player.h"
+#include "notice.h"
 
 #include "app_settings.h"
 #include "song_detail_loader.h"
@@ -115,7 +116,7 @@ void Player::noticePreview()
     m_previewKnownKey = key;
     m_previewKnown = preview;
     if (preview && !before)
-        emit notice(tr("这首歌只能试听片段"));
+        emit notice(noticed("player.preview_only", tr("这首歌只能试听片段")));
 }
 
 QString Player::failureMessage() const
@@ -148,15 +149,18 @@ void Player::addSongs(const QStringList& keys, bool next, int origin, const QStr
     if (!m_source || keys.isEmpty())
         return;
     if (m_snapshot.mode == playback::PersonalFm) {
-        emit notice(tr("私人 FM 不能加入队列"));
+        emit notice(noticed("player.fm_no_queue", tr("私人 FM 不能加入队列")));
         return;
     }
     const bool playing = !m_snapshot.queue.isEmpty();
     if (m_source->addSongs(keys, next, PlayOrigin{origin, originId}) && playing)
-        emit notice(next ? (keys.size() > 1 ? tr("%1 首歌将在这首之后播放").arg(keys.size())
-                                            : tr("将在这首之后播放"))
-                         : (keys.size() > 1 ? tr("已把 %1 首歌加到播放队列").arg(keys.size())
-                                            : tr("已加到播放队列")));
+        emit notice(
+            next ? (keys.size() > 1 ? noticed("player.play_next",
+                                              tr("%1 首歌将在这首之后播放").arg(keys.size()))
+                                    : noticed("player.play_next", tr("将在这首之后播放")))
+                 : (keys.size() > 1
+                        ? noticed("player.queued", tr("已把 %1 首歌加到播放队列").arg(keys.size()))
+                        : noticed("player.queued", tr("已加到播放队列"))));
 }
 
 void Player::clearQueue()
