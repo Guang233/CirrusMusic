@@ -19,6 +19,7 @@ class FakeControls;
 class Formatter;
 class CurrentLyrics;
 class Library;
+class LocalStats;
 class NetworkStatus;
 class Player;
 class Session;
@@ -38,6 +39,7 @@ class App : public QObject
     Q_MOC_INCLUDE("formatter.h")
     Q_MOC_INCLUDE("lyrics.h")
     Q_MOC_INCLUDE("library.h")
+    Q_MOC_INCLUDE("stats_model.h")
     Q_MOC_INCLUDE("network_status.h")
     Q_MOC_INCLUDE("player.h")
     Q_MOC_INCLUDE("session.h")
@@ -52,6 +54,7 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::NetworkStatus* network READ network CONSTANT)
     Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
     Q_PROPERTY(cirrus::ui::Session* session READ session CONSTANT)
+    Q_PROPERTY(cirrus::ui::LocalStats* stats READ stats CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -76,12 +79,14 @@ class App : public QObject
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
+    [[nodiscard]] LocalStats* stats() const { return m_stats; }
     [[nodiscard]] FakeControls* debug() const { return m_sources.fakeControls.get(); }
 
     [[nodiscard]] CatalogSource* catalog() const { return m_sources.catalog.get(); }
     [[nodiscard]] ImageSource* images() const { return m_sources.images.get(); }
     [[nodiscard]] LibrarySource* librarySource() const { return m_sources.library.get(); }
     [[nodiscard]] CommentSource* commentSource() const { return m_sources.comments.get(); }
+    [[nodiscard]] StatsSource* statsSource() const { return m_sources.stats.get(); }
 
     // `image://cover/<key>` provider; the QML engine takes ownership.
     [[nodiscard]] QQuickAsyncImageProvider* makeCoverProvider();
@@ -101,6 +106,7 @@ class App : public QObject
     Session* m_session;
     Library* m_library;
     CurrentLyrics* m_lyrics;
+    LocalStats* m_stats;
 };
 
 } // namespace cirrus::ui

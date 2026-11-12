@@ -82,6 +82,9 @@ class AppSettings : public QObject
     // The library and discover pages' tabs.
     CIRRUS_SETTING(int, libraryTab, setLibraryTab, "library/tab", 0)
     CIRRUS_SETTING(int, discoverTab, setDiscoverTab, "discover/tab", 0)
+    // The listening statistics page: StatsPageModel.Range and rankings by time.
+    CIRRUS_SETTING(int, statsRange, setStatsRange, "stats/range", 0)
+    CIRRUS_SETTING(bool, statsByTime, setStatsByTime, "stats/byTime", false)
 
     // Playback.
     // Requested stream quality, the backend's AudioQuality: Standard (0), Exhigh (1,

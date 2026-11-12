@@ -3,6 +3,7 @@
 #include "account.h"
 #include "playback.h"
 #include "request.h"
+#include "stats_types.h"
 #include "types.h"
 
 #include <QByteArray>
@@ -198,6 +199,20 @@ class CacheSource
     virtual void setAudioCapacity(qint64 bytes) = 0;
 };
 
+// Local listening statistics (docs/ui/pages/stats.md): the account's plays on this
+// computer, or the guest's.
+class StatsSource
+{
+  public:
+    virtual ~StatsSource() = default;
+    virtual Request stats(const StatsQuery& query, Reply<ListeningStats> reply) = 0;
+    // Clears the account's local listening history (never the service's records).
+    virtual Request clear(Reply<bool> reply) = 0;
+    // Called when what stats() reads changed: a play was recorded, song details arrived,
+    // a clear. Possibly often; never synchronously from a command.
+    virtual void setChangedHandler(std::function<void()> changed) = 0;
+};
+
 // A song's lyrics, all languages and versions.
 class LyricsSource
 {
@@ -304,6 +319,7 @@ struct Sources {
     std::unique_ptr<CommentSource> comments;
     std::unique_ptr<CacheSource> cache;
     std::unique_ptr<LyricsSource> lyrics;
+    std::unique_ptr<StatsSource> stats;
 };
 
 } // namespace cirrus::ui

@@ -13,11 +13,14 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMap>
 #include <QRandomGenerator>
 #include <QSet>
 #include <QTimer>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <random>
@@ -2833,6 +2836,234 @@ class FakeLyrics : public QObject, public LyricsSource
     FakeControls* m_controls;
 };
 
+// Local listening statistics over a made-up history: 75 days up to now, more in the
+// evenings and at weekends, some skips, a few origins. The same every run (seeded),
+// aggregated per query like the backend does.
+class FakeStats : public QObject, public StatsSource
+{
+  public:
+    FakeStats(FakeControls* controls, std::shared_ptr<const Samples> samples)
+        : m_controls(controls), m_samples(std::move(samples))
+    {
+        build();
+    }
+
+    Request stats(const StatsQuery& query, Reply<ListeningStats> reply) override
+    {
+        return replyLater<ListeningStats>(this, m_controls, std::move(reply), [this, query]() {
+            return Outcome<ListeningStats>{aggregate(query)};
+        });
+    }
+
+    Request clear(Reply<bool> reply) override
+    {
+        return replyLater<bool>(this, m_controls, std::move(reply), [this]() {
+            m_records.clear();
+            if (m_changed)
+                QTimer::singleShot(0, this, [this] { m_changed(); });
+            return Outcome<bool>{true};
+        });
+    }
+
+    void setChangedHandler(std::function<void()> changed) override
+    {
+        m_changed = std::move(changed);
+    }
+
+  private:
+    struct Record {
+        qint64 startedAtMs = 0;
+        qint64 playedMs = 0;
+        QString song;
+        StatsOrigin origin; // amount unused
+        bool counted = false;
+    };
+
+    void build()
+    {
+        const QStringList& songs = m_samples->songOrder;
+        if (songs.isEmpty())
+            return;
+        std::mt19937 random(20261112);
+        QList<StatsOrigin> origins;
+        for (const QString& key : m_samples->playlistOrder.mid(0, 3))
+            origins.append({StatsOrigin::Playlist, key, m_samples->playlists[key].info.title, {}});
+        origins.append({StatsOrigin::Fm, {}, {}, {}});
+        origins.append({StatsOrigin::Daily, {}, {}, {}});
+        if (!m_samples->albumOrder.isEmpty()) {
+            const QString album = m_samples->albumOrder.first();
+            origins.append({StatsOrigin::Album, album, m_samples->albums[album].info.title, {}});
+        }
+        origins.append({StatsOrigin::Search, {}, {}, {}});
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        const QDate today = QDate::currentDate();
+        for (int back = 74; back >= 0; --back) {
+            const QDate day = today.addDays(-back);
+            if (back > 2 && random() % 7 == 0)
+                continue; // some days without music
+            const bool weekend = day.dayOfWeek() >= 6;
+            // Listening sessions: a commute in the morning on weekdays, evenings, and
+            // weekend afternoons.
+            QList<int> hours;
+            if (!weekend && random() % 3 != 0)
+                hours.append(8);
+            if (random() % 4 != 0)
+                hours.append(20 + int(random() % 3));
+            if (weekend)
+                hours.append(14 + int(random() % 3));
+            for (const int hour : hours) {
+                qint64 at = day.startOfDay()
+                                .addSecs(hour * 3600 + int(random() % 1200))
+                                .toMSecsSinceEpoch();
+                const auto& origin = origins[random() % origins.size()];
+                const int count = 3 + int(random() % 6);
+                for (int i = 0; i < count && at < now; ++i) {
+                    // Favourites come back: the first songs are picked far more often.
+                    const auto pick = std::min<qsizetype>(
+                        qsizetype(std::pow(double(random() % 1000) / 1000.0, 2.2) *
+                                  double(songs.size())),
+                        songs.size() - 1);
+                    const SongInfo song = m_samples->song(songs[pick]);
+                    const qint64 length = song.durationMs > 0 ? song.durationMs : 210000;
+                    const bool skipped = random() % 9 == 0;
+                    const qint64 played = skipped ? 4000 + qint64(random() % 20000) : length;
+                    m_records.append({at, played, song.key, origin, played >= 30000});
+                    at += played + 2000;
+                }
+            }
+        }
+    }
+
+    static QDate periodStart(const QDate& day, StatsQuery::PeriodSize size)
+    {
+        switch (size) {
+        case StatsQuery::Week:
+            return day.addDays(1 - day.dayOfWeek());
+        case StatsQuery::Month:
+            return QDate(day.year(), day.month(), 1);
+        default:
+            return day;
+        }
+    }
+
+    ListeningStats aggregate(const StatsQuery& query) const
+    {
+        ListeningStats stats;
+        const qint64 to = query.toMs > 0 ? query.toMs : std::numeric_limits<qint64>::max();
+        QMap<QDate, StatsAmount> periods;
+        QHash<QString, StatsSong> songs;
+        QHash<QString, StatsItem> artists, albums;
+        QHash<QString, QSet<QString>> artistSongs, albumSongs;
+        QHash<QString, StatsOrigin> origins;
+        QSet<QString> countedSongs, days, seenBefore;
+        QSet<QDate> playDays;
+        const auto add = [](StatsAmount& amount, const Record& r) {
+            amount.playedMs += r.playedMs;
+            amount.plays += r.counted ? 1 : 0;
+        };
+        for (const Record& r : m_records) {
+            const QDateTime local = QDateTime::fromMSecsSinceEpoch(r.startedAtMs);
+            if (r.counted)
+                playDays.insert(local.date());
+            if (r.startedAtMs < query.fromMs) {
+                if (r.counted)
+                    seenBefore.insert(r.song);
+                continue;
+            }
+            if (r.startedAtMs >= to)
+                continue;
+            ++stats.records;
+            add(stats.total, r);
+            days.insert(local.date().toString(Qt::ISODate));
+            add(periods[periodStart(local.date(), query.periodSize)], r);
+            add(stats.weekHours[(local.date().dayOfWeek() - 1) * 24 + local.time().hour()], r);
+            const SongInfo song = m_samples->song(r.song);
+            StatsSong& row = songs[r.song];
+            row.song = song;
+            row.known = true;
+            add(row.amount, r);
+            for (const ArtistRef& artist : song.artists) {
+                const QString id =
+                    artist.key.isEmpty() ? QStringLiteral("n:") + artist.name : artist.key;
+                StatsItem& item = artists[id];
+                item.key = artist.key;
+                item.title = artist.name;
+                add(item.amount, r);
+                if (r.counted)
+                    artistSongs[id].insert(r.song);
+            }
+            if (!song.albumKey.isEmpty()) {
+                StatsItem& item = albums[song.albumKey];
+                item.key = song.albumKey;
+                item.title = song.albumTitle;
+                item.coverKey = song.coverKey;
+                add(item.amount, r);
+                if (r.counted)
+                    albumSongs[song.albumKey].insert(r.song);
+            }
+            const QString originId = QString::number(r.origin.kind) + u':' + r.origin.key;
+            StatsOrigin& origin = origins[originId];
+            origin.kind = r.origin.kind;
+            origin.key = r.origin.key;
+            origin.name = r.origin.name;
+            add(origin.amount, r);
+            if (r.counted)
+                countedSongs.insert(r.song);
+        }
+        stats.songs = int(countedSongs.size());
+        stats.artists = int(std::count_if(artistSongs.cbegin(), artistSongs.cend(),
+                                          [](const auto& s) { return !s.isEmpty(); }));
+        stats.albums = int(std::count_if(albumSongs.cbegin(), albumSongs.cend(),
+                                         [](const auto& s) { return !s.isEmpty(); }));
+        for (const QString& song : countedSongs)
+            stats.newSongs += seenBefore.contains(song) ? 0 : 1;
+        stats.days = int(days.size());
+        for (auto it = periods.cbegin(); it != periods.cend(); ++it)
+            stats.periods.append({it.key(), it.value()});
+
+        const auto rank = [&query](auto list) {
+            const auto value = [&query](const StatsAmount& a) {
+                return query.byTime ? a.playedMs : qint64(a.plays);
+            };
+            list.removeIf([&](const auto& row) { return value(row.amount) <= 0; });
+            std::stable_sort(list.begin(), list.end(), [&](const auto& a, const auto& b) {
+                if (value(a.amount) != value(b.amount))
+                    return value(a.amount) > value(b.amount);
+                return (query.byTime ? a.amount.plays : a.amount.playedMs) >
+                       (query.byTime ? b.amount.plays : b.amount.playedMs);
+            });
+            return list.mid(0, query.limit);
+        };
+        stats.topSongs = rank(songs.values());
+        for (auto it = artists.begin(); it != artists.end(); ++it)
+            it->songs = int(artistSongs.value(it.key()).size());
+        for (auto it = albums.begin(); it != albums.end(); ++it)
+            it->songs = int(albumSongs.value(it.key()).size());
+        stats.topArtists = rank(artists.values());
+        stats.topAlbums = rank(albums.values());
+        stats.topOrigins = rank(origins.values());
+
+        QList<QDate> sorted(playDays.cbegin(), playDays.cend());
+        std::sort(sorted.begin(), sorted.end());
+        int run = 0;
+        for (qsizetype i = 0; i < sorted.size(); ++i) {
+            run = i > 0 && sorted[i - 1].addDays(1) == sorted[i] ? run + 1 : 1;
+            stats.longestStreak = std::max(stats.longestStreak, run);
+        }
+        const QDate today = QDate::currentDate();
+        if (!sorted.isEmpty() && sorted.last().daysTo(today) <= 1)
+            stats.streak = run;
+        if (!m_records.isEmpty())
+            stats.firstRecordAtMs = m_records.first().startedAtMs;
+        return stats;
+    }
+
+    FakeControls* m_controls;
+    std::shared_ptr<const Samples> m_samples;
+    QList<Record> m_records; // oldest first
+    std::function<void()> m_changed;
+};
+
 Sources makeFakeSources()
 {
     Sources sources;
@@ -2847,6 +3078,7 @@ Sources makeFakeSources()
     sources.comments = std::make_unique<FakeComments>(sources.fakeControls.get(), samples, account);
     sources.cache = std::make_unique<FakeCache>(sources.fakeControls.get());
     sources.lyrics = std::make_unique<FakeLyrics>(sources.fakeControls.get());
+    sources.stats = std::make_unique<FakeStats>(sources.fakeControls.get(), samples);
     return sources;
 }
 

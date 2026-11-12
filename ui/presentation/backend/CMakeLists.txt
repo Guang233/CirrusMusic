@@ -28,6 +28,8 @@ qt_add_library(cirrus_presentation_backend STATIC
     backend_session.cpp
     cache_queue.h
     cache_queue.cpp
+    backend_stats.h
+    backend_stats.cpp
 )
 target_compile_features(cirrus_presentation_backend PUBLIC cxx_std_20)
 target_include_directories(cirrus_presentation_backend PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

@@ -55,6 +55,9 @@ qt_add_qml_module(cirrus_presentation
         discover_models.cpp
         cache_status.h
         cache_status.cpp
+        stats_types.h
+        stats_model.h
+        stats_model.cpp
         diagnostics.h
         diagnostics.cpp
         diagnostic_report.h
