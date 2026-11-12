@@ -263,6 +263,22 @@ Item {
         });
     }
 
+    // The local listening statistics (pages/stats.md), and its full song ranking for a
+    // range and period (StatsPageModel.range, offset).
+    function openStats() {
+        shell.go(statsPage, {
+            shell: shell
+        });
+    }
+
+    function openStatsSongs(range: int, offset: int) {
+        shell.go(statsSongsPage, {
+            shell: shell,
+            range: range,
+            offset: offset
+        });
+    }
+
     // Today's recommended songs, or a past day's ("yyyy-MM-dd", album-daily.md §2.1).
     function openDaily(date: string) {
         shell.go(dailySongsPage, {
@@ -390,6 +406,14 @@ Item {
         RankingPage {}
     }
     Component {
+        id: statsPage
+        StatsPage {}
+    }
+    Component {
+        id: statsSongsPage
+        StatsSongsPage {}
+    }
+    Component {
         id: dailySongsPage
         DailySongsPage {}
     }
@@ -479,6 +503,7 @@ Item {
                 onPlaylistRequested: key => shell.openPlaylist(key)
                 onLikedRequested: shell.openLikedPlaylist()
                 onRecentRequested: shell.openRecent()
+                onStatsRequested: shell.openStats()
                 onSignInRequested: shell.openLogin()
             }
         }
