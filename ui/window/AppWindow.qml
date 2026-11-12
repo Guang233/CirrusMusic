@@ -5,8 +5,9 @@ import Cirrus.Theme
 
 // Top-level window with the Cirrus frame (docs/ui/README.md §6.1). `titleBar` picks
 // the window decorations:
-// - Custom: drawn by the app (shadow and rounded corners on Wayland, resize bands,
-//   window buttons); macOS keeps the traffic lights over an expanded client area.
+// - Custom: drawn by the app (shadow and rounded corners on Wayland, the system's
+//   rounded corners on Windows 11, resize bands, window buttons); macOS keeps the
+//   traffic lights over an expanded client area.
 // - System: native decorations.
 // - Hidden: none, for tiling window managers: no buttons, shadow or corners; the
 //   title bar row still moves the window and resize bands stay.
@@ -52,9 +53,11 @@ Window {
          : titleBar === TitleBarMode.Custom && macOS
            ? Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
          : Qt.Window | Qt.FramelessWindowHint
-    // Always translucent: the alpha channel is chosen when the native window is
-    // created, and the shadow margin needs it. `surface` paints the opaque part.
-    color: "transparent"
+    // Translucent where the frame can have a shadow margin (Wayland): the alpha channel
+    // is chosen when the native window is created, and the margin needs it. `surface`
+    // paints the opaque part. Elsewhere opaque: there is no margin, and on Windows a
+    // translucent frameless window may not get the system's rounded corners.
+    color: windowFrame.translucent ? "transparent" : window.surfaceColor
 
     WindowFrame {
         id: windowFrame

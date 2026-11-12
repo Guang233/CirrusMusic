@@ -239,7 +239,8 @@ Text {
 
 - **Wayland**：窗口四周留 24 px 透明边距画阴影，用 Qt 私有接口 `setCustomMargins` 把它排除在窗口几何之外，贴边、平铺都按可见窗口计算；`setMask` 把输入区域限制为可见窗口外扩 8 px（缩放边带），阴影处的点击落到下面的窗口。最大化、全屏、平铺时边距为 0、直角。圆角 `Theme.shape.medium`，另加 1 px 半透明 outlineVariant 描边，暗色下阴影看不清时仍能分辨窗口边缘。
 - **私有接口**：平铺状态、自定义边距、窗口菜单在 Qt 中没有公开 API，只在 `window_frame.cpp` 里通过 `Qt6::WaylandClientPrivate` 使用（找不到该模块时退化为无阴影）。私有接口不保证跨版本兼容，换 Qt 版本要重新编译并复查。
-- **X11、Windows**：不依赖合成器透明，没有阴影、直角，缩放边带只在窗口内侧 4 px。Windows 未验证。
+- **X11、Windows**：不依赖合成器透明，没有阴影，缩放边带只在窗口内侧 4 px；窗口不透明（底色就是 `surfaceColor`）。X11 直角；Windows 11 请系统画圆角（DWM 的 `DWMWA_WINDOW_CORNER_PREFERENCE`：自绘模式下圆角，最大化、全屏时直角，系统模式交回系统；2026-11-12 加），Windows 10 没有这个属性，仍是直角。Windows 未验证。
+- **标题栏的拖动层**是标题栏内容下面的一个 `MouseArea`（拖动、双击、右键菜单），不用 pointer handler：handler 能收到上面的搜索框、按钮已经接住的按下（触摸、笔，或被动抓取），在搜索框里拖动选字会变成拖窗口（维护者在 Windows 上遇到，2026-11-12）；item 只收到上面没人要的按下。
 - **macOS**：方案 B（`ExpandedClientAreaHint` + `NoTitleBarBackgroundHint`），不画窗口按钮和缩放边带，标题栏左侧为红绿灯留 72 px（估计值）。未验证。
 - **内容规则**：圆角处只画窗口底色，子项不要画到圆角区域；铺满窗口的内容（播放页背景）自己按 `window.cornerRadius` 裁圆角。
 - **不重启切换**：隐藏窗口 → 改 flags → 重新显示，原生窗口重建。niri 上可行（尺寸、状态保留）；GNOME、KDE 待验证，通过后设置项改为立即生效。原型页面有切换按钮。

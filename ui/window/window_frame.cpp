@@ -2,6 +2,15 @@
 
 #include <QGuiApplication>
 
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+
+#include <dwmapi.h>
+#endif
+
 #ifdef CIRRUS_HAVE_WAYLAND
 #include <QtWaylandClient/private/qwaylanddisplay_p.h>
 #include <QtWaylandClient/private/qwaylandshellsurface_p.h>
@@ -43,6 +52,8 @@ void WindowFrame::setWindow(QQuickWindow* window)
     m_watchingSurface = false;
     m_appliedMargin = 0;
     m_appliedMask = {};
+    m_cornerWindow = 0;
+    m_appliedCorner = -1;
     m_window = window;
     if (window) {
         m_connections = {
@@ -166,6 +177,33 @@ void WindowFrame::update()
         m_window->setMask(mask);
         m_appliedMask = mask;
     }
+
+    updateCorners();
+}
+
+// Windows 11 rounds decorated windows by itself but not frameless ones: ask for it,
+// and for square corners while maximized or fullscreen (DWM keeps a frameless
+// window's rounding there, which would leave the desktop showing in the corners).
+// Windows 10 has no such attribute; the call fails there and the corners stay square.
+void WindowFrame::updateCorners()
+{
+#ifdef Q_OS_WIN
+    if (!m_window || !m_window->handle())
+        return;
+    // Values of DWM_WINDOW_CORNER_PREFERENCE (Windows 11 SDK).
+    constexpr int kDefault = 0, kSquare = 1, kRound = 2;
+    constexpr DWORD kCornerPreference = 33; // DWMWA_WINDOW_CORNER_PREFERENCE
+    const bool filled =
+        m_window->windowStates().testAnyFlags(Qt::WindowMaximized | Qt::WindowFullScreen);
+    const int corner = !m_clientSide ? kDefault : filled ? kSquare : kRound;
+    const WId id = m_window->winId();
+    if (id == m_cornerWindow && corner == m_appliedCorner)
+        return;
+    m_cornerWindow = id;
+    m_appliedCorner = corner;
+    const DWORD value = corner;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(id), kCornerPreference, &value, sizeof(value));
+#endif
 }
 
 } // namespace cirrus::ui

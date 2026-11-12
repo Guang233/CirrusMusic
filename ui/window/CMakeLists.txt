@@ -37,3 +37,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                         "shadow or tiling support on Wayland")
     endif()
 endif()
+
+# Rounded corners of the custom frame on Windows 11 (window_frame.cpp).
+if(WIN32)
+    target_link_libraries(cirrus_ui_window PRIVATE dwmapi)
+endif()
