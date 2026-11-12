@@ -25,6 +25,7 @@
 | 存储与隐私 | 缓存：占用多少、清除 | **新增** | 后端 `ResourceCacheService::usage()`／`clear()`：歌曲信息和歌词（上限 128 MiB）、封面（512 MiB）；只清缓存，不动登录、音乐库、听歌记录。展示层加 `App.cache`（`usage`、`clear()`），假实现给固定数字 |
 | | 歌曲缓存：占用多少、清除；上限 | **新增**（2026-11-08，S9） | 后端 `AudioStore`（听过的歌，所有账号合计，默认 2 GB，[音频引擎 §7 Q2](../../tasks/audio-engine.md)）。上限 `App.settings.audioCacheLimit`（字节），改小时立刻删掉最久没听的，正在播的不删 |
 | | 搜索历史：清除 | **新增** | `App.settings.searchHistory`（现在只能在搜索下拉里逐条删） |
+| | 本地听歌记录：清除 | **新增**（2026-11-12） | 用于听歌统计（[stats.md §7](stats.md)）；先确认，只清当前账号（或游客）的，`App.stats.clear()` |
 | | 向网易云上报听歌记录 | 等后端 | 后端有显式上报，自动上报的时机没接 |
 | 诊断 | 记下刚才的问题（也可全局按 Ctrl+Alt+Shift+D）、详细日志（24 小时后自动关）、日志占用与打开文件夹、导出诊断包、清除旧日志 | **新增**（2026-11-09，S11；2026-11-11 改） | `App.diagnostics`（[日志系统 §7](../../tasks/logging.md)、[第二版](../../tasks/logging-v2.md) §4.4、§5.2）。详细日志的到期时间存在 `App.settings.verboseLogUntil`，重启后照旧，到期自动关；导出时先列出日志文件（默认勾本次、上次、有标记或异常退出的），可写问题描述、展开看 `summary.txt`，再选保存位置写 zip |
 | 键盘快捷键 | 只读列表 | **新增** | 见 §4 |
@@ -102,7 +103,7 @@
 - 开关行：焦点在开关上，Space 切换。菜单行：焦点在按钮上，Enter／Space 打开菜单。
 - **快捷键一节**是只读的，按"全局／页面／播放"分组列出，每行左边是动作，右边是按键（键帽样式：SurfaceContainerHighest、圆角 small、labelLarge）。现有的有：
   - 全局：Ctrl+K／Ctrl+F 搜索；Alt+←／Alt+→ 后退／前进；Esc 返回；Ctrl+Q 退出。
-  - 页面：Ctrl+PageUp／PageDown 切换标签；F5 刷新首页；Ctrl+S 保存歌单顺序。
+  - 页面：Ctrl+PageUp／PageDown 切换标签；F5 刷新首页；Ctrl+S 保存歌单顺序；听歌统计里 [ ] 翻到上一段／下一段。
   - 列表：↑／↓、Enter 等，写成一句说明，不逐条列。
 - **播放快捷键现在一个都没有（S6）**。建议随设置页一起加上，参照网易云 PC 客户端的习惯：
   - Ctrl+P：播放／暂停；

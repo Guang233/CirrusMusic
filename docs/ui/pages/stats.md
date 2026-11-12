@@ -1,6 +1,6 @@
 # 听歌统计设计（已评审，2026-11-12）
 
-状态：**已评审**（2026-11-12）。**维护者已定：§9 的 T1–T9 全部按建议。** 后端已完成（[本地收听历史 §6](../../api/local-listening-history.md)，提交 `30ab6ad`）；展示层、页面和真数据一起做（维护者 2026-11-12 定的顺序：后端 → 设计 → 接真数据）。
+状态：**已评审**（2026-11-12），**已实现**（2026-11-12，§11）。**维护者已定：§9 的 T1–T9 全部按建议。** 后端已完成（[本地收听历史 §6](../../api/local-listening-history.md)，提交 `30ab6ad`）；展示层、页面和真数据一起做（维护者 2026-11-12 定的顺序：后端 → 设计 → 接真数据）。
 
 听歌统计是**这台电脑上、Cirrus 自己播放过的歌**的看板。它回答三个问题，页面也按这三个问题分成三段：
 
@@ -227,3 +227,14 @@
 - **页面**：`StatsPage`、歌曲完整排行页（`SongCollectionPage`）；侧边栏、音乐库卡片、设置的清除行；`App.settings` 记范围种类和排序。
 - **图标**：`bar_chart`、`local_fire_department` 加进 `symbols.txt` 后重新生成。
 - **文档**：shell.md（侧边栏）、library.md（卡片）、settings.md（清除行）随实现更新。
+
+## 11. 实现记录（2026-11-12）
+
+- 后端（`30ab6ad`、`15e248e`）：schema v4、来源、7×24 表、`storedHistoryChanged`；展示层（`79510a3`）：`StatsSource`、`App.stats`、`StatsPageModel`，假实现是 75 天的固定随机记录。
+- 组件（`Cirrus.Components`）：`BarChart`、`HeatGrid`、`RankRow`、`StatTile`；`SongList` 加排行模式（`rankValues` 非空时：名次＋封面，尾部换成横条和数值，"未知歌曲"不能点）。gallery"数据与状态"页最下面有一组示例，读假记录，可切范围、翻页、按时长。
+- 页面：`ui/app/StatsPage.qml`、`StatsSongsPage.qml`（`SongCollectionPage`，复用推荐理由那一列显示次数或时长，`SongTable.reasonTitle` 改列名）。`StatsPageModel` 在 QML 设好属性后才加载（`QQmlParserStatus`），`offset` 可写，完整排行页带着看板的范围和时段打开。
+- 入口：侧边栏"我的"第三行、音乐库第四张卡片（自己带一个 `StatsPageModel` 取本周时长）、云端听歌排行页头部的"这台电脑上的听歌统计 ›"；设置 › 存储与隐私的清除行；快捷键列表加了 `[` `]`。
+- 和设计的出入：
+  - 空状态只有图标和"还没有听歌记录"，没有第二行和"去发现"按钮（`PageState` 的空状态不带按钮；要的话给它加一个）。
+  - 窄窗口时节奏图的格子从 20 px 缩到 14 px，再窄才横向滚动。
+- 验证：构建、qmllint、clang-format 通过；gallery 亮、暗两种截图；临时钩子（`build/research-scripts/stats-shots-hook.patch`，已用 `git apply -R` 撤掉）把应用的统计数据换成假实现，截了周、年、窄窗口和完整排行页。用真账号的真记录看页面、清除记录，留给维护者。
