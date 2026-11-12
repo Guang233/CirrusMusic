@@ -117,6 +117,11 @@ StatsPageModel::StatsPageModel(QObject* parent)
     if (App* app = App::instance())
         connect(app->stats(), &LocalStats::changed, this, [this] { m_changed.start(); });
     followAccount();
+}
+
+void StatsPageModel::componentComplete()
+{
+    m_complete = true;
     reload();
 }
 
@@ -138,6 +143,12 @@ void StatsPageModel::setRange(int range)
     range = std::clamp(range, int(Week), int(AllTime));
     if (range != m_range)
         navigate(range, 0);
+}
+
+void StatsPageModel::setOffset(int offset)
+{
+    if (std::min(offset, 0) != m_offset)
+        navigate(m_range, offset);
 }
 
 void StatsPageModel::setByTime(bool byTime)
@@ -170,6 +181,8 @@ void StatsPageModel::navigate(int range, int offset)
     emit compareChanged();
     emit rangeChanged();
     // The new range replaces the old one in place: no skeleton (§5).
+    if (!m_complete)
+        return;
     if (state() == loadstate::Idle)
         reload();
     else
@@ -524,6 +537,7 @@ void StatsPageModel::buildRankings()
             info.title = tr("未知歌曲");
             info.unavailable = true;
         }
+        info.reason = text(row.amount); // the full ranking's value column
         keys.append(info.key);
         infos.append(info);
         m_songValues.append(QVariantMap{{QStringLiteral("fraction"), value(row.amount) / songTop},

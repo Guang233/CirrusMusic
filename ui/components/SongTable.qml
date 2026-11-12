@@ -42,6 +42,7 @@ Item {
     property bool albumColumn: true
     // A recommendation reason column, between title and album; hides with the album's.
     property bool reasonColumn: false
+    property string reasonTitle: qsTr("推荐理由")
     // Numbers are the place in the list (an album's track numbers), not the shown row:
     // finding keeps them.
     property bool numberByPosition: false
@@ -322,7 +323,7 @@ Item {
             width: table.reasonWidth
             anchors.verticalCenter: parent.verticalCenter
             visible: table.showReason
-            text: qsTr("推荐理由")
+            text: table.reasonTitle
             color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
         }

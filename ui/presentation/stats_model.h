@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QVariantList>
+#include <QtQml/qqmlparserstatus.h>
 #include <QtQml/qqmlregistration.h>
 
 namespace cirrus::ui
@@ -47,9 +48,10 @@ class LocalStats : public QObject
 // year, paged back from the current one, or all time) scopes everything. Loads the range
 // and the same stretch of the period before it (the comparison). Formats the numbers;
 // QML only lays them out. Reloads by itself when a play is recorded (§5).
-class StatsPageModel : public LoadableModel
+class StatsPageModel : public LoadableModel, public QQmlParserStatus
 {
     Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
     Q_MOC_INCLUDE("song_list_model.h")
     QML_ELEMENT
     Q_PROPERTY(int range READ range WRITE setRange NOTIFY rangeChanged)
@@ -57,7 +59,7 @@ class StatsPageModel : public LoadableModel
     // Ranking rows: 10 songs (100 on the full ranking page), 5 of the others.
     Q_PROPERTY(int songLimit READ songLimit WRITE setSongLimit NOTIFY songLimitChanged)
     // Periods back from the current one (0); never positive.
-    Q_PROPERTY(int offset READ offset NOTIFY rangeChanged)
+    Q_PROPERTY(int offset READ offset WRITE setOffset NOTIFY rangeChanged)
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY contentChanged)
     Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY rangeChanged)
     // "11月9日–15日", "2026年11月", "2026年"; empty for all time.
@@ -123,6 +125,7 @@ class StatsPageModel : public LoadableModel
     [[nodiscard]] int songLimit() const { return m_songLimit; }
     void setSongLimit(int limit);
     [[nodiscard]] int offset() const { return m_offset; }
+    void setOffset(int offset);
     [[nodiscard]] bool canGoBack() const;
     [[nodiscard]] bool canGoForward() const { return m_range != AllTime && m_offset < 0; }
     [[nodiscard]] QString periodTitle() const;
@@ -176,6 +179,9 @@ class StatsPageModel : public LoadableModel
     void compareChanged();
 
   protected:
+    // Loads once QML has set the range, offset and limit.
+    void classBegin() override {}
+    void componentComplete() override;
     Request load() override;
     void clear() override;
 
@@ -193,6 +199,7 @@ class StatsPageModel : public LoadableModel
     void buildHeat();
     void navigate(int range, int offset);
 
+    bool m_complete = false;
     int m_range = Week;
     bool m_byTime = false;
     int m_songLimit = 10;

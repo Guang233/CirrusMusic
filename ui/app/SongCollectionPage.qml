@@ -83,6 +83,7 @@ Item {
     property bool showCover: true
     property bool albumColumn: true
     property bool reasonColumn: false
+    property string reasonTitle: qsTr("推荐理由")
     property bool numberByPosition: false
     property bool showAlbumAction: true
     property bool showLiked: true
@@ -289,6 +290,7 @@ Item {
         showCover: page.showCover
         albumColumn: page.albumColumn
         reasonColumn: page.reasonColumn
+        reasonTitle: page.reasonTitle
         numberByPosition: page.numberByPosition
         showAlbumAction: page.showAlbumAction
         showLiked: page.showLiked
