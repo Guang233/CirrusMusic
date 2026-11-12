@@ -27,6 +27,10 @@ qt_add_qml_module(cirrus_ui_components
         CollectionGrid.qml
         CollectionView.qml
         LoadMoreFooter.qml
+        BarChart.qml
+        HeatGrid.qml
+        RankRow.qml
+        StatTile.qml
 )
 
 target_link_libraries(cirrus_ui_components

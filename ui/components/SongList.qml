@@ -22,6 +22,11 @@ ListView {
     property string originId
     property string originName
     property real sideMargin: 24
+    // A ranking (stats.md §2.5): [{fraction, text}] by row. Rows then show their rank
+    // beside the cover and a bar with the value instead of the duration; songs without
+    // details (unavailable) can't be played.
+    property var rankValues: []
+    readonly property bool ranked: rankValues.length > 0
     // Off on the album's own page.
     property bool showAlbumAction: true
     // Paged lists load the next page as the end comes near (set footer to a
@@ -79,6 +84,8 @@ ListView {
         required property string durationText
         required property bool loaded
         required property bool current
+        required property bool unavailable
+        readonly property var rankValue: list.rankValues[index] ?? null
 
         x: list.sideMargin
         width: list.width - 2 * list.sideMargin
@@ -91,15 +98,36 @@ ListView {
                                                    : title
         supportingText: list.showAlbum && albumTitle !== "" ? artistText + " · " + albumTitle
                                                             : artistText
+        enabled: !(list.ranked && unavailable)
         onClicked: list.activated(index)
 
-        leading: list.showCovers ? coverComponent : numberComponent
+        leading: list.ranked ? rankComponent : list.showCovers ? coverComponent : numberComponent
         trailing: Component {
             Row {
                 spacing: 4
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: row.rankValue !== null
+                    width: Math.min(160, list.width * 0.22)
+                    height: 8
+                    Rectangle {
+                        width: Math.max(height, parent.width * (row.rankValue?.fraction ?? 0))
+                        height: parent.height
+                        radius: height / 2
+                        color: ColorScope.scheme.primary
+                    }
+                }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: row.loaded
+                    visible: row.rankValue !== null
+                    leftPadding: 12
+                    text: row.rankValue?.text ?? ""
+                    color: ColorScope.scheme.onSurfaceVariant
+                    font: Fonts.tabular(Theme.type.labelLarge.font)
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: row.loaded && row.rankValue === null
                     text: row.durationText
                     color: ColorScope.scheme.onSurfaceVariant
                     font: Theme.type.labelSmall.font
@@ -134,6 +162,26 @@ ListView {
             }
         }
         Component {
+            id: rankComponent
+            Row {
+                spacing: 8
+                Text {
+                    width: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: row.index + 1
+                    color: row.index < 3 ? ColorScope.scheme.primary
+                                         : ColorScope.scheme.onSurfaceVariant
+                    font: Fonts.tabular(Theme.type.titleSmall.font)
+                }
+                CoverArt {
+                    width: 48
+                    height: 48
+                    coverKey: row.coverKey
+                }
+            }
+        }
+        Component {
             id: numberComponent
             Item {
                 width: 32
@@ -157,7 +205,7 @@ ListView {
 
         // Details still on their way: placeholder bars instead of text.
         Column {
-            x: row.leftPadding + (list.showCovers ? 60 : 44)
+            x: row.leftPadding + (list.ranked ? 92 : list.showCovers ? 60 : 44)
             anchors.verticalCenter: parent.verticalCenter
             visible: !row.loaded
             spacing: 8
