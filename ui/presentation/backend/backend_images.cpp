@@ -139,8 +139,10 @@ Request BackendImages::image(const QString& key, int size, Reply<QByteArray> rep
                                                       : "network")
                             << log::field("bytes", bytes->size())
                             << log::field("ms", (*it)->elapsed.elapsed());
-                } else
+                } else {
                     outcome.failure = Failure{failureOf(result.error), std::nullopt};
+                    warnFailed(result.error);
+                }
                 finish(id, std::move(outcome));
             },
             [this, id](failure::Kind kind) {
@@ -162,6 +164,25 @@ Request BackendImages::image(const QString& key, int size, Reply<QByteArray> rep
             self->m_fetches.erase(it);
         }
     });
+}
+
+// The cover fetcher already warns about network failures (cover.failed). A cover the
+// cache itself refuses (its folder, its database) fails the same way for every cover, so
+// the first one of each kind is a warning and the rest only reach the flight recorder.
+void BackendImages::warnFailed(domain::CacheError error)
+{
+    using domain::CacheError;
+    if (error == CacheError::Network || error == CacheError::Timeout ||
+        error == CacheError::Canceled || error == CacheError::StaleContext)
+        return;
+    const quint32 bit = 1u << (unsigned(error) % 32);
+    const bool first = !(m_warned & bit);
+    m_warned |= bit;
+    if (first)
+        qCWarning(lcUiBackend) << log::event("cover.failed") << log::field("err", error)
+                               << log::field("first", true);
+    else
+        qCDebug(lcUiBackend) << log::event("cover.failed") << log::field("err", error);
 }
 
 void BackendImages::finish(const QString& id, Outcome<QByteArray> outcome)

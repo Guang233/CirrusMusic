@@ -196,6 +196,10 @@ cirrus-diagnostics-20261111-1403.zip
 - **网络请求失败** `cirrus.net request.failed`：除错误类别外，另记 Qt 的原话 `detail`（经 `log::message()`：其中的 URL 只留主机，最长 300 字）、`method`、`host`、实际走的 `proxy`（与 QNetworkAccessManager 用同一个代理工厂，只记类型和地址，不记凭据）、`phase`（`connect` 没收到任何回应／`response` 有状态码／`body` 收到一部分）、`received` 字节、超时时的 `timeout_ms`、第几次 `attempt`、HTTP 原因短语 `reason`、TLS 错误 `tls`、系统报告的网络可达性 `reach`。重发记录 `request.retry` 也带 `detail`、`host`、`proxy`。
 - **接口失败** `cirrus.api api.failed`／`api.done`：带传输层请求号 `req`（和 `request.*` 对得上）、业务码 `code`、服务端自己的说明 `msg`（如"操作频繁"，同样经 `log::message()`）。
 - **封面下载失败** `cirrus.cache cover.failed`：带 Qt 错误、`detail`、HTTP 状态、类型不对时的 `type`、已收字节；超时带 `timeout_ms`。
+- **缓存目录不能用**（2026-11-12，Windows 用户封面全挂、日志里只有 QML 的 `cover is unavailable`）：私有文件检查（`storage/private_files.h`）把没通过的那一项记在 `storage::lastRefusal()`（本线程最近一次：`reason` 加系统错误码）。POSIX 上有 `stat`、`owner`、`mode`、`ancestor_owner`、`ancestor_writable`、`create`、`open` 等；Windows 上有 `file_information`、`reparse_point`、`links`、`security_info`、`owner`、`null_acl`、`acl_writable_by_others` 等；其他系统是 `unsupported_system`。
+  - `cirrus.cache resource_cache.unusable dir= step= [reason=] [os_error=] [file=] [detail=]`：`step` 是 `root`、`root_not_canonical`、`main_database`、`file`（`file=` 是哪个文件：`.sqlite`、`-journal`…）、`open_file`、`lock`、`lock_permissions`、`sqlite_open`、`schema`、`journal_mode`；SQLite 那几步的 `detail` 是 SQLite 的原话。每个任务都会重试打开，所以同一原因只记一次，原因变了再记；之后打开成功记 `resource_cache.usable`。
+  - `cirrus.media audio_cache.root_unusable` 也带 `reason`、`os_error`。
+  - `cirrus.ui.backend cover.failed err=<CacheError> first=true`：封面在缓存层失败（网络和超时已由下载那边记过，取消不算），每种错误第一次记 warning，之后只进飞行记录器。
 - **崩溃**：除日志里的 `app.crash`（带崩溃那次的 `build_id`）外，另存 `crashes/<会话>.txt`（模块加偏移的表，最多 10 份），进诊断包。
 - 原因从下层传到界面层（`model.failed` 直接带上 `request.failed` 的细节）要改多层值类型，仍是 V6；现在靠 `req` 和飞行记录器带出的前 30 秒记录串起来。
 

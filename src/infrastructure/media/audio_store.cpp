@@ -216,9 +216,14 @@ AudioStore::AudioStore(Options options, std::unique_ptr<QNetworkAccessManager> m
 {
     Q_ASSERT(m_manager->thread() == thread() && !m_manager->parent());
     m_rootUsable = !m_options.root.isEmpty() && makePrivateDirectory(m_options.root);
-    if (!m_options.root.isEmpty() && !m_rootUsable)
+    if (!m_options.root.isEmpty() && !m_rootUsable) {
+        const storage::Refusal why = storage::lastRefusal();
         qCWarning(lcMedia) << log::event("audio_cache.root_unusable")
-                           << log::field("dir", log::path(m_options.root));
+                           << log::field("dir", log::path(m_options.root))
+                           << log::field("reason",
+                                         QString::fromLatin1(why.reason ? why.reason : "-"))
+                           << log::fieldIf(why.error != 0, "os_error", qint64(why.error));
+    }
 }
 AudioStore::~AudioStore()
 {
