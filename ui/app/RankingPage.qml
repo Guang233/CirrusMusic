@@ -64,6 +64,14 @@ SongCollectionPage {
             color: Theme.color.onSurfaceVariant
             font: Theme.type.bodyMedium.font
         }
+        // The local statistics, the other way round (pages/stats.md §2.8).
+        Button {
+            x: -leftPadding
+            variant: Md.Text
+            trailingGlyph: Symbols.chevron_right
+            text: qsTr("这台电脑上的听歌统计")
+            onClicked: page.shell.openStats()
+        }
     }
 
     // The last week or all time; as tall as the other buttons of the row.

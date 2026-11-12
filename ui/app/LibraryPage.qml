@@ -280,7 +280,7 @@ Item {
 
                 ListCard {
                     id: likedCard
-                    width: page.wide ? (parent.width - 32) * 0.4 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.34 : parent.width
                     hero: true
                     enabled: App.library.likedPlaylistKey !== ""
                     glyph: Symbols.favorite
@@ -298,7 +298,7 @@ Item {
                     }
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
                     glyph: Symbols.history
                     text: qsTr("最近播放")
                     subtitle: overview.lastPlayedTitle !== ""
@@ -306,13 +306,26 @@ Item {
                     onClicked: page.shell.openRecent()
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
                     glyph: Symbols.leaderboard
                     text: qsTr("听歌排行")
                     subtitle: overview.weekTopTitle !== ""
                               ? qsTr("本周：%1").arg(overview.weekTopTitle)
                               : qsTr("看看这周常听什么")
                     onClicked: page.shell.openRanking()
+                }
+                ListCard {
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
+                    glyph: Symbols.bar_chart
+                    text: qsTr("听歌统计")
+                    subtitle: weekStats.state === LoadState.Ready && !weekStats.periodEmpty
+                              ? qsTr("本周 %1").arg(weekStats.durationText) : ""
+                    onClicked: page.shell.openStats()
+                    // This week's time; follows new plays by itself.
+                    StatsPageModel {
+                        id: weekStats
+                        songLimit: 5
+                    }
                 }
             }
 

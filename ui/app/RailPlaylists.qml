@@ -20,6 +20,7 @@ Flickable {
     // My music: the liked playlist, recently played (library.md §4).
     signal likedRequested
     signal recentRequested
+    signal statsRequested
     signal signInRequested
 
     contentHeight: column.height + 8
@@ -159,6 +160,12 @@ Flickable {
             glyph: Symbols.history
             text: qsTr("最近播放")
             onClicked: root.recentRequested()
+        }
+        SidebarRow {
+            width: column.width
+            glyph: Symbols.bar_chart
+            text: qsTr("听歌统计")
+            onClicked: root.statsRequested()
         }
         Divider {}
 

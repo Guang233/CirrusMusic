@@ -34,6 +34,9 @@ SettingsGroup {
             text: qsTr("刷新首页"),
             keys: ["F5"]
         }, {
+            text: qsTr("听歌统计的上一段／下一段"),
+            keys: ["[", "]"]
+        }, {
             text: qsTr("设置"),
             keys: ["Ctrl+,"]
         }, {
