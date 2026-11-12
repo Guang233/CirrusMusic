@@ -190,8 +190,8 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     m_sourceSession = sourceSession;
     m_positionObservedAt.reset();
     m_history.begin(m_token, m_backend.snapshot().accountId, entry->song,
-                    fm ? ListeningMode::PersonalFm : ListeningMode::Queue,
-                    fm ? QUuid{} : entry->id);
+                    fm ? ListeningMode::PersonalFm : ListeningMode::Queue, fm ? QUuid{} : entry->id,
+                    fm ? PlayOrigin{} : entry->origin);
     m_quality = quality;
     m_intent = intent;
     m_auto = automatic;
@@ -234,14 +234,15 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     return;
 }
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
-                                    AudioQuality quality)
+                                    AudioQuality quality, const PlayOrigin& origin)
 {
     qCInfo(lcPlayback) << log::event("queue.replace") << log::field("count", songs.size())
                        << log::field("index", startIndex) << log::field("quality", quality);
     if (startIndex < 0 || startIndex >= songs.size())
         return false;
     auto candidate = m_queue;
-    if (!candidate.replace(songs) || !candidate.select(candidate.snapshot().entries[startIndex].id))
+    if (!candidate.replace(songs, origin) ||
+        !candidate.select(candidate.snapshot().entries[startIndex].id))
         return false;
     return begin(std::move(candidate), TransportIntent::Play, quality, false);
 }
@@ -267,7 +268,7 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     emit queueChanged(m_queue.snapshot());
     return guard && m_revision == revision && m_backend.snapshot() == expected;
 }
-bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
+bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const PlayOrigin& origin)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_mode == ListeningMode::PersonalFm || m_backend.state() != BackendState::Ready ||
@@ -275,7 +276,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext)
         return false;
     if (m_queueContext.isValid() && !queueContextMatches())
         return false;
-    if (!m_queue.append(songs, playNext))
+    if (!m_queue.append(songs, playNext, origin))
         return false;
     m_queueContext = m_backend.snapshot().token;
     m_sourceSession = m_backend.snapshot();

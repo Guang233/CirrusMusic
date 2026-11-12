@@ -57,6 +57,7 @@ target_sources(cirrus_domain INTERFACE
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_state_types.h
+    domain/playback/listening_stats_types.h
     domain/playback/playback_observation_types.h
     domain/playback/listening_history.h
     domain/playback/listening_report.h

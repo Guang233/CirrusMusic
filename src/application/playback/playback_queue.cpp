@@ -40,19 +40,20 @@ bool PlaybackQueue::restore(const QueueSnapshot& saved)
     }
     return true;
 }
-bool PlaybackQueue::replace(const QList<SongId>& songs)
+bool PlaybackQueue::replace(const QList<SongId>& songs, const PlayOrigin& origin)
 {
-    if (songs.isEmpty() || songs.size() > MaximumEntries)
+    if (songs.isEmpty() || songs.size() > MaximumEntries || !validPlayOrigin(origin))
         return false;
     for (const auto& song : songs)
         if (!validMusicId(song.value))
             return false;
     clear();
-    return append(songs);
+    return append(songs, false, origin);
 }
-bool PlaybackQueue::append(const QList<SongId>& songs, bool playNext)
+bool PlaybackQueue::append(const QList<SongId>& songs, bool playNext, const PlayOrigin& origin)
 {
-    if (songs.isEmpty() || songs.size() > MaximumEntries - m_state.entries.size())
+    if (songs.isEmpty() || songs.size() > MaximumEntries - m_state.entries.size() ||
+        !validPlayOrigin(origin))
         return false;
     for (const auto& song : songs)
         if (!validMusicId(song.value))
@@ -61,7 +62,7 @@ bool PlaybackQueue::append(const QList<SongId>& songs, bool playNext)
     QList<QUuid> ids;
     for (const auto& song : songs) {
         const auto id = QUuid::createUuid();
-        entries.append({id, song});
+        entries.append({id, song, origin});
         ids.append(id);
     }
     if (playNext && !m_state.active.isNull()) {

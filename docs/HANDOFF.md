@@ -2,6 +2,8 @@
 
 **维护者最新约定**：本助手只负责后端，不做UI；听歌统计／dashboard留到最后，先补上线所需后端。允许本地commit，只禁止push；此前“不提交”仅是各历史检查点状态，不是用户限制。测试按需要加：维护者 2026-11-08 说明“不新增测试”原是为了制止不必要的测试，确有必要时可以加（例如音频引擎的衔接、时钟、范围缓存）。维护者暂无Windows/macOS设备，后续Linux优先，两端原生源码保持default off／未验证，不把其环境门禁作为其他Linux后端开发的前置阻塞；不据此宣称跨平台完成。
 
+**本地播放统计后端（2026-11-12）**：维护者要做本地统计看板，先补后端（[本地收听历史 §6](api/local-listening-history.md)）。表结构 v4：队列项和听歌记录带来源（`domain::PlayOrigin`），按账号存听过的歌的信息快照（`listening_song`／`listening_song_artist`，后台按缓存优先补上）；`ListeningStateService::stats()` 在 SQLite 里聚合汇总、日／周／月趋势、时段分布、歌曲／歌手／专辑／来源排行和连续天数。计次规则：非试听、听满 30 秒，短于 30 秒的歌听完或听九成也算；时间全部计入。新增 `tst_listening_stats`。界面层未做，界面构造队列时也还没传来源。
+
 **缓存跨平台（2026-11-11）**：资源缓存和音频缓存原先只在 Linux 上启用（别的平台 Unsupported／走临时文件）。私有目录和文件的检查从 `resource_cache_store.cpp`、`audio_store.cpp` 抽到 `src/infrastructure/storage/private_files.*`（`cirrus_storage`），分 POSIX（Linux、macOS：规则不变）和 Windows（所有者是当前用户或令牌默认所有者，无重解析点，单链接，DACL 不给 Everyone／Authenticated Users／Users／Interactive／Anonymous 写权限；不查祖先，靠用户目录默认 ACL）。Windows 打开缓存文件允许他人读写删（同 POSIX 各自持有句柄）；正在被读的文件删不掉时留到下次（淘汰本来就跳过打开中的文件）。验证：Linux 上缓存相关测试通过；macOS 由 CI（`macos.yml`）跑测试；Windows 只有 CI 编译，尚未运行。
 
 **音频引擎（2026-11-08）**：维护者把播放质量定为第一优先，[ADR-0008](adr/0008-own-audio-engine.md) 取代 ADR-0004：FFmpeg 解码＋`QAudioSink` 回调输出的自研引擎、范围下载落盘缓存、预载与无缝（[设计与进度](tasks/audio-engine.md)）。阶段 A PoC（`tools/audio-poc/`）已过；阶段 B `media::AudioStore`（范围下载、落盘缓存、md5 校验、淘汰，`tst_audio_store`）完成，`MediaSource` 多了 `md5`；阶段 C `media::AudioEngine` 已替换 `QtPlaybackBackend` 成为默认播放后端（`BackendConfig::audioCacheRoot`，`tst_audio_decoder`/`tst_audio_engine`）；阶段 D 预载与无缝完成（`IPlaybackBackend::preload/refresh`，事件 `Advanced`/`SourceExpired`，门面 `preloadSong`，`ListeningSession` 自动预载下一首；旧的 `QtPlaybackBackend`/`MediaBuffer` 已删），下一步阶段 E。

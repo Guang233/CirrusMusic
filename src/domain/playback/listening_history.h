@@ -11,7 +11,8 @@ struct ListeningRecord {
     QString accountId; // empty for guest; never reassigned on login
     SongId song;
     ListeningMode source = ListeningMode::Queue;
-    QUuid queueEntry; // no playlist/album origin is fabricated
+    QUuid queueEntry;  // no playlist/album origin is fabricated
+    PlayOrigin origin; // the queue entry's, as the caller gave it; None for FM
     std::optional<PreviewRange> preview;
     QString actualQuality;
     qint64 playedMs = 0; // observed elapsed progress, NOT final position or unique coverage

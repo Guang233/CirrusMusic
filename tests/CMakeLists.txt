@@ -50,6 +50,11 @@ target_link_libraries(tst_storage PRIVATE cirrus_storage Qt6::Test)
 add_test(NAME storage COMMAND tst_storage)
 set_tests_properties(storage PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_listening_stats unit/listening_stats_test.cpp)
+target_link_libraries(tst_listening_stats PRIVATE cirrus_listening_state Qt6::Test)
+add_test(NAME listening_stats COMMAND tst_listening_stats)
+set_tests_properties(listening_stats PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_secrets unit/secrets_test.cpp)
 target_link_libraries(tst_secrets PRIVATE cirrus_bootstrap Qt6::Test)
 add_test(NAME secrets COMMAND tst_secrets)

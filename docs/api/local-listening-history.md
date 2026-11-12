@@ -1,5 +1,7 @@
 # 本地可观测收听累计与会话历史
 
+**最新接续（2026-11-12）**：维护者要做本地播放统计看板，后端接口按 §6 补齐：表结构 v4 记播放来源和歌曲信息快照，统计查询在 SQLite 里聚合，计次规则见 §6.1。新增 `tst_listening_stats`（9 项）。
+
 **最新接续**：新增[队列恢复与长期本地历史](../tasks/listening-state-persistence.md)显式default-off Runtime接缝，SQLite v3独立record ID／UTC起止／实际playedMs、长期保存与keyset分页；256仅近期内存窗口，不是保留上限。不序列化原token，不自动恢复活动账本／播放或报告。该新增包只做编译与静态检查，无新增或运行测试／SQL／真实播放；以下计量算法不改，§4为c838573历史证据。
 
 ## 1. 范围与入口
@@ -84,3 +86,40 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 ## 5. 下一步
 
 维护者决定历史展示优先采用网易云记录，本地主要计量时长；后续[网易云最近听过／听歌排行读取](cloud-history-reads.md)已离线接入，但不提供实听时长，不与本地累计直接合并；维护者随后明确需要长期本地历史和实际时长供future dashboard，新增包已写独立schema与显式Runtime接缝：无默认条数删除、guest独立桶、clear／FIFO写与读取epoch、有限未送fact／分页。没有直接序列化本内存结构／token；统计聚合与dashboard仍另做，SQL语义、durability／磁盘满／崩溃恢复尚无本包运行证据。后续[显式startplay／play报告](explicit-listening-reports.md)已另包接入，不自动调用；播放来源扩展、资格／阈值、结算时机和load去重仍待播放接线，不喜欢反馈仍未实现，真实报告另行授权。UI、统计聚合／dashboard与先进音频仍另包处理；MPRIS已有default-off源码接缝，实际桌面仍未验；队列状态-only恢复见新包。
+
+## 6. 本地统计（2026-11-12）
+
+维护者要做本地播放统计看板，决定先补齐后端，再设计 UI，最后接真数据。
+
+### 6.1 计次规则
+
+一条记录（一次加载）算"听过一次"，要满足：不是试听片段，并且听满 30 秒；歌本身不足 30 秒的，听到结尾（`Ended`）或听了九成以上也算。所有记录都计入听歌时间，包括试听片段和不足 30 秒就切走的。规则只在查询时判断（`listening_stats_types.h` 的 `CountedPlayMinimumMs` 与存储里的 `counted()`），数据库只存原始数据，改规则不用改数据。没有歌曲时长（信息还没补上，或服务端没有这首歌）的，只能靠 30 秒计次。
+
+### 6.2 表结构 v4
+
+迁移只追加（`ListeningStateStore::migrations()`），升级前数据库照例留 `.backup-v3`：
+
+- `playback_queue_entry`、`listening_history` 各加 `origin_kind`、`origin_id`、`origin_name`：队列项从哪里来（`domain::PlayOrigin`：歌单、专辑、歌手、每日推荐、搜索、最近播放、听歌排行、其他），歌单等的 ID 与当时的名字；不记搜索词。私人 FM 记录靠 `source` 区分，没有来源。旧数据为 `None`。来源随记录第一次写入固定，之后同一记录改来源按冲突处理（`Corrupt`）。
+- `listening_song`、`listening_song_artist`：每个账号听过的歌的信息快照（歌名、专辑 ID／名／封面网址、时长、歌手 ID 和名字），按账号分开；清除听歌记录时一起删。服务端没有的歌记 `available=0`，不再反复查，也不会覆盖已有的信息。
+- 新索引 `listening_history_song (account_id, song_id, started_at_ms)`，给"首次听"和缺信息的查询用。
+
+### 6.3 接口
+
+- 来源：`ListeningSession::replaceQueue(songs, start, quality, origin)`、`append(songs, playNext, origin)`，`PlaybackQueue` 同样。不传就是 `None`；来源不合法时队列操作失败，记录时则当作 `None`。
+- 统计：`ListeningStateService::stats(ListeningStatsQuery)` → `statsReady(id, error, ListeningStats)`。查询带 UTC 起止（半开区间，0 表示不限）、分组粒度（日／周／月，本地日历，周从周一开始）、排行依据（次数／时长）和每个排行的条数（1–100）。查之前先把还没写入的记录写下去（同一数据库线程，按顺序执行）。和翻页读取一样只给当前账号，换账号或清除后的结果不送达。
+- 结果 `ListeningStats`：
+  - 汇总：总时长、次数、记录数、歌曲数、歌手数、专辑数、新听的歌（首次计次落在范围内）、有记录的天数；
+  - 按日／周／月的时长和次数；24 小时和周一到周日分布；
+  - 歌曲、歌手、专辑、来源排行：一首歌的时长全额算给它的每位歌手，没有 ID 的歌手按名字合并，来源取最近一次的名字；
+  - 连续收听天数（全部时间，按有计次的天算：当前、最长及结束日、最近一天）；第一条记录的时间；范围内还没补上信息的歌曲数。
+- 时间按本机时区分组（SQLite 的 `localtime`），"今天"可由查询的 `nowMs` 指定。
+
+### 6.4 歌曲信息怎么补
+
+`ListeningStateService` 一步一步来：查缺信息的歌（最多 100 首，最近听的在前）→ `songsWanted(ticket, songs)` → runtime 用 `CachedMusicQueryService::details(PreferCache)` 查（先缓存后网络，一次最多 100 首）→ `resolveSongs(ticket, …)` → 写入 → 接着查下一批。登录后 15 秒开始，之后每次写入记录 3 秒后再看一次；查询失败 10 分钟后再试；同一批查不到的歌不反复查。只有配置了资源缓存时才会补；没补上的歌在统计里只有 ID（`known=false`）。只写当前账号、仍在其听歌记录里的歌，清除或换账号后在途的结果丢弃。日志只记条数。
+
+### 6.5 验证
+
+`tst_listening_stats`（真实 SQLite 文件，时区固定为 UTC+8）：v3→v4 升级保留旧记录；队列与记录的来源往返、来源不可改写、FM 不带来源；计次规则各情况；歌曲／歌手（多歌手、无 ID）／专辑／来源排行与按时长排序；跨日边界的本地分组、周和月、小时与星期分布、连续天数；缺信息查询、保存条件、清除。播放、队列、FM、上报、存储等 10 个相关测试照常通过；`backend_runtime` 只有原有的 `closeWhileDatabaseOpening` 失败。在测试数据目录里实际运行应用：v3 库升级到 v4 并留下备份，登录 15 秒后补上了两首歌的信息（走缓存，约 0.1 秒）。
+
+界面层（`App.stats`、看板页面）还没做；界面构造队列时还没有传来源，所以现在新记录的来源都是 `None`，接真数据时补上。
