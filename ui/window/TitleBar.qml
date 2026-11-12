@@ -28,24 +28,40 @@ Item {
     // invisible too, so `hasContent` could never turn true again.
     clip: implicitHeight === 0
 
-    // Under the content and the buttons, so presses on them never move the window.
-    Item {
+    // Under the content and the buttons. A MouseArea, not pointer handlers: handlers
+    // in items below still get a press that the search field or a button accepted
+    // (a passive grab), so dragging to select text moved the window, double-clicking
+    // a word maximized it and a right click opened the window menu. An item only gets
+    // presses that nothing above it took.
+    MouseArea {
+        id: dragArea
+
+        property point pressPoint
+        property bool moving
+
         anchors.fill: parent
         enabled: root.windowControls
-
-        DragHandler {
-            target: null
-            onActiveChanged: if (active)
-                                 root.Window.window.startSystemMove()
-        }
-        TapHandler {
-            onDoubleTapped: buttons.toggleMaximized()
-        }
-        TapHandler {
-            acceptedButtons: Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onPressed: mouse => {
+            pressPoint = Qt.point(mouse.x, mouse.y);
+            moving = false;
             // The compositor wants the serial of the press, not of the release.
-            onPressedChanged: if (pressed)
-                                  root.frame.showWindowMenu()
+            if (mouse.button === Qt.RightButton)
+                root.frame.showWindowMenu();
+        }
+        onPositionChanged: mouse => {
+            if (moving || !(mouse.buttons & Qt.LeftButton))
+                return;
+            const distance = Application.styleHints.startDragDistance;
+            if (Math.abs(mouse.x - pressPoint.x) >= distance
+                    || Math.abs(mouse.y - pressPoint.y) >= distance) {
+                moving = true;
+                root.Window.window.startSystemMove();
+            }
+        }
+        onDoubleClicked: mouse => {
+            if (mouse.button === Qt.LeftButton)
+                buttons.toggleMaximized();
         }
     }
 
