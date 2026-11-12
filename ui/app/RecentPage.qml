@@ -11,6 +11,7 @@ import Cirrus.Presentation
 // sorting or find. Ctrl+PageUp/PageDown switch tabs.
 SongCollectionPage {
     id: page
+    origin: Playback.FromRecent
 
     // 0 songs, 1 playlists, 2 albums, 3 podcasts, 4 voices.
     property int currentTab: 0

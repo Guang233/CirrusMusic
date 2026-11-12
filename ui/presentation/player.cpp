@@ -138,13 +138,15 @@ QString Player::failureMessage() const
     }
 }
 
-void Player::playSongs(const QStringList& keys, int index, int origin, const QString& originId)
+void Player::playSongs(const QStringList& keys, int index, int origin, const QString& originId,
+                       const QString& originName)
 {
     if (m_source && index >= 0 && index < keys.size())
-        m_source->playSongs(keys, index, PlayOrigin{origin, originId});
+        m_source->playSongs(keys, index, PlayOrigin{origin, originId, originName});
 }
 
-void Player::addSongs(const QStringList& keys, bool next, int origin, const QString& originId)
+void Player::addSongs(const QStringList& keys, bool next, int origin, const QString& originId,
+                      const QString& originName)
 {
     if (!m_source || keys.isEmpty())
         return;
@@ -153,7 +155,7 @@ void Player::addSongs(const QStringList& keys, bool next, int origin, const QStr
         return;
     }
     const bool playing = !m_snapshot.queue.isEmpty();
-    if (m_source->addSongs(keys, next, PlayOrigin{origin, originId}) && playing)
+    if (m_source->addSongs(keys, next, PlayOrigin{origin, originId, originName}) && playing)
         emit notice(
             next ? (keys.size() > 1 ? noticed("player.play_next",
                                               tr("%1 首歌将在这首之后播放").arg(keys.size()))

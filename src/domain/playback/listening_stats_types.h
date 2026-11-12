@@ -96,6 +96,8 @@ struct ListeningStats {
     QList<ListeningPeriod> periods;          // periods with records, oldest first
     std::array<ListeningSlot, 24> hours{};   // local hour the record started
     std::array<ListeningSlot, 7> weekdays{}; // Monday first
+    // Both at once: [weekday * 24 + hour], Monday first. hours and weekdays are its sums.
+    std::array<ListeningSlot, 7 * 24> weekHours{};
     QList<StatsSong> songs;
     QList<StatsArtist> artists;
     QList<StatsAlbum> albums;

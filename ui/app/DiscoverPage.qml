@@ -91,7 +91,7 @@ Item {
             if (playWhenReady && (state === LoadState.Ready || state === LoadState.Partial)) {
                 playWhenReady = false;
                 if (songs.count > 0)
-                    App.player.playSongs(songs.keys(), 0, Playback.FromChart, playlistKey);
+                    App.player.playSongs(songs.keys(), 0, Playback.FromChart, playlistKey, title);
             }
         }
     }

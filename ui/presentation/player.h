@@ -81,10 +81,11 @@ class Player : public QObject
     // The clock of `positionAt`, in ms.
     Q_INVOKABLE static double now() { return double(playback::now()); }
 
-    // `origin` (Playback.Origin) and `originId`: where the songs come from, e.g.
-    // playSongs(keys, 0, Playback.FromAlbum, albumKey).
+    // `origin` (Playback.Origin), `originId` and `originName`: where the songs come from,
+    // e.g. playSongs(keys, 0, Playback.FromAlbum, albumKey, albumTitle).
     Q_INVOKABLE void playSongs(const QStringList& keys, int index, int origin = 0,
-                               const QString& originId = QString());
+                               const QString& originId = QString(),
+                               const QString& originName = QString());
     Q_INVOKABLE void playVoices(const QStringList& keys, int index);
     [[nodiscard]] bool canPlayVoices() const;
     Q_INVOKABLE void playPause();
@@ -99,7 +100,8 @@ class Player : public QObject
     // Adds `keys` right after the playing song (`next`) or at the end, as playSongs()
     // takes them; with an empty queue they play. Personal FM refuses (a notice says why).
     Q_INVOKABLE void addSongs(const QStringList& keys, bool next, int origin = 0,
-                              const QString& originId = QString());
+                              const QString& originId = QString(),
+                              const QString& originName = QString());
     Q_INVOKABLE void clearQueue();
     // Details for queue rows [first, last] (clamped), e.g. the rows on screen.
     Q_INVOKABLE void ensureQueueLoaded(int first, int last);

@@ -378,9 +378,13 @@ void ListeningStatsTest::periodsSlotsAndStreak()
     QCOMPARE(stats->hours[23].plays, 1);
     QCOMPARE(stats->hours[0].plays, 1);
     QCOMPARE(stats->hours[21].plays, 3);
-    QCOMPARE(stats->weekdays[6].plays, 1); // Sunday
-    QCOMPARE(stats->weekdays[0].plays, 2); // Mondays the 2nd and the 9th
-    QCOMPARE(stats->streak.longest, 3);    // 1st to 3rd
+    QCOMPARE(stats->weekdays[6].plays, 1);                  // Sunday
+    QCOMPARE(stats->weekdays[0].plays, 2);                  // Mondays the 2nd and the 9th
+    QCOMPARE(stats->weekHours[6 * 24 + 23].plays, 1);       // Sunday 23:30
+    QCOMPARE(stats->weekHours[0 * 24 + 0].plays, 1);        // Monday 00:30
+    QCOMPARE(stats->weekHours[1 * 24 + 8].playedMs, 70000); // Tuesday 8:00 and 8:30
+    QCOMPARE(stats->weekHours[1 * 24 + 8].plays, 1);
+    QCOMPARE(stats->streak.longest, 3); // 1st to 3rd
     QCOMPARE(stats->streak.longestEnd, QDate(2026, 11, 3));
     QCOMPARE(stats->streak.current, 1); // the 9th, and today is the 10th
     QCOMPARE(stats->streak.lastDay, QDate(2026, 11, 9));

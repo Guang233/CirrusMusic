@@ -40,15 +40,23 @@ bool PlaybackQueue::restore(const QueueSnapshot& saved)
     }
     return true;
 }
-bool PlaybackQueue::replace(const QList<SongId>& songs, const PlayOrigin& origin)
+bool PlaybackQueue::replace(const QList<SongId>& songs, const QList<PlayOrigin>& origins)
 {
-    if (songs.isEmpty() || songs.size() > MaximumEntries || !validPlayOrigin(origin))
+    if (songs.isEmpty() || songs.size() > MaximumEntries ||
+        (!origins.isEmpty() && origins.size() != songs.size()))
         return false;
     for (const auto& song : songs)
         if (!validMusicId(song.value))
             return false;
+    for (const auto& origin : origins)
+        if (!validPlayOrigin(origin))
+            return false;
     clear();
-    return append(songs, false, origin);
+    if (!append(songs))
+        return false;
+    for (qsizetype i = 0; i < origins.size(); ++i)
+        m_state.entries[i].origin = origins.at(i);
+    return true;
 }
 bool PlaybackQueue::append(const QList<SongId>& songs, bool playNext, const PlayOrigin& origin)
 {

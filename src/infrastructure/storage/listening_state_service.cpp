@@ -143,7 +143,16 @@ void ListeningStateService::deliver(ListeningStateResult result)
     Q_ASSERT(QThread::currentThread() == thread());
     if (!m_pending.remove(result.id))
         return;
-    m_clearRequests.remove(result.id);
+    // The guest's account is empty: tell "a guest write" from "not a write" by presence.
+    const auto scope = m_clearRequests.contains(result.id)   ? m_clearRequests.take(result.id)
+                       : m_historyWrites.contains(result.id) ? m_historyWrites.take(result.id)
+                                                             : std::optional<QString>{};
+    if (result.error == StorageError::None && live() && scope && *scope == m_source.accountId) {
+        const QPointer<ListeningStateService> alive(this);
+        emit storedHistoryChanged();
+        if (!alive)
+            return;
+    }
     const QPointer<ListeningStateService> guard(this);
     if (m_historyReads.contains(result.id)) {
         const auto read = m_historyReads.take(result.id);
@@ -186,8 +195,12 @@ void ListeningStateService::deliver(ListeningStateResult result)
             qCWarning(lcStorage) << log::event("listening.songs_save_failed")
                                  << log::field("err", result.error);
             emit storageFailed(result.error);
-        } else if (songsCurrent)
+        } else if (songsCurrent) {
+            emit storedHistoryChanged();
+            if (!guard)
+                return;
             scheduleSongs(0); // the next batch
+        }
         if (guard && !m_closed && !m_historyTimer.isActive())
             flushHistory();
         return;
@@ -280,6 +293,7 @@ QList<ListeningStateJob> ListeningStateService::historyJobs(qsizetype maximumJob
         } else {
             job.operation = ListeningStateOperation::SaveHistory;
             job.accountId = m_historyDirty.first().accountId;
+            m_historyWrites.insert(job.id, job.accountId);
             for (auto it = m_historyDirty.begin();
                  it != m_historyDirty.end() && job.records.size() < 64;)
                 if (it->accountId == job.accountId) {

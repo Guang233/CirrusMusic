@@ -234,14 +234,14 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     return;
 }
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
-                                    AudioQuality quality, const PlayOrigin& origin)
+                                    AudioQuality quality, const QList<PlayOrigin>& origins)
 {
     qCInfo(lcPlayback) << log::event("queue.replace") << log::field("count", songs.size())
                        << log::field("index", startIndex) << log::field("quality", quality);
     if (startIndex < 0 || startIndex >= songs.size())
         return false;
     auto candidate = m_queue;
-    if (!candidate.replace(songs, origin) ||
+    if (!candidate.replace(songs, origins) ||
         !candidate.select(candidate.snapshot().entries[startIndex].id))
         return false;
     return begin(std::move(candidate), TransportIntent::Play, quality, false);

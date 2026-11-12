@@ -597,25 +597,23 @@ class StatsReader
 
     bool timeSlots(domain::ListeningStats& stats)
     {
-        QSqlQuery hours(m_db);
-        if (!run(hours, m_range + QStringLiteral("SELECT CAST(strftime('%H',lt) AS INTEGER) AS "
-                                                 "k,SUM(ms),SUM(c) FROM r GROUP BY k")))
+        QSqlQuery query(m_db);
+        if (!run(query, m_range + QStringLiteral("SELECT CAST(strftime('%w',lt) AS INTEGER) AS d,"
+                                                 "CAST(strftime('%H',lt) AS INTEGER) AS h,"
+                                                 "SUM(ms),SUM(c) FROM r GROUP BY d,h")))
             return false;
-        while (hours.next()) {
-            const auto hour = hours.value(0).toInt();
-            if (hour < 0 || hour > 23)
+        while (query.next()) {
+            const auto day = query.value(0).toInt(); // 0 is Sunday
+            const auto hour = query.value(1).toInt();
+            if (day < 0 || day > 6 || hour < 0 || hour > 23)
                 return corrupt();
-            stats.hours[hour] = {hours.value(1).toLongLong(), count(hours.value(2))};
-        }
-        QSqlQuery days(m_db);
-        if (!run(days, m_range + QStringLiteral("SELECT CAST(strftime('%w',lt) AS INTEGER) AS "
-                                                "k,SUM(ms),SUM(c) FROM r GROUP BY k")))
-            return false;
-        while (days.next()) {
-            const auto day = days.value(0).toInt(); // 0 is Sunday
-            if (day < 0 || day > 6)
-                return corrupt();
-            stats.weekdays[(day + 6) % 7] = {days.value(1).toLongLong(), count(days.value(2))};
+            const domain::ListeningSlot slot{query.value(2).toLongLong(), count(query.value(3))};
+            const auto weekday = (day + 6) % 7;
+            stats.weekHours[weekday * 24 + hour] = slot;
+            stats.hours[hour].playedMs += slot.playedMs;
+            stats.hours[hour].plays += slot.plays;
+            stats.weekdays[weekday].playedMs += slot.playedMs;
+            stats.weekdays[weekday].plays += slot.plays;
         }
         return true;
     }

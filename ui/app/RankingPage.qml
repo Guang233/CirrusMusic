@@ -10,6 +10,8 @@ import Cirrus.Presentation
 // first three in primary); no sorting or find.
 SongCollectionPage {
     id: page
+    origin: Playback.FromRanking
+    originId: App.session.accountKey
 
     model: pageModel
     songs: pageModel.songs

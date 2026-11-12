@@ -41,6 +41,9 @@ class ListeningStateService final : public QObject
     // Heard songs without details (<=100): look them up (cache first) and answer with
     // resolveSongs(ticket, ...). The runtime connects this; without it details stay missing.
     void songsWanted(quint64 ticket, QList<cirrus::domain::SongId> songs);
+    // Records, their song details or a clear were written for the live account: statistics
+    // read now differ. Several writes in a row may each emit it.
+    void storedHistoryChanged();
 
   private:
     void contextChanged();
@@ -77,6 +80,7 @@ class ListeningStateService final : public QObject
     QList<domain::SongId> m_songsAsked; // the last ones asked for: the same again stops
     QHash<quint64, HistoryRead> m_historyReads;
     QHash<quint64, QString> m_clearRequests; // page admission waits for same-scope erase receipts
+    QHash<quint64, QString> m_historyWrites; // SaveHistory id -> account (storedHistoryChanged)
     quint64 m_historyEpoch = 0;
     bool m_closed = false, m_restoring = false, m_writeRejected = false;
 };

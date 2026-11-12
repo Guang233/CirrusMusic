@@ -51,9 +51,11 @@ Item {
     property bool voices: false
     // Numbers are ranks: the first three in primary (the listening ranking).
     property bool ranked: false
-    // Where these songs come from (Playback.Origin and its id), for the listening reports.
+    // Where these songs come from (Playback.Origin, its id and name), for the listening
+    // reports and the local statistics.
     property int origin: Playback.NoOrigin
     property string originId
+    property string originName
     // Voices can't play until the backend can (search.md §3.4).
     readonly property bool playable: !voices || App.player.canPlayVoices
     readonly property ListView view: list
@@ -137,7 +139,8 @@ Item {
         if (voices)
             App.player.playVoices(keys, keys.indexOf(key));
         else
-            App.player.playSongs(keys, keys.indexOf(key), table.origin, table.originId);
+            App.player.playSongs(keys, keys.indexOf(key), table.origin, table.originId,
+                                 table.originName);
     }
     function isMissing(row: int): bool {
         return songs.data(songs.index(row, 0), SongListModel.MissingRole) === true;
@@ -917,7 +920,8 @@ Item {
                 else if (table.voices)
                     App.player.playVoices(songMenu.keys, 0);
                 else
-                    App.player.playSongs(songMenu.keys, 0, table.origin, table.originId);
+                    App.player.playSongs(songMenu.keys, 0, table.origin, table.originId,
+                                         table.originName);
             }
         }
         MenuItem {
@@ -925,14 +929,16 @@ Item {
             height: visible ? implicitHeight : 0
             glyph: Symbols.queue_play_next
             text: qsTr("下一首播放")
-            onTriggered: App.player.addSongs(songMenu.keys, true, table.origin, table.originId)
+            onTriggered: App.player.addSongs(songMenu.keys, true, table.origin, table.originId,
+                                             table.originName)
         }
         MenuItem {
             visible: !table.voices
             height: visible ? implicitHeight : 0
             glyph: Symbols.add_to_queue
             text: qsTr("加到播放队列")
-            onTriggered: App.player.addSongs(songMenu.keys, false, table.origin, table.originId)
+            onTriggered: App.player.addSongs(songMenu.keys, false, table.origin, table.originId,
+                                             table.originName)
         }
         MenuSeparator {
             visible: !table.voices
