@@ -388,7 +388,7 @@ Item {
                         elide: Text.ElideRight
                         color: linked && titleHover.hovered ? Theme.color.primary
                                                             : Theme.color.onSurface
-                        font: Theme.type.titleLarge.font
+                        font: Theme.type.titleLargeEmphasized.font
                         Accessible.role: Accessible.Heading
                         HoverHandler {
                             id: titleHover

@@ -148,8 +148,8 @@ Item {
                             maximumLineCount: 2
                             elide: Text.ElideRight
                             color: Theme.color.onSurface
-                            font: page.wide ? Theme.type.headlineLarge.font
-                                            : Theme.type.headlineSmall.font
+                            font: page.wide ? Theme.type.headlineLargeEmphasized.font
+                                            : Theme.type.headlineSmallEmphasized.font
                             Accessible.role: Accessible.Heading
                         }
                         Text {
@@ -211,6 +211,7 @@ Item {
                 spacing: 8
                 Button {
                     variant: Md.Filled
+                    size: Md.Medium
                     glyph: Symbols.play_arrow
                     text: qsTr("播放")
                     enabled: !page.song.unavailable && page.song.key !== ""
@@ -232,6 +233,7 @@ Item {
                     }
                 }
                 Button {
+                    anchors.verticalCenter: parent.verticalCenter
                     variant: Md.Tonal
                     glyph: Symbols.comment
                     text: qsTr("评论")

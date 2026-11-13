@@ -354,21 +354,25 @@ Item {
                 id: actions
                 x: songTable.rowX
                 width: songTable.rowWidth
-                height: 40
+                height: 56
                 visible: page.showActions
                 Component.onCompleted: page.headerActions = actions
 
+                // The main action is a medium button (expressive.md §3.3), the rest small.
                 Row {
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
                     Button {
                         visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
+                        size: Md.Medium
                         glyph: Symbols.play_arrow
                         text: page.playText
                         onClicked: page.playAll()
                     }
                     Loader {
+                        anchors.verticalCenter: parent.verticalCenter
                         sourceComponent: page.actionsContent
                     }
                 }

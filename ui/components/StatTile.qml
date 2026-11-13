@@ -27,7 +27,7 @@ Rectangle {
             text: tile.value
             elide: Text.ElideRight
             color: ColorScope.scheme.onSurface
-            font: Theme.type.headlineMedium.font
+            font: Theme.type.headlineMediumEmphasized.font
         }
         Text {
             width: parent.width

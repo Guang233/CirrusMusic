@@ -281,7 +281,7 @@ Item {
                 text: page.query
                 elide: Text.ElideRight
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
             }
 
@@ -518,7 +518,7 @@ Item {
             Text {
                 text: qsTr("热门搜索")
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
             }
             Repeater {

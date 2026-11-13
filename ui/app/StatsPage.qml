@@ -96,7 +96,7 @@ Item {
 
     component SectionTitle: Text {
         color: Theme.color.onSurface
-        font: Theme.type.titleLarge.font
+        font: Theme.type.titleLargeEmphasized.font
         Accessible.role: Accessible.Heading
     }
     component SubTitle: Text {
@@ -162,7 +162,7 @@ Item {
                     Text {
                         text: qsTr("听歌统计")
                         color: Theme.color.onSurface
-                        font: Theme.type.headlineMedium.font
+                        font: Theme.type.headlineMediumEmphasized.font
                         Accessible.role: Accessible.Heading
                     }
                     Text {
@@ -190,12 +190,12 @@ Item {
                         id: streakRow
                         anchors.centerIn: parent
                         spacing: 12
-                        Icon {
+                        IconContainer {
                             anchors.verticalCenter: parent.verticalCenter
                             glyph: Symbols.local_fire_department
-                            size: 28
-                            fill: 1
-                            color: Theme.color.onTertiaryContainer
+                            size: 40
+                            tone: Md.Tertiary
+                            inverted: true
                         }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
@@ -306,13 +306,13 @@ Item {
                                 Text {
                                     text: part.modelData.value
                                     color: Theme.color.onPrimaryContainer
-                                    font: Theme.type.displayLarge.font
+                                    font: Theme.type.displayLargeEmphasized.font
                                 }
                                 Text {
                                     anchors.baseline: parent.children[0].baseline
                                     text: part.modelData.unit
                                     color: Theme.color.onPrimaryContainer
-                                    font: Theme.type.titleLarge.font
+                                    font: Theme.type.titleLargeEmphasized.font
                                 }
                             }
                         }

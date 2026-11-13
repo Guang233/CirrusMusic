@@ -51,7 +51,7 @@ Column {
             text: section.title
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: Theme.type.titleLarge.font
+            font: Theme.type.titleLargeEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Button {
