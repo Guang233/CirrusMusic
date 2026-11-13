@@ -17,6 +17,11 @@ Row {
                                       || Window.visibility === Window.FullScreen
     // Icon color on a background of their own (the player page), when set.
     property color tint: "transparent"
+    // Redraws the symbols after the window comes back from the tray (a Qt bug).
+    ShapeRefresh {
+        id: refresh
+        target: root
+    }
 
     function toggleMaximized() {
         if (maximized)
@@ -51,7 +56,7 @@ Row {
     component Stroke: ShapePath {
         required property WindowButton button
         strokeColor: button.contentColor
-        strokeWidth: button.stroke
+        strokeWidth: button.stroke + refresh.offset
         fillColor: "transparent"
         capStyle: ShapePath.RoundCap
         joinStyle: ShapePath.RoundJoin

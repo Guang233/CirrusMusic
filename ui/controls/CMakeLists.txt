@@ -19,6 +19,7 @@ qt_add_qml_module(cirrus_ui_controls
         Elevation.qml
         MorphShape.qml
         Pop.qml
+        ShapeRefresh.qml
         ButtonContainer.qml
         Button.qml
         IconButton.qml

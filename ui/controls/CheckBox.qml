@@ -78,11 +78,19 @@ T.CheckBox {
             }
 
             Shape {
+                id: mark
                 anchors.fill: parent
                 visible: stroke.value > 0.01
                 preferredRendererType: Shape.CurveRenderer
 
+                // Drawn again after the window comes back from the tray (a Qt bug).
+                ShapeRefresh {
+                    id: refresh
+                    target: mark
+                }
+
                 ShapePath {
+                    startX: refresh.offset
                     strokeColor: control.markColor
                     strokeWidth: 2
                     fillColor: "transparent"
