@@ -642,6 +642,25 @@ class FakeCatalog : public QObject, public CatalogSource
         });
     }
 
+    // The song page has no fake data (the gallery shows design factors, not features).
+    Request songWiki(const SongInfo&, Reply<SongWiki> reply) override
+    {
+        return replyLater<SongWiki>(this, m_controls, std::move(reply),
+                                    []() { return Outcome<SongWiki>{SongWiki{}}; });
+    }
+    Request similarSongs(const QString&, Reply<QList<SongInfo>> reply) override
+    {
+        return replyLater<QList<SongInfo>>(this, m_controls, std::move(reply), []() {
+            return Outcome<QList<SongInfo>>{QList<SongInfo>{}};
+        });
+    }
+    Request similarPlaylists(const QString&, Reply<QList<CollectionItem>> reply) override
+    {
+        return replyLater<QList<CollectionItem>>(this, m_controls, std::move(reply), []() {
+            return Outcome<QList<CollectionItem>>{QList<CollectionItem>{}};
+        });
+    }
+
     Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) override
     {
         return replyLater<QList<CollectionItem>>(this, m_controls, std::move(reply), [this, key]() {

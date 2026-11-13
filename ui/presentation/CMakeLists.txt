@@ -45,6 +45,8 @@ qt_add_qml_module(cirrus_presentation
         album_page_model.cpp
         artist_page_model.h
         artist_page_model.cpp
+        song_page_model.h
+        song_page_model.cpp
         user_page_model.h
         user_page_model.cpp
         podcast_page_model.h

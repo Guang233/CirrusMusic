@@ -30,7 +30,8 @@ struct SongInfo {
     QString albumKey;
     QString albumTitle;
     QString coverKey;
-    qint64 durationMs = -1; // -1 when unknown
+    qint64 durationMs = -1;   // -1 when unknown
+    qint64 publishedAtMs = 0; // 0 when unknown
     bool unavailable = false;
     // Why it was recommended (daily songs), as the service words it; may be empty.
     QString reason;
@@ -118,6 +119,27 @@ struct ArtistIntroduction {
         QString title; // may be empty
         QString text;
     };
+    QList<Section> sections;
+};
+
+// A song's wiki as the song page shows it (docs/ui/pages/song.md §2): tag cards (style,
+// language, BPM: the service's display text) and titled sections of label / text rows.
+// Plain text only; the service's content, not checked to be complete.
+struct SongWiki {
+    struct Card {
+        QString title;
+        QStringList values;
+    };
+    struct Row {
+        QString label;
+        QString text; // several short texts are joined with " / "
+    };
+    struct Section {
+        QString title;
+        QString description; // may be empty
+        QList<Row> rows;
+    };
+    QList<Card> cards;
     QList<Section> sections;
 };
 

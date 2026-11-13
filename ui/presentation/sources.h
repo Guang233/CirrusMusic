@@ -39,6 +39,12 @@ class CatalogSource
     virtual Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) = 0;
     // The service may want a signed-in account.
     virtual Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
+    // The song page (docs/ui/pages/song.md): the song's wiki (both of the service's wiki
+    // reads; a part that fails is left out unless both do), and songs and playlists like
+    // it. The wiki needs the song as read (its title and album).
+    virtual Request songWiki(const SongInfo& song, Reply<SongWiki> reply) = 0;
+    virtual Request similarSongs(const QString& key, Reply<QList<SongInfo>> reply) = 0;
+    virtual Request similarPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
 
     // Search: completions for what is typed, trending keywords, and paged results.
     virtual Request suggestions(const QString& text, Reply<QList<SearchSuggestion>> reply) = 0;

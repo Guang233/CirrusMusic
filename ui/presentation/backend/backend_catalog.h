@@ -54,6 +54,9 @@ class BackendCatalog : public QObject, public CatalogSource
                          Reply<ResultPage<CollectionItem>> reply) override;
     Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) override;
     Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) override;
+    Request songWiki(const SongInfo& song, Reply<SongWiki> reply) override;
+    Request similarSongs(const QString& key, Reply<QList<SongInfo>> reply) override;
+    Request similarPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) override;
     Request podcast(const QString& key, Reply<PodcastInfo> reply) override;
     Request podcastVoices(const QString& key, bool oldestFirst, PageRequest page,
                           Reply<ResultPage<SongInfo>> reply) override;
