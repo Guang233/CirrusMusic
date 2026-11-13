@@ -27,6 +27,15 @@ ListView {
     // details (unavailable) can't be played.
     property var rankValues: []
     readonly property bool ranked: rankValues.length > 0
+    // Shows only the first rows (0: all), e.g. a section that expands in place: the last
+    // shown row gets the segmented list's bottom corners. Set the height to match
+    // (`heightFor`).
+    property int rowLimit: 0
+    readonly property int shownRows: rowLimit > 0 ? Math.min(count, rowLimit) : count
+    // The height of `rows` two-line rows (a row is 72, with 2 between rows).
+    function heightFor(rows: int): real {
+        return rows > 0 ? rows * 72 + (rows - 1) * spacing : 0;
+    }
     // Off on the album's own page.
     property bool showAlbumAction: true
     // Paged lists load the next page as the end comes near (set footer to a
@@ -41,6 +50,8 @@ ListView {
 
     signal activated(int index)
     signal albumRequested(string key)
+    // "歌曲详情": the song's own page.
+    signal songRequested(string key)
     signal artistRequested(string key)
 
     readonly property SongListModel songs: model as SongListModel
@@ -72,6 +83,7 @@ ListView {
 
     delegate: ListItem {
         id: row
+        required property string key
 
         required property int index
         required property string title
@@ -91,7 +103,7 @@ ListView {
         width: list.width - 2 * list.sideMargin
         segmented: true
         first: index === 0
-        last: index === list.count - 1
+        last: index === list.shownRows - 1
         containerColor: ColorScope.scheme.surfaceContainer
         highlighted: current
         text: !loaded ? "" : secondaryTitle !== "" ? qsTr("%1（%2）").arg(title).arg(secondaryTitle)
@@ -141,7 +153,7 @@ ListView {
                     enabled: row.loaded
                     glyph: Symbols.more_vert
                     text: qsTr("更多")
-                    onClicked: songMenu.openFor(row, row.albumKey, row.artists, more, 0, more.height)
+                    onClicked: songMenu.openFor(row, row.key, row.albumKey, row.artists, more, 0, more.height)
                 }
             }
         }
@@ -149,7 +161,7 @@ ListView {
         TapHandler {
             acceptedButtons: Qt.RightButton
             enabled: row.loaded
-            onTapped: eventPoint => songMenu.openFor(row, row.albumKey, row.artists, row,
+            onTapped: eventPoint => songMenu.openFor(row, row.key, row.albumKey, row.artists, row,
                                                      eventPoint.position.x, eventPoint.position.y)
         }
 
@@ -225,12 +237,14 @@ ListView {
 
         // The row the menu is open for.
         property Item row: null
+        property string songKey
         property string albumKey
         property var artists: []
 
-        function openFor(target: Item, album: string, songArtists: var, anchor: Item, x: real,
-                         y: real): void {
+        function openFor(target: Item, song: string, album: string, songArtists: var,
+                         anchor: Item, x: real, y: real): void {
             row = target;
+            songKey = song;
             albumKey = album;
             artists = songArtists;
             popup(anchor, x, y);
@@ -238,6 +252,11 @@ ListView {
 
         onClosed: row = null
 
+        MenuItem {
+            glyph: Symbols.info
+            text: qsTr("歌曲详情")
+            onTriggered: list.songRequested(songMenu.songKey)
+        }
         MenuItem {
             visible: list.showAlbumAction
             height: visible ? implicitHeight : 0
@@ -255,7 +274,7 @@ ListView {
                 text: qsTr("查看歌手：%1").arg(modelData.name)
                 onTriggered: list.artistRequested(modelData.key)
             }
-            onObjectAdded: (index, object) => songMenu.insertItem(index + 1, object as MenuItem)
+            onObjectAdded: (index, object) => songMenu.insertItem(index + 2, object as MenuItem)
             onObjectRemoved: (index, object) => songMenu.removeItem(object as MenuItem)
         }
     }

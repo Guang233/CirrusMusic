@@ -157,6 +157,16 @@ Item {
     }
 
     // The song's comments, from a song list or the mini player.
+    // A song's own page: wiki and similar songs, playlists (pages/song.md).
+    function openSong(key: string) {
+        if (key === "")
+            return;
+        shell.go(songPage, {
+            shell: shell,
+            songKey: key
+        });
+    }
+
     function openSongComments(key: string, title: string, artistText: string,
                               coverKey: string) {
         openComments(CommentsPageModel.Song, key, title, artistText, coverKey);
@@ -404,6 +414,10 @@ Item {
     Component {
         id: rankingPage
         RankingPage {}
+    }
+    Component {
+        id: songPage
+        SongPage {}
     }
     Component {
         id: statsPage

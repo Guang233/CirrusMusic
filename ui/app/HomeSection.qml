@@ -16,6 +16,8 @@ Column {
     property bool showsAll: false
     property LoadableModel model
     property Component skeleton
+    // At the right of the title once there is content, instead of "查看全部" (e.g. play all).
+    property Component trailing: null
     default property alias content: body.data
 
     signal allRequested
@@ -43,7 +45,8 @@ Column {
 
         Text {
             anchors.left: parent.left
-            anchors.right: allButton.visible ? allButton.left : parent.right
+            anchors.right: allButton.visible ? allButton.left
+                         : trailingLoader.active ? trailingLoader.left : parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: section.title
             elide: Text.ElideRight
@@ -62,6 +65,13 @@ Column {
             text: qsTr("查看全部")
             trailingGlyph: Symbols.chevron_right
             onClicked: section.allRequested()
+        }
+        Loader {
+            id: trailingLoader
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            active: section.trailing !== null && section.hasContent && !allButton.visible
+            sourceComponent: section.trailing
         }
     }
 

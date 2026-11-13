@@ -37,6 +37,7 @@ qt_add_qml_module(appCirrusMusic
         RankingPage.qml
         StatsPage.qml
         StatsSongsPage.qml
+        SongPage.qml
         LoginDialog.qml
         AddToPlaylistDialog.qml
         ChartCard.qml
