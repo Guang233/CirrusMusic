@@ -18,14 +18,17 @@ class Theme;
 // The player page's colors (docs/ui/pages/player.md §3), all from one cover palette:
 //  grid            the cover's 5 x 5 colors with their tones mapped into the background
 //                  range (dark 15-35, light 82-94 at 70% chroma), row-major
-//  solid           the "solid" background: the main cover color at tone 20 / 90
-//  content         text and icons: the background's mean hue at a low chroma, tone
-//                  85 / 18; contentVariant is the secondary level (tone 68 / 40)
+//  solid           the "solid" background: the background's hue (below) at tone 20 / 80
+//  content         text and icons: the background's hue at a low chroma, tone 85 / 15;
+//                  contentVariant is the secondary level (tone 68 / 32)
 //  shadow          the cover's shadow: its darkest color, made darker
 //  glare           the light sliding over the tilted cover: near white in the content
 //                  hue, in both modes
 //  scheme          MD3 roles for the player's menus, dialogs and panels
-//                  (ColorScope.scheme), from the cover's seed
+//                  (ColorScope.scheme), seeded with the background's hue
+// The background's hue is the cover grid's chroma-weighted mean hue: one hue for the
+// background, the text and the controls on it (player.md §3.1). A cover with little
+// color (black and white, or a low mean chroma) makes all three neutral.
 // A new palette or a light/dark switch blends everything together (slowEffects;
 // immediate with reduced motion).
 //   PlayerPalette { id: colors; palette: Theme.coverPalette; dark: Theme.dark }
@@ -81,6 +84,14 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     // Indices after the grid in the color lists.
     enum Extra { Solid = kGridCells, Content, ContentVariant, Shadow, Glare, ColorCount };
 
+    // The background's hue, how colorful it is overall (the chroma-weighted mean as a
+    // vector: hues that cancel out make it small), and whether everything goes neutral.
+    struct Tint {
+        double hue = 0;
+        double chroma = 0;
+        bool neutral = true;
+    };
+    [[nodiscard]] Tint tint() const;
     [[nodiscard]] QList<QColor> computeColors() const;
     void update(bool animate);
     void updateScheme(bool animate);
