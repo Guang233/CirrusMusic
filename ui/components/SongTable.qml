@@ -823,6 +823,7 @@ Item {
                         checkable: true
                         checked: row.liked
                         iconFill: row.liked ? 1 : 0
+                        pops: true
                         glyph: Symbols.favorite
                         text: row.liked ? qsTr("取消喜欢") : qsTr("喜欢")
                         onToggled: {

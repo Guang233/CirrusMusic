@@ -16,6 +16,8 @@ T.Button {
     // Icon FILL axis when not checkable; checkable buttons go from 0 to 1 when checked.
     property real iconFill: 0
     property bool showToolTip: true
+    // The icon grows and springs back when a press fills it (a like, expressive.md §5).
+    property bool pops: false
     // Standard icon buttons on InverseSurface (a snackbar's close): InverseOnSurface.
     property bool inverse: false
     // Standard icon buttons on a background of their own (the player page): this color
@@ -95,6 +97,18 @@ T.Button {
         target: control.toggled ? 1 : 0
         spec: Theme.motion.defaultEffects
     }
+    Pop {
+        id: pop
+    }
+    onPressedChanged: {
+        if (pops && pressed)
+            pop.arm();
+    }
+    onIconFillChanged: {
+        if (pops && iconFill >= 1)
+            pop.filled();
+    }
+
     // A non-checkable icon fills and empties smoothly too (a like turning on).
     Spring {
         id: fillSpring
@@ -125,6 +139,7 @@ T.Button {
             anchors.centerIn: parent
             glyph: control.glyph
             size: control.iconSize
+            scale: pop.scale
             fill: control.checkable ? selection.value : fillSpring.value
             color: control.contentColor
         }

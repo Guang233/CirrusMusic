@@ -17,6 +17,8 @@ T.AbstractButton {
     // Icon FILL axis (animated); checkable buttons fill when checked.
     property real iconFill: checkable ? (checked ? 1 : 0) : 1
     property bool showToolTip: true
+    // The icon grows and springs back when a press fills it (a like, expressive.md §5).
+    property bool pops: false
 
     implicitWidth: iconSize + 20
     implicitHeight: iconSize + 20
@@ -33,6 +35,17 @@ T.AbstractButton {
         id: press
         target: control.down ? 1 : 0
         spec: Theme.motion.fastSpatial
+    }
+    Pop {
+        id: pop
+    }
+    onPressedChanged: {
+        if (pops && pressed)
+            pop.arm();
+    }
+    onIconFillChanged: {
+        if (pops && iconFill >= 1)
+            pop.filled();
     }
     Spring {
         id: fillSpring
@@ -59,7 +72,7 @@ T.AbstractButton {
             fill: fillSpring.value
             color: control.color
             opacity: control.enabled ? 1 : 0.38
-            scale: 1 - 0.12 * press.value
+            scale: (1 - 0.12 * press.value) * pop.scale
         }
     }
 
