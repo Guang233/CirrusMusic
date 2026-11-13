@@ -302,6 +302,7 @@ Item {
         onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)
         onArtistRequested: key => page.shell.openArtist(key)
+        onSongRequested: key => page.shell.openSong(key)
         onCommentsRequested: (key, title, artistText, coverKey) =>
                              page.shell.openSongComments(key, title, artistText, coverKey)
         // Typing on the table goes on in the find field.

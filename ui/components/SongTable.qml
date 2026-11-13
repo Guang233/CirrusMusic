@@ -110,6 +110,8 @@ Item {
     signal albumRequested(string key)
     signal podcastRequested(string key)
     signal artistRequested(string key)
+    // "歌曲详情" for one song (not voices): the song's own page.
+    signal songRequested(string key)
     // "查看评论" for one song (not voices).
     signal commentsRequested(string key, string title, string artistText, string coverKey)
     signal typed(string text)
@@ -958,6 +960,13 @@ Item {
             text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
                                          : qsTr("收藏到歌单…")
             onTriggered: table.addToPlaylistRequested(songMenu.keys)
+        }
+        MenuItem {
+            visible: songMenu.songCount === 1 && !table.voices
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.info
+            text: qsTr("歌曲详情")
+            onTriggered: table.songRequested(songMenu.key)
         }
         MenuItem {
             visible: songMenu.songCount === 1 && !table.voices

@@ -136,6 +136,10 @@ AppWindow {
             close();
             shell.openArtist(key);
         }
+        onSongRequested: {
+            close();
+            shell.openSong(App.player.current.key);
+        }
         onAlbumRequested: key => {
             close();
             shell.openAlbum(key);

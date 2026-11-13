@@ -380,12 +380,25 @@ Item {
                         font: Theme.type.labelLarge.font
                     }
                     Text {
-                        width: parent.width
+                        id: resourceTitle
+                        // A song's title opens its page (song.md §3).
+                        readonly property bool linked: page.target === CommentsPageModel.Song
+                        width: Math.min(parent.width, implicitWidth)
                         text: page.title
                         elide: Text.ElideRight
-                        color: Theme.color.onSurface
+                        color: linked && titleHover.hovered ? Theme.color.primary
+                                                            : Theme.color.onSurface
                         font: Theme.type.titleLarge.font
                         Accessible.role: Accessible.Heading
+                        HoverHandler {
+                            id: titleHover
+                            enabled: resourceTitle.linked
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            enabled: resourceTitle.linked
+                            onTapped: page.shell.openSong(page.targetKey)
+                        }
                     }
                     Text {
                         width: parent.width

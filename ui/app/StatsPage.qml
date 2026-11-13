@@ -447,6 +447,7 @@ Item {
                         rankValues: pageModel.songValues
                         onAlbumRequested: key => page.shell.openAlbum(key)
                         onArtistRequested: key => page.shell.openArtist(key)
+                        onSongRequested: key => page.shell.openSong(key)
                     }
                 }
                 Column {
