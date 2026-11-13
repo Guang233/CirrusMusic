@@ -25,6 +25,7 @@ Project docs are in Chinese; start with `docs/HANDOFF.md` (backend) and `docs/ui
 - Do not copy code from GPL/AGPL reference projects; see `docs/ui/references.md`.
 - Text fonts come from `Theme.type.*` or `Fonts.font(weight, size)`; never set `font.weight` in QML (MiSans's weight axis is non-standard, see `docs/ui/README.md` §4.2).
 - Theme API and design decisions: `docs/ui/theme.md`. Use `Theme.color.*` (in `Cirrus.Controls`, `Cirrus.Components` and `ui/app/settings/`: `ColorScope.scheme.*`, so a scope such as the player can hand them another scheme), `Theme.type.*`, `Theme.shape.*`, `Theme.motion.*`; never hard-code colors in product QML. Use the `Spring` element (not `SpringAnimation`) for spring motion.
+- A `Shape` with `preferredRendererType: Shape.CurveRenderer` needs a `ShapeRefresh` (offset added to each ShapePath's `startX`), or it draws nothing after the window comes back from the tray (Qt bug, `docs/ui/controls.md` §2).
 - QML-registered C++ classes must not be `final` (Qt derives from them).
 - Controls (`Cirrus.Controls`, spec in `docs/ui/controls.md`) have no prefix: product QML imports `Cirrus.Controls` and never `QtQuick.Controls` (use `import QtQuick.Templates as T` for non-visual helpers such as `T.ButtonGroup`). Gallery pages may use `import QtQuick.Controls.Basic as B` for controls that do not exist yet.
 - Animate control state colors with a `Spring` 0–1 progress plus `Theme.mix(a, b, t)`, not `Behavior on color` (it lags while the theme blends).
