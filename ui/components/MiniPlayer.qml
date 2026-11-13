@@ -161,7 +161,8 @@ Item {
                     visible: root.tier === 0 && App.player.durationMs > 0
                     from: 0
                     to: Math.max(1, App.player.durationMs)
-                    value: clock.positionMs
+                    // Bounded by `to` so it is evaluated again when `to` changes, see `seek`.
+                    value: Math.min(to, clock.positionMs)
                 }
                 LoadingIndicator {
                     anchors.centerIn: parent
@@ -248,7 +249,11 @@ Item {
                 from: 0
                 to: Math.max(1, App.player.durationMs)
                 stepSize: 5000
-                value: pressed ? value : heldMs >= 0 ? heldMs : clock.positionMs
+                // Bounded by `to` so it is evaluated again when `to` changes: a restored
+                // position arriving with its duration may be evaluated before `to` and be
+                // clamped to the old one (the control clamps `value`), and nothing would
+                // set it again.
+                value: Math.min(to, pressed ? value : heldMs >= 0 ? heldMs : clock.positionMs)
                 Accessible.name: qsTr("播放进度")
                 onPressedChanged: if (!pressed)
                                       seekTo(valueAt(position))
