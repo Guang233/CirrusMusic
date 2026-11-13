@@ -1,9 +1,12 @@
 import QtQuick
+import M3Shapes
 import Cirrus.Theme
 import Cirrus.Controls
 
 // Centered icon, message and optional action: the empty, error, offline and signed-out
 // views of PageState, also usable inside a page (e.g. an empty playlist under its header).
+// The icon sits on a large expressive shape (expressive.md §3.5): `tone` Md.Secondary for
+// empty (the default), Md.Error for errors (a burst), Md.Neutral offline, Md.Primary signed out.
 Column {
     id: root
 
@@ -12,16 +15,22 @@ Column {
     property string message
     property string actionText
     property string actionGlyph
+    property int tone: Md.Secondary
 
     signal actionTriggered
 
     spacing: 12
 
-    Icon {
+    IconContainer {
         anchors.horizontalCenter: parent.horizontalCenter
         glyph: root.glyph
-        size: 48
-        color: ColorScope.scheme.onSurfaceVariant
+        size: 96
+        shape: root.tone === Md.Error ? MaterialShape.SoftBurst : MaterialShape.Cookie9Sided
+        tone: root.tone
+    }
+    Item {
+        width: 1
+        height: 4
     }
     Text {
         width: parent.width

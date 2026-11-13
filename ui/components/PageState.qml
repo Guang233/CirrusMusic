@@ -126,6 +126,7 @@ Item {
             anchors.centerIn: parent
             width: Math.min(parent.width - 48, 360)
             glyph: Symbols.error
+            tone: Md.Error
             message: root.error.message
             actionText: root.error.retryable ? qsTr("重试") : ""
             actionGlyph: Symbols.refresh
@@ -139,6 +140,7 @@ Item {
             anchors.centerIn: parent
             width: Math.min(parent.width - 48, 360)
             glyph: Symbols.wifi_off
+            tone: Md.Neutral
             title: qsTr("没有网络连接")
             message: root.error.message
         }
@@ -150,6 +152,7 @@ Item {
             anchors.centerIn: parent
             width: Math.min(parent.width - 48, 360)
             glyph: Symbols.account_circle
+            tone: Md.Primary
             message: root.signedOutText !== "" ? root.signedOutText : root.error.message
             actionText: qsTr("登录")
             actionGlyph: Symbols.login

@@ -7,7 +7,8 @@ import Cirrus.Presentation
 
 // A playlist, album, artist or podcast card: cover (round for artists), title and subtitle.
 // `text` is the title. The state layer covers the whole card. A playlist's play count,
-// when known (`plays` >= 0), sits on the cover's lower left (discover.md D4).
+// when known (`plays` >= 0), sits on the cover's lower left (discover.md D4). A square
+// cover's corners round further on hover and tighten on press (expressive.md §3.4).
 T.AbstractButton {
     id: control
 
@@ -26,6 +27,13 @@ T.AbstractButton {
                       plays >= 0 ? qsTr("播放 %1 次").arg(App.format.count(plays)) : ""]
         .filter(part => part !== "").join("，")
 
+    Spring {
+        id: corner
+        target: control.down ? Theme.shape.medium
+              : control.hovered ? Theme.shape.extraLarge : Theme.shape.large
+        spec: Theme.motion.fastSpatial
+    }
+
     HoverHandler {
         enabled: control.hoverEnabled
         cursorShape: Qt.PointingHandCursor
@@ -36,7 +44,7 @@ T.AbstractButton {
         CoverArt {
             width: control.availableWidth
             height: width
-            radius: control.artist ? width / 2 : Theme.shape.medium
+            radius: control.artist ? width / 2 : Math.max(0, corner.value)
             glyph: control.kind === Collection.Album ? Symbols.album
                  : control.artist ? Symbols.person
                  : control.kind === Collection.Podcast ? Symbols.podcasts : Symbols.queue_music

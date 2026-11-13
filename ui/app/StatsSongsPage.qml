@@ -20,8 +20,7 @@ SongCollectionPage {
     title: qsTr("听得最多的歌")
     cover: GlyphTile {
         glyph: Symbols.bar_chart
-        color: Theme.color.primaryContainer
-        contentColor: Theme.color.onPrimaryContainer
+        tone: Md.Primary
     }
     sortable: false
     findable: false
@@ -53,7 +52,7 @@ SongCollectionPage {
             text: page.title
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLarge.font : Theme.type.headlineSmall.font
+            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Text {
