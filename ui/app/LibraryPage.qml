@@ -275,8 +275,20 @@ Item {
                 Accessible.role: Accessible.Heading
             }
 
+            // The cards, then the collections, rise in when they first arrive.
+            Reveal {
+                target: listCards
+                shown: pageState.showsContent
+            }
+            Reveal {
+                target: collections
+                shown: collections.visible
+                order: 1
+            }
+
             // Song lists: a row of cards when wide, strips under each other otherwise.
             Flow {
+                id: listCards
                 width: parent.width
                 spacing: page.wide ? 16 : 8
 
@@ -388,6 +400,7 @@ Item {
                          ? qsTr("还没有创建的歌单") : qsTr("还没有收藏的歌单")
             }
             CollectionGrid {
+                id: collections
                 x: -8
                 width: parent.width + 16
                 visible: page.tabModel.state === LoadState.Ready

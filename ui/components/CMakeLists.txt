@@ -33,6 +33,7 @@ qt_add_qml_module(cirrus_ui_components
         RankRow.qml
         StatTile.qml
         IconContainer.qml
+        Reveal.qml
 )
 
 target_link_libraries(cirrus_ui_components

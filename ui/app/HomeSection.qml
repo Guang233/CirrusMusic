@@ -32,11 +32,10 @@ Column {
     visible: hasContent || failed || loading
     spacing: 12
 
-    Spring {
-        id: reveal
-        target: section.hasContent ? 1 : 0
-        spec: Theme.motion.standardDefaultSpatial
-        threshold: 0.002
+    Reveal {
+        target: body
+        shown: section.hasContent
+        once: false
     }
 
     Item {
@@ -114,9 +113,5 @@ Column {
         id: body
         width: section.width
         visible: section.hasContent
-        opacity: reveal.value
-        transform: Translate {
-            y: 16 * (1 - reveal.value)
-        }
     }
 }

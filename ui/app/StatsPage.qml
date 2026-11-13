@@ -150,6 +150,32 @@ Item {
             width: page.contentWidth
             spacing: 24
 
+            // The sections rise in one after another when the records first arrive.
+            Reveal {
+                target: mainCard
+                shown: pageState.showsContent
+            }
+            Reveal {
+                target: counts
+                shown: pageState.showsContent
+                order: 1
+            }
+            Reveal {
+                target: mostTitle
+                shown: pageState.showsContent
+                order: 2
+            }
+            Reveal {
+                target: most
+                shown: pageState.showsContent
+                order: 2
+            }
+            Reveal {
+                target: whenWhere
+                shown: pageState.showsContent
+                order: 3
+            }
+
             // The title, where the records come from, and the streak (all time).
             Item {
                 width: parent.width
@@ -362,6 +388,7 @@ Item {
 
             // The four counts.
             Grid {
+                id: counts
                 visible: page.hasPeriod
                 width: parent.width
                 columns: page.wide ? 4 : 2
@@ -385,6 +412,7 @@ Item {
 
             // What: songs, artists, albums.
             Item {
+                id: mostTitle
                 visible: page.hasPeriod
                 width: parent.width
                 height: 40
@@ -415,6 +443,7 @@ Item {
                 }
             }
             Flow {
+                id: most
                 visible: page.hasPeriod
                 width: parent.width
                 spacing: 32
@@ -482,6 +511,7 @@ Item {
 
             // When, and from where.
             Flow {
+                id: whenWhere
                 visible: page.hasPeriod
                 width: parent.width
                 spacing: 32
