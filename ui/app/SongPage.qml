@@ -359,6 +359,20 @@ Item {
         id: wiki
         spacing: 16
 
+        // The label column, shared by every section so their texts line up: as wide as
+        // the longest label, at most 120.
+        readonly property real labelWidth: {
+            let widest = 0;
+            for (const section of pageModel.wiki.sections)
+                for (const row of section.rows)
+                    widest = Math.max(widest, labelMetrics.advanceWidth(row.label));
+            return Math.min(120, Math.ceil(widest));
+        }
+        FontMetrics {
+            id: labelMetrics
+            font: Theme.type.bodyMedium.font
+        }
+
         Flow {
             width: wiki.width
             visible: pageModel.wiki.cards.length > 0
@@ -405,22 +419,11 @@ Item {
             delegate: Rectangle {
                 id: section
                 required property var modelData
-                // The label column: as wide as this section's longest label, at most 120.
-                readonly property real labelWidth: {
-                    let widest = 0;
-                    for (const row of modelData.rows)
-                        widest = Math.max(widest, labelMetrics.advanceWidth(row.label));
-                    return Math.min(120, Math.ceil(widest));
-                }
                 width: wiki.width
                 height: sectionColumn.implicitHeight + 32
                 radius: Theme.shape.large
                 color: Theme.color.surfaceContainerLow
 
-                FontMetrics {
-                    id: labelMetrics
-                    font: Theme.type.bodyMedium.font
-                }
                 Column {
                     id: sectionColumn
                     x: 20
@@ -453,7 +456,7 @@ Item {
                             Accessible.name: modelData.label + "：" + modelData.text
                             Text {
                                 id: rowLabel
-                                width: section.labelWidth
+                                width: wiki.labelWidth
                                 text: row.modelData.label
                                 wrapMode: Text.Wrap
                                 color: Theme.color.onSurfaceVariant
@@ -461,7 +464,7 @@ Item {
                             }
                             SelectableText {
                                 id: rowText
-                                x: section.labelWidth + 16
+                                x: wiki.labelWidth + 16
                                 width: parent.width - x
                                 text: row.modelData.text
                                 wrapMode: Text.Wrap

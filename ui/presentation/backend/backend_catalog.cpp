@@ -35,6 +35,33 @@ std::optional<domain::SearchPage> searchPage(const QString& text, PageRequest pa
 
 CollectionItem searchArtistOf(const domain::SearchArtist& artist) { return artistOf(artist); }
 
+// The two wiki reads overlap and the service gives one row per person: rows next to each
+// other with the same label become one ("作曲: A / B"), and a row saying what a tag card
+// already says (曲风, BPM) is left out. Sections left empty go.
+void tidyWiki(SongWiki& wiki)
+{
+    QHash<QString, QString> cardText;
+    for (const SongWiki::Card& card : std::as_const(wiki.cards))
+        cardText.insert(card.title.trimmed(), card.values.join(QStringLiteral(" / ")));
+    QList<SongWiki::Section> sections;
+    for (SongWiki::Section& section : wiki.sections) {
+        QList<SongWiki::Row> rows;
+        for (const SongWiki::Row& row : std::as_const(section.rows)) {
+            const QString label = row.label.trimmed();
+            if (cardText.value(label) == row.text && cardText.contains(label))
+                continue;
+            if (!rows.isEmpty() && rows.last().label.trimmed() == label)
+                rows.last().text += QStringLiteral(" / ") + row.text;
+            else
+                rows.append(row);
+        }
+        section.rows = rows;
+        if (!section.rows.isEmpty() || !section.description.trimmed().isEmpty())
+            sections.append(std::move(section));
+    }
+    wiki.sections = std::move(sections);
+}
+
 SongInfo programOf(const domain::Program& program)
 {
     SongInfo info;
@@ -515,10 +542,12 @@ Request BackendCatalog::songWiki(const SongInfo& song, Reply<SongWiki> reply)
             return;
         state->cards.release();
         state->sections.release();
-        if (state->failed == 2)
+        if (state->failed == 2) {
             state->reply(Outcome<SongWiki>{std::nullopt, false, state->failure});
-        else
-            state->reply(Outcome<SongWiki>{std::move(state->wiki)});
+            return;
+        }
+        tidyWiki(state->wiki);
+        state->reply(Outcome<SongWiki>{std::move(state->wiki)});
     };
 
     const QString key = song.key;
