@@ -9,6 +9,7 @@ qt_add_qml_module(cirrus_ui_components
         Cirrus.Theme
         Cirrus.Controls
         Cirrus.Presentation
+        M3Shapes
     QML_FILES
         PageStack.qml
         PageScaffold.qml
@@ -31,6 +32,7 @@ qt_add_qml_module(cirrus_ui_components
         HeatGrid.qml
         RankRow.qml
         StatTile.qml
+        IconContainer.qml
 )
 
 target_link_libraries(cirrus_ui_components
