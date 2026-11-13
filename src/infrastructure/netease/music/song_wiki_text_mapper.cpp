@@ -18,7 +18,8 @@ bool text(const QJsonObject& o, QString key, int limit, QString& out, int& aggre
 bool optionalText(const QJsonObject& o, QString key, int limit, std::optional<QString>& out,
                   int& aggregate)
 {
-    if (!o.contains(key))
+    // The service sends null for an empty optional field (desc, content: 2026-11-13).
+    if (!o.contains(key) || o.value(key).isNull())
         return true;
     QString s;
     if (!text(o, key, limit, s, aggregate))
@@ -102,7 +103,7 @@ application::MusicResult mapSongWikiTextResponse(const domain::SongWikiTextQuery
             if (!text(row, "title", 256, item.label, aggregate) ||
                 !optionalText(row, "content", 4096, item.content, aggregate))
                 return invalid;
-            if (row.contains("wikiSubMetaVos")) {
+            if (row.contains("wikiSubMetaVos") && !row.value("wikiSubMetaVos").isNull()) {
                 const auto metas = row.value("wikiSubMetaVos");
                 if (!metas.isArray() || metas.toArray().size() > 16)
                     return invalid;
@@ -117,8 +118,10 @@ application::MusicResult mapSongWikiTextResponse(const domain::SongWikiTextQuery
                 }
                 item.texts = std::move(values);
             }
+            // Present ""/[] is kept; a row with neither (missing or null) has nothing to
+            // show and is left out rather than failing the whole wiki.
             if (!item.content && !item.texts)
-                return invalid; // present []/"" valid; missing/null isn't
+                continue;
             section.items.append(std::move(item));
         }
         page.sections.append(std::move(section)); // preserve original order and duplicates

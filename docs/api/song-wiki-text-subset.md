@@ -37,6 +37,8 @@
 
 忽略 `id/songId/encodeId/jumpUrl/imgUrl/coverImage`、pattern/style/log、edit/upload/user contribution信息；不回传这些字段、不独立提升其身份含义。其他艺人/相似歌曲/版本/歌单/节目/首听及MV、评论、曲谱、娱乐、奖项、整块歌词均unsupported。不访问图/链接、不级联detail/page/audio、入队/播放/报告/写、cache/SQL/自动翻页/重试或定时任务。既有六轨歌词与唯一media owner不变。
 
+**2026-11-13 修订（歌曲页接入时的实测）**：游客读一首歌（HTTP 200、业务码 200），原 mapper 因 `blockInfo.desc: null` 拒绝整个结果；放过它后又遇到行上的 `wikiSubMetaVos: null`。服务用 null 表示可选字段为空，原"已出现的 null 拒绝"规则会让整份百科丢失。改为：`desc`、`content`、`wikiSubMetaVos` 的 null 等同缺失；`content` 和短文本都没有（缺失或 null）的行跳过，不再拒绝整个结果。错类型（数字、对象）、超限、必需字段（title、blockName、wikiSubElementVos 等）为 null 仍然拒绝。显式 `""`／`[]` 照旧保留。修订后同一首歌得到两节（4 行、2 行）。测试：原 malformed 的 8、11、13、18 四种变体移到 `nullMeansMissing()` 验证接受，`tst_song_wiki_text` 85 项通过，`songWikiTextThroughThread` 通过。
+
 ## 4. 代码与合成验收
 
 新增 `SongWikiText` 一个Eapi operation；107枚举/50注册，26人工family、39E/63W/5X，44FR不增；module/operation/entry/产品能力不是同一单位。全百科仍G；原 [catalog introduction](catalog-introduction-and-metadata-reads.md) 的旧summary路径/模型不变。
