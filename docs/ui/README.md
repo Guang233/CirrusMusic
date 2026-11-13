@@ -383,6 +383,7 @@ illogical-impulse 与 Caelestia 基于 Quickshell，本身就是 QML 实现，�
 | [`docs/ui/presentation.md`](presentation.md) ViewModel 与数据源接口 | 阶段 3 开始前（已完成） |
 | `docs/ui/pages/*.md` 各页面设计（[首页](pages/home.md)、[外壳](pages/shell.md)已实现；[歌单详情](pages/playlist.md)待评审；[听歌统计](pages/stats.md)已实现，2026-11-12；[歌曲页](pages/song.md)已实现，2026-11-13） | 每个页面实现前 |
 | [`docs/ui/pages/player.md`](pages/player.md) 播放页规格 | 已评审（2026-11-05） |
+| [`docs/ui/expressive.md`](expressive.md) 界面的表现力改造（图标容器、形状、强调字体、封面飞行） | 待评审（2026-11-13） |
 
 ## 14. 待决问题
 
