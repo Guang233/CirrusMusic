@@ -102,7 +102,10 @@ Item {
         forwardEntries = [];
         sections = sections.concat([section]);
         rail.currentIndex = section;
-        stack.push(component, properties, transition);
+        const handoff = CoverHandoff.take();
+        const page = stack.push(component, properties, transition);
+        if (transition === PageStack.Kind.Forward)
+            coverFlight.forward(handoff, page);
     }
 
     function openPlaylist(key: string) {
@@ -327,6 +330,7 @@ Item {
         const leaving = stack.entries[stack.entries.length - 1];
         if (!stack.pop())
             return;
+        coverFlight.backward(leaving.item, stack.currentItem);
         // An editing page left is done with, not something to go forward to.
         if (leaving.component !== playlistOrderPage)
             forwardEntries = forwardEntries.concat([{
@@ -450,6 +454,12 @@ Item {
             onCurrentItemChanged: if (currentItem)
                                       App.diagnostics.pageShown(currentItem, depth,
                                                                 entries[entries.length - 1].properties)
+        }
+        // A card's cover flying to the page it opened, and back (expressive.md §5).
+        CoverFlight {
+            id: coverFlight
+            anchors.fill: stack
+            current: stack.currentItem
         }
 
         Repeater {

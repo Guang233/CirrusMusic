@@ -34,6 +34,9 @@ T.AbstractButton {
         spec: Theme.motion.fastSpatial
     }
 
+    // The shell flies this cover to the page the card opens (expressive.md §5).
+    onReleased: CoverHandoff.note(coverArt, artist)
+
     HoverHandler {
         enabled: control.hoverEnabled
         cursorShape: Qt.PointingHandCursor
@@ -42,6 +45,7 @@ T.AbstractButton {
         spacing: 8
 
         CoverArt {
+            id: coverArt
             width: control.availableWidth
             height: width
             radius: control.artist ? width / 2 : Math.max(0, corner.value)

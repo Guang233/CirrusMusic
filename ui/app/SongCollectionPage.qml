@@ -34,6 +34,12 @@ Item {
     property Component cover: null
     // A round cover (artists): the skeleton matches.
     property bool roundCover: false
+    // The header cover a card's cover flies to (CoverFlight, expressive.md §5).
+    property Item flightCover: null
+    readonly property bool flightRound: roundCover
+    readonly property real flightRadius: Theme.shape.large
+    readonly property bool flightReady: state_.contentOpacity > 0.99
+                                        && ((flightCover as Cover)?.ready ?? true)
     // Right of the cover: the type label, title and the page's lines.
     property Component infoContent: null
     // Under the cover, full width (e.g. a description in narrow windows), while
@@ -258,7 +264,11 @@ Item {
     component Cover: Item {
         id: coverItem
         property real radius: Theme.shape.large
+        // Its picture is shown (or there is none).
+        readonly property bool ready: page.cover ? ((custom.item as CoverArt)?.ready ?? true)
+                                                 : art.ready || page.coverKey === ""
         CoverArt {
+            id: art
             anchors.fill: parent
             visible: !page.cover
             radius: coverItem.radius
@@ -266,6 +276,7 @@ Item {
             coverKey: page.coverKey
         }
         Loader {
+            id: custom
             anchors.fill: parent
             active: page.cover !== null
             sourceComponent: page.cover
@@ -332,6 +343,7 @@ Item {
                     id: cover
                     width: page.wide ? 200 : 140
                     height: width
+                    Component.onCompleted: page.flightCover = cover
                 }
                 Loader {
                     id: info

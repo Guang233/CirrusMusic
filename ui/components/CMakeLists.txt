@@ -1,6 +1,8 @@
 # Business-facing building blocks of the shell and pages (docs/ui/README.md §3.1).
 qt_add_library(cirrus_ui_components STATIC)
 
+set_source_files_properties(CoverHandoff.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(cirrus_ui_components
     URI Cirrus.Components
     VERSION 1.0
@@ -34,6 +36,8 @@ qt_add_qml_module(cirrus_ui_components
         StatTile.qml
         IconContainer.qml
         Reveal.qml
+        CoverHandoff.qml
+        CoverFlight.qml
 )
 
 target_link_libraries(cirrus_ui_components
