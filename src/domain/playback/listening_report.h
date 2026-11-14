@@ -6,8 +6,10 @@
 namespace cirrus::domain
 {
 // Explicit individual weblog action; no timing policy or automatic two-request sequence.
-enum class ListeningReportAction { StartPlay, Play };
-CIRRUS_LOG_ENUM(ListeningReportAction, StartPlay, Play)
+// ActiveClient is the web player's daily "this client is in use" log, about no song
+// (docs/api/explicit-listening-reports.md §4c).
+enum class ListeningReportAction { StartPlay, Play, ActiveClient };
+CIRRUS_LOG_ENUM(ListeningReportAction, StartPlay, Play, ActiveClient)
 // Where the song was played from, as the web client names it (`source`): a playlist,
 // album, artist page, chart, daily recommendations, a search (sourceId is the
 // keywords) or a song page. Evidence: docs/ui/integration.md §6.1; the PC client's
@@ -79,6 +81,8 @@ struct ListeningReport {
     ListeningReportEnd end = ListeningReportEnd::PlayEnd; // Play only
     [[nodiscard]] bool isValid() const
     {
+        if (action == ListeningReportAction::ActiveClient)
+            return !eventId.isNull() && playedSeconds == 0;
         return !eventId.isNull() && validMusicId(song.value) && validSourceId(source, sourceId) &&
                ((action == ListeningReportAction::StartPlay && playedSeconds == 0) ||
                 (action == ListeningReportAction::Play && playedSeconds > 0 &&

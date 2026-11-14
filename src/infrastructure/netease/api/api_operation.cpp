@@ -77,6 +77,15 @@ std::optional<QJsonObject> credentialPayload(ApiOperation operation, const QJson
     return std::nullopt;
 }
 
+// weblog's form: `logs` is a one-element JSON array as a compact string.
+QJsonObject listeningLogs(const QString& action, const QJsonObject& json)
+{
+    const QJsonArray logs{
+        QJsonObject{{QStringLiteral("action"), action}, {QStringLiteral("json"), json}}};
+    return QJsonObject{{QStringLiteral("logs"),
+                        QString::fromUtf8(QJsonDocument(logs).toJson(QJsonDocument::Compact))}};
+}
+
 } // namespace
 
 std::optional<ApiOperationContract> operationContract(ApiOperation operation,
@@ -183,7 +192,9 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
         return std::nullopt; // resolved only from a validated canonical ID above
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
-        return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Eapi,
+    case ApiOperation::ListeningActive:
+        // As the web player sends them (docs/api/explicit-listening-reports.md §4c).
+        return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Weapi,
                                     ResponseEncoding::Json, 64 * 1024,
                                     OfficialDestination::ListeningLog};
     case ApiOperation::DailyHistoryDates:
@@ -433,7 +444,8 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::MyPlaylists || operation == ApiOperation::LikedSongIds ||
            operation == ApiOperation::SavedAlbums || operation == ApiOperation::SavedArtists ||
            operation == ApiOperation::ListeningStart || operation == ApiOperation::ListeningPlay ||
-           operation == ApiOperation::RecentSongs || operation == ApiOperation::ListeningRanking ||
+           operation == ApiOperation::ListeningActive || operation == ApiOperation::RecentSongs ||
+           operation == ApiOperation::ListeningRanking ||
            operation == ApiOperation::RecentPlaylists || operation == ApiOperation::RecentAlbums ||
            operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices ||
            operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs ||
@@ -645,27 +657,27 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
             !domain::validSourceId(*kind, source) || !endKnown ||
             (play && (seconds <= 0 || seconds > 604800 || time != QJsonValue(seconds))))
             return std::nullopt;
-        // startplay's content is the page's query string on the web; ids only.
-        QJsonObject json{{QStringLiteral("id"), id},
+        // The web player's logs (§4c): source, sourceId and end stay local (checked above,
+        // logged by the gateway); the player leaves them out.
+        QJsonObject json{{QStringLiteral("mainSite"), QStringLiteral("2")},
+                         {QStringLiteral("mainSiteWeb"), QStringLiteral("2")},
+                         {QStringLiteral("id"), id},
                          {QStringLiteral("type"), QStringLiteral("song")},
-                         {QStringLiteral("mainsite"), QStringLiteral("1")},
-                         {QStringLiteral("mainsiteWeb"), QStringLiteral("1")},
-                         {QStringLiteral("content"), domain::validMusicId(source)
-                                                         ? QStringLiteral("id=") + source
-                                                         : QString()}};
+                         {QStringLiteral("content"), QString()}};
         if (play) {
-            json.insert(QStringLiteral("download"), 0);
-            json.insert(QStringLiteral("end"), endText);
-            json.insert(QStringLiteral("sourceId"), source);
             json.insert(QStringLiteral("time"), seconds);
             json.insert(QStringLiteral("wifi"), 0);
-            json.insert(QStringLiteral("source"), sourceText);
+            json.insert(QStringLiteral("download"), 0);
         }
-        const QJsonArray logs{QJsonObject{
-            {QStringLiteral("action"), play ? QStringLiteral("play") : QStringLiteral("startplay")},
-            {QStringLiteral("json"), json}}};
-        return QJsonObject{{QStringLiteral("logs"),
-                            QString::fromUtf8(QJsonDocument(logs).toJson(QJsonDocument::Compact))}};
+        return listeningLogs(play ? QStringLiteral("play") : QStringLiteral("startPlay"), json);
+    }
+    if (operation == ApiOperation::ListeningActive) {
+        // The web player's daily `activeclient` (§4c).
+        if (!parameters.isEmpty())
+            return std::nullopt;
+        return listeningLogs(QStringLiteral("activeclient"),
+                             QJsonObject{{QStringLiteral("mainSite"), QStringLiteral("2")},
+                                         {QStringLiteral("mainSiteWeb"), QStringLiteral("2")}});
     }
     if (operation == ApiOperation::AccountIdentity ||
         operation == ApiOperation::AnonymousRegister || operation == ApiOperation::PersonalFm) {
@@ -926,6 +938,7 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::SavedArtists:
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
+    case ApiOperation::ListeningActive:
     case ApiOperation::RecentSongs:
     case ApiOperation::ListeningRanking:
     case ApiOperation::RecommendedPlaylists:
@@ -1041,6 +1054,7 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::SavedArtists:
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
+    case ApiOperation::ListeningActive:
     case ApiOperation::RecentSongs:
     case ApiOperation::ListeningRanking:
         return false; // business reads/writes must not mutate verified account credentials

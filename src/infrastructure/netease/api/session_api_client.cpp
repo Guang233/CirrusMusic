@@ -347,6 +347,9 @@ void SessionApiClient::start(quint64 id)
         request.userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
                             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
         request.musicReferer = true;
+        request.destination = it->contract.destination;
+        if (request.destination == OfficialDestination::ListeningLog)
+            request.csrfQuery = *csrf; // the web player repeats it in the URL
         request.responseLimit = it->contract.responseLimit;
         request.retryLostConnection = retriesLostConnection(it->operation);
         it->transportId = m_transport->post(std::move(request));
@@ -372,8 +375,6 @@ void SessionApiClient::start(quint64 id)
                                        *nmtid};
     auto profile = metadata;
     profile.encryptedResponse = it->operation == ApiOperation::SearchPodcasts;
-    if (it->contract.destination == OfficialDestination::ListeningLog)
-        profile.profile = EapiProfile::ListeningLogOsx;
     const auto prepared = prepareEapiRequest(it->contract.logicalPath, it->payload, profile);
     if (!prepared.ok()) {
         finish(id, {ApiError::Crypto});

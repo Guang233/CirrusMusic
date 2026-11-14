@@ -31,6 +31,7 @@ enum class ApiOperation {
     SavedArtists,
     ListeningStart,
     ListeningPlay,
+    ListeningActive,
     RecentSongs,
     ListeningRanking,
     Charts,

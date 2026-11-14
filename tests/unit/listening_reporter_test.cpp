@@ -16,9 +16,12 @@ struct Harness {
     ListeningReporter reporter{facade, session};
     QList<PlaybackCommand> commands;
     QList<ListeningReportCommand> reports;
+    QList<ListeningReportCommand> actives; // ActiveClient, kept apart
+    QDateTime now{QDate(2026, 11, 14), QTime(10, 0)};
     quint64 positionRevision = 0;
     explicit Harness(SessionPhase phase = SessionPhase::Authenticated)
     {
+        reporter.setClock([this] { return now; });
         QObject::connect(&facade, &BackendFacade::playbackRequested, &facade,
                          [this](PlaybackCommand c) {
                              commands.append(c);
@@ -31,7 +34,11 @@ struct Harness {
                              });
                          });
         QObject::connect(&facade, &BackendFacade::listeningReportRequested, &facade,
-                         [this](ListeningReportCommand c) { reports.append(c); });
+                         [this](ListeningReportCommand c) {
+                             (c.report.action == ListeningReportAction::ActiveClient ? actives
+                                                                                     : reports)
+                                 .append(c);
+                         });
         facade.start();
         BackendEvent e;
         e.kind = BackendEvent::Kind::Started;
@@ -74,14 +81,20 @@ struct Harness {
     }
     QList<ListeningReport> plays() const { return of(ListeningReportAction::Play); }
     QList<ListeningReport> starts() const { return of(ListeningReportAction::StartPlay); }
-    void answer(qsizetype index)
+    static void answer(BackendFacade& facade, const ListeningReportCommand& c,
+                       ReportOutcome outcome)
     {
-        ListeningReportDelivery d{reports[index].id,
-                                  reports[index].generation,
-                                  reports[index].context,
-                                  {reports[index].report.eventId, reports[index].report.action,
-                                   ReportOutcome::Acknowledged, ReportError::None}};
-        facade.deliverListeningReport(d);
+        facade.deliverListeningReport(
+            {c.id,
+             c.generation,
+             c.context,
+             {c.report.eventId, c.report.action, outcome,
+              outcome == ReportOutcome::Acknowledged ? ReportError::None : ReportError::Network}});
+    }
+    void answer(qsizetype index) { answer(facade, reports[index], ReportOutcome::Acknowledged); }
+    void answerActive(qsizetype index, ReportOutcome outcome = ReportOutcome::Acknowledged)
+    {
+        answer(facade, actives[index], outcome);
     }
 };
 } // namespace
@@ -194,6 +207,37 @@ class ListeningReporterTest : public QObject
         guest.state(PlaybackState::Playing, 60000);
         QVERIFY(guest.session.next());
         QVERIFY(guest.reports.isEmpty()); // neither StartPlay nor Play
+        QVERIFY(guest.actives.isEmpty());
+    }
+    void activeClientOnceADay()
+    {
+        QCOMPARE(ListeningReporter::dayStart({QDate(2026, 11, 15), QTime(5, 59)}),
+                 QDateTime(QDate(2026, 11, 14), QTime(6, 0)));
+        QCOMPARE(ListeningReporter::dayStart({QDate(2026, 11, 15), QTime(6, 0)}),
+                 QDateTime(QDate(2026, 11, 15), QTime(6, 0)));
+        Harness h;
+        QCOMPARE(h.actives.size(), 1); // signed in
+        QCOMPARE(h.actives.first().accountId, "101");
+        QVERIFY(h.actives.first().report.isValid());
+        h.answerActive(0);
+        QVERIFY(h.session.replaceQueue({{"1"}, {"2"}, {"3"}, {"4"}}));
+        h.state(PlaybackState::Playing, 4000);
+        QCOMPARE(h.starts().size(), 1);
+        QCOMPARE(h.actives.size(), 1); // the same day
+        h.now = {QDate(2026, 11, 15), QTime(5, 59)};
+        QVERIFY(h.session.next());
+        QCOMPARE(h.actives.size(), 1); // still the day that began at 6:00 yesterday
+        h.now = {QDate(2026, 11, 15), QTime(6, 0)};
+        h.state(PlaybackState::Playing, 4000);
+        QCOMPARE(h.actives.size(), 2); // a new day: before the next report
+        QVERIFY(h.actives[1].id < h.reports.last().id);
+        h.answerActive(1, ReportOutcome::Unknown);
+        QVERIFY(h.session.next());
+        QCOMPARE(h.actives.size(), 3); // not acknowledged: again before the next report
+        h.answerActive(2);
+        h.state(PlaybackState::Playing, 4000);
+        QVERIFY(h.session.next());
+        QCOMPARE(h.actives.size(), 3);
     }
     void flushSettlesThePlayingLoadAndWaits()
     {
@@ -206,6 +250,7 @@ class ListeningReporterTest : public QObject
         QCOMPARE(h.plays().first().end, ListeningReportEnd::Interrupt);
         QTest::qWait(50);
         QVERIFY(!done); // waits for the answers
+        h.answerActive(0);
         for (qsizetype i = 0; i < h.reports.size(); ++i)
             h.answer(i);
         QVERIFY(done);
@@ -218,6 +263,7 @@ class ListeningReporterTest : public QObject
         QTRY_VERIFY(lateDone);
         // Nothing to settle: done straight away (but not inside the call).
         Harness idle;
+        idle.answerActive(0);
         bool idleDone = false;
         idle.reporter.flush([&] { idleDone = true; });
         QVERIFY(!idleDone);

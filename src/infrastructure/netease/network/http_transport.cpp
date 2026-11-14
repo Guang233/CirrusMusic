@@ -199,7 +199,10 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
              ? !validCommentV3Token(request.commentV3Token)
              : !request.commentV3Token.isEmpty()) ||
         (!request.commentV3Token.isEmpty() &&
-         request.destination != OfficialDestination::Default)) {
+         request.destination != OfficialDestination::Default) ||
+        !validHeaderValue(request.csrfQuery, 256) ||
+        (!request.csrfQuery.isEmpty() &&
+         request.destination != OfficialDestination::ListeningLog)) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -210,7 +213,13 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     pending->timeoutMs = request.timeoutMs;
     if (request.retryLostConnection && pending->resends < kLostConnectionResends)
         pending->again = request;
-    QNetworkRequest wire(*url);
+    const bool log = request.destination == OfficialDestination::ListeningLog;
+    auto target = *url;
+    if (log && !request.csrfQuery.isEmpty())
+        target.setQuery(QStringLiteral("csrf_token=") + QString::fromLatin1(QUrl::toPercentEncoding(
+                                                            QString::fromUtf8(request.csrfQuery))),
+                        QUrl::StrictMode);
+    QNetworkRequest wire(target);
     if (pending->resends > 0) // the HTTP/2 connection was lost: this time over HTTP/1.1
         wire.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     wire.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -231,6 +240,10 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
 
     if (request.musicReferer) {
         wire.setRawHeader("Referer", "https://music.163.com");
+    }
+    if (log) { // what the web player's log request carries (explicit-listening-reports §4c)
+        wire.setRawHeader("Origin", "https://music.163.com");
+        wire.setRawHeader("x-music-web-os", "web3");
     }
     for (const auto& [name, value] : request.xeapiHeaders) {
         wire.setRawHeader(name, value);

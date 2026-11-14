@@ -65,9 +65,10 @@ std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPat
     }
 
     if (destination == OfficialDestination::ListeningLog) {
-        if (protocol != Protocol::Eapi || logicalPath != u"/api/feedback/weblog")
+        // The web player's log host (docs/api/explicit-listening-reports.md §4c).
+        if (protocol != Protocol::Weapi || logicalPath != u"/api/feedback/weblog")
             return std::nullopt;
-        host = u"clientlog.music.163.com"_s;
+        host = u"clientlogusf.music.163.com"_s;
     } else if (destination == OfficialDestination::TogetherHttp) {
         if (protocol != Protocol::Eapi)
             return std::nullopt;

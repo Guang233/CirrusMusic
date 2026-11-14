@@ -55,6 +55,8 @@ struct Harness {
         Plan seed{R"({"code":200,"unikey":"synthetic"})"};
         seed.headers.append(std::pair<QByteArray, QByteArray>{
             "Set-Cookie", "MUSIC_U=synthetic-original; Domain=.music.163.com; Path=/"});
+        seed.headers.append(std::pair<QByteArray, QByteArray>{
+            "Set-Cookie", "__csrf=synthetic-csrf; Domain=.music.163.com; Path=/"});
         http->plans.prepend(seed);
         QSignalSpy done(&client, &SessionApiClient::completed);
         QVERIFY(client.submit(session.snapshot().token, ApiOperation::QrKey));
@@ -117,14 +119,26 @@ class ListeningReportTest : public QObject
         r = report();
         r.eventId = {};
         QVERIFY(!r.isValid());
-        for (auto op : {ApiOperation::ListeningStart, ApiOperation::ListeningPlay}) {
+        ListeningReport active; // about no song
+        active.eventId = QUuid::createUuid();
+        active.action = ListeningReportAction::ActiveClient;
+        QVERIFY(active.isValid());
+        active.playedSeconds = 1;
+        QVERIFY(!active.isValid());
+        for (auto op : {ApiOperation::ListeningStart, ApiOperation::ListeningPlay,
+                        ApiOperation::ListeningActive}) {
             const auto c = operationContract(op);
             QVERIFY(c);
             QCOMPARE(c->logicalPath, "/api/feedback/weblog");
             QCOMPARE(c->responseLimit, 64 * 1024);
-            QCOMPARE(c->protocol, Protocol::Eapi);
+            QCOMPARE(c->protocol, Protocol::Weapi);
             QVERIFY(requiresAccountCookie(op));
             QCOMPARE(c->destination, OfficialDestination::ListeningLog);
+            if (op == ApiOperation::ListeningActive) {
+                QVERIFY(operationPayload(op, {}));
+                QVERIFY(!operationPayload(op, {{"id", "1"}}));
+                continue;
+            }
             auto p = QJsonObject{{"id", "9007199254740993"}, {"source", "list"}, {"sourceId", "2"}};
             if (op == ApiOperation::ListeningPlay) {
                 p.insert("time", 35);
@@ -154,19 +168,46 @@ class ListeningReportTest : public QObject
         const auto logs =
             QJsonDocument::fromJson(search->value("logs").toString().toUtf8()).array();
         const auto json = logs.first().toObject().value("json").toObject();
-        QCOMPARE(json.value("source").toString(), "search");
-        QCOMPARE(json.value("sourceId").toString(), "富士山下");
-        QCOMPARE(json.value("content").toString(), QString());
+        // The web player's logs (explicit-listening-reports §4c): no source, sourceId or end.
+        QCOMPARE(logs.size(), 1);
+        QCOMPARE(logs.first().toObject().value("action").toString(), "play");
+        QCOMPARE(json, (QJsonObject{{"mainSite", "2"},
+                                    {"mainSiteWeb", "2"},
+                                    {"id", "1"},
+                                    {"type", "song"},
+                                    {"content", ""},
+                                    {"time", 35},
+                                    {"wifi", 0},
+                                    {"download", 0}}));
+        const auto logOf = [](ApiOperation op, const QJsonObject& p) {
+            return QJsonDocument::fromJson(
+                       operationPayload(op, p)->value("logs").toString().toUtf8())
+                .array()
+                .first()
+                .toObject();
+        };
+        const auto start = logOf(ApiOperation::ListeningStart,
+                                 {{"id", "1"}, {"source", "list"}, {"sourceId", "2"}});
+        QCOMPARE(start.value("action").toString(), "startPlay");
+        QCOMPARE(start.value("json").toObject(), (QJsonObject{{"mainSite", "2"},
+                                                              {"mainSiteWeb", "2"},
+                                                              {"id", "1"},
+                                                              {"type", "song"},
+                                                              {"content", ""}}));
+        const auto client = logOf(ApiOperation::ListeningActive, {});
+        QCOMPARE(client.value("action").toString(), "activeclient");
+        QCOMPARE(client.value("json").toObject(),
+                 (QJsonObject{{"mainSite", "2"}, {"mainSiteWeb", "2"}}));
         QVERIFY(!operationPayload(ApiOperation::ListeningStart,
                                   {{"id", "1"}, {"source", "list"}, {"sourceId", "0"}}));
-        const auto log = officialRequestUrl(Protocol::Eapi, u"/api/feedback/weblog",
+        const auto log = officialRequestUrl(Protocol::Weapi, u"/api/feedback/weblog",
                                             OfficialDestination::ListeningLog);
         QVERIFY(log);
-        QCOMPARE(log->host(), "clientlog.music.163.com");
-        QCOMPARE(log->path(), "/eapi/feedback/weblog");
-        QVERIFY(!officialRequestUrl(Protocol::Weapi, u"/api/feedback/weblog",
+        QCOMPARE(log->host(), "clientlogusf.music.163.com");
+        QCOMPARE(log->path(), "/weapi/feedback/weblog");
+        QVERIFY(!officialRequestUrl(Protocol::Eapi, u"/api/feedback/weblog",
                                     OfficialDestination::ListeningLog));
-        QVERIFY(!officialRequestUrl(Protocol::Eapi, u"/api/song/like/get",
+        QVERIFY(!officialRequestUrl(Protocol::Weapi, u"/api/song/like/get",
                                     OfficialDestination::ListeningLog));
         QCOMPARE(officialRequestUrl(Protocol::Eapi, u"/api/song/like/get")->host(),
                  "interfacepc.music.163.com");
@@ -176,44 +217,35 @@ class ListeningReportTest : public QObject
         Plan response{R"({"code":200})"};
         response.headers.append(std::pair<QByteArray, QByteArray>{
             "Set-Cookie", "MUSIC_U=synthetic-rotation; Domain=.music.163.com; Path=/"});
-        Harness h({response, Plan{R"({"code":200})"}});
+        Harness h({response, Plan{R"({"code":200})"}, Plan{R"({"code":200})"}});
         QSignalSpy done(&h.gateway, &IListeningReportGateway::completed);
-        for (auto action : {ListeningReportAction::StartPlay, ListeningReportAction::Play}) {
-            const auto r = report(action);
+        int sent = 0;
+        for (auto action : {ListeningReportAction::StartPlay, ListeningReportAction::Play,
+                            ListeningReportAction::ActiveClient}) {
+            auto r = report(action);
+            if (action == ListeningReportAction::ActiveClient)
+                r = ListeningReport{QUuid::createUuid(), {}, {}, action, 0};
             QVERIFY(h.submit(r));
-            QTRY_COMPARE(done.size(), action == ListeningReportAction::StartPlay ? 1 : 2);
+            ++sent;
+            QTRY_COMPARE(done.size(), sent);
             QCOMPARE(result(done).outcome, ReportOutcome::Acknowledged);
             QCOMPARE(result(done).eventId, r.eventId);
             QCOMPARE(result(done).action, action);
+            // As the web player sends its logs (explicit-listening-reports §4c); the weapi
+            // body itself can't be read back here (operationPayload is checked above).
             const auto& request = h.http->requests.last();
-            QCOMPARE(request.url().host(), "clientlog.music.163.com");
-            QCOMPARE(request.url().path(), "/eapi/feedback/weblog");
-            const auto wire = decodeEapiRequest(h.http->bodies.last());
-            QVERIFY(wire);
-            QCOMPARE(wire->logicalPath, "/api/feedback/weblog");
-            const auto header = wire->payload.value("header").toObject();
-            QCOMPARE(header.value("os").toString(), "osx");
-            QCOMPARE(header.value("osver").toString(), "15.5");
-            QCOMPARE(header.value("appver").toString(), "3.1.10.5100");
-            QCOMPARE(header.value("MUSIC_U").toString(),
-                     "synthetic-original"); // response Cookies ignored
+            QCOMPARE(request.url().host(), "clientlogusf.music.163.com");
+            QCOMPARE(request.url().path(), "/weapi/feedback/weblog");
+            QCOMPARE(request.url().query(), "csrf_token=synthetic-csrf");
+            QCOMPARE(request.rawHeader("x-music-web-os"), "web3");
+            QCOMPARE(request.rawHeader("Origin"), "https://music.163.com");
+            QCOMPARE(request.rawHeader("Referer"), "https://music.163.com");
             QVERIFY(request.rawHeader("User-Agent").startsWith("Mozilla/5.0 (Macintosh;"));
-            QVERIFY(request.rawHeader("Cookie").contains("os=osx"));
-            const auto rows =
-                QJsonDocument::fromJson(wire->payload.value("logs").toString().toUtf8()).array();
-            QCOMPARE(rows.size(), 1);
-            const auto row = rows.first().toObject(), json = row.value("json").toObject();
-            QCOMPARE(row.value("action").toString(),
-                     action == ListeningReportAction::Play ? "play" : "startplay");
-            QCOMPARE(json.value("id").toString(), "9007199254740993");
-            QCOMPARE(json.value("content").toString(), "id=2");
-            if (action == ListeningReportAction::Play) {
-                QCOMPARE(json.value("time").toInt(), 35);
-                QCOMPARE(json.value("source").toString(), "list");
-                QCOMPARE(json.value("sourceId").toString(), "2");
-                QCOMPARE(json.value("end").toString(), "ui");
-            } else
-                QVERIFY(!json.contains("time"));
+            const auto cookie = request.rawHeader("Cookie");
+            QVERIFY(cookie.contains("MUSIC_U=synthetic-original")); // response Cookies ignored
+            QVERIFY(!cookie.contains("os="));                       // no client identity: a browser
+            QVERIFY(h.http->bodies.last().startsWith("params="));
+            QVERIFY(h.http->bodies.last().contains("&encSecKey="));
             QCOMPARE(h.http->requests.size(), done.size() + 1); // no automatic second action
         }
     }

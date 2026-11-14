@@ -42,6 +42,9 @@ struct TransportRequest {
     QList<std::pair<QByteArray, QByteArray>> xeapiHeaders;
     QByteArray commentV3Token; // only two closed XEAPI comment paths, not arbitrary headers
     OfficialDestination destination = OfficialDestination::Default;
+    // ListeningLog only: the `?csrf_token=` the web player adds to its log URL. That
+    // destination also gets the player's fixed Origin and `x-music-web-os` headers.
+    QByteArray csrfQuery;
     // Reads only: a connection that closed before any response (HTTP/2 "connection
     // closed", remote host closed) is tried again over HTTP/1.1, at once and, closed
     // again, a second later. Never for writes.

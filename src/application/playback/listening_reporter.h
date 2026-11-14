@@ -2,6 +2,7 @@
 #include "application/backend/backend_facade.h"
 #include "domain/playback/listening_report.h"
 #include "domain/playback/listening_state_types.h"
+#include <QDateTime>
 #include <QSet>
 #include <QTimer>
 #include <functional>
@@ -17,8 +18,11 @@ class ListeningSession;
 // paused for longer than the pause timeout. Plays under 3 s are not reported; guests
 // and personal FM (no evidence for its source) get neither. The source
 // comes from the caller per queue entry; without one the song itself is the source.
-// Results are not retried (the facade doesn't either). Caller-thread object; facade and
-// session must outlive it.
+// Results are not retried (the facade doesn't either). Like the web player, it also logs
+// the client as active (ActiveClient): once the account is signed in, and again before a
+// report once a day has begun (at 6:00 local time) or when the last one wasn't
+// acknowledged (docs/api/explicit-listening-reports.md §4c). Caller-thread object; facade
+// and session must outlive it.
 class ListeningReporter final : public QObject
 {
     Q_OBJECT
@@ -36,6 +40,9 @@ class ListeningReporter final : public QObject
 
     void setOriginLookup(OriginLookup lookup) { m_lookup = std::move(lookup); }
     void setPauseTimeout(int ms) { m_pause.setInterval(ms); }
+    // The local time (tests); the day for ActiveClient begins at 6:00 of it.
+    void setClock(std::function<QDateTime()> clock) { m_clock = std::move(clock); }
+    static QDateTime dayStart(const QDateTime& now);
     // Closing: settles the load playing now, then calls `done` once every report in
     // flight has answered, or after `timeoutMs`. `done` runs once, later, never inside.
     void flush(std::function<void()> done, int timeoutMs = 2000);
@@ -54,6 +61,7 @@ class ListeningReporter final : public QObject
     void send(const Prepared& prepared, const domain::StoredListeningRecord& row);
     static void remember(QSet<QUuid>& set, QList<QUuid>& order, QUuid id);
     void finishFlush();
+    void markActive(); // sends ActiveClient unless this account's day already has one
 
     BackendFacade& m_facade;
     ListeningSession& m_session;
@@ -67,5 +75,9 @@ class ListeningReporter final : public QObject
     QTimer m_pause;
     QTimer m_flushTimer;
     std::function<void()> m_flushDone;
+    std::function<QDateTime()> m_clock;
+    QString m_activeAccount; // the account the last ActiveClient was for
+    QDateTime m_activeAt;    // when it was sent; null: none, or not acknowledged
+    quint64 m_activeId = 0;  // the ActiveClient in flight
 };
 } // namespace cirrus::application
