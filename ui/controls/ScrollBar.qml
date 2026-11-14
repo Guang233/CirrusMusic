@@ -29,7 +29,7 @@ T.ScrollBar {
     // scrolls at a steady speed, and it stops about 0.1 s after the last notch, with no
     // glide. (Qt's wheel either restarts a 0.3 s ease from where the content is, dropping
     // the unfinished part, or flicks and glides; a restarted ease per notch also makes
-    // the speed pulse.) Past an end it runs out a little and comes back. Touchpad gestures
+    // the speed pulse.) At an end it runs on a little and springs back. Touchpad gestures
     // (scroll phases) are left to the Flickable; at an end the wheel goes on to the view around
     // it (WheelFilter).
     readonly property Flickable flickable: orientation === Qt.Vertical ? parent as Flickable
@@ -46,7 +46,11 @@ T.ScrollBar {
 
     Spring {
         id: wheelScroll
-        spec: Theme.motion.custom(1, 3600)
+        // Critically damped while scrolling; towards an end, the expressive fast spatial
+        // spring (0.6 / 800), which carries on past the end with the speed it has and
+        // springs back in one motion.
+        property bool toEnd: false
+        spec: toEnd ? Theme.motion.fastSpatial : Theme.motion.custom(1, 3600)
         threshold: 0.3
         onValueChanged: {
             if (!isNaN(control.placed) && control.flickable) {
@@ -55,16 +59,8 @@ T.ScrollBar {
             }
         }
         onRunningChanged: {
-            if (running)
-                return;
-            // Ran out past an end: back to it.
-            const bound = Math.max(control.minY, Math.min(control.maxY, control.goal));
-            if (Math.abs(bound - control.goal) > 0.5 && !isNaN(control.placed)) {
-                control.goal = bound;
-                target = bound;
-            } else if (!control.pressed) {
+            if (!running && !control.pressed)
                 control.active = false;
-            }
         }
     }
 
@@ -90,10 +86,8 @@ T.ScrollBar {
                 wheelScroll.snapTo(view.contentY);
                 control.placed = view.contentY;
             }
-            const past = wanted < control.minY ? wanted - control.minY
-                       : wanted > control.maxY ? wanted - control.maxY : 0;
-            control.goal = past === 0 ? wanted
-                         : (past < 0 ? control.minY : control.maxY) + Math.max(-24, Math.min(24, past / 3));
+            control.goal = Math.max(control.minY, Math.min(control.maxY, wanted));
+            wheelScroll.toEnd = control.goal !== wanted;
             control.active = true;
             wheelScroll.target = control.goal;
             accepted = true;
