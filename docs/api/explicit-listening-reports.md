@@ -97,7 +97,9 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 - 维护者决定（2026-11-09）：Cirrus 的"最近播放"页只显示云端；本机听歌数据放到以后的"听歌统计"仪表盘页。
 - 网页版公开前端代码（2026-11-09）：切歌时先 `play`（上一首），再 `startplay`（新歌）；没有其他写入最近播放的请求。Cirrus 原先只发 `play`，现在 `ListeningReporter` 在每次加载第一次出声时也发 `startplay`（[UI 接入 §6.1](../ui/integration.md)）。维护者确认（2026-11-09）：发了之后歌进了"最近播放"。结论：`startplay` 更新"最近播放"，`play` 计入听歌排行。
 
-## 4c. 改为照新网页版发送（2026-11-14）
+## 4c. 改为照新网页版发送（2026-11-14，已被 §4d 取代）
+
+> 实测没有用：照网页版发的记录当天就不入账（服务器照样回 code 200）。现行做法见 §4d。
 
 **问题**（维护者 2026-11-14）：听歌足迹里当天的记录都在，过几天再看，那一天的记录整天消失。服务器每条都回 code 200（11-09～11-14 共 170 条，151 条确认，19 条是 `clientlog` 上的 `HTTP/2 protocol error`）。社区里用 `os=osx` 的写法（[api-enhanced#167](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/issues/167)）只验证过"当时入账"。原来的请求是混合身份：同一 deviceId 平时自称 Windows PC 客户端，上报时自称 Mac 客户端（还带着 PC 的 `versioncode`、`resolution`），UA 是浏览器，内容是旧网页版的格式，而且从来没有登记过"客户端活跃"。
 
@@ -116,6 +118,23 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 **改动**：三个 action 照新网页版发（新增 `ListeningActive`／`ListeningReportAction::ActiveClient`），走已有的 weapi 通道（浏览器 UA、`Referer`），`OfficialDestination::ListeningLog` 改为只允许 weapi，发往 `clientlogusf`，并带 `?csrf_token=`、`Origin`、`x-music-web-os: web3`（只此目的地）。去掉 `ListeningLogOsx` eapi profile，不再冒充 Mac 客户端。来源和结束原因照旧校验并记在日志里，不发出去。`ListeningReporter` 在账号登录后发一次 `activeclient`；之后每次上报前，如果上一次是在最近一个 6:00 之前发的，或者没得到确认，就先补发一次。时机、3 秒门槛不变。
 
 **待验证**（维护者的账号）：当天听歌足迹里有没有记录（社区说旧网页版的发法当天就不入账），过 3～5 天那一天还在不在；还有 `clientlogusf` 上 HTTP/2 失败是否还有。测试：`tst_listening_report`（合同、三种内容、URL／请求头）、`tst_listening_reporter`（`activeClientOnceADay`）。
+
+## 4d. 改为照安卓客户端的加密日志上传（2026-11-14，现行）
+
+**结论**：听歌足迹只认**安卓格式设备号**的播放日志。Cirrus 原来的设备号是 52 位十六进制（PC 客户端的格式），服务器照收（`successfiles` 里有、code 200），之后不记。令牌（MUSIC_U）是 PC 身份扫码登录签发的也没关系，设备号也不用在服务器登记过。
+
+**证据**（维护者 2026-11-14 授权：读官方安卓 APK 9.6.22（jadx 反编译），分析维护者自己手机上官方 9.6.15 的抓包，并在维护者账号上重放）：
+
+- 官方安卓客户端的播放只有两条记录：`_plv`（开始播放，驱动"最近播放"）和 `_pld`（结束，驱动听歌足迹和排行），属于 UA 日志流。抓包里没有经典的 `startplay`／`play`（APK 里它们去 BI 流，但这段时间的 BI 文件里没有）。
+- 上传：`POST https://clientlogsf.music.163.com/api/clientlog/encrypt/upload?multiupload=true`，multipart，每个日志流一个文件，文件名 `flush_<流>_<pid>_<序号>_<随机数>`（`ua`、`bi`），每个分段带自己的 `Content-Length`。回复 `data.successfiles` 列出收下的文件，另有 `rate`、`maxUploadCount`。
+- 文件是 NCBL 容器：记录为 `秒 \x01 action \x01 json \n`，zstd 压缩，ChaCha20 加密（密钥用服务端固定的 256 位 RSA 模数、e=65537 包起来），meta 块是加密的 `{MUSIC_U, appver, buildver}`（官方还有 `URS_APPID`，不需要）。格式只取协议事实，实现是自己写的（`client_log.*`）；最早的线索 folltoshe/netease-report-listen-song 是 AGPL，不抄代码。
+- 每条记录带 `_log_thoroughfare`（`ua`／`bi`）、`_logTime`、`pid` 等公共字段；UA 流另有 `_sessid`（`毫秒#随机数#appver#buildver`）、`logtime`、`process_id`。`id` 是数字，`startlogtime` 是**秒**。
+- 安卓的设备号（APK `x4.e`）：`URL编码(Base64("IMEI \t WiFi MAC \t ANDROID_ID \t 本地ID"))`；新版安卓上是 `null`、`02:00:00:00:00:00` 和两段 16 位十六进制。`sDeviceId` 由服务器（`middle/device-info/get`，易盾指纹）下发，格式相同。
+- 重放逐项对比（每次换一首当天没记录的歌，`_plv` 后 70 秒发 `_pld`）：官方原样 → 记上；手机的 MUSIC_U、设备号，其他全换成 Cirrus 的发法（无 `x-*` 请求头、10 个 cookie、appver 9.1.65、无 `URS_APPID`）→ 记上；再换成 Cirrus 的 MUSIC_U → 记上；再换成 Cirrus 的设备号 → **不记**；改用新随机生成的安卓格式设备号 → 记上，"最近播放"也有（没发 `startplay`）。
+
+**改动**：三个动作改走 `OfficialDestination::ClientLog`（`Protocol::Api`、`/api/clientlog/encrypt/upload`、只此组合）。`ListeningStart`／`ListeningPlay` 各发一条 `_plv`／`_pld`（字段照官方 9.6.15，我们不知道的取它的默认值；不发歌名、歌手名），`ListeningActive` 发 BI 流的 `activeclient`。上报带 `duration`、`quality`、`started`（`ListeningReport` 的 `durationSeconds`、`quality`、`startedAtMs`）。身份和我们的 xeapi 一致：安卓 UA、`os=android`、appver 9.1.65；设备号用 `androidDeviceId()` 由安装 ID 派生（SHA-256，每次一样，不另存），**只用于日志上传**，其他请求仍用原来的安装 ID。只有回复列出了我们所有文件才算 `Acknowledged`，否则 `Rejected`（providerCode -2）。去掉 web 版 weblog 的路由和请求头（`ListeningLog`、`csrfQuery`、`x-music-web-os`）。新依赖 zstd（BSD-3-Clause；CMake 包，没有时用 pkg-config）。
+
+**待观察**：过几天那一天的听歌足迹还在不在（维护者 2026-11-14 当天确认足迹、最近播放都有）。测试：`tst_client_log`（ChaCha20 向量、容器结构、multipart、设备号格式）、`tst_listening_report`（合同、`_plv`／`_pld` 内容、URL、请求头、cookie、回复里的文件名）、`tst_listening_reporter`。研究脚本（解码 HAR、重放）只在 `build/research-scripts/weblog/`，不进仓库；抓包里的凭据不入库、不打印。
 
 ## 5. 未决事项
 

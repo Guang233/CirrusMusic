@@ -147,6 +147,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 
 **2026-11-14 改为照新网页版发送**（听歌足迹里的记录几天后整天消失）：weapi 发往 `clientlogusf`，三个 action `activeclient`（每天一次，以本地 6:00 为界）／`startPlay`／`play`，不再冒充 Mac 客户端，来源和结束原因只记在本地日志里。见 [explicit-listening-reports.md §4c](../api/explicit-listening-reports.md)。
 
+**2026-11-14 改为照安卓客户端的加密日志上传**（网页版的发法当天就不入账）：StartPlay／Play 各发一条 `_plv`／`_pld`，`activeclient` 照旧每天一次，都发往 `clientlogsf`。原因是设备号格式：服务器只记安卓格式设备号的播放，Cirrus 由安装 ID 派生一个只给日志上传用。维护者当天确认听歌足迹、最近播放都有；还要看几天后在不在。见 [explicit-listening-reports.md §4d](../api/explicit-listening-reports.md)。
+
 **来源**：展示层要记住每个队列条目从哪里来（`playSongs` 加来源参数；“下一首播放”“加入队列”的条目各自带来源），这部分无论怎样都要做。
 
 **证据：网页版的做法**（2026-11-07 读取 music.163.com 公开下发的前端代码，只读，没有发送任何上报；`core_d6d4797f….js` SHA-256 前缀 `b79d32317e06a476`，`pt_frame_index_f8fa6836….js` 前缀 `4ccc6cb5d58085e4`）：
