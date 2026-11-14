@@ -29,8 +29,8 @@ T.ScrollBar {
     // scrolls at a steady speed, and it stops about 0.1 s after the last notch, with no
     // glide. (Qt's wheel either restarts a 0.3 s ease from where the content is, dropping
     // the unfinished part, or flicks and glides; a restarted ease per notch also makes
-    // the speed pulse.) Past an end it runs out a little and comes back. Touchpads (pixel
-    // deltas) are left to the Flickable; at an end the wheel goes on to the view around
+    // the speed pulse.) Past an end it runs out a little and comes back. Touchpad gestures
+    // (scroll phases) are left to the Flickable; at an end the wheel goes on to the view around
     // it (WheelFilter).
     readonly property Flickable flickable: orientation === Qt.Vertical ? parent as Flickable
                                                                        : null

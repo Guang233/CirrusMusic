@@ -10,7 +10,7 @@ namespace cirrus::ui
 
 // Sees a scroll view's wheel events before the view does and lets QML take the mouse
 // wheel's notches (docs/ui/pages/playlist.md §12), leaving everything else to the view:
-// touchpad scrolling (pixel deltas, scroll phases) and the notches QML does not take
+// touchpad scrolling (scroll phases) and the notches QML does not take
 // (`accepted` stays false, e.g. at an end, so the view around it scrolls). A WheelHandler
 // cannot do this: it marks the event handled before its `wheel` signal runs. Wheels are
 // told apart by their events, not by the device: under some Wayland compositors (niri)
