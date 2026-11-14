@@ -20,7 +20,6 @@
 #endif
 #include "single_instance.h"
 #include "title_bar_mode.h"
-#include "wheel_scrolling.h"
 
 #include <QCommandLineParser>
 #include <QDir>
@@ -138,7 +137,6 @@ int main(int argc, char* argv[])
     QGuiApplication::setDesktopFileName(QStringLiteral("com.guang233.Cirrus"));
     moveOldSettings();
     cirrus::ui::gpu::apply(cirrus::ui::AppSettings().preferDiscreteGpu());
-    cirrus::ui::applyWheelScrolling();
 
     Application app(argc, argv);
     QGuiApplication::setWindowIcon(cirrus::ui::appIcon());
