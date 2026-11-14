@@ -8,44 +8,33 @@
 namespace cirrus::ui
 {
 
-// Sees a scroll view's wheel events before the view does and lets QML take the mouse
-// wheel's notches (docs/ui/pages/playlist.md §12), leaving everything else to the view:
-// touchpad scrolling (scroll phases) and the notches QML does not take
-// (`accepted` stays false, e.g. at an end, so the view around it scrolls). A WheelHandler
-// cannot do this: it marks the event handled before its `wheel` signal runs. Wheels are
-// told apart by their events, not by the device: under some Wayland compositors (niri)
-// Qt reports the one pointer, mouse wheel included, as a touchpad.
-//   WheelFilter { target: list; onNotch: steps => { …; accepted = true } }
+// Makes a scroll view treat mouse wheel notches as wheel notches (docs/ui/pages/playlist.md
+// §12). Qt 6.12's Wayland plugin gives each notch a 15 px pixel delta as well; a Flickable
+// then takes it for touchpad scrolling and moves 15 px a notch. The filter hands the view
+// the same event without the pixel delta, so Qt's own wheel scrolling (wheelScrollLines ×
+// 24 px a notch, overshooting and springing back at the ends) applies on every Qt version.
+// Touchpad gestures (with a scroll phase) pass untouched.
+//   WheelFilter { target: list }
 class WheelFilter : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QQuickItem* target READ target WRITE setTarget NOTIFY targetChanged)
-    Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
-    Q_PROPERTY(bool accepted MEMBER m_accepted)
 
   public:
     explicit WheelFilter(QObject* parent = nullptr);
 
     QQuickItem* target() const { return m_target; }
     void setTarget(QQuickItem* target);
-    bool isEnabled() const { return m_enabled; }
-    void setEnabled(bool enabled);
 
   signals:
     void targetChanged();
-    void enabledChanged();
-    // Vertical notches (120 per notch; positive scrolls up, fractions from fine wheels).
-    // Set `accepted` to take the event.
-    void notch(qreal steps);
 
   protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
   private:
     QPointer<QQuickItem> m_target;
-    bool m_enabled = true;
-    bool m_accepted = false;
 };
 
 } // namespace cirrus::ui

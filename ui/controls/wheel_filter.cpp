@@ -1,5 +1,6 @@
 #include "wheel_filter.h"
 
+#include <QCoreApplication>
 #include <QWheelEvent>
 
 namespace cirrus::ui
@@ -19,31 +20,23 @@ void WheelFilter::setTarget(QQuickItem* target)
     emit targetChanged();
 }
 
-void WheelFilter::setEnabled(bool enabled)
-{
-    if (m_enabled == enabled)
-        return;
-    m_enabled = enabled;
-    emit enabledChanged();
-}
-
 bool WheelFilter::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched != m_target || event->type() != QEvent::Wheel || !m_enabled)
+    if (watched != m_target || event->type() != QEvent::Wheel)
         return false;
-    const auto* wheel = static_cast<QWheelEvent*>(event);
-    // A wheel notch: no scroll phase (touchpad gestures on Wayland and macOS begin, update
-    // and end), vertical, and not Alt (which turns the wheel sideways). Not the pixel
-    // delta: Qt 6.12's Wayland plugin gives wheel notches one too (15 px), and handing
-    // those to the Flickable scrolled 15 px a notch.
-    if (wheel->phase() != Qt::NoScrollPhase || wheel->angleDelta().y() == 0 ||
-        (wheel->modifiers() & Qt::AltModifier))
+    auto* wheel = static_cast<QWheelEvent*>(event);
+    // A wheel notch has no scroll phase (touchpad gestures begin, update and end); only
+    // one carrying a pixel delta needs the copy.
+    if (wheel->phase() != Qt::NoScrollPhase || wheel->pixelDelta().isNull() ||
+        wheel->angleDelta().isNull())
         return false;
-    m_accepted = false;
-    emit notch(wheel->angleDelta().y() / 120.0);
-    if (!m_accepted)
-        return false;
-    event->accept();
+    QWheelEvent notch(wheel->position(), wheel->globalPosition(), QPoint(), wheel->angleDelta(),
+                      wheel->buttons(), wheel->modifiers(), Qt::NoScrollPhase, wheel->inverted(),
+                      wheel->source(), wheel->pointingDevice());
+    notch.setTimestamp(wheel->timestamp());
+    notch.setAccepted(false);
+    QCoreApplication::sendEvent(m_target, &notch);
+    event->setAccepted(notch.isAccepted());
     return true;
 }
 
