@@ -22,14 +22,16 @@ T.ScrollBar {
     minimumSize: orientation === Qt.Horizontal ? height / width : width / height
 
     // Mouse wheel scrolling (docs/ui/pages/playlist.md §12): each notch moves the goal
-    // wheelScrollLines × 40 px (120 px at the usual 3 lines; Qt's 24 px a line was too
-    // slow), notches add up, and a critically damped spring follows the goal, keeping its
-    // speed when a new notch arrives: steady turning scrolls at a steady speed, and it
-    // stops about 0.15 s after the last notch, with no glide. (Qt's wheel either restarts a 0.3 s ease
-    // from where the content is, dropping the unfinished part, or flicks and glides; a
-    // restarted ease per notch also makes the speed pulse.) Past an end it runs out a
-    // little and comes back. Touchpads (pixel deltas) are left to the Flickable; at an
-    // end the wheel goes on to the view around it (WheelFilter).
+    // 2 × height^(2/3) px, scaled by wheelScrollLines / 3 (a 500 px view 126 px, 800 px
+    // 172 px, 1300 px 238 px: taller views scroll further, as in GTK; logical pixels, so
+    // the same on any screen scale). Notches add up, and a critically damped spring
+    // follows the goal, keeping its speed when a new notch arrives: steady turning
+    // scrolls at a steady speed, and it stops about 0.1 s after the last notch, with no
+    // glide. (Qt's wheel either restarts a 0.3 s ease from where the content is, dropping
+    // the unfinished part, or flicks and glides; a restarted ease per notch also makes
+    // the speed pulse.) Past an end it runs out a little and comes back. Touchpads (pixel
+    // deltas) are left to the Flickable; at an end the wheel goes on to the view around
+    // it (WheelFilter).
     readonly property Flickable flickable: orientation === Qt.Vertical ? parent as Flickable
                                                                        : null
     readonly property real minY: flickable ? flickable.originY - flickable.topMargin : 0
@@ -44,7 +46,7 @@ T.ScrollBar {
 
     Spring {
         id: wheelScroll
-        spec: Theme.motion.custom(1, 2500)
+        spec: Theme.motion.custom(1, 3600)
         threshold: 0.3
         onValueChanged: {
             if (!isNaN(control.placed) && control.flickable) {
@@ -78,7 +80,7 @@ T.ScrollBar {
                                    : view.contentY;
             // QStyleHints.wheelScrollLines (typed QObject for qmllint).
             const lines = Object(Qt.styleHints).wheelScrollLines ?? 3;
-            const wanted = from - steps * lines * 40;
+            const wanted = from - steps * lines / 3 * 2 * Math.pow(view.height, 2 / 3);
             // Already at that end: the view around it scrolls instead.
             if (!following && (wanted < control.minY && from <= control.minY + 0.5
                                || wanted > control.maxY && from >= control.maxY - 0.5))
