@@ -22,10 +22,10 @@ T.ScrollBar {
     minimumSize: orientation === Qt.Horizontal ? height / width : width / height
 
     // Mouse wheel scrolling (docs/ui/pages/playlist.md §12): each notch moves the goal
-    // wheelScrollLines × 24 px (Qt's own distance, following the system setting), notches
-    // add up, and a critically damped spring follows the goal, keeping its speed when a
-    // new notch arrives: steady turning scrolls at a steady speed, and it stops about
-    // 0.15 s after the last notch, with no glide. (Qt's wheel either restarts a 0.3 s ease
+    // wheelScrollLines × 40 px (120 px at the usual 3 lines; Qt's 24 px a line was too
+    // slow), notches add up, and a critically damped spring follows the goal, keeping its
+    // speed when a new notch arrives: steady turning scrolls at a steady speed, and it
+    // stops about 0.15 s after the last notch, with no glide. (Qt's wheel either restarts a 0.3 s ease
     // from where the content is, dropping the unfinished part, or flicks and glides; a
     // restarted ease per notch also makes the speed pulse.) Past an end it runs out a
     // little and comes back. Touchpads (pixel deltas) are left to the Flickable; at an
@@ -44,7 +44,7 @@ T.ScrollBar {
 
     Spring {
         id: wheelScroll
-        spec: Theme.motion.custom(1, 1400)
+        spec: Theme.motion.custom(1, 2500)
         threshold: 0.3
         onValueChanged: {
             if (!isNaN(control.placed) && control.flickable) {
@@ -83,7 +83,7 @@ T.ScrollBar {
                                    : view.contentY;
             // QStyleHints.wheelScrollLines (typed QObject for qmllint).
             const lines = Object(Qt.styleHints).wheelScrollLines ?? 3;
-            const step = event.angleDelta.y / 120 * lines * 24;
+            const step = event.angleDelta.y / 120 * lines * 40;
             const wanted = from - step;
             // Already at that end: the view around it scrolls instead.
             if (!following && (wanted < control.minY && from <= control.minY + 0.5
