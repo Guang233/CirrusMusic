@@ -1081,7 +1081,8 @@ void BackendRuntimeTest::listeningReportThroughThread()
     const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
     seed(config.databasePath, *state);
     auto plans = loginPlans();
-    plans.append(QList<Plan>{Plan{R"({"code":200})"}, Plan{R"({"code":500})"}, Plan{"", 200, -1}});
+    plans.append(QList<Plan>{Plan{R"({"code":200,"data":{"successfiles":{files}}})"},
+                             Plan{R"({"code":500})"}, Plan{"", 200, -1}});
     BackendRuntime runtime(config, factories(state, gate, plans));
     auto& f = runtime.facade();
     QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);
