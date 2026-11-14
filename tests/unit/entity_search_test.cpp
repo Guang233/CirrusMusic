@@ -39,7 +39,7 @@ QJsonObject json(const QByteArray& b) { return QJsonDocument::fromJson(b).object
 MusicResult map(int index, const QJsonObject& o) { return mapMusicResponse(queries()[index], o); }
 QByteArray encrypted(const QByteArray& b)
 {
-    const auto a = detail::aes(b, "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
+    const auto a = cirrus::netease::detail::aes(b, "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
     return a.value_or(QByteArray{});
 }
 MusicResult result(const QSignalSpy& spy) { return qvariant_cast<MusicResult>(spy.last()[2]); }
