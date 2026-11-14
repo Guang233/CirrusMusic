@@ -1,0 +1,35 @@
+// Windows resources of the executable: the icon Explorer, the Start menu shortcut and
+// "Installed apps" show (they read it from the file, not from the running window), and
+// the version information of the file's properties and Task Manager.
+#include <winver.h>
+
+IDI_ICON1 ICON "@CIRRUS_ICO@"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION  @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "guang233"
+            VALUE "FileDescription", "Cirrus"
+            VALUE "FileVersion", "@PROJECT_VERSION@"
+            VALUE "InternalName", "Cirrus"
+            VALUE "LegalCopyright", "Copyright (c) 2026 guang233. MIT License."
+            VALUE "OriginalFilename", "@CIRRUS_EXECUTABLE@.exe"
+            VALUE "ProductName", "Cirrus"
+            VALUE "ProductVersion", "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END

@@ -13,7 +13,7 @@
 | deb | `cirrus_<版本>_amd64.deb` | 装到 `/opt/cirrus`，自带 Qt；`/usr/bin/cirrus` 是链接；桌面文件、图标、AppStream 装在 `/usr/share` |
 | AppImage | `Cirrus-<版本>-x86_64.AppImage` | 和 deb 同一套目录，另外带上基础系统以外的库 |
 | AUR | `packaging/aur/PKGBUILD`（`cirrus`） | 用 Arch 的 Qt 和库从源码编译，仓库公开后上传 |
-| Windows 安装包 | `Cirrus-<版本>-windows-x64-setup.exe` | Inno Setup；默认只装给当前用户（不用管理员），第一页可改为所有用户 |
+| Windows 安装包 | `Cirrus-<版本>-windows-x64-setup.exe` | Inno Setup；默认只装给当前用户（不用管理员），第一页可改为所有用户。开始菜单、桌面快捷方式和"已安装的应用"用 `Cirrus.exe` 里嵌的图标（`ui/app/cirrus.rc.in`，2026-11-14 补上；之前没有嵌，开始菜单显示默认图标） |
 | Windows 免安装版 | `Cirrus-<版本>-windows-x64.zip` | 解压即用；设置和数据仍在用户目录 |
 | 库的源码 | `Cirrus-<版本>-library-sources.tar` | 包里带的 FFmpeg、QtKeychain 的原始源码（LGPL 的源码提供，§6） |
 | 校验 | `SHA256SUMS.txt` | |

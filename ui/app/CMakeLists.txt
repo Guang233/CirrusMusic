@@ -154,6 +154,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_MPRIS)
     target_link_libraries(appCirrusMusic PRIVATE Qt6::DBus)
 elseif(WIN32)
+    # The executable's icon and version information (cirrus.rc.in).
+    set(CIRRUS_ICO "${CMAKE_CURRENT_SOURCE_DIR}/icons/cirrus.ico")
+    file(TO_CMAKE_PATH "${CIRRUS_ICO}" CIRRUS_ICO)
+    configure_file(cirrus.rc.in "${CMAKE_CURRENT_BINARY_DIR}/cirrus.rc" @ONLY)
+    target_sources(appCirrusMusic PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/cirrus.rc")
     # C++/WinRT from the Windows SDK (MSVC).
     option(CIRRUS_UI_SMTC "Windows media controls (SMTC); needs MSVC and the Windows SDK" ON)
     if(CIRRUS_UI_SMTC)
