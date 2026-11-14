@@ -45,7 +45,7 @@
 | [account-library-reads.md](account-library-reads.md) | 当前账号播客订阅／云盘列表与详情三项；独立CloudSongId、MUSIC_U与原token、bounded候选schema，仅合成，无云盘音源／播放／写入 |
 | [personal-library.md](personal-library.md) | 当前账号歌单、喜欢ID、收藏专辑及艺人；有界只读与账号校验，无库缓存／写入 |
 | [local-listening-history.md](local-listening-history.md) | 媒体线程的有界观测累计、Queue／FM会话历史、清空与账号隔离；无持久化／上报 |
-| [explicit-listening-reports.md](explicit-listening-reports.md) | StartPlay／Play显式报告、clientlog/osx profile、未知写入结果；无自动触发／重试 |
+| [explicit-listening-reports.md](explicit-listening-reports.md) | StartPlay／Play／ActiveClient显式报告、照新网页版走clientlogusf weapi（§4c）、未知写入结果；无自动触发／重试 |
 | [cloud-history-reads.md](cloud-history-reads.md) | 当前账号最近听过、一周／全部时间听歌排行；原顺序、有界只读，不推算时长；仅合成响应验证 |
 | [chart-reads.md](chart-reads.md) | 榜单列表／内容摘要；展示预览不是可播放歌曲，复用歌单详情／分页与显式选歌播放，响应仅合成验证 |
 | [playlist-discovery-reads.md](playlist-discovery-reads.md) | 推荐、普通／精品歌单及分类／热门／精品标签6项；有界只读、不同分页／来源，原歌单／显式播放复用，仅合成验证 |

@@ -97,6 +97,26 @@ LC_ALL=C.UTF-8 QT_FATAL_WARNINGS=1 build/linux-dev-local/tests/tst_backend_runti
 - 维护者决定（2026-11-09）：Cirrus 的"最近播放"页只显示云端；本机听歌数据放到以后的"听歌统计"仪表盘页。
 - 网页版公开前端代码（2026-11-09）：切歌时先 `play`（上一首），再 `startplay`（新歌）；没有其他写入最近播放的请求。Cirrus 原先只发 `play`，现在 `ListeningReporter` 在每次加载第一次出声时也发 `startplay`（[UI 接入 §6.1](../ui/integration.md)）。维护者确认（2026-11-09）：发了之后歌进了"最近播放"。结论：`startplay` 更新"最近播放"，`play` 计入听歌排行。
 
+## 4c. 改为照新网页版发送（2026-11-14）
+
+**问题**（维护者 2026-11-14）：听歌足迹里当天的记录都在，过几天再看，那一天的记录整天消失。服务器每条都回 code 200（11-09～11-14 共 170 条，151 条确认，19 条是 `clientlog` 上的 `HTTP/2 protocol error`）。社区里用 `os=osx` 的写法（[api-enhanced#167](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced/issues/167)）只验证过"当时入账"。原来的请求是混合身份：同一 deviceId 平时自称 Windows PC 客户端，上报时自称 Mac 客户端（还带着 PC 的 `versioncode`、`resolution`），UA 是浏览器，内容是旧网页版的格式，而且从来没有登记过"客户端活跃"。
+
+**证据**：只读网易云新网页版 `music.163.com/st/webplayer` 公开下发的前端（`hybrid/app.4c9df986.js` SHA-256 前缀 `baa76cd9cefd3b63`，`hybrid/vendors~app.31d15e2d.js` 前缀 `de33b2d8521fafb8`），没有发送请求。它是 PC 客户端的前端；PC 客户端的完整播放日志（`_plv`／`_pld`，几十个字段，走 `clientlog3` 的加密上传）在浏览器里（`isWeb`）不发，只换成三条 weblog：
+
+| 时机 | action | json |
+| --- | --- | --- |
+| 启动后（取到用户信息）；开着跨过本地 **6:00** 时再发 | `activeclient` | `{mainSite:"2", mainSiteWeb:"2"}` |
+| 一首开始 | `startPlay` | `{mainSite:"2", mainSiteWeb:"2", id, type:"song", content:""}` |
+| 一首结束 | `play` | `{mainSite:"2", mainSiteWeb:"2", id, type:"song", content:"", time, wifi:0, download:0}` |
+
+- `logs` 是单元素数组的 JSON 字符串。`time` 是真实收听秒数（四舍五入）。`end` 读的是不存在的 `endValue`，实际不发；也没有 `source`／`sourceId`。
+- 发送：网易云的日志主机固定为 `clientlogusf.music.163.com`（路由表 `logGenerator`）；浏览器里没有原生 deviceId／appver，走不了 eapi，用普通 weapi：`POST https://clientlogusf.music.163.com/weapi/feedback/weblog?csrf_token=<__csrf>`，明文另带 `csrf_token`、`e_r`，请求头 `x-music-web-os: web3`，浏览器的 Cookie。
+- 旧网页版（`core_d6d4797f….js`）同样发往 `clientlogusf` 的 weapi，字段是 `mainsite:"1"`、小写 `startplay`，没有 `activeclient`；它的 `useNewEncrypt` 标记现在没有代码读取。
+
+**改动**：三个 action 照新网页版发（新增 `ListeningActive`／`ListeningReportAction::ActiveClient`），走已有的 weapi 通道（浏览器 UA、`Referer`），`OfficialDestination::ListeningLog` 改为只允许 weapi，发往 `clientlogusf`，并带 `?csrf_token=`、`Origin`、`x-music-web-os: web3`（只此目的地）。去掉 `ListeningLogOsx` eapi profile，不再冒充 Mac 客户端。来源和结束原因照旧校验并记在日志里，不发出去。`ListeningReporter` 在账号登录后发一次 `activeclient`；之后每次上报前，如果上一次是在最近一个 6:00 之前发的，或者没得到确认，就先补发一次。时机、3 秒门槛不变。
+
+**待验证**（维护者的账号）：当天听歌足迹里有没有记录（社区说旧网页版的发法当天就不入账），过 3～5 天那一天还在不在；还有 `clientlogusf` 上 HTTP/2 失败是否还有。测试：`tst_listening_report`（合同、三种内容、URL／请求头）、`tst_listening_reporter`（`activeClientOnceADay`）。
+
 ## 5. 未决事项
 
 自动时机、最低有效收听阈值、试听资格、来源扩展、自然End／手动切歌／失败／关闭的终止字段、跨设备行为及结果对账都未在本包决定。后续[最近听过／听歌排行读取](cloud-history-reads.md)已另包离线接入，不证明本报告已进入云端记录；详细本地历史持久化／分析按维护者后续需求。UI仍最后，不以接口接通宣称用户的播放已进入云端记录。

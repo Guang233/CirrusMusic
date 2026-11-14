@@ -175,7 +175,7 @@ python3 tools/validate_api_inventory.py --upstream build/reference/api-enhanced
 | `src/application/music/personal_fm_source.*`、`netease/music/discovery_mapper.*` | [日推读取／FM条目供给](api/discovery-and-fm.md)；Runtime.fm()仅供给；[连续播放](api/fm-continuous-playback.md)由ListeningSession.startFm()独占驱动 |
 | `src/domain/music/library_types.h`、`netease/music/library_mapper.*`、`tests/unit/library_test.cpp` | [当前账号个人库](api/personal-library.md)：歌单／喜欢ID／收藏专辑及艺人，认证与账号绑定，无缓存／写入 |
 | `src/application/playback/observed_playback.*`、`listening_history.*` | 媒体进展计量值模型与256条会话账本；Qt采样在基础设施；无持久化／官方报告 |
-| `application/ports/listening_report_gateway.h`、`netease/music/listening_report_gateway.*` | [显式上报能力](api/explicit-listening-reports.md)：每调用一个action，clientlog/osx profile；无自动触发／重试 |
+| `application/ports/listening_report_gateway.h`、`netease/music/listening_report_gateway.*` | [显式上报能力](api/explicit-listening-reports.md)：每调用一个action，照新网页版走weapi发往clientlogusf（§4c）；无自动触发／重试 |
 | `src/domain/music/cloud_history_types.h`、`netease/music/cloud_history_mapper.*`、`tests/unit/cloud_history_test.cpp` | [最近听过／听歌排行](api/cloud-history-reads.md)：当前账号有界只读，次数／分值缺失为未知，不推导时长；响应仅合成验证 |
 | `src/domain/music/chart_types.h`、`netease/music/chart_mapper.*`、`tests/unit/charts_test.cpp` | [榜单列表／内容摘要](api/chart-reads.md)：Guest／账号只读，展示预览非Song，歌曲页和显式播放复用原链 |
 | `domain/music/playlist_discovery_types.h`、`netease/music/playlist_discovery_mapper.*`、`tests/unit/playlist_discovery_test.cpp` | [歌单发现6项](api/playlist-discovery-reads.md)：推荐无offset、普通offset、精品before与独立标签；原目录／显式播放复用 |

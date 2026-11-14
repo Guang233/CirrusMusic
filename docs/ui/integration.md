@@ -145,6 +145,8 @@ ui/app/main.cpp             组装 BackendRuntime → makeBackendSources(runtime
 - 结果是 Rejected／Unknown 时不重试（后端也不重试）。
 - StartPlay：每次加载第一次真正出声时（累计时长第一次大于 0）发一次，和网页版一样在上一首的 Play 之后；没出声就失败的加载不发；不满 3 秒的加载只有 StartPlay。最初先不发，2026-11-09 为查"最近播放"补上（§8），维护者 2026-11-09 确认：发了 StartPlay 后歌就进了官方的"最近播放"。
 
+**2026-11-14 改为照新网页版发送**（听歌足迹里的记录几天后整天消失）：weapi 发往 `clientlogusf`，三个 action `activeclient`（每天一次，以本地 6:00 为界）／`startPlay`／`play`，不再冒充 Mac 客户端，来源和结束原因只记在本地日志里。见 [explicit-listening-reports.md §4c](../api/explicit-listening-reports.md)。
+
 **来源**：展示层要记住每个队列条目从哪里来（`playSongs` 加来源参数；“下一首播放”“加入队列”的条目各自带来源），这部分无论怎样都要做。
 
 **证据：网页版的做法**（2026-11-07 读取 music.163.com 公开下发的前端代码，只读，没有发送任何上报；`core_d6d4797f….js` SHA-256 前缀 `b79d32317e06a476`，`pt_frame_index_f8fa6836….js` 前缀 `4ccc6cb5d58085e4`）：
