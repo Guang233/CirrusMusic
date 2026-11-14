@@ -64,10 +64,8 @@ jobs:
       - name: QML lint
         run: cmake --build build --target all_qmllint
 
-      # Same exclusions as ci.yml (§7.1).
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(playback_observation|playback_observation_feed|linux_observation_service)$"
