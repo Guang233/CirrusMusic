@@ -10,6 +10,7 @@ qt_add_qml_module(cirrus_ui_window
     SOURCES
         title_bar_mode.h
         title_bar_mode.cpp
+        wheel_scrolling.h
         window_frame.h
         window_frame.cpp
     QML_FILES
