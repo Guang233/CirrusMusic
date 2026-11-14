@@ -12,6 +12,7 @@ qt_add_qml_module(cirrus_ui_controls
     SOURCES
         md.h
         input_mode.h input_mode.cpp
+        wheel_filter.h wheel_filter.cpp
     QML_FILES
         Icon.qml
         StateLayer.qml

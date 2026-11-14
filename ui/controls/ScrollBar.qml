@@ -29,7 +29,7 @@ T.ScrollBar {
     // from where the content is, dropping the unfinished part, or flicks and glides; a
     // restarted ease per notch also makes the speed pulse.) Past an end it runs out a
     // little and comes back. Touchpads (pixel deltas) are left to the Flickable; at an
-    // end the wheel goes on to the view around it.
+    // end the wheel goes on to the view around it (WheelFilter).
     readonly property Flickable flickable: orientation === Qt.Vertical ? parent as Flickable
                                                                        : null
     readonly property real minY: flickable ? flickable.originY - flickable.topMargin : 0
@@ -66,34 +66,23 @@ T.ScrollBar {
         }
     }
 
-    WheelHandler {
-        parent: control.flickable
+    WheelFilter {
+        target: control.flickable
         enabled: control.flickable !== null && control.flickable.interactive
-        target: null
-        // Wheels only, told apart by their missing pixel delta, not by the device: under
-        // some Wayland compositors (niri, 2026-11-14) Qt reports the seat's one pointer,
-        // mouse wheel included, as a touchpad.
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        orientation: Qt.Vertical
-        onWheel: event => {
+        onNotch: steps => {
             const view = control.flickable;
-            if (event.pixelDelta.y !== 0 || event.angleDelta.y === 0 || control.maxY <= control.minY) {
-                event.accepted = false;
+            if (control.maxY <= control.minY)
                 return;
-            }
             const following = wheelScroll.running && Math.abs(view.contentY - control.placed) < 0.5;
             const from = following ? Math.max(control.minY, Math.min(control.maxY, control.goal))
                                    : view.contentY;
             // QStyleHints.wheelScrollLines (typed QObject for qmllint).
             const lines = Object(Qt.styleHints).wheelScrollLines ?? 3;
-            const step = event.angleDelta.y / 120 * lines * 40;
-            const wanted = from - step;
+            const wanted = from - steps * lines * 40;
             // Already at that end: the view around it scrolls instead.
             if (!following && (wanted < control.minY && from <= control.minY + 0.5
-                               || wanted > control.maxY && from >= control.maxY - 0.5)) {
-                event.accepted = false;
+                               || wanted > control.maxY && from >= control.maxY - 0.5))
                 return;
-            }
             if (!following) {
                 control.placed = NaN;
                 wheelScroll.snapTo(view.contentY);
@@ -105,6 +94,7 @@ T.ScrollBar {
                          : (past < 0 ? control.minY : control.maxY) + Math.max(-24, Math.min(24, past / 3));
             control.active = true;
             wheelScroll.target = control.goal;
+            accepted = true;
         }
     }
 
