@@ -109,7 +109,7 @@ jobs:
 
       - name: Install tree
         if: inputs.package
-        # windeployqt resolves every DLL Cirrus.exe needs: FFmpeg, OpenSSL and zlib through
+        # windeployqt resolves every DLL Cirrus.exe needs: FFmpeg, OpenSSL, zlib and zstd through
         # PATH (Git Bash's PATH uses /d/... paths; D:/... would split at the colon).
         # QtKeychain is static here (build-qtkeychain.sh).
         run: |
@@ -117,14 +117,14 @@ jobs:
           cmake --install build --prefix "$STAGE"
           ls "$STAGE"
           # Every library Cirrus.exe takes from vcpkg must be in the package: FFmpeg
-          # (avcodec-63.dll …), OpenSSL (libcrypto-3-x64.dll), zlib (z.dll or zlib1.dll).
+          # (avcodec-63.dll …), OpenSSL (libcrypto-3-x64.dll), zlib (z.dll or zlib1.dll), zstd.
           shopt -s nullglob
           missing=0 found=0
-          for dll in "$VCPKG_INSTALLED"/x64-windows/bin/{avcodec,avformat,avutil,swresample,libcrypto,zlib,z}[-.0-9]*dll; do
+          for dll in "$VCPKG_INSTALLED"/x64-windows/bin/{avcodec,avformat,avutil,swresample,libcrypto,zlib,z,zstd}[-.0-9]*dll; do
             found=$((found + 1))
             [[ -f "$STAGE/$(basename "$dll")" ]] || { echo "::error::missing $(basename "$dll")"; missing=1; }
           done
-          (( found >= 6 )) || { echo "::error::expected 6 vcpkg DLLs, found $found"; missing=1; }
+          (( found >= 7 )) || { echo "::error::expected 7 vcpkg DLLs, found $found"; missing=1; }
           [[ -f "$STAGE/vcruntime140.dll" ]] || { echo "::error::missing the MSVC runtime"; missing=1; }
           (( missing == 0 ))
           mkdir -p dist

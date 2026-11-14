@@ -11,7 +11,7 @@ arch=('x86_64')
 url='https://github.com/Guang233/CirrusMusic'
 license=('MIT')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'qt6-imageformats'
-         'qtkeychain-qt6' 'ffmpeg' 'openssl' 'zlib' 'hicolor-icon-theme')
+         'qtkeychain-qt6' 'ffmpeg' 'openssl' 'zlib' 'zstd' 'hicolor-icon-theme')
 makedepends=('cmake' 'ninja' 'qt6-shadertools' 'qt6-tools' 'git')
 optdepends=('gnome-keyring: keep the sign-in in a keyring'
             'kwallet: keep the sign-in in KWallet')
