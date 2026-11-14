@@ -68,7 +68,9 @@ make_deb() {
         find "$stage/opt/cirrus" -name '*.so*' -printf '%h\n' | sort -u)
     local depends
     depends=$(cd "$tmp" && dpkg-shlibdeps -O --ignore-missing-info "${libdirs[@]}" \
-        -e"${elves[@]}" 2>/dev/null | sed -n 's/^shlibs:Depends=//p')
+        -e"${elves[@]}" 2> >(grep -v 'warning:' >&2) | sed -n 's/^shlibs:Depends=//p')
+    # Qt's TLS takes the system's root certificates (not a library, so not found above).
+    depends+=", ca-certificates"
     rm -rf "$tmp"
 
     mkdir -p "$stage/DEBIAN"
