@@ -86,8 +86,8 @@ MSVC（VS 2022）、Qt `win64_msvc2022_64`、vcpkg（`packaging/windows/vcpkg.js
 - 第三方声明：`packaging/THIRD-PARTY-NOTICES.md`，许可原文在 `packaging/licenses/`（LGPL-2.1、LGPL-3.0、GPL-3.0、Apache-2.0）和各依赖目录；装到包的 `share/doc/cirrus/`（Windows：`licenses\`）。设置 › 关于的"第三方许可"同步列了 FFmpeg、QtKeychain、OpenSSL、zlib、QR Code generator。
 - LGPL：全部动态链接、不修改，用户可以替换 `lib/` 里的库。Release 附上 FFmpeg、QtKeychain 的原始源码；声明里写了"三年内应要求提供源码"，Qt 指向官方源码下载（Qt 源码约 1 GB，不附）。
 - MiSans：原样随应用分发，不单独分发（字体许可，`ui/theme/fonts/README.md`）。
+- **项目许可证：MIT**（维护者 2026-11-14 决定）。根目录 `LICENSE`；`cmake --install` 把它和第三方声明一起装进说明文档目录（Linux `share/doc/cirrus/`，Windows `licenses\`）；AppStream 的 `project_license` 是 `MIT`；PKGBUILD 是 `license=('MIT')`，另装到 `/usr/share/licenses/cirrus/`；deb 的 `copyright` 前面是 MIT 全文、后面是第三方声明。Windows 安装程序不加许可页（MIT 不要求用户同意）。
 - **待维护者决定**：
-  - 项目自己的许可证（发布阻塞项，`docs/11-security-privacy-and-compliance.md` §7）。在那之前 AppStream 不写 `project_license`，PKGBUILD 是 `LicenseRef-unknown`，安装包没有许可页。
   - 源码提供的承诺（上面"三年内应要求提供"）是否保留，还是只靠 Release 附的源码。
   - deb 的 `Maintainer` 现在只有 `guang233`，没有邮箱。
   - 安全问题的报告渠道（同上文档 §8）。

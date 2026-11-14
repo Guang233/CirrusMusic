@@ -49,7 +49,9 @@ make_deb() {
     mv "$stage/opt/cirrus/share/applications" "$stage/opt/cirrus/share/metainfo" \
        "$stage/opt/cirrus/share/icons" "$stage/usr/share/"
     ln -s /opt/cirrus/bin/cirrus "$stage/usr/bin/cirrus"
-    cp "$root/packaging/THIRD-PARTY-NOTICES.md" "$stage/usr/share/doc/$pkg/copyright"
+    # Cirrus's own license, then the third-party software it ships.
+    { cat "$root/LICENSE"; echo; cat "$root/packaging/THIRD-PARTY-NOTICES.md"; } \
+        >"$stage/usr/share/doc/$pkg/copyright"
 
     # Dependencies on the system's libraries (everything not in the bundle).
     local tmp; tmp=$(mktemp -d)

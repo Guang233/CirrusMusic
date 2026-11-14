@@ -1,7 +1,8 @@
 # Cirrus: third-party software
 
 Cirrus is a third-party NetEase Cloud Music client. It is not affiliated with, endorsed
-by or sponsored by NetEase.
+by or sponsored by NetEase. Cirrus itself is licensed under the MIT License (`LICENSE`
+next to this file).
 
 Cirrus uses the following software. The license texts are in `licenses/` next to this
 file. Libraries under the LGPL are linked dynamically and are not modified; you may

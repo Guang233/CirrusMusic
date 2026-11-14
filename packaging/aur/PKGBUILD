@@ -9,7 +9,7 @@ pkgrel=1
 pkgdesc='Third-party NetEase Cloud Music client'
 arch=('x86_64')
 url='https://github.com/Guang233/CirrusMusic'
-license=('LicenseRef-unknown') # set once the maintainer picks the project license
+license=('MIT')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'qt6-imageformats'
          'qtkeychain-qt6' 'ffmpeg' 'openssl' 'zlib' 'hicolor-icon-theme')
 makedepends=('cmake' 'ninja' 'qt6-shadertools' 'qt6-tools' 'git')
@@ -30,4 +30,5 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 "CirrusMusic-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

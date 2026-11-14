@@ -83,7 +83,7 @@
 
 ## 7. 开源依赖与软件许可
 
-正式发布前必须明确 Cirrus 自身许可证，建议维护者在开源分发模式、潜在贡献和依赖条件之间做选择。本文不擅自添加 LICENSE。
+Cirrus 自身采用 **MIT 许可证**（维护者 2026-11-14 决定，仓库根目录 `LICENSE`）。安装包随附 `LICENSE`、第三方声明和各许可文本（`docs/tasks/release.md`）。
 
 发布审查至少覆盖：Qt 各使用模块、FFmpeg 的实际构建配置、OpenSSL、QtKeychain、TagLib（若引入）、图标／字体和音视频测试素材。
 
