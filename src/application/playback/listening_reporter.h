@@ -76,8 +76,9 @@ class ListeningReporter final : public QObject
     QTimer m_flushTimer;
     std::function<void()> m_flushDone;
     std::function<QDateTime()> m_clock;
-    QString m_activeAccount; // the account the last ActiveClient was for
-    QDateTime m_activeAt;    // when it was sent; null: none, or not acknowledged
-    quint64 m_activeId = 0;  // the ActiveClient in flight
+    QString m_activeAccount;            // the account the last ActiveClient was for
+    QDateTime m_activeAt;               // when it was sent; null: none, or not acknowledged
+    quint64 m_activeId = 0;             // the ActiveClient in flight
+    QHash<QString, qint64> m_durations; // song id → its length in seconds, as played
 };
 } // namespace cirrus::application

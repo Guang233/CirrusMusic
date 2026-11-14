@@ -79,10 +79,18 @@ struct ListeningReport {
     qint64 playedSeconds = 0; // caller must supply genuine observed time, never final position
     ListeningReportSource source = ListeningReportSource::List;
     ListeningReportEnd end = ListeningReportEnd::PlayEnd; // Play only
+    qint64 durationSeconds = 0;                           // the song's length, when known (0: not)
+    QString quality;        // the level played ("exhigh", "lossless"…), when known
+    qint64 startedAtMs = 0; // when the load began playing (epoch ms), when known
     [[nodiscard]] bool isValid() const
     {
         if (action == ListeningReportAction::ActiveClient)
             return !eventId.isNull() && playedSeconds == 0;
+        if (durationSeconds < 0 || durationSeconds > 86400 || quality.size() > 16)
+            return false;
+        for (const QChar c : quality)
+            if (!c.isLetterOrNumber())
+                return false;
         return !eventId.isNull() && validMusicId(song.value) && validSourceId(source, sourceId) &&
                ((action == ListeningReportAction::StartPlay && playedSeconds == 0) ||
                 (action == ListeningReportAction::Play && playedSeconds > 0 &&

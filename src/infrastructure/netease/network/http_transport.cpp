@@ -200,9 +200,9 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
              : !request.commentV3Token.isEmpty()) ||
         (!request.commentV3Token.isEmpty() &&
          request.destination != OfficialDestination::Default) ||
-        !validHeaderValue(request.csrfQuery, 256) ||
-        (!request.csrfQuery.isEmpty() &&
-         request.destination != OfficialDestination::ListeningLog)) {
+        !validHeaderValue(request.contentType, 128) ||
+        (request.destination == OfficialDestination::ClientLog) !=
+            request.contentType.startsWith("multipart/form-data; boundary=")) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -213,17 +213,14 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     pending->timeoutMs = request.timeoutMs;
     if (request.retryLostConnection && pending->resends < kLostConnectionResends)
         pending->again = request;
-    const bool log = request.destination == OfficialDestination::ListeningLog;
-    auto target = *url;
-    if (log && !request.csrfQuery.isEmpty())
-        target.setQuery(QStringLiteral("csrf_token=") + QString::fromLatin1(QUrl::toPercentEncoding(
-                                                            QString::fromUtf8(request.csrfQuery))),
-                        QUrl::StrictMode);
-    QNetworkRequest wire(target);
+    QNetworkRequest wire(*url);
     if (pending->resends > 0) // the HTTP/2 connection was lost: this time over HTTP/1.1
         wire.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
-    wire.setHeader(QNetworkRequest::ContentTypeHeader,
-                   QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
+    if (request.contentType.isEmpty())
+        wire.setHeader(QNetworkRequest::ContentTypeHeader,
+                       QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
+    else
+        wire.setRawHeader("Content-Type", request.contentType);
     wire.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                       QNetworkRequest::ManualRedirectPolicy);
     wire.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
@@ -240,10 +237,6 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
 
     if (request.musicReferer) {
         wire.setRawHeader("Referer", "https://music.163.com");
-    }
-    if (log) { // what the web player's log request carries (explicit-listening-reports §4c)
-        wire.setRawHeader("Origin", "https://music.163.com");
-        wire.setRawHeader("x-music-web-os", "web3");
     }
     for (const auto& [name, value] : request.xeapiHeaders) {
         wire.setRawHeader(name, value);

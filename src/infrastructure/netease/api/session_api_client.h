@@ -103,8 +103,10 @@ class SessionApiClient final : public QObject
         quint64 transportId = 0;
         ApiError forcedError{};
         std::shared_ptr<SessionCookieStore> credentials;
-        QElapsedTimer elapsed; // for the log
+        QElapsedTimer elapsed;         // for the log
+        QList<QByteArray> uploadFiles; // ClientLog: the names `successfiles` must list
     };
+    void startClientLog(quint64 requestId, Pending& pending);
     void invalidatePrevious(domain::SessionToken context);
     void start(quint64 requestId);
     void receive(quint64 transportId, const TransportResult& result);
@@ -117,6 +119,9 @@ class SessionApiClient final : public QObject
     std::optional<XeapiSessionKey> m_xeapiSession; // current epoch only; secret
     QByteArray m_anonymousToken;                   // installation-level; secret
     const QString m_deviceId;
+    QString m_logSession;  // the data-report SDK's session (ms#rand#ver#build)
+    int m_logSequence = 0; // the log files' sequence
+    int m_logPid = 0;      // the "process id" in file names and records
     SessionCookieStore m_cookies;
     domain::SessionToken m_context;
     QHash<quint64, Pending> m_pending;

@@ -78,6 +78,11 @@ void ListeningReporter::recordChanged(const StoredListeningRecord& row)
 
 void ListeningReporter::playbackChanged(const PlaybackSnapshot& snapshot)
 {
+    if (snapshot.durationMs && *snapshot.durationMs > 0 && validMusicId(snapshot.song.value)) {
+        if (m_durations.size() > 64)
+            m_durations.clear();
+        m_durations.insert(snapshot.song.value, qMin<qint64>(*snapshot.durationMs / 1000, 86400));
+    }
     if (snapshot.state == PlaybackState::Paused) {
         if (!m_pause.isActive())
             m_pause.start();
@@ -112,6 +117,9 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
     ListeningReport report{QUuid::createUuid(), row.song, row.song.value, action,
                            action == ListeningReportAction::Play ? row.playedMs / 1000 : 0};
     report.source = ListeningReportSource::Song; // played as itself, unless we know better
+    report.quality = row.actualQuality.size() <= 16 ? row.actualQuality : QString();
+    report.durationSeconds = m_durations.value(row.song.value);
+    report.startedAtMs = qMax<qint64>(0, row.startedAtMs);
     const char* origin = "none";
     if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
         auto known = report;

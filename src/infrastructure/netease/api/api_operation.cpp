@@ -13,6 +13,7 @@
 #include "together_operation.h"
 #include "user_profile_operation.h"
 
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSet>
@@ -75,15 +76,6 @@ std::optional<QJsonObject> credentialPayload(ApiOperation operation, const QJson
                            {u"rememberLogin"_s, u"true"_s}};
     }
     return std::nullopt;
-}
-
-// weblog's form: `logs` is a one-element JSON array as a compact string.
-QJsonObject listeningLogs(const QString& action, const QJsonObject& json)
-{
-    const QJsonArray logs{
-        QJsonObject{{QStringLiteral("action"), action}, {QStringLiteral("json"), json}}};
-    return QJsonObject{{QStringLiteral("logs"),
-                        QString::fromUtf8(QJsonDocument(logs).toJson(QJsonDocument::Compact))}};
 }
 
 } // namespace
@@ -193,10 +185,10 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::ListeningStart:
     case ApiOperation::ListeningPlay:
     case ApiOperation::ListeningActive:
-        // As the web player sends them (docs/api/explicit-listening-reports.md §4c).
-        return ApiOperationContract{QStringLiteral("/api/feedback/weblog"), Protocol::Weapi,
+        // The Android client's encrypted log upload (explicit-listening-reports §4d).
+        return ApiOperationContract{QStringLiteral("/api/clientlog/encrypt/upload"), Protocol::Api,
                                     ResponseEncoding::Json, 64 * 1024,
-                                    OfficialDestination::ListeningLog};
+                                    OfficialDestination::ClientLog};
     case ApiOperation::DailyHistoryDates:
         return ApiOperationContract{QStringLiteral("/api/discovery/recommend/songs/history/recent"),
                                     Protocol::Weapi, ResponseEncoding::Json, 1024 * 1024};
@@ -642,6 +634,9 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         const auto endText = parameters.value(QStringLiteral("end")).toString();
         const auto time = parameters.value(QStringLiteral("time"));
         const auto seconds = time.toInteger(-1);
+        const auto duration = parameters.value(QStringLiteral("duration")).toInteger(-1);
+        const auto quality = parameters.value(QStringLiteral("quality")).toString();
+        const auto startedMs = parameters.value(QStringLiteral("started")).toInteger(0);
         std::optional<ListeningReportSource> kind;
         for (auto k : {ListeningReportSource::List, ListeningReportSource::Album,
                        ListeningReportSource::Artist, ListeningReportSource::Toplist,
@@ -653,31 +648,136 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         for (auto e : {ListeningReportEnd::PlayEnd, ListeningReportEnd::Ui,
                        ListeningReportEnd::Interrupt, ListeningReportEnd::Exception})
             endKnown = endKnown || domain::endName(e) == endText;
-        if (parameters.size() != (play ? 5 : 3) || !domain::validMusicId(id) || !kind ||
-            !domain::validSourceId(*kind, source) || !endKnown ||
+        bool qualityKnown = quality.size() <= 16;
+        for (const QChar c : quality)
+            qualityKnown = qualityKnown && c.isLetterOrNumber();
+        if (parameters.size() != (play ? 8 : 6) || !domain::validMusicId(id) || !kind ||
+            startedMs < 0 || !domain::validSourceId(*kind, source) || !endKnown || duration < 0 ||
+            duration > 86400 || !qualityKnown ||
             (play && (seconds <= 0 || seconds > 604800 || time != QJsonValue(seconds))))
             return std::nullopt;
-        // The web player's logs (§4c): source, sourceId and end stay local (checked above,
-        // logged by the gateway); the player leaves them out.
-        QJsonObject json{{QStringLiteral("mainSite"), QStringLiteral("2")},
-                         {QStringLiteral("mainSiteWeb"), QStringLiteral("2")},
-                         {QStringLiteral("id"), id},
-                         {QStringLiteral("type"), QStringLiteral("song")},
-                         {QStringLiteral("content"), QString()}};
+        // The Android client's `_plv` / `_pld`, field for field as the official 9.6.15
+        // uploads them (§4d: its only playback records; `_plv` drives 最近播放, `_pld` the
+        // footprint and ranking). Values we can't know are its defaults; the per-upload
+        // fields (session, times, process) are added when sent.
+        static const QHash<QString, int> bitrates{{QStringLiteral("standard"), 128},
+                                                  {QStringLiteral("higher"), 192},
+                                                  {QStringLiteral("exhigh"), 320},
+                                                  {QStringLiteral("lossless"), 999},
+                                                  {QStringLiteral("hires"), 1999}};
+        const auto bitrate = bitrates.value(quality, 320);
+        const bool lossless =
+            quality == QStringLiteral("lossless") || quality == QStringLiteral("hires");
+        const qint64 numericId = id.toLongLong();
+        const qint64 startedSecs = startedMs / 1000;
+        QJsonObject event;
+        for (const auto& [key, value] : std::initializer_list<std::pair<const char*, QJsonValue>>{
+                 {"_addUndefineRefer", QString()},
+                 {"_addrefer", QString()},
+                 {"_multirefers", QString()},
+                 {"aidj_open_type", QStringLiteral("default")},
+                 {"alg", QStringLiteral("null")},
+                 {"audioLevel", quality.isEmpty() ? QStringLiteral("exhigh") : quality},
+                 {"bitrate", bitrate},
+                 {"config_ver", 123791360},
+                 {"copyright", 1},
+                 {"currentProcessName", QStringLiteral("com.netease.cloudmusic")},
+                 {"download", 0},
+                 {"fee", 0},
+                 {"file", 4},
+                 {"id", numericId},
+                 {"isMergeProcess", 1},
+                 {"isQuickListenFramework", 1},
+                 {"isVipSong", 0},
+                 {"is_autoplay", 0},
+                 {"is_heart", QStringLiteral("0")},
+                 {"is_horizontal", 0},
+                 {"is_listentogether", 0},
+                 {"lags", QString()},
+                 {"list_start", QStringLiteral("manual")},
+                 {"listentogether_room", QString()},
+                 {"mode", QStringLiteral("circulation")},
+                 {"npu_bitrate", -1},
+                 {"playermodel_id", QString()},
+                 {"preferrefer", QString()},
+                 {"privilege_viptype", 0},
+                 {"reference_id", QString()},
+                 {"resource_ratio",
+                  play ? (duration > 0 ? int(qMin<qint64>(100, seconds * 100 / duration)) : 0) : 0},
+                 {"resource_time", duration},
+                 {"rightSource", 0},
+                 {"s_position", 1},
+                 {"sleeping_resid", QString()},
+                 {"songInd", 0},
+                 {"sound_effect_id", QStringLiteral("{}")},
+                 {"song_add", QStringLiteral("auto")},
+                 {"song_start", QStringLiteral("first")},
+                 {"source", sourceText},
+                 {"sourceId", source},
+                 {"sp_fl", 320000},
+                 {"sp_flag", 0},
+                 {"sp_pay", 0},
+                 {"sp_pl", 999000},
+                 {"sp_playMaxbr", 999000},
+                 {"sp_source", QStringLiteral("SERVER")},
+                 {"startlogtime", startedSecs},
+                 {"status", QStringLiteral("front")},
+                 {"supportSepTrack", 0},
+                 {"trialMode", 0},
+                 {"type", QStringLiteral("song")},
+                 {"viptype", QStringLiteral("0")},
+                 {"wifi", 0}})
+            event.insert(QString::fromLatin1(key), value);
+        event.insert(QStringLiteral("time"), play ? seconds : 0);
+        event.insert(QStringLiteral("realtime"), play ? seconds : 0);
         if (play) {
-            json.insert(QStringLiteral("time"), seconds);
-            json.insert(QStringLiteral("wifi"), 0);
-            json.insert(QStringLiteral("download"), 0);
+            event.insert(QStringLiteral("end"), endText);
+            event.insert(QStringLiteral("end_mix_list_type"), QStringLiteral("default"));
+            event.insert(QStringLiteral("start_mix_list_type"), QStringLiteral("default"));
+            event.insert(QStringLiteral("end_source"), 100);
+            event.insert(QStringLiteral("errorcode"), endText == u"exception" ? 1 : -1);
+            event.insert(QStringLiteral("format"),
+                         lossless ? QStringLiteral("flac") : QStringLiteral("mp3"));
+            event.insert(QStringLiteral("progressTime"), seconds);
+            event.insert(QStringLiteral("play_speed"), 1);
+            event.insert(QStringLiteral("volumeBalance"), QStringLiteral("[2,0]"));
+            event.insert(QStringLiteral("enableSepTrack"), 0);
+            event.insert(QStringLiteral("finalVol"), 0);
+            event.insert(QStringLiteral("isForegroundService"), 1);
+            event.insert(QStringLiteral("isZhuoyi"), false);
+            event.insert(
+                QStringLiteral("play_extra"),
+                QJsonObject{{QStringLiteral("deviceType"), 0}, {QStringLiteral("readType"), 0}});
+            event.insert(QStringLiteral("ignoreBatteryOpt"), 0);
+            event.insert(QStringLiteral("mix_list_status"), QStringLiteral("0"));
+            event.insert(QStringLiteral("skip_reason"), endText == u"playend"
+                                                            ? QStringLiteral("complete")
+                                                            : QStringLiteral("next"));
+            event.insert(QStringLiteral("transitionSwitchStatus"), 0);
         }
-        return listeningLogs(play ? QStringLiteral("play") : QStringLiteral("startPlay"), json);
+        const auto code = play ? QStringLiteral("_pld") : QStringLiteral("_plv");
+        event.insert(QStringLiteral("_eventcode"), code);
+        const auto record = [](const QString& stream, const QString& action,
+                               const QJsonObject& data) {
+            return QJsonObject{{QStringLiteral("stream"), stream},
+                               {QStringLiteral("action"), action},
+                               {QStringLiteral("data"), data}};
+        };
+        const QJsonArray records{record(QStringLiteral("ua"), code, event)};
+        return QJsonObject{{QStringLiteral("records"), records}};
     }
     if (operation == ApiOperation::ListeningActive) {
-        // The web player's daily `activeclient` (§4c).
+        // The client's daily `activeclient`, a BI log (§4d).
         if (!parameters.isEmpty())
             return std::nullopt;
-        return listeningLogs(QStringLiteral("activeclient"),
-                             QJsonObject{{QStringLiteral("mainSite"), QStringLiteral("2")},
-                                         {QStringLiteral("mainSiteWeb"), QStringLiteral("2")}});
+        return QJsonObject{
+            {QStringLiteral("records"),
+             QJsonArray{QJsonObject{
+                 {QStringLiteral("stream"), QStringLiteral("bi")},
+                 {QStringLiteral("action"), QStringLiteral("activeclient")},
+                 {QStringLiteral("data"),
+                  QJsonObject{{QStringLiteral("source"), QStringLiteral("netease")},
+                              {QStringLiteral("resolution"), QStringLiteral("1920x1080x1")}}}}}}};
     }
     if (operation == ApiOperation::AccountIdentity ||
         operation == ApiOperation::AnonymousRegister || operation == ApiOperation::PersonalFm) {

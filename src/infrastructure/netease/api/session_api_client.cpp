@@ -4,12 +4,15 @@
 #include "logging/durations.h"
 #include "logging/log.h"
 
+#include "infrastructure/netease/protocol/client_log.h"
 #include "infrastructure/netease/protocol/eapi_request_profile.h"
 #include "infrastructure/netease/protocol/xeapi_request_profile.h"
 
 #include <QDateTime>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkCookie>
+#include <QRandomGenerator>
 #include <QThread>
 #include <QTimer>
 
@@ -17,7 +20,6 @@
 
 namespace cirrus::netease
 {
-
 bool validAnonymousToken(const QByteArray& token)
 {
     if (token.isEmpty() || token.size() > 4096) {
@@ -266,7 +268,9 @@ quint64 SessionApiClient::submit(domain::SessionToken context, ApiOperation oper
                                       : !pending.commentV3Token.isEmpty()) ||
         !contract || !payload ||
         (contract->protocol != Protocol::Eapi && contract->protocol != Protocol::Weapi &&
-         contract->protocol != Protocol::Xeapi)) {
+         contract->protocol != Protocol::Xeapi &&
+         !(contract->protocol == Protocol::Api &&
+           contract->destination == OfficialDestination::ClientLog))) {
         pending.forcedError = ApiError::InvalidRequest;
     } else {
         const auto origin = officialRequestUrl(contract->protocol, contract->logicalPath);
@@ -304,6 +308,10 @@ void SessionApiClient::start(quint64 id)
     // registry, never a URL or cookie domain supplied by an API response.
     if (it->contract.protocol == Protocol::Xeapi) {
         startXeapi(id, *it);
+        return;
+    }
+    if (it->contract.destination == OfficialDestination::ClientLog) {
+        startClientLog(id, *it);
         return;
     }
     if (it->contract.protocol == Protocol::Weapi) {
@@ -348,8 +356,6 @@ void SessionApiClient::start(quint64 id)
                             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
         request.musicReferer = true;
         request.destination = it->contract.destination;
-        if (request.destination == OfficialDestination::ListeningLog)
-            request.csrfQuery = *csrf; // the web player repeats it in the URL
         request.responseLimit = it->contract.responseLimit;
         request.retryLostConnection = retriesLostConnection(it->operation);
         it->transportId = m_transport->post(std::move(request));
@@ -393,6 +399,114 @@ void SessionApiClient::start(quint64 id)
     it->transportId = m_transport->post(std::move(request));
     m_transportIds.insert(it->transportId, id);
     it->payload = {};
+}
+
+void SessionApiClient::startClientLog(quint64 id, Pending& pending)
+{
+    const auto csrf = m_cookies.value(pending.context, pending.origin, "__csrf");
+    const auto musicU = m_cookies.value(pending.context, pending.origin, "MUSIC_U");
+    const auto nmtid = m_cookies.value(pending.context, pending.origin, "NMTID");
+    if (!csrf || !musicU || musicU->isEmpty() || !nmtid) {
+        finish(id, {ApiError::Cookie});
+        return;
+    }
+    // The Android client's identity, as our stream URL requests (xeapi) carry it: its
+    // log header holds MUSIC_U, appver and buildver. The device id must be in its format.
+    const auto buildver = QByteArray::number(QDateTime::currentSecsSinceEpoch());
+    QJsonObject meta{{QStringLiteral("MUSIC_U"), QString::fromUtf8(*musicU)},
+                     {QStringLiteral("appver"), QStringLiteral("9.1.65")},
+                     {QStringLiteral("buildver"), QString::fromLatin1(buildver)}};
+    const auto device = androidDeviceId(m_deviceId); // not our PC-format id (dropped)
+    QByteArray header = "MUSIC_U=" + QUrl::toPercentEncoding(QString::fromUtf8(*musicU));
+    if (!csrf->isEmpty())
+        header += "; __csrf=" + QUrl::toPercentEncoding(QString::fromUtf8(*csrf));
+    if (!nmtid->isEmpty())
+        header += "; NMTID=" + QUrl::toPercentEncoding(QString::fromUtf8(*nmtid));
+    header += "; os=android; osver=16; appver=9.1.65; buildver=" + buildver +
+              "; channel=netease; deviceId=" + device + "; sDeviceId=" + device;
+    // As the official client uploads (§4d): one file per stream (`flush_ua_…` for the
+    // data-report SDK's events, `flush_bi_…` for BI logs), each record with the fields
+    // that SDK / the BI logger add to every log.
+    const auto now = QDateTime::currentMSecsSinceEpoch();
+    if (m_logPid == 0)
+        m_logPid = 10000 + QRandomGenerator::global()->bounded(20000);
+    if (m_logSession.isEmpty())
+        m_logSession = QString::number(now) + u'#' +
+                       QString::number(100 + QRandomGenerator::global()->bounded(900)) +
+                       u"#9.1.65#" + QString::fromLatin1(buildver);
+    QList<ClientLogFile> files;
+    QStringList actions;
+    QHash<QString, qsizetype> fileOf;
+    for (const auto& entry : pending.payload.value(QStringLiteral("records")).toArray()) {
+        const auto row = entry.toObject();
+        const auto stream = row.value(QStringLiteral("stream")).toString();
+        const auto action = row.value(QStringLiteral("action")).toString();
+        if (stream != u"ua" && stream != u"bi") {
+            finish(id, {ApiError::InvalidRequest});
+            return;
+        }
+        auto data = row.value(QStringLiteral("data")).toObject();
+        for (const auto& [key, value] : std::initializer_list<std::pair<const char*, QJsonValue>>{
+                 {"_logTime", now},
+                 {"_log_thoroughfare", stream},
+                 {"abtest", QString()},
+                 {"buildType", QStringLiteral("release")},
+                 {"lca", 1},
+                 {"libra_abt", QString()},
+                 {"net_wbid", QString()},
+                 {"net_wn", QString()},
+                 {"netstatus", QStringLiteral("wifi")},
+                 {"pid", m_logPid},
+                 {"screenType", QStringLiteral("other")}})
+            data.insert(QString::fromLatin1(key), value);
+        if (stream == u"ua") {
+            data.insert(QStringLiteral("_sessid"), m_logSession);
+            data.insert(QStringLiteral("_sidrefer"), m_logSession);
+            data.insert(QStringLiteral("_hsrefer"), QString());
+            data.insert(QStringLiteral("g_dprefer"), QString());
+            data.insert(QStringLiteral("channel"), QStringLiteral("netease"));
+            data.insert(QStringLiteral("logtime"), now);
+            data.insert(QStringLiteral("process_id"), m_logPid);
+            if (action == u"_pld") { // the app's install / update times (ms)
+                const auto installed = m_logSession.section(u'#', 0, 0).toLongLong();
+                data.insert(QStringLiteral("firstInstallTime"), installed);
+                data.insert(QStringLiteral("updateTime"), installed);
+            }
+        }
+        auto it = fileOf.find(stream);
+        if (it == fileOf.end()) {
+            const auto name = "flush_" + stream.toLatin1() + '_' + QByteArray::number(m_logPid) +
+                              '_' + QByteArray::number(++m_logSequence) + '_' +
+                              QByteArray::number(QRandomGenerator::global()->generate());
+            it = fileOf.insert(stream, files.size());
+            files.append({name, {}});
+        }
+        actions.append(action);
+        files[*it].records += clientLogRecord(now / 1000, action.toLatin1(), data);
+    }
+    const auto upload = clientLogUpload(QJsonDocument(meta).toJson(QJsonDocument::Compact), files);
+    if (!upload.ok()) {
+        finish(id, {ApiError::Crypto});
+        return;
+    }
+    qCInfo(lcReport) << log::event("report.upload") << log::field("req", id)
+                     << log::field("actions", actions.join(u','))
+                     << log::field("files", QString::fromLatin1(upload.fileNames.join(',')))
+                     << log::field("bytes", upload.body.size());
+    TransportRequest request;
+    request.protocol = pending.contract.protocol;
+    request.destination = pending.contract.destination;
+    request.logicalPath = pending.contract.logicalPath;
+    request.formBody = upload.body;
+    request.contentType = upload.contentType;
+    request.cookieHeader = header;
+    request.userAgent = "NeteaseMusic/9.5.61.260802021928(9005061);Dalvik/2.1.0 (Linux; U; "
+                        "Android 12; HBN-AL00 Build/cd737a2.0)"; // as the xeapi profile
+    request.responseLimit = pending.contract.responseLimit;
+    pending.uploadFiles = upload.fileNames;
+    pending.transportId = m_transport->post(std::move(request));
+    m_transportIds.insert(pending.transportId, id);
+    pending.payload = {};
 }
 
 void SessionApiClient::startXeapi(quint64 id, Pending& pending)
@@ -491,6 +605,25 @@ void SessionApiClient::receive(quint64 transportId, const TransportResult& trans
         result.decoded.businessCode == 200) {
         // Returned to the caller, never staged into the account jar.
         result.anonymousToken = anonymousTokenFrom(pending.origin, transport.setCookieHeaders);
+    }
+    if (result.decoded.ok() && !pending.uploadFiles.isEmpty() &&
+        result.decoded.businessCode == 200) {
+        // Taken only when the service lists our file (§4d); otherwise a rejection.
+        const auto files = result.decoded.object.value(QStringLiteral("data"))
+                               .toObject()
+                               .value(QStringLiteral("successfiles"))
+                               .toArray();
+        bool taken = true;
+        for (const auto& name : pending.uploadFiles)
+            taken = taken && files.contains(QString::fromLatin1(name));
+        qCInfo(lcReport) << log::event("report.upload_result") << log::field("req", id)
+                         << log::field("taken", taken) << log::field("files", files.size())
+                         << log::field("rate", result.decoded.object.value(QStringLiteral("data"))
+                                                   .toObject()
+                                                   .value(QStringLiteral("rate"))
+                                                   .toInt(-1));
+        if (!taken)
+            result.decoded.businessCode = -2;
     }
     if (!result.decoded.ok()) {
         result.error = ApiError::Decode;

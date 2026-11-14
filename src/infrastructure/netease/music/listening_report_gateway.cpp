@@ -131,7 +131,10 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
     if (!active)
         parameters = {{QStringLiteral("id"), report.song.value},
                       {QStringLiteral("source"), sourceName(report.source)},
-                      {QStringLiteral("sourceId"), report.sourceId}};
+                      {QStringLiteral("sourceId"), report.sourceId},
+                      {QStringLiteral("duration"), report.durationSeconds},
+                      {QStringLiteral("quality"), report.quality},
+                      {QStringLiteral("started"), report.startedAtMs}};
     const bool play = report.action == ListeningReportAction::Play;
     if (play) {
         parameters.insert(QStringLiteral("time"), report.playedSeconds);
@@ -146,7 +149,8 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
                                         ? QStringLiteral("len:%1").arg(report.sourceId.size())
                                         : report.sourceId)
                       << log::field("seconds", report.playedSeconds)
-                      << log::field("end", report.end);
+                      << log::field("duration", report.durationSeconds)
+                      << log::field("quality", report.quality) << log::field("end", report.end);
     const auto apiId = m_client->submit(context,
                                         active ? ApiOperation::ListeningActive
                                         : play ? ApiOperation::ListeningPlay

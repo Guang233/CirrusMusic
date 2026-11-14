@@ -64,11 +64,16 @@ std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPat
         return std::nullopt;
     }
 
-    if (destination == OfficialDestination::ListeningLog) {
-        // The web player's log host (docs/api/explicit-listening-reports.md §4c).
-        if (protocol != Protocol::Weapi || logicalPath != u"/api/feedback/weblog")
+    if (destination == OfficialDestination::ClientLog) {
+        // The Android client's log upload (explicit-listening-reports §4d).
+        if (protocol != Protocol::Api || logicalPath != u"/api/clientlog/encrypt/upload")
             return std::nullopt;
-        host = u"clientlogusf.music.163.com"_s;
+        QUrl url;
+        url.setScheme(u"https"_s);
+        url.setHost(u"clientlogsf.music.163.com"_s); // the Android client's BI / UA host
+        url.setPath(logicalPath.toString());
+        url.setQuery(u"multiupload=true"_s);
+        return url;
     } else if (destination == OfficialDestination::TogetherHttp) {
         if (protocol != Protocol::Eapi)
             return std::nullopt;
