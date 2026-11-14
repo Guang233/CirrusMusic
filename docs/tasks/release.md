@@ -129,4 +129,10 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
   - AppImage：不设空的 `LDAI_UPDATE_INFORMATION`（linuxdeploy 把空值当格式错误）。
   - 桌面文件校验：Ubuntu 22.04 的 `desktop-file-validate` 不认 `SingleMainWindow`（规范 1.5），只放过这一条。
   - Windows：windeployqt 把所有 `qt6*.dll` 当成 Qt 模块，遇到 `qt6keychain.dll` 先报错、再崩溃，所以 Windows 上静态链接 QtKeychain；`qwayland` 等只在 Linux 才有的部署选项不传给它（否则它会崩溃，`0xc0000409`）；排除系统 DLL 时只排除 `C:\Windows`（原来的写法把 vcpkg 的 `x64-windows/bin` 也排除了）；不带 `vc_redist.x64.exe`（运行库已放在 exe 旁边）。CI 检查 vcpkg 的 6 个 DLL（FFmpeg、`libcrypto-3-x64.dll`、`z.dll`）和 MSVC 运行库都在包里。
-- 还没做：在真实系统上安装、运行这些包（Ubuntu/Debian、其他发行版的 AppImage、Windows 10/11）；推标签走一遍完整的发布工作流。
+- 本机容器（2026-11-14，干净的 `ubuntu:22.04`，照 `linux-packages.yml` 打包，Qt 6.11.2 加 qtimageformats）：
+  - 打包脚本原先靠 GitHub 运行器预装的 GTK 3 和 Xrandr（Qt 的 GTK 主题插件、FFmpeg 插件链接它们），干净的 22.04 上 `dpkg-shlibdeps` 找不到就失败，而且错误被丢掉了：两者加进 `install-build-deps.sh`，错误照常显示。
+  - `strip --strip-unneeded` 把 Qt 已经 strip 过的 `libavutil.so.59` 再 strip 一遍（binutils 2.38），段对齐坏掉、加载不了（Qt Multimedia 的 FFmpeg 后端）。之前 CI 打的包也是这个脚本，应该同样有问题。改为只 strip 还带符号的 ELF。
+  - deb 依赖加 `ca-certificates`：最小系统没有根证书时 TLS 握手全部失败（首页"连不上网易云音乐"）。
+  - 在另一个干净的 22.04 里 `apt install` deb：依赖自动装齐，`/opt/cirrus` 里每个 ELF 的 `ldd` 都没有 not found；Xvfb 上启动，首页、封面正常（截图在本地 `build/pkgtest/check2/`）。AppImage（`APPIMAGE_EXTRACT_AND_RUN=1`）同样能启动。
+  - 新系统第一次用钥匙环时 gnome-keyring 弹窗要求设密码，弹窗没处理前首页一直在加载（启动要先读 `xeapi-key`）。没有钥匙环服务时照常加载。已登录桌面的钥匙环是解锁的，不会弹窗。
+- 还没做：真实桌面上装包（Ubuntu/Debian、其他发行版的 AppImage、Windows 10/11）；推标签走一遍完整的发布工作流。
