@@ -70,7 +70,10 @@ T.ScrollBar {
         parent: control.flickable
         enabled: control.flickable !== null && control.flickable.interactive
         target: null
-        acceptedDevices: PointerDevice.Mouse
+        // Wheels only, told apart by their missing pixel delta, not by the device: under
+        // some Wayland compositors (niri, 2026-11-14) Qt reports the seat's one pointer,
+        // mouse wheel included, as a touchpad.
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         orientation: Qt.Vertical
         onWheel: event => {
             const view = control.flickable;
