@@ -106,8 +106,7 @@ FFmpeg、QtKeychain、vcpkg 的编译结果都缓存（按脚本和清单的哈�
 
 ### 7.1 排除的测试
 
-- `backend_runtime`、`playback_observation`、`playback_observation_feed`、`linux_observation_service` 已知失败：CI 的 ctest 用 `-E` 排除。本地照常跑、照常失败。
-- `audio_store` 的 `interruptWakesOneRead` 不稳定（2026-11-10 第一次 CI 发现；本机单独跑 6 次失败 3 次）：测试先读第 4 块再 `interrupt()`，期望读还在等数据；但读请求有时比开头的下载先到，缓存直接从那里下载，第一个数据块就满足了这次读，返回数据而不是 FAILED。也先在 CI 里排除整个 `audio_store`。
+- `playback_observation`、`playback_observation_feed`、`linux_observation_service` 已知失败：CI 的 ctest 用 `-E` 排除。本地照常跑、照常失败。`backend_runtime`（重开数据库用错了迁移列表）和 `audio_store`（`interruptWakesOneRead` 的竞争）2026-11-14 修好，不再排除。
 - macOS 第一次跑时 `resource_cache_store` 和 `log_canary`（`audio.cached`）失败：资源缓存和音频缓存的私有目录检查原先只在 Linux 实现。2026-11-11 移植到 macOS 和 Windows（`src/infrastructure/storage/private_files.*`，见 HANDOFF），不再排除。`secrets` 的 `keychainWithoutBackendHasNoPlaintextFallback` 靠断开 D-Bus 来切断后端，只在 Linux 上跑；别的平台会写真实钥匙串（macOS CI 上卡到超时），所以在 Linux 以外 QSKIP。
 - 修好以后从这里和 `ci.yml` 里去掉。
 

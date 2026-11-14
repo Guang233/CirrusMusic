@@ -70,4 +70,4 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: >
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
+          -E "^(playback_observation|playback_observation_feed|linux_observation_service)$"

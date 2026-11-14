@@ -127,16 +127,14 @@ jobs:
         run: cmake --build build --target all_qmllint
 
       # Known failures, excluded until fixed (AGENTS.md "Build and verify"):
-      # backend_runtime (closeWhileDatabaseOpening), playback_observation,
-      # playback_observation_feed, linux_observation_service; audio_store
-      # (interruptWakesOneRead is timing-dependent: fails about half the runs alone).
+      # playback_observation, playback_observation_feed, linux_observation_service.
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           dbus-run-session --
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
+          -E "^(playback_observation|playback_observation_feed|linux_observation_service)$"
 
   windows:
     name: Windows build

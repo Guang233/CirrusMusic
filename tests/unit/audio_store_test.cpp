@@ -381,7 +381,9 @@ class AudioStoreTest : public QObject
         server.blockBytes = 1024;
         auto s = store(server);
         auto stream = s->open(source(server.body));
-        auto blocked = readAsync(stream, Chunk * 4, 100);
+        // More than one block: wherever the download starts (the head, or at once from
+        // here when the read is first), the second block is the one it waits for.
+        auto blocked = readAsync(stream, Chunk * 4, 4 * 1024);
         QTest::qWait(100);
         stream->interrupt();
         QTRY_VERIFY_WITH_TIMEOUT(ready(blocked), 1000);

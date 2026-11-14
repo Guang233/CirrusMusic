@@ -52,5 +52,5 @@ clang-format --dry-run --Werror <changed C++ files>
 - Offscreen uses the software renderer; custom shaders need `QT_QUICK_BACKEND=rhi QSG_RHI_BACKEND=opengl`.
 - Screenshots of `appCirrusMusic` from a temporary hook: QML `grabToImage` drops button/tab/chip containers in pages (they look disabled); call `QQuickWindow::grabWindow` from C++ instead (`docs/ui/expressive.md` §9).
 - Backend tests: `ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error`.
-- Known failures, all pre-existing (they fail the same at 97cbc0e): `backend_runtime` (`closeWhileDatabaseOpening`), and `playback_observation`, `playback_observation_feed`, `linux_observation_service` (`ListeningSession::select` of the active entry returns false). Reported to the maintainer 2026-11-08. `audio_store` (`interruptWakesOneRead`) is flaky, about half its runs fail (found 2026-11-10). CI excludes all of these (`ci.yml`) until fixed.
+- Known failures, all pre-existing: `playback_observation`, `playback_observation_feed`, `linux_observation_service` (`ListeningSession::select` of the active entry returns false: since 55458e5 a session phase change resets the queue). CI excludes them (`ci.yml`) until fixed.
 - `tst_audio_engine` plays on the default output at volume 0 and skips itself without a device.
