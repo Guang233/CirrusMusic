@@ -8,18 +8,19 @@
 namespace cirrus::ui
 {
 
-// Makes a scroll view treat mouse wheel notches as wheel notches (docs/ui/pages/playlist.md
-// §12). Qt 6.12's Wayland plugin gives each notch a 15 px pixel delta as well; a Flickable
-// then takes it for touchpad scrolling and moves 15 px a notch. The filter hands the view
-// the same event without the pixel delta, so Qt's own wheel scrolling (wheelScrollLines ×
-// 24 px a notch, overshooting and springing back at the ends) applies on every Qt version.
-// Touchpad gestures (with a scroll phase) pass untouched.
-//   WheelFilter { target: list }
+// Mouse wheel notches for a scroll view (docs/ui/pages/playlist.md §12): the view gets each
+// notch without a pixel delta and with its angle `scale`d, so Qt's own wheel scrolling
+// (wheelScrollLines × 24 px × scale a notch, eased, overshooting and springing back at the
+// ends) applies on every Qt version. Qt 6.12's Wayland plugin gives notches a 15 px pixel
+// delta too, which a Flickable takes for touchpad scrolling (15 px a notch). Touchpad
+// gestures (with a scroll phase) pass untouched.
+//   WheelFilter { target: list; scale: 5 / 3 }
 class WheelFilter : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QQuickItem* target READ target WRITE setTarget NOTIFY targetChanged)
+    Q_PROPERTY(qreal scale MEMBER m_scale)
 
   public:
     explicit WheelFilter(QObject* parent = nullptr);
@@ -35,6 +36,8 @@ class WheelFilter : public QObject
 
   private:
     QPointer<QQuickItem> m_target;
+    qreal m_scale = 1;
+    bool m_forwarding = false;
 };
 
 } // namespace cirrus::ui
