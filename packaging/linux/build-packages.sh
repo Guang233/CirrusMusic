@@ -36,9 +36,11 @@ cmake --build "$build" --parallel "${JOBS:-4}"
 install_tree() {
     rm -rf "$1"
     DESTDIR="$1" cmake --install "$build" --prefix "$2"
-    # Debug symbols are not shipped.
+    # Debug symbols are not shipped. Only files that still have them: stripping Qt's
+    # already stripped libraries again (binutils 2.38) breaks the alignment of its
+    # FFmpeg's libavutil.so.59, which then no longer loads.
     find "$1" -type f \( -name '*.so*' -o -perm -u+x \) -exec sh -c \
-        'file -b "$1" | grep -q ELF && strip --strip-unneeded "$1"' _ {} \;
+        'file -b "$1" | grep -q "^ELF.*not stripped" && strip --strip-unneeded "$1"' _ {} \;
 }
 
 make_deb() {
