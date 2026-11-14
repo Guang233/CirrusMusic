@@ -645,8 +645,9 @@ class StatsReader
                 const auto albumId = query.value(6).toString();
                 if (!albumId.isEmpty() || !query.value(7).toString().isEmpty())
                     row.song.album = domain::AlbumReference{
-                        albumId.isEmpty() ? std::nullopt
-                                          : std::optional<domain::AlbumId>({albumId}),
+                        albumId.isEmpty()
+                            ? std::nullopt
+                            : std::optional<domain::AlbumId>(domain::AlbumId{albumId}),
                         query.value(7).toString(), QUrl(query.value(8).toString())};
                 if (!query.value(9).isNull())
                     row.song.durationMs = query.value(9).toLongLong();
@@ -678,7 +679,8 @@ class StatsReader
                 return corrupt();
             const auto id = artists.value(1).toString();
             songs[at].song.artists.append(
-                {id.isEmpty() ? std::nullopt : std::optional<domain::ArtistId>({id}),
+                {id.isEmpty() ? std::nullopt
+                              : std::optional<domain::ArtistId>(domain::ArtistId{id}),
                  artists.value(2).toString()});
         }
         return true;
@@ -699,7 +701,8 @@ class StatsReader
             return false;
         while (query.next()) {
             const auto id = query.value(1).toString();
-            artists.append({{id.isEmpty() ? std::nullopt : std::optional<domain::ArtistId>({id}),
+            artists.append({{id.isEmpty() ? std::nullopt
+                                          : std::optional<domain::ArtistId>(domain::ArtistId{id}),
                              query.value(2).toString()},
                             count(query.value(3)),
                             query.value(4).toLongLong(),

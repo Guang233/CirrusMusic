@@ -68,7 +68,8 @@ domain::Song song(const QString& id, const QString& title, QList<domain::ArtistC
 }
 domain::ArtistCredit artist(const QString& id, const QString& name)
 {
-    return {id.isEmpty() ? std::nullopt : std::optional<domain::ArtistId>({id}), name};
+    return {id.isEmpty() ? std::nullopt : std::optional<domain::ArtistId>(domain::ArtistId{id}),
+            name};
 }
 
 class Fixture
