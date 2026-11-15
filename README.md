@@ -1,5 +1,12 @@
 <p align="center"><img src="ui/app/icons/cirrus-256.png" width="128" alt="Cirrus"></p>
 
+<p align="center">
+  <a href="https://github.com/Guang233/CirrusMusic/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Guang233/CirrusMusic?style=flat-square&logo=github" /></a>
+  <a href="https://github.com/Guang233/CirrusMusic/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Guang233/CirrusMusic?style=flat-square" /></a>
+  <a href="https://github.com/Guang233/CirrusMusic/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Guang233/CirrusMusic/total?style=flat-square" /></a>
+  <a href="https://www.qt.io/"><img alt="Qt" src="https://img.shields.io/badge/Qt-6.10%2B-41CD52?style=flat-square&logo=qt&logoColor=white" /></a>
+</p>
+
 # Cirrus
 
 **Cirrus is an unofficial desktop client for NetEase Cloud Music, built with C++ and Qt Quick, made for Linux first.** It streams, caches and plays music with its own gapless audio engine, shows word-by-word lyrics, and keeps your playlists, likes and listening history in sync with your NetEase account. The interface follows Material 3 Expressive and works fully from the keyboard. The app is in Chinese.
@@ -102,3 +109,11 @@ cmake --build --preset linux-release --target appCirrusMusic
 ## 许可证
 
 [MIT](LICENSE)。安装包附带的第三方软件（Qt、FFmpeg、QtKeychain、MiSans 字体、Material Symbols 等）及其许可证见 [packaging/THIRD-PARTY-NOTICES.md](packaging/THIRD-PARTY-NOTICES.md)。
+
+## Star History
+
+<p align="center">
+  <a href="https://star-history.com/#Guang233/CirrusMusic&Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Guang233/CirrusMusic&type=Date" />
+  </a>
+</p>
