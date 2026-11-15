@@ -1,3 +1,12 @@
+<p align="center"><img src="ui/app/icons/cirrus-256.png" width="128" alt="Cirrus"></p>
+
+<p align="center">
+  <a href="https://github.com/Guang233/CirrusMusic/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Guang233/CirrusMusic?style=flat-square&logo=github" /></a>
+  <a href="https://github.com/Guang233/CirrusMusic/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Guang233/CirrusMusic?style=flat-square" /></a>
+  <a href="https://github.com/Guang233/CirrusMusic/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Guang233/CirrusMusic/total?style=flat-square" /></a>
+  <a href="https://www.qt.io/"><img alt="Qt" src="https://img.shields.io/badge/Qt-6.10%2B-41CD52?style=flat-square&logo=qt&logoColor=white" /></a>
+</p>
+
 # Cirrus
 
 **Cirrus** 是面向 Linux 桌面的第三方网易云音乐客户端项目，仓库／工程名称为 **CirrusMusic**。计划使用 C++ 与 Qt Quick/QML，构建以歌曲播放、音乐发现和音乐库管理为中心的桌面体验。
@@ -68,3 +77,11 @@ Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen �
 - 后端优先、UI 最后；包括每日推荐歌曲、私人 FM 和一起听。维护者明确新增播客／声音消费端范围，搜索与消费／recent读取已分包接入，后续播放独立建模并保留音源／身份实证门禁；仍排除视频、云贝、动态、云小编与创作者工作台。
 - 所有音质、下载、离线和账号操作受服务端能力、账号权限及适用条款约束，不提供付费／版权限制绕过功能。
 - 上游参考材料的 MIT 通知见 [third_party/api-enhanced](third_party/api-enhanced/NOTICE.md)。项目自身许可证尚待维护者确认；未添加许可证不等于允许自由复制分发。依赖许可与发布门禁见[安全、隐私与合规](docs/11-security-privacy-and-compliance.md)。
+
+## Star History
+
+<p align="center">
+  <a href="https://star-history.com/#Guang233/CirrusMusic&Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Guang233/CirrusMusic&type=Date" />
+  </a>
+</p>
