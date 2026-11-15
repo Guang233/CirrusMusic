@@ -9,6 +9,8 @@ qt_add_executable(appCirrusMusic
     app_icon.h
     gpu_preference.h
     gpu_preference.cpp
+    memory.h
+    memory.cpp
     single_instance.h
     single_instance.cpp
 )

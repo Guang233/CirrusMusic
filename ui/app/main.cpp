@@ -9,6 +9,7 @@
 #include "gpu_preference.h"
 #include "logging/log.h"
 #include "logging/logger.h"
+#include "memory.h"
 #ifdef CIRRUS_UI_MPRIS
 #include "mpris.h"
 #endif
@@ -29,6 +30,7 @@
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTimer>
 #ifdef CIRRUS_UI_TRAY
 // QSystemTrayIcon needs QApplication (docs/10-linux-integration.md §4).
 #include <QApplication>
@@ -126,6 +128,8 @@ void startLog()
 
 int main(int argc, char* argv[])
 {
+    // Before anything allocates on another thread.
+    cirrus::ui::memory::configure();
     // Every record from here on goes through the app's log (docs/tasks/logging.md); it
     // is the last thing to go.
     cirrus::log::Session logging;
@@ -137,6 +141,14 @@ int main(int argc, char* argv[])
     QGuiApplication::setDesktopFileName(QStringLiteral("com.guang233.Cirrus"));
     moveOldSettings();
     cirrus::ui::gpu::apply(cirrus::ui::AppSettings().preferDiscreteGpu());
+    // Qt Multimedia only plays audio here. Left alone, its FFmpeg backend opens every
+    // hardware video device when it starts (CUDA, VDPAU, Vulkan): a CUDA context on the
+    // discrete GPU, with its thread and memory, for nothing.
+    for (const char* name :
+         {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}) {
+        if (!qEnvironmentVariableIsSet(name))
+            qputenv(name, QByteArray(""));
+    }
 
     Application app(argc, argv);
     QGuiApplication::setWindowIcon(cirrus::ui::appIcon());
@@ -213,6 +225,20 @@ int main(int argc, char* argv[])
         presentation->diagnostics()->watch(window);
         window->setPersistentGraphics(false);
         window->setPersistentSceneGraph(false);
+        // ... and the heap gives back what that freed, once it is all gone.
+        QObject::connect(window, &QWindow::visibleChanged, window, [window](bool visible) {
+            if (visible)
+                return;
+            QTimer::singleShot(2000, window, [window]() {
+                if (window->isVisible())
+                    return;
+                const int before = cirrus::ui::memory::residentMb();
+                cirrus::ui::memory::trim();
+                qCInfo(lcApp) << cirrus::log::event("app.memory_trimmed")
+                              << cirrus::log::field("before_mb", before)
+                              << cirrus::log::field("after_mb", cirrus::ui::memory::residentMb());
+            });
+        });
 #ifdef CIRRUS_UI_SMTC
         smtc = std::make_unique<cirrus::ui::Smtc>(presentation->player(), window);
 #endif
