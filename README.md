@@ -89,6 +89,11 @@ cmake --build --preset linux-release --target appCirrusMusic
 - 音乐、歌词、封面等内容的版权归网易云音乐及各自的权利人所有。Cirrus 不提供、不存储也不分发这些内容，只播放你的账号本来就能播放的歌曲。
 - 本项目仅供学习和个人使用，请勿用于商业用途。
 
+## 致谢
+
+- [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland)（illogical-impulse）：界面里的许多控件借鉴了它的设计。
+- [NeteaseCloudMusicApiEnhanced/api-enhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)：本项目的大部分接口来源于此。
+
 ## 许可证
 
 [MIT](LICENSE)。安装包附带的第三方软件（Qt、FFmpeg、QtKeychain、MiSans 字体、Material Symbols 等）及其许可证见 [packaging/THIRD-PARTY-NOTICES.md](packaging/THIRD-PARTY-NOTICES.md)。
