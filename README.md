@@ -6,6 +6,16 @@
 
 Cirrus 是一个非官方的网易云音乐桌面客户端，用 C++ 和 Qt Quick 编写，优先面向 Linux。
 
+![首页](packaging/screenshots/home-dark.png)
+
+| 播放页（亮色） | 播放页（暗色） |
+| --- | --- |
+| ![播放页（亮色）](packaging/screenshots/player-light.png) | ![播放页（暗色）](packaging/screenshots/player-dark.png) |
+
+| 首页（亮色） | 歌单 |
+| --- | --- |
+| ![首页（亮色）](packaging/screenshots/home-light.png) | ![歌单](packaging/screenshots/playlist-dark.png) |
+
 ## 功能
 
 - **发现与搜索**：推荐歌单、歌单分类、排行榜、歌手、新碟，每日推荐与私人 FM；搜索歌曲、歌手、专辑、歌单、播客和声音。
