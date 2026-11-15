@@ -69,8 +69,10 @@ make_deb() {
     local depends
     depends=$(cd "$tmp" && dpkg-shlibdeps -O --ignore-missing-info "${libdirs[@]}" \
         -e"${elves[@]}" 2> >(grep -v 'warning:' >&2) | sed -n 's/^shlibs:Depends=//p')
-    # Qt's TLS takes the system's root certificates (not a library, so not found above).
-    depends+=", ca-certificates"
+    # Qt's TLS takes the system's root certificates (not a library, so not found above),
+    # and QtKeychain opens libsecret at run time, to reach the keyring that keeps the
+    # sign-in (KWallet it reaches over D-Bus).
+    depends+=", ca-certificates, libsecret-1-0"
     rm -rf "$tmp"
 
     mkdir -p "$stage/DEBIAN"
@@ -102,6 +104,13 @@ make_appimage() {
     fi
     # Qt is already deployed (CIRRUS_DEPLOY_QT); linuxdeploy adds the remaining
     # non-base libraries of the executable, Qt's plugins and QML plugins, then packs.
+    # QtKeychain opens libsecret at run time, so linuxdeploy does not see it. It must be
+    # this system's, next to the glib that gets bundled: the host's libsecret wants the
+    # host's newer glib and fails to load ("undefined symbol: g_task_set_static_name"),
+    # and then the sign-in is not kept (0.1.0).
+    local libsecret
+    libsecret=$(ldconfig -p | awk '$1 == "libsecret-1.so.0" { print $NF; exit }')
+    [[ -n "$libsecret" ]] || { echo "libsecret-1.so.0 not found (libsecret-1-0)" >&2; exit 1; }
     local deps_only=()
     while IFS= read -r d; do deps_only+=(--deploy-deps-only "$d"); done < <(
         find "$appdir/usr/plugins" "$appdir/usr/qml" -name '*.so' -printf '%h\n' | sort -u)
@@ -111,8 +120,10 @@ make_appimage() {
             --executable "$appdir/usr/bin/cirrus" \
             --desktop-file "$appdir/usr/share/applications/com.guang233.Cirrus.desktop" \
             --icon-file "$appdir/usr/share/icons/hicolor/256x256/apps/com.guang233.Cirrus.png" \
+            --library "$libsecret" \
             "${deps_only[@]}" \
             --output appimage)
+    [[ -e "$appdir/usr/lib/libsecret-1.so.0" ]] || { echo "libsecret was not bundled" >&2; exit 1; }
 }
 
 for kind in "${kinds[@]}"; do

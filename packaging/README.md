@@ -58,7 +58,7 @@ JOBS=$(nproc) packaging/linux/build-packages.sh <Qt 前缀> <deps> <输出目录
 `stage` 只编译并装出 `/opt/cirrus` 那套目录（`build/package-linux/stage`），可以在任何发行版上检查。`JOBS` 是并行编译的任务数（默认 4）。
 
 - **deb**：`/opt/cirrus` 自成一体，因为发行版的 Qt 比 6.11 旧。`Depends` 由 `dpkg-shlibdeps` 按包里的程序和库算出，另加 `ca-certificates`（Qt 的 TLS 用系统的根证书）；`Recommends` 一个钥匙串服务。只 strip 还带符号的文件：再 strip 一遍 Qt 已经处理过的库，会弄坏它自带的 `libavutil`。
-- **AppImage**：同一套目录装到 `AppDir/usr`，再用 linuxdeploy（固定版本，构建时下载）补上基础系统以外的库并打包。没有自动更新信息。
+- **AppImage**：同一套目录装到 `AppDir/usr`，再用 linuxdeploy（固定版本，构建时下载）补上基础系统以外的库并打包。没有自动更新信息。linuxdeploy 会把构建机的 glib 一起带上，所以 `libsecret` 也要显式带上（`--library`）：QtKeychain 在运行时才打开它，linuxdeploy 看不到；不带的话加载的是宿主系统的 libsecret，它要新版 glib 的符号，加载失败，登录状态就存不下来（0.1.0 的问题）。
 - **AUR**：从 GitHub 的标签源码包编译，依赖 Arch 的 `qt6-*`、`qtkeychain-qt6`、`ffmpeg`，`/usr` 布局。Cirrus 用了 Qt 的私有 Wayland 客户端接口，Arch 的 Qt 每升一个小版本都要重新编译（`pkgrel` 加一）。关掉了 LTO（`options=('!lto')`）：makepkg 默认开启，而 Qt 给大资源（随应用的字体）做的两步 rcc 在 LTO 的目标文件里找不到数据。还没有上传到 AUR（AUR 暂停注册新账号）；在 `packaging/aur/` 里 `makepkg -si` 可以直接打包安装。
 
 在本机干净的环境里检查：用 `ubuntu:22.04` 容器按上面的命令打包，再在另一个全新的 `ubuntu:22.04` 容器里 `apt install` 生成的 deb，在 Xvfb 上启动。
