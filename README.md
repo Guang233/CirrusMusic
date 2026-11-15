@@ -1,3 +1,5 @@
+<p align="center"><img src="ui/app/icons/cirrus-256.png" width="128" alt="Cirrus"></p>
+
 # Cirrus
 
 **Cirrus is an unofficial desktop client for NetEase Cloud Music, built with C++ and Qt Quick, made for Linux first.** It streams, caches and plays music with its own gapless audio engine, shows word-by-word lyrics, and keeps your playlists, likes and listening history in sync with your NetEase account. The interface follows Material 3 Expressive and works fully from the keyboard. The app is in Chinese.
