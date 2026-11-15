@@ -1,7 +1,7 @@
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
 # The executable's file name. Development builds keep appCirrusMusic (docs, launch
-# configs); packages name it cirrus (Linux) or Cirrus (Windows), docs/tasks/release.md §2.
+# configs); packages name it cirrus (Linux) or Cirrus (Windows), packaging/README.md.
 set(CIRRUS_EXECUTABLE "appCirrusMusic" CACHE STRING "File name of the app executable")
 
 qt_add_executable(appCirrusMusic

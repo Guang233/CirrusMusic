@@ -339,7 +339,7 @@ target_link_libraries(cirrus_resource_cache PUBLIC cirrus_application cirrus_sto
 
 # System keyring (QtKeychain system package). Plaintext fallback is disabled.
 find_package(Qt6Keychain REQUIRED)
-# A static QtKeychain (the Windows packages, docs/tasks/release.md §5) exports nothing:
+# A static QtKeychain (the Windows packages, packaging/README.md) exports nothing:
 # its users must say so, or MSVC looks for dllimport symbols.
 get_target_property(cirrus_keychain_type qt6keychain TYPE)
 if(cirrus_keychain_type STREQUAL "STATIC_LIBRARY")

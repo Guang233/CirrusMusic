@@ -1,4 +1,4 @@
-# Builds and tests every push to master and every pull request (docs/tasks/release.md §7).
+# Builds and tests every push to master and every pull request (packaging/README.md).
 # Linux always; Windows only when asked (Run workflow, or the release workflow), since its
 # runner minutes count double on a private repository. macOS (a trial, build and tests,
 # no package) only when asked: its minutes count ten times. "Build packages" (Run workflow)

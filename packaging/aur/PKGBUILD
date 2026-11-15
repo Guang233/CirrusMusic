@@ -1,6 +1,6 @@
 # Maintainer: guang233
 # Builds Cirrus from a release tag against Arch's own Qt and libraries
-# (docs/tasks/release.md §4.3). Not uploaded yet: the repository is still private.
+# (packaging/README.md). Not uploaded yet: the repository is still private.
 # Cirrus uses Qt's private Wayland client API, so it needs a rebuild whenever qt6-base
 # or qt6-wayland moves to a new minor version.
 pkgname=cirrus

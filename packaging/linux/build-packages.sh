@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Linux packages (docs/tasks/release.md §4): a deb that installs into
+# Builds the Linux packages (packaging/README.md): a deb that installs into
 # /opt/cirrus with its own Qt, and an AppImage. Both carry the same deployed tree.
 #
 #   packaging/linux/build-packages.sh <qt prefix> <deps prefix> <out dir> [deb|appimage|stage]...

@@ -1,4 +1,4 @@
-# What `cmake --install` puts where (docs/tasks/release.md §2). Packages build with
+# What `cmake --install` puts where (packaging/README.md). Packages build with
 # BUILD_TESTING=OFF and CIRRUS_BUILD_GALLERY=OFF: only the app is installed.
 #
 # Linux (GNU layout under CMAKE_INSTALL_PREFIX):

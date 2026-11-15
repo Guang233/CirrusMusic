@@ -1,6 +1,6 @@
 # Linux packages (deb, AppImage) and the sources of the bundled libraries, uploaded as the
 # artifact "linux". Called by the release workflow and by CI's "Build packages" option
-# (docs/tasks/release.md §7).
+# (packaging/README.md).
 name: Linux packages
 
 on:

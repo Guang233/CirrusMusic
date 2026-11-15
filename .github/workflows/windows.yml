@@ -1,5 +1,5 @@
 # Windows build, called by CI (build only) and the release workflow (installer and zip).
-# docs/tasks/release.md §5. MSVC, Qt from the Qt installer, FFmpeg/OpenSSL/zlib from
+# packaging/README.md. MSVC, Qt from the Qt installer, FFmpeg/OpenSSL/zlib from
 # vcpkg (packaging/windows/vcpkg.json), QtKeychain from packaging/deps/.
 name: Windows
 

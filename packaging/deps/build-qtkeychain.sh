@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds QtKeychain against the Qt the package bundles (docs/tasks/release.md §3); a
+# Builds QtKeychain against the Qt the package bundles (packaging/README.md); a
 # distribution's QtKeychain is built against its own, older Qt.
 #
 #   packaging/deps/build-qtkeychain.sh <prefix> <qt prefix>

@@ -1,5 +1,5 @@
 # Pushing a tag vX.Y.Z builds the packages and puts them in a draft GitHub release
-# (docs/tasks/release.md §7). The maintainer reviews the draft and publishes it.
+# (packaging/README.md). The maintainer reviews the draft and publishes it.
 # The tag must match project(VERSION) in CMakeLists.txt and have a CHANGELOG.md section.
 name: Release
 

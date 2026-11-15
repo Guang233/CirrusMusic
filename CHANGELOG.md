@@ -1,6 +1,6 @@
 # 更新日志
 
-Cirrus 各版本的改动。版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)；1.0 之前，次版本号的升级也可能有不兼容的改动。发布工作流把每个版本的小节用作 GitHub Release 的说明（docs/tasks/release.md §7）。
+Cirrus 各版本的改动。版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)；1.0 之前，次版本号的升级也可能有不兼容的改动。发布工作流把每个版本的小节用作 GitHub Release 的说明（packaging/README.md）。
 
 ## [Unreleased]
 

@@ -1,4 +1,4 @@
-# macOS build and tests, called by CI when asked (docs/tasks/release.md §7). A trial: no
+# macOS build and tests, called by CI when asked (packaging/README.md). A trial: no
 # package yet (this round ships no macOS build). Apple Silicon runner, Qt from the Qt
 # installer, FFmpeg and OpenSSL from Homebrew, QtKeychain from packaging/deps/.
 name: macOS
