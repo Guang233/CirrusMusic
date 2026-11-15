@@ -34,11 +34,12 @@ Cirrus 是一个非官方的网易云音乐桌面客户端，用 C++ 和 Qt Quic
 | --- | --- | --- |
 | Ubuntu 22.04 / Debian 12 及更新 | `cirrus_<版本>_amd64.deb` | `sudo apt install ./cirrus_<版本>_amd64.deb` |
 | 其他 Linux（x86_64，glibc ≥ 2.35） | `Cirrus-<版本>-x86_64.AppImage` | `chmod +x Cirrus-*.AppImage`，然后直接运行 |
-| Windows 10 / 11（预览） | `Cirrus-<版本>-windows-x64-setup.exe` | 运行安装程序 |
+| Windows 10 / 11 | `Cirrus-<版本>-windows-x64-setup.exe` | 运行安装程序；或用免安装的 `Cirrus-<版本>-windows-x64.zip`，解压即用 |
 
 - deb 和 AppImage 自带 Qt 和 FFmpeg，不依赖系统里的版本。
 - 登录状态保存在系统钥匙串里（GNOME Keyring、KWallet 等）。没有钥匙串服务时也能用，但每次启动都要重新登录。
-- Windows 版能编译和打包，但还没在真机上充分验证；暂不提供 macOS 版。
+- Windows 安装包没有签名，第一次运行时 SmartScreen 可能会拦下：点“更多信息 → 仍要运行”。
+- 暂不提供 macOS 版。
 - Arch Linux 的 AUR 包在准备中，见 [`packaging/aur/PKGBUILD`](packaging/aur/PKGBUILD)。
 
 ## 从源码构建

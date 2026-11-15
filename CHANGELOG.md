@@ -6,7 +6,7 @@ Cirrus 各版本的改动。版本号遵循[语义化版本](https://semver.org/
 
 ## [0.1.0]
 
-第一个公开版本，以 Linux 为主。Windows 版是预览：能编译、打包，还没有在真机上验证；暂不提供 macOS 版。
+第一个公开版本，支持 Linux 和 Windows；暂不提供 macOS 版。
 
 ### 音乐
 
