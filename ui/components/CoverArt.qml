@@ -15,9 +15,10 @@ Item {
     property string coverKey
     property real radius: Theme.shape.small
     property string glyph: Symbols.music_note
-    // Decode size; the item's size in device pixels by default.
-    property size sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio),
-                                      Math.ceil(height * Screen.devicePixelRatio))
+    // Decode size; by default the item's size in device pixels, rounded up to a step.
+    // With the exact size, every pixel of a resize (a window edge being dragged, a
+    // pane sliding) decoded and cached every visible cover again, at a new size.
+    property size sourceSize: Qt.size(decodeLength(width), decodeLength(height))
     // A cover that arrives shows at once instead of fading in (the flying cover, which
     // must not start from the placeholder).
     property bool immediate: false
@@ -81,6 +82,12 @@ Item {
         // Still loading here only when it is reloading at a new size (retained).
         incoming.opacity = incoming.status === Image.Ready || incoming.status === Image.Loading ? 1 : 0;
         base = incoming;
+    }
+
+    function decodeLength(length: real): int {
+        const pixels = Math.ceil(length * Screen.devicePixelRatio);
+        const step = pixels <= 128 ? 32 : 64;
+        return Math.ceil(pixels / step) * step;
     }
 
     onCoverKeyChanged: show()

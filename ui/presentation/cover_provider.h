@@ -28,7 +28,9 @@ class CoverProvider : public QQuickAsyncImageProvider
     // Shared with the decode jobs, which can outlive a canceled response.
     struct Cache {
         QMutex mutex;
-        QCache<QString, QImage> images{128 * 1024}; // cost in KiB
+        // What Image items show is shared with them, so this mostly holds what scrolled
+        // away a moment ago.
+        QCache<QString, QImage> images{48 * 1024}; // cost in KiB
     };
 
   private:

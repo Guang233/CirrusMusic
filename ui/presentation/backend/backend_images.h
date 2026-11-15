@@ -44,7 +44,7 @@ class BackendImages : public QObject, public ImageSource
     // "url@size" -> the fetch and who waits for it.
     QHash<QString, std::shared_ptr<Fetch>> m_fetches;
     // "url@size" -> the image hosts' bytes; cost in KiB.
-    QCache<QString, QByteArray> m_bytes{64 * 1024};
+    QCache<QString, QByteArray> m_bytes{16 * 1024};
     quint64 m_nextWaiter = 0;
     quint32 m_warned = 0; // the CacheErrors cover.failed has warned about (bits)
 };
