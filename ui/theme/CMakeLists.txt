@@ -37,10 +37,12 @@ qt_add_qml_module(cirrus_ui_theme
 # a big resource rather than a C array. Builds without the file fall back to the system
 # font (for a smaller package without it, later).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fonts/MiSansVF.ttf")
+    # Not compressed: the font is used straight from the executable's pages (fonts.cpp).
     qt_add_resources(cirrus_ui_theme cirrus_ui_theme_misans
         BIG_RESOURCES
         PREFIX "/qt/qml/Cirrus/Theme"
         FILES fonts/MiSansVF.ttf
+        OPTIONS -no-compress
     )
 else()
     message(WARNING "ui/theme/fonts/MiSansVF.ttf is missing (tools/ui/prepare_fonts.py fetches "

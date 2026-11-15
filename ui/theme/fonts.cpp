@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QJSEngine>
 #include <QLoggingCategory>
+#include <QResource>
 #include <QUrl>
 
 #include <algorithm>
@@ -22,9 +23,20 @@ const QString kSymbolsPath =
 // Embedded only when tools/ui/prepare_fonts.py fetched it (ui/theme/CMakeLists.txt).
 const QString kMiSansPath = QStringLiteral(":/qt/qml/Cirrus/Theme/fonts/MiSansVF.ttf");
 
+// A font in the resources is registered from its bytes, not by its path. Given a path
+// that is not a native file, Qt reads the whole file into memory again for every face it
+// makes, and a variable font is one face per weight in use: 20 MB each for MiSans, a few
+// hundred MB in all. The resource's bytes are used where they are (the font resources
+// are not compressed, CMakeLists.txt), so registering copies nothing either.
 QString registerFont(const QString& path)
 {
-    const int id = QFontDatabase::addApplicationFont(path);
+    const QResource resource(path);
+    const QByteArray data =
+        resource.compressionAlgorithm() == QResource::NoCompression
+            ? QByteArray::fromRawData(reinterpret_cast<const char*>(resource.data()),
+                                      resource.size())
+            : resource.uncompressedData();
+    const int id = data.isEmpty() ? -1 : QFontDatabase::addApplicationFontFromData(data);
     const QStringList families =
         id < 0 ? QStringList{} : QFontDatabase::applicationFontFamilies(id);
     if (families.isEmpty()) {
