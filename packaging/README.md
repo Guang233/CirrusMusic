@@ -59,7 +59,7 @@ JOBS=$(nproc) packaging/linux/build-packages.sh <Qt 前缀> <deps> <输出目录
 
 - **deb**：`/opt/cirrus` 自成一体，因为发行版的 Qt 比 6.11 旧。`Depends` 由 `dpkg-shlibdeps` 按包里的程序和库算出，另加 `ca-certificates`（Qt 的 TLS 用系统的根证书）；`Recommends` 一个钥匙串服务。只 strip 还带符号的文件：再 strip 一遍 Qt 已经处理过的库，会弄坏它自带的 `libavutil`。
 - **AppImage**：同一套目录装到 `AppDir/usr`，再用 linuxdeploy（固定版本，构建时下载）补上基础系统以外的库并打包。没有自动更新信息。
-- **AUR**：从 GitHub 的标签源码包编译，依赖 Arch 的 `qt6-*`、`qtkeychain-qt6`、`ffmpeg`，`/usr` 布局。Cirrus 用了 Qt 的私有 Wayland 客户端接口，Arch 的 Qt 每升一个小版本都要重新编译（`pkgrel` 加一）。
+- **AUR**：从 GitHub 的标签源码包编译，依赖 Arch 的 `qt6-*`、`qtkeychain-qt6`、`ffmpeg`，`/usr` 布局。Cirrus 用了 Qt 的私有 Wayland 客户端接口，Arch 的 Qt 每升一个小版本都要重新编译（`pkgrel` 加一）。关掉了 LTO（`options=('!lto')`）：makepkg 默认开启，而 Qt 给大资源（随应用的字体）做的两步 rcc 在 LTO 的目标文件里找不到数据。还没有上传到 AUR（AUR 暂停注册新账号）；在 `packaging/aur/` 里 `makepkg -si` 可以直接打包安装。
 
 在本机干净的环境里检查：用 `ubuntu:22.04` 容器按上面的命令打包，再在另一个全新的 `ubuntu:22.04` 容器里 `apt install` 生成的 deb，在 Xvfb 上启动。
 
@@ -92,3 +92,4 @@ FFmpeg、QtKeychain、vcpkg 的编译结果按脚本和清单的哈希缓存，Q
 1. 改 `CMakeLists.txt` 的版本号；把 `CHANGELOG.md` 的 Unreleased 改成 `## [x.y.z]`。
 2. 提交，打标签 `vx.y.z`，推送提交和标签。
 3. 等发布工作流跑完，在 GitHub 上检查草稿（试装 deb、AppImage、安装包），再发布。
+4. 标签推送后更新 `packaging/aur/PKGBUILD`：改 `pkgver`、`pkgrel` 归 1，`updpkgsums` 填入标签源码包的校验值，`makepkg -Cf` 试编一遍。

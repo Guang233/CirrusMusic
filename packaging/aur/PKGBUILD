@@ -1,6 +1,6 @@
 # Maintainer: guang233
 # Builds Cirrus from a release tag against Arch's own Qt and libraries
-# (packaging/README.md). Not uploaded yet: the repository is still private.
+# (packaging/README.md). Not on the AUR yet; `makepkg -si` in this directory installs it.
 # Cirrus uses Qt's private Wayland client API, so it needs a rebuild whenever qt6-base
 # or qt6-wayland moves to a new minor version.
 pkgname=cirrus
@@ -15,8 +15,10 @@ depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'qt6-imagef
 makedepends=('cmake' 'ninja' 'qt6-shadertools' 'qt6-tools' 'git')
 optdepends=('gnome-keyring: keep the sign-in in a keyring'
             'kwallet: keep the sign-in in KWallet')
+# Qt's two-pass rcc for large resources (the bundled font) finds no data in an LTO object.
+options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP') # replaced with the tag's checksum when publishing
+sha256sums=('49811c56876955ffe50382207df271b3219e75d3ca89394fe48b3211e4f66aa4')
 
 build() {
   cmake -S "CirrusMusic-$pkgver" -B build -G Ninja \

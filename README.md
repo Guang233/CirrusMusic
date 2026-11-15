@@ -42,7 +42,12 @@ Cirrus 是一个非官方的网易云音乐桌面客户端，用 C++ 和 Qt Quic
 - 登录状态保存在系统钥匙串里（GNOME Keyring、KWallet 等）。没有钥匙串服务时也能用，但每次启动都要重新登录。
 - Windows 安装包没有签名，第一次运行时 SmartScreen 可能会拦下：点“更多信息 → 仍要运行”。
 - 暂不提供 macOS 版。
-- Arch Linux 的 AUR 包在准备中，见 [`packaging/aur/PKGBUILD`](packaging/aur/PKGBUILD)。
+- Arch Linux：还没有上传到 AUR，可以用仓库里的 [PKGBUILD](packaging/aur/PKGBUILD) 打包安装（用系统的 Qt 从源码编译）：
+
+  ```bash
+  git clone https://github.com/Guang233/CirrusMusic.git
+  cd CirrusMusic/packaging/aur && makepkg -si
+  ```
 
 ## 从源码构建
 
