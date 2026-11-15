@@ -1,5 +1,6 @@
 #include "resource_cache_store.h"
 #include "infrastructure/storage/private_files.h"
+#include "logging/log.h"
 #include "resource_cache_codec.h"
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -7,6 +8,7 @@
 #include <QFileInfo>
 #include <QLockFile>
 #include <QPointer>
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QTimer>
 #include <QUuid>
@@ -29,22 +31,34 @@ bool sameFile(const QString& a, const QString& b)
     return a == b;
 #endif
 }
+// Which step of opening the store failed, and why (for resource_cache.unusable).
+struct Unusable {
+    const char* step = nullptr; // null: usable
+    storage::Refusal why;       // from the private-file checks
+    QString file;               // the side file ("-journal" …) a file check was about
+    QString detail;             // SQLite's own words
+};
 // The root is private and canonical; the store and its SQLite side files are private
 // regular files and never the main database (storage/private_files.h).
-bool safePath(const QString& root, const QString& path, const QString& mainPath)
+Unusable safePath(const QString& root, const QString& path, const QString& mainPath)
 {
-    if (!storage::isPrivateDirectory(root) ||
-        !sameFile(QFileInfo(root).canonicalFilePath(), root) ||
-        sameFile(QFileInfo(path).absoluteFilePath(), QFileInfo(mainPath).absoluteFilePath()) ||
+    if (!storage::isPrivateDirectory(root))
+        return {"root", storage::lastRefusal()};
+    if (!sameFile(QFileInfo(root).canonicalFilePath(), root))
+        return {"root_not_canonical"};
+    if (sameFile(QFileInfo(path).absoluteFilePath(), QFileInfo(mainPath).absoluteFilePath()) ||
         (QFileInfo(path).exists() &&
          sameFile(QFileInfo(path).canonicalFilePath(), QFileInfo(mainPath).canonicalFilePath())))
-        return false;
+        return {"main_database"};
     for (const auto& suffix : {QString(), QStringLiteral("-journal"), QStringLiteral("-wal"),
                                QStringLiteral("-shm"), QStringLiteral(".lock")}) {
         if (!storage::isPrivateFileOrAbsent(path + suffix))
-            return false;
+            return {"file", storage::lastRefusal(),
+                    suffix.isEmpty() ? QStringLiteral(".sqlite") : suffix};
     }
-    return storage::openPrivateFile(path) != nullptr;
+    if (!storage::openPrivateFile(path))
+        return {"open_file", storage::lastRefusal()};
+    return {};
 }
 bool sql(QSqlDatabase& db, const QString& statement)
 {
@@ -381,36 +395,76 @@ class StoreConnection : public QObject
 
     [[nodiscard]] QString path() const { return m_root + QStringLiteral("/resource-cache.sqlite"); }
 
+    // Every job opens the store if it is not open, so a refusal is logged once, and again
+    // only when its reason changes; resource_cache.usable when it opens after that.
+    void report(const Unusable& u)
+    {
+        const QString key = QString::fromLatin1(u.step ? u.step : "") + u'/' +
+                            QString::fromLatin1(u.why.reason ? u.why.reason : "") + u'/' + u.file;
+        if (!u.step) {
+            if (!m_unusable.isEmpty())
+                qCInfo(lcCache) << log::event("resource_cache.usable")
+                                << log::field("dir", log::path(m_root));
+            m_unusable.clear();
+            return;
+        }
+        if (key == m_unusable)
+            return;
+        m_unusable = key;
+        qCWarning(lcCache) << log::event("resource_cache.unusable")
+                           << log::field("dir", log::path(m_root)) << log::field("step", u.step)
+                           << log::fieldIf(u.why.reason != nullptr, "reason",
+                                           QString::fromLatin1(u.why.reason ? u.why.reason : ""))
+                           << log::fieldIf(u.why.error != 0, "os_error", qint64(u.why.error))
+                           << log::fieldIf(!u.file.isEmpty(), "file", u.file)
+                           << log::fieldIf(!u.detail.isEmpty(), "detail", log::message(u.detail));
+    }
+
     bool open()
     {
         if (m_open)
             return true;
-        if (!safePath(m_root, path(), m_mainPath))
+        if (const Unusable unusable = safePath(m_root, path(), m_mainPath); unusable.step) {
+            report(unusable);
             return false;
+        }
         m_lock = std::make_unique<QLockFile>(path() + QStringLiteral(".lock"));
         m_lock->setStaleLockTime(0);
-        if (!m_lock->tryLock(0) ||
-            !QFile::setPermissions(path() + QStringLiteral(".lock"),
+        if (!m_lock->tryLock(0)) {
+            // Another Cirrus holds it (LockFailedError), or the folder refuses the lock file.
+            report(
+                {"lock", {}, {}, QStringLiteral("QLockFile error %1").arg(int(m_lock->error()))});
+            m_lock.reset();
+            return false;
+        }
+        if (!QFile::setPermissions(path() + QStringLiteral(".lock"),
                                    QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
+            report({"lock_permissions"});
             m_lock.reset();
             return false;
         }
         m_name = QStringLiteral("cirrus-cache-%1").arg(QUuid::createUuid().toString(QUuid::Id128));
         auto db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), m_name);
         db.setDatabaseName(path());
-        bool ok = db.open() && sql(db, QStringLiteral("PRAGMA busy_timeout=100")) &&
-                  sql(db, QStringLiteral("PRAGMA foreign_keys=ON")) && schema(db);
-        if (ok) {
+        const char* step = nullptr;
+        if (!db.open())
+            step = "sqlite_open";
+        else if (!sql(db, QStringLiteral("PRAGMA busy_timeout=100")) ||
+                 !sql(db, QStringLiteral("PRAGMA foreign_keys=ON")) || !schema(db))
+            step = "schema";
+        if (!step) {
             QSqlQuery journal(db);
-            ok = journal.exec(QStringLiteral("PRAGMA journal_mode=DELETE")) && journal.next() &&
-                 journal.value(0).toString() == QStringLiteral("delete");
-            journal.finish();
-            ok = ok && sql(db, QStringLiteral("PRAGMA synchronous=FULL"));
+            if (!journal.exec(QStringLiteral("PRAGMA journal_mode=DELETE")) || !journal.next() ||
+                journal.value(0).toString() != QStringLiteral("delete") ||
+                (journal.finish(), !sql(db, QStringLiteral("PRAGMA synchronous=FULL"))))
+                step = "journal_mode";
         }
-        m_open = ok;
-        if (!ok)
+        const QString detail = step ? db.lastError().text() : QString();
+        m_open = !step;
+        report({step, {}, {}, detail});
+        if (step)
             close();
-        return ok;
+        return m_open;
     }
 
     void close()
@@ -507,6 +561,7 @@ class StoreConnection : public QObject
     }
 
     QString m_root, m_mainPath, m_name;
+    QString m_unusable; // the refusal last logged (report())
     Deliver m_deliver;
     std::unique_ptr<QLockFile> m_lock;
     bool m_open = false;

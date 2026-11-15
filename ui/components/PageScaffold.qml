@@ -27,7 +27,7 @@ Item {
             text: root.title
             elide: Text.ElideRight
             color: ColorScope.scheme.onSurface
-            font: Theme.type.titleLarge.font
+            font: Theme.type.titleLargeEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Row {

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import Cirrus.Controls
 
 // One rounded corner of the content panel, drawn as the frame color outside a
 // quarter circle (top-left as is; rotate by 90° steps for the others). Covering the
@@ -14,10 +15,16 @@ Shape {
     height: radius
     preferredRendererType: Shape.CurveRenderer
 
+    // Drawn again after the window comes back from the tray (a Qt bug).
+    ShapeRefresh {
+        id: refresh
+        target: corner
+    }
+
     ShapePath {
         fillColor: corner.color
         strokeWidth: -1
-        startX: 0
+        startX: refresh.offset
         startY: 0
         PathLine {
             x: corner.radius

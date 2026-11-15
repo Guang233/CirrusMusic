@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import M3Shapes
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
@@ -63,6 +64,92 @@ ControlPage {
                     text: qsTr("部分歌曲信息暂时无法获取")
                 }
             }
+        }
+    }
+
+    SectionTitle {
+        text: qsTr("图标容器")
+    }
+    Caption {
+        text: qsTr("IconContainer（expressive.md §3.1）：32、40、56 是圆，96 起可用形状（软件渲染退回圆）；五种色调，inverted 用在同色调的容器上。")
+    }
+    Flow {
+        Layout.fillWidth: true
+        spacing: 16
+        Repeater {
+            model: [Md.Primary, Md.Secondary, Md.Tertiary, Md.Error, Md.Neutral]
+            delegate: Row {
+                id: toneRow
+                required property int modelData
+                spacing: 12
+                Repeater {
+                    model: [32, 40, 56]
+                    delegate: IconContainer {
+                        required property int modelData
+                        anchors.verticalCenter: parent.verticalCenter
+                        size: modelData
+                        tone: toneRow.modelData
+                        glyph: Symbols.favorite
+                    }
+                }
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 56
+                    height: 56
+                    radius: Theme.shape.large
+                    // The tone's own container, which the inverted circle stands out on.
+                    color: inverted.colors[0]
+                    IconContainer {
+                        id: inverted
+                        anchors.centerIn: parent
+                        tone: toneRow.modelData
+                        inverted: true
+                        glyph: Symbols.local_fire_department
+                    }
+                }
+            }
+        }
+    }
+    Row {
+        spacing: 16
+        IconContainer {
+            size: 96
+            shape: MaterialShape.Cookie9Sided
+            glyph: Symbols.queue_music
+        }
+        IconContainer {
+            size: 96
+            shape: MaterialShape.SoftBurst
+            tone: Md.Error
+            glyph: Symbols.error
+        }
+        IconContainer {
+            size: 96
+            shape: MaterialShape.Cookie12Sided
+            tone: Md.Tertiary
+            glyph: Symbols.leaderboard
+        }
+    }
+
+    SectionTitle {
+        text: qsTr("卡片")
+    }
+    Caption {
+        text: qsTr("CollectionCard：方形封面静止圆角 16，悬停 28，按下 12（fastSpatial，带过冲）；歌手是圆形。")
+    }
+    Row {
+        spacing: 16
+        CollectionCard {
+            kind: Collection.Playlist
+            coverKey: sample.coverKey
+            text: sample.title
+            subtitle: qsTr("歌单")
+            plays: 12345
+        }
+        CollectionCard {
+            kind: Collection.Artist
+            coverKey: sample.coverKey
+            text: qsTr("歌手")
         }
     }
 

@@ -9,74 +9,106 @@
 
 # Cirrus
 
-**Cirrus** 是面向 Linux 桌面的第三方网易云音乐客户端项目，仓库／工程名称为 **CirrusMusic**。计划使用 C++ 与 Qt Quick/QML，构建以歌曲播放、音乐发现和音乐库管理为中心的桌面体验。
+**Cirrus is an unofficial desktop client for NetEase Cloud Music, built with C++ and Qt Quick, made for Linux first.** It streams, caches and plays music with its own gapless audio engine, shows word-by-word lyrics, and keeps your playlists, likes and listening history in sync with your NetEase account. The interface follows Material 3 Expressive and works fully from the keyboard. The app is in Chinese.
 
-> 当前状态：Qt 模板入口 + 分层原生后端（认证／查询／队列／FM播放／歌词）+ 开发文档、固定版本 API 审计及定向 Qt Test，尚未实现可用的音乐客户端功能。本文中的产品目标不是已交付功能；本项目不是网易云音乐官方客户端。
+---
 
-**最新查询缓存接入**：[歌曲／歌词显式缓存查询](docs/tasks/resource-cache-query-integration.md)。Runtime `resourceQueries()` 提供CacheOnly／PreferCache／Refresh，复用原Facade、只补查miss歌曲，服务端许可沿原ID/context传递，未知/no-store不落盘；原permit、单调剩余期限、清理／取消与部分写入错误保持明确。封面仍按需且同步收紧未知许可；原查询默认行为／UI／播放链不改。Debug/Release、Clang16units、24个分层对象和链接检查通过；未新增或运行测试/SQL/图片/网络，仅源码与静态证据，统计仍最后。
+Cirrus 是一个非官方的网易云音乐桌面客户端，用 C++ 和 Qt Quick 编写，优先面向 Linux。
 
-**此前缓存后端**：[先设计、后实现的资源缓存首包](docs/tasks/resource-cache-backend.md)：歌曲元数据／六轨歌词显式读写、封面显式受限GET与PNG尺寸化缓存，独立cache库／原SQL线程／账号隔离／TTL／SHA256／预算LRU／清理屏障。Runtime `resourceCacheRoot` 空时关闭，不透明接管MusicQuery；写入需原查询前捕获的permit与明确获准TTL。Linux Debug／Release、Clang8units／23个实际依赖对象和链接检查通过；未新增或运行测试／SQL／图片／网络，不能据此声称运行验收通过。**本助手只负责后端，不做UI；听歌统计留最后。** 只本地commit，不push。
+![首页](packaging/screenshots/home-dark.png)
 
-**此前后端增量**：[队列恢复与长期收听历史](docs/tasks/listening-state-persistence.md)。队列包本地提交 `55458e5`；复用SQLite线程、v2队列／v3长期明细与分页，独立record ID／UTC／实际已听毫秒、累计upsert不重复计账；256仅近期内存窗口，不截断数据库。纯队列恢复不load/play/lyrics，历史不还原active或自动报告；显式Runtime开关default false、不接UI。两包Debug／Release、Clang7 units／Core+Sql链接通过；无新增或运行测试／SQL／播放／服务／NetEase，不把编译当持久性或崩溃验收，#92等门禁保留，仅本地commit、不push。
+| 播放页（亮色） | 播放页（暗色） |
+| --- | --- |
+| ![播放页（亮色）](packaging/screenshots/player-light.png) | ![播放页（暗色）](packaging/screenshots/player-dark.png) |
 
-**此前架构整理**：[评论写入Facade内部职责拆分](docs/tasks/comment-write-facade-refactor.md)。独立Core同步组件管理pending／接纳／取消结果／回包校验，Facade保留原API、共享ID、账号屏障与Qt通知；不扩业务／通用Manager。Debug／Release、Clang与Core-only链接通过；未新增或运行测试，仅本地commit、不push。
+| 首页（亮色） | 歌单 |
+| --- | --- |
+| ![首页（亮色）](packaging/screenshots/home-light.png) | ![歌单](packaging/screenshots/playlist-dark.png) |
 
-**此前B-031代码增量**：[B-031 §9.9](docs/tasks/B-031-playback-observation.md)补写Windows SMTC／macOS Now Playing原生适配及共享有界回调／main-loop生命周期接缝；原binding＋private intent复验、≤8pending、exact native token撤销，不建第二player。Linux便携接缝Debug/Release、Clang与no-undefined链接通过；**两端原生代码缺SDK／Qt Kit，未编译或运行验证**。后续源码阶段未新增／运行测试、安装依赖或接产品／UI，全部default off；不能称三平台已完成。维护者允许本地commit、禁止push，提交边界见§9.10。
+## 功能
 
-**此前Linux MPRIS代码检查点**：[B-031 §9.8](docs/tasks/B-031-playback-observation.md)新增Linux MPRIS可选适配，复用同一观测／命令桥；独立I/O线程、显式私有Unix session bus、默认关闭，控制／metadata分别opt-in。Qt6.11.2 Debug/Release编译、实际flags Clang与no-undefined链接通过；未启动真实服务或验GNOME/KDE／最低Qt。没有新增或运行测试、产品接线或提交；Windows SMTC／macOS Now Playing仍未实现。
+- **发现与搜索**：推荐歌单、歌单分类、排行榜、歌手、新碟，每日推荐与私人 FM；搜索歌曲、歌手、专辑、歌单、播客和声音。
+- **音乐库**：创建和收藏的歌单、我喜欢的音乐、收藏的专辑和歌手、最近播放、听歌排行；红心、收藏、关注、新建歌单。
+- **播放**：自己的音频引擎，边下边播、无缝衔接、精确跳转，歌曲缓存可设上限；音质选择、音量均衡。
+- **播放页**：随封面变化的流光背景，逐字歌词、翻译和注音，可拖动排序的播放队列。
+- **听歌记录**：同步到网易云的最近播放、听歌排行和听歌足迹；另有本地的听歌统计看板。
+- **桌面集成**：媒体键和系统媒体控制（MPRIS）、托盘、单实例；配色跟随封面或自选主题色，亮色和暗色。
+- **登录**：扫码、手机号（验证码或密码）、邮箱；登录状态保存在系统钥匙串里。
 
-**此前跨平台资源代码阶段**：[B-031 §9.7](docs/tasks/B-031-playback-observation.md)新增共享本机资源／身份接口及Windows命名管道、macOS Unix socket原生代码。Linux共享适配Debug/Release编译通过；缺少Windows SDK/macOS工具链，尚未原生验证，也未完成这两端I/O服务／发现组合。维护者要求后续不必写测试，本阶段未新增或运行测试；default off、无产品接线／提交／push。
+## 安装
 
-**此前O3b2检查点（Linux限定验证）**：[B-031 §9.6](docs/tasks/B-031-playback-observation.md)已接参数化Linux owner→单I/O线程→真实socket组合、严格私有发现/双向UID/hello实例关联与显式XDG选择，default off、不接产品入口。新50，11selected Debug361＋runtime6、8selected Release307，均0fail/skip；当前Linux58登记非全58，历史包不相加。八个真实慢socket验证input≤16KiB、retained＋native pending≤2MiB/client／16MiB total，隐私屏障/单票wake/期限/异步关闭已限定I/S。O3发行身份/另一OS用户负测/沙箱/最低Qt/部署性能仍G，系统媒体adapter未接；107operations不增，无新依赖/NetEase请求/UI/提交/push，#92未闭。
+从 [Releases](https://github.com/Guang233/CirrusMusic/releases) 下载：
 
-**此前O3a未提交子包（历史检查点）**：[B-031 §9.4](docs/tasks/B-031-playback-observation.md)O3a Linux私有端点资源/native UID接缝与隔离harness：默认关闭、无发行app ID默认值、0700/0600、no-follow/inode/exclusive/仅自身清理；32新＋O2两协议回归合计200pass、0fail/skip，当前Linux54登记非全54。O1/O2便携观测与fake协议历史见§9.1–9.3；O3整体未完成，尚无Core私有通知/真实调度/发现消费者及另一OS用户负测，不是可消费音乐状态服务、不接产品入口；107operations不增，UI/paused/stash不动，未安装新依赖/实网/提交/push，#92独立未闭。
+| 系统 | 文件 | 安装 |
+| --- | --- | --- |
+| Ubuntu 22.04 / Debian 12 及更新 | `cirrus_<版本>_amd64.deb` | `sudo apt install ./cirrus_<版本>_amd64.deb` |
+| 其他 Linux（x86_64，glibc ≥ 2.35） | `Cirrus-<版本>-x86_64.AppImage` | `chmod +x Cirrus-*.AppImage`，然后直接运行 |
+| Windows 10 / 11 | `Cirrus-<版本>-windows-x64-setup.exe` | 运行安装程序；或用免安装的 `Cirrus-<版本>-windows-x64.zip`，解压即用 |
 
-## 开发文档
+- deb 和 AppImage 自带 Qt 和 FFmpeg，不依赖系统里的版本。
+- 登录状态保存在系统钥匙串里（GNOME Keyring、KWallet 等）。没有钥匙串服务时也能用，但每次启动都要重新登录。
+- Windows 安装包没有签名，第一次运行时 SmartScreen 可能会拦下：点“更多信息 → 仍要运行”。
+- 暂不提供 macOS 版。
+- Arch Linux：还没有上传到 AUR，可以用仓库里的 [PKGBUILD](packaging/aur/PKGBUILD) 打包安装（用系统的 Qt 从源码编译）：
 
-**新接手者从 [开发接手指南](docs/HANDOFF.md) 开始**：包含当前状态、从零构建、代码导航、设计边界和待确认事项。[匿名启动](docs/api/anonymous-bootstrap.md)与[账号记忆／恢复／退出](docs/api/account-session-restore.md)已完成后端闭环；[后台线程与非阻塞启动／关闭装配](docs/api/backend-runtime.md)也已完成；[搜索／歌曲详情／三语言歌词](docs/api/music-queries-and-lyrics.md)已接入并完成少量官方公开只读实测；[官方URL与无界面播放PoC](docs/api/stream-resolution-and-playback.md)已接入并通过公开试听静音验证；[队列与六轨歌词时钟](docs/api/queue-and-lyric-clock.md)也已完成后端最小闭环；[专辑／艺人／歌单只读目录](docs/api/catalog-queries.md)已接入并离线验证；[每日推荐读取与私人FM条目供给](docs/api/discovery-and-fm.md)也已接入，[FM连续播放接线](docs/api/fm-continuous-playback.md)已完成离线后端闭环，[个人库四项只读查询](docs/api/personal-library.md)也已离线接入；[本地可观测收听累计／有界会话历史](docs/api/local-listening-history.md)已接入，[显式听歌上报能力](docs/api/explicit-listening-reports.md)也已离线接入，[云端最近听过／一周与全部时间排行](docs/api/cloud-history-reads.md)已离线接入，[榜单列表／内容摘要与歌单选歌播放链](docs/api/chart-reads.md)也已离线接通，[六项歌单发现读取](docs/api/playlist-discovery-reads.md)也已成组离线接入；自动上报时机／来源扩展尚未接线，本地历史持久化已提供显式default-off后端，统计聚合／dashboard与实际运行验收仍未实现（见[增量契约](docs/tasks/listening-state-persistence.md)）；已完成的[扫码轮询与总时限](docs/tasks/B-010-qr-polling.md)可作为任务契约范例；[干净源码验证记录](docs/handoff-verification.md)说明已跑过的流程和局限。完整规格见[技术文档总览](docs/README.md)。
+  ```bash
+  git clone https://github.com/Guang233/CirrusMusic.git
+  cd CirrusMusic/packaging/aur && makepkg -si
+  ```
 
-- [产品范围与需求](docs/01-product-requirements.md)
-- [技术栈](docs/02-technology-stack.md) · [系统架构](docs/03-system-architecture.md)
-- [网易云 API 与客户端后端](docs/05-api-and-backend.md)
-- [API 审计与移植清单](docs/api/README.md)：440 个上游模块，164 个采用候选、40 个待定、236 个排除；仅少量原生查询有公开实测，清单不是实现进度
-- [已实现的 C++ 协议基础与测试](docs/api/native-foundation.md)
-- [扫码请求链](docs/api/qr-auth-request-chain.md) · [身份验证与凭据交接](docs/api/authentication-transaction.md)：离线认证事务、扫码自动轮询与总时限已实现，未装配到产品入口／UI
-- [播放引擎](docs/06-playback-and-audio.md) · [自定义 QML 控件体系](docs/07-qml-and-design-system.md)
-- [实施路线与任务拆解](docs/14-roadmap-and-backlog.md)
-- [待确认问题](docs/15-risks-and-open-questions.md) · [API 交接清单](docs/checklists/api-handoff.md)
+## 从源码构建
 
-最新增量：[歌曲百科受限纯文本](docs/api/song-wiki-text-subset.md)，仅两类文本子块/原来源关联，明确“内容身份未独立验证”，完整百科仍G。107ops／50登记，26families／39E63W5X；百科88／23affected Debug1278＋selected runtime19，0fail/skip，18fresh LSP0／14实际应用对象7004逐对象-602唯一依赖禁入0，UI未改。另行确认四次公开metadata观察与实现后离线证据分开，无后实现实网、账号/SDK/媒体/自动下游或暂停恢复。
+需要：
 
-上包修正：[发现公开响应窗口](docs/api/discovery-public-response-verification.md)，原C++/Qt链11次metadata读，业务301即停、未重试；修正月榜optional分组／相似歌曲有界未知分页批，188／22affected1190＋selected runtime18，0fail/skip，5fresh LSP0／14实际应用对象6998逐对象依赖禁入0。初始[发现9typed读取](docs/api/discovery-browse-reads.md)331b4fb的165／1167为历史、不累加。复杂百科仅观察data.blocks6/rnData部分结构，原Song绑定／块类仍G，不注册假入口；106ops／49登记不变，无自动下游／UI／SDK或新依赖，原暂停不恢复。
+- CMake 3.24+、Ninja、支持 C++20 的编译器（GCC 12 及更新，或较新的 Clang）
+- Qt 6.10+：Core、Gui、Qml、Quick、Multimedia、Network、Sql、DBus、ShaderTools，以及 Wayland 和 Image Formats 模块
+- OpenSSL 3、zlib、zstd、FFmpeg（libavcodec、libavformat、libswresample）、[QtKeychain](https://github.com/frankosterfeld/qtkeychain)（Qt 6 版）
 
-[107operations／44FR覆盖对照](docs/api/backend-coverage-audit.md)已跟随本轮更新为26families／39E63W5X；I/S/L/G/P/X分层，不能把164adopt与operation作差值或宣称全后端完成。此前53f8f3e盘点为97／48的docs-only时点，本包测试不是该审计轮证据。当前账号等级＋音乐收藏计数仍候选、尚未接入，真实schema待证、不推权益/完整库。
-
-此前仅资料审计（f384b7d时点）：[一起听Android摘要＋固定九HTTP对照](docs/api/together-protocol-material-audit.md)。NIM/chatRoomId/消息type与毫秒/serverSeq有新线索，但transport/auth/envelope、seq/version/时钟恢复权限与Linux许可未闭，HTTP存在crypto/profile/字段/schema差异。材料已收到，不自动解除实施暂停或恢复WIP；85ops/47登记不变，无新代码验证／SDK／新库／实网／UI，其他暂停项保留。
-
-## VS Code 与当前骨架构建
-
-完整说明见 **[VS Code 开发指南](docs/17-vscode-development.md)**。需要 CMake ≥ 3.24、Ninja、C++20 编译器、OpenSSL ≥ 3、zlib、Qt6Keychain 开发包及 Qt 开发 Kit（含 Network、Sql／QSQLITE、Multimedia及音频后端插件、封面基础设施的Gui／JPEG插件，测试另需 Test）；模板要求 Qt 6.10+，当前已验证 Qt 6.11.2。
-
-首次克隆时复制 `CMakeUserPresets.json.example` 为 `CMakeUserPresets.json`，填写其中两处 Qt Kit 路径。本次已为当前机器配置好私有文件，不必重复覆盖；个人路径不会提交。
+Arch Linux 上：
 
 ```bash
-cmake --preset linux-dev-local
-cmake --build --preset linux-dev-local --parallel
-ctest --test-dir build/linux-dev-local --output-on-failure --no-tests=error
-./build/linux-dev-local/appCirrusMusic
+sudo pacman -S --needed cmake ninja qt6-base qt6-declarative qt6-multimedia qt6-wayland \
+    qt6-imageformats qt6-shadertools qtkeychain-qt6 ffmpeg openssl zlib zstd
 ```
 
-在 VS Code 中安装推荐扩展，选择 **Linux Debug (local Qt)** configure preset 和对应 build preset；`Ctrl+Shift+B` 完整构建 app／后端／已启用测试，`Cirrus: test` 先构建再运行 CTest，`F5` 使用 **Cirrus: Debug (GDB)** 调试。另有 QML lint 与 clean 任务；只运行应用仍是模板窗口。
+构建并运行：
 
-Debug/Release 构建、qmllint、clangd 检查、GDB main 断点和 offscreen 启动冒烟已验证。C++ 协议（含 XEAPI）、网络、会话隔离、认证事务和 SQLite 存储基础、系统密钥环的历史完整基线为13套件／329项 Qt Test pass（含数据行／初始化／清理），通过了当时的 Debug/Release CTest。百科提交时共50套件／107业务operations（当前Linux58登记，新增O1/O2/O3a/O3b1/O3b2验证不与历史相加）；最新百科子集范围见上段，以下各包验证是历史、不累加。此前[发现映射修正](docs/api/discovery-public-response-verification.md)188、22affected1190＋selected runtime18 pass，0fail/skip；11次公开metadata观察与修后合成证据分开，无完整49／Release／minQt／广泛服务或平台验收。此前[一起听核心12 HTTP-only](docs/api/together-http-core.md)全部标准Eapi-ECB（含Status）、窄interface.music host、原账号上下文／shared8／四结果，playlist内容明确unmapped。15affected Debug911＋selected runtime17 pass，0fail/skip，新109；16fresh路径clean／14实际应用对象6992deps禁入0／UI0。不接NIM／SDK／新库／实网／播放器队列报告或心跳timer，不是Active／同步验收；仅本授权覆盖HTTP暂停，其他暂停保留，APK撤权且从未检查。此前[每日推荐历史读取](docs/api/daily-recommendation-history.md)两Weapi读已合成接入，原账号／日期列表成员private factory／source token／read16；data.dates与data.songs仅严格候选，不推会员／服务日期窗口／推荐完整性，无日期cache或自动下游／反馈写。17受影响Debug839 pass＋13线程数据行15 pass，0fail/skip，新86；16fresh路径clean／14实际应用对象6985deps禁入0／UI0，registry85。前三项与播客／声音下一阶段均明确暂停、无实网／SDK／新库，UI最后。此前[播客／声音离线媒体接缝阶段1](docs/api/spoken-media-seam.md)15受影响Debug套件373 pass＋11线程数据行13 pass，0fail／原桌面音频1默认skip（新media_seam28）；物理MediaSource无身份，原唯一owner先验Song-token-TTL，PlaybackEntity／AudioTrackId仅结构准备。17fresh路径clean／14实际应用对象6973dep禁入0／UI0，registry83不增；不开放节目／声音入口、binding／v1权益仍待证，无实网／SDK／新库。前三项继续暂停，第四项先离线准备。此前[独立每日推荐歌单](docs/api/daily-recommended-playlists.md)16受影响Debug套件753 pass＋12线程数据行14 pass，0fail/skip（新62）；原账号／MUSIC_U／空Weapi业务、root.recommend有界候选，与普通推荐／每日歌曲不同。补强同token账号-认证态私有读取屏障，14fresh路径clean／14应用对象6963真实dep禁入0／UI0，registry83；无日期cache／自动下游／新库／SDK／实网。整歌单收藏因维护者暂无v2资料明确暂缓，需求与调查保留；一起听至最后、云盘后续继续暂停。此前[搜索建议／简略及详细热搜](docs/api/search-assistance-reads.md)11受影响Debug套件631 pass、另10条线程数据行12 pass，0fail/skip（新suite117）；四类独立ID预览、严格候选schema／原16槽／token、乱序query绑定，无自动搜索／详情／图／play／报告／缓存或持久历史；13changed CPP＋2邻接fresh clean，14应用对象6963实编依赖禁入0／UI0，registry82，仅合成、无新库／SDK／实网。此前[评论五动作写](docs/api/comment-writes.md)10受影响Debug套件760 pass、另9条线程数据行11 pass，0fail/skip；新增评论suite134，发布／回复经明确批准采用封闭原生v3前置GET、无JS／SDK／新依赖／实网／UI。原账号／token／8槽与Unknown，不推断评论ID、可见性、权限或自动重试；22fresh C++ clean／Core实编依赖6957无泄漏，业务registry79。此前[歌单封面更新](docs/api/playlist-cover-update.md)10个受影响Debug套件562项、另9条线程数据行11项通过，无fail/skip；有界JPEG／去元数据／NOS三阶段与Unknown，Gui仅基础设施、无真实文件／上传／UI。此前[标签编辑／隐私歌单单向公开](docs/api/playlist-tags-and-publication-writes.md)8个受影响Debug套件563项、另9条线程数据行11项通过，无fail/skip；原账号／Catalogue工厂与Unknown，仅合成，无标签清空／反向隐私转换／UI／真实写入；歌单介绍已有修改／清空且继续回归。此前[歌曲／歌单／艺人／专辑资料与介绍](docs/api/catalog-introduction-and-metadata-reads.md)14个受影响Debug套件730项、另9条线程数据行11项通过，无fail/skip；复用已有描述，增补optional元数据／艺人分节介绍／歌曲百科基础文本，仅合成，无UI或自动级联。此前[歌单删除／两类完整范围排序](docs/api/playlist-delete-and-order-writes.md)8个受影响Debug套件463项通过、另8条线程数据行10项通过，无fail/skip；不发送分页当全量，原token绑定／Unknown，无真实写入；四类介绍资料已另包连续合成接入。此前[歌单创建／改名／描述写](docs/api/playlist-management-writes.md)7个受影响Debug套件404项通过、另7条线程数据用例9项通过，无fail/skip；创建身份仅候选schema，Unknown不盲重试／同名对账，没有真实写入。此前[五类收藏／订阅写](docs/api/collection-writes.md)7个受影响Debug套件335项通过、另7条线程数据用例9项通过，无fail/skip；红心与收藏到歌单独立，原账号／明确Unknown，无真实写入／自动重试；整歌单收藏因v2 SDK门禁经确认延期。此前[账号播客订阅／云盘读取](docs/api/account-library-reads.md)7个受影响Debug套件332项通过、另6条线程数据用例8项通过，无fail/skip；独立CloudSongId与原账号，仅合成候选，无云盘音源／播放／写入。此前[资源评论只读包](docs/api/comment-reads.md)7个受影响Debug套件共328项通过、另6条后台线程数据用例共8项通过，无fail/skip；只有合成候选schema，无实网／评论写／账号历史／通知。此前[播客消费／四类recent读取](docs/api/podcast-and-recent-reads.md)增量的7个受影响 Debug 套件共207项通过，另6条后台线程数据用例共8项通过（含init/cleanup）；该消费读取包的3次无Cookie公开metadata探测在节目列表code-462即停，节目详情／真实recent未实证；此前[实体搜索](docs/api/entity-search-reads.md)有限公开证据单列，不声明重新完成全量／Release验证；已有公开查询及单个官方试听片段的静音播放实测，仍没有 CI、真实账号／完整业务测试或正式发布包；未来规范见[工程与交付](docs/13-engineering-and-delivery.md)。
+```bash
+cmake --preset linux-release
+cmake --build --preset linux-release --target appCirrusMusic
+./build/linux-release/appCirrusMusic
+```
 
-## 边界
+用 Qt 官方安装器装的 Qt：复制 `CMakeUserPresets.json.example` 为 `CMakeUserPresets.json`，填上 Qt 的路径，改用 `linux-release-local` 预设。开发、测试和代码结构见 [CONTRIBUTING.md](CONTRIBUTING.md)，打包见 [packaging/README.md](packaging/README.md)。
 
-- Cirrus 内置对接网易云官方 API，用户无需配置 API 地址或部署服务。客户端 C++ 层负责协议适配、请求签名／加密与会话管理；参考 api-enhanced 源码但不运行 Node.js 服务。
-- 产品代码使用 C++/Qt；`tools/` 中 Python 仅用于离线接口审计校验，不是客户端运行依赖。
-- 后端优先、UI 最后；包括每日推荐歌曲、私人 FM 和一起听。维护者明确新增播客／声音消费端范围，搜索与消费／recent读取已分包接入，后续播放独立建模并保留音源／身份实证门禁；仍排除视频、云贝、动态、云小编与创作者工作台。
-- 所有音质、下载、离线和账号操作受服务端能力、账号权限及适用条款约束，不提供付费／版权限制绕过功能。
-- 上游参考材料的 MIT 通知见 [third_party/api-enhanced](third_party/api-enhanced/NOTICE.md)。项目自身许可证尚待维护者确认；未添加许可证不等于允许自由复制分发。依赖许可与发布门禁见[安全、隐私与合规](docs/11-security-privacy-and-compliance.md)。
+## 数据存放位置
+
+| 内容 | 位置 |
+| --- | --- |
+| 设置 | `~/.config/Cirrus/` |
+| 播放队列、本地听歌记录 | `~/.local/share/Cirrus/` |
+| 封面和歌曲缓存 | `~/.cache/Cirrus/`（可在 设置 › 存储 里清除） |
+| 日志 | `~/.local/state/Cirrus/logs/` |
+| 登录状态 | 系统钥匙串，名为 `com.guang233.Cirrus` |
+
+## 反馈问题
+
+欢迎在 [Issues](https://github.com/Guang233/CirrusMusic/issues) 报告问题。遇到播放失败、加载不出来之类的情况，请在 **设置 › 诊断** 里生成一个诊断包附上：里面有日志和系统信息，不含账号凭据。
+
+## 声明
+
+- Cirrus 是个人开发的第三方客户端，与网易云音乐及网易公司没有任何关系，也未获得其授权或认可。“网易云音乐”是网易公司的商标。
+- 音乐、歌词、封面等内容的版权归网易云音乐及各自的权利人所有。Cirrus 不提供、不存储也不分发这些内容，只播放你的账号本来就能播放的歌曲。
+- 本项目仅供学习和个人使用，请勿用于商业用途。
+
+## 致谢
+
+- [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland)（illogical-impulse）：界面里的许多控件借鉴了它的设计。
+- [NeteaseCloudMusicApiEnhanced/api-enhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)：本项目的大部分接口来源于此。
+
+## 许可证
+
+[MIT](LICENSE)。安装包附带的第三方软件（Qt、FFmpeg、QtKeychain、MiSans 字体、Material Symbols 等）及其许可证见 [packaging/THIRD-PARTY-NOTICES.md](packaging/THIRD-PARTY-NOTICES.md)。
 
 ## Star History
 

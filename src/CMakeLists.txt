@@ -1,5 +1,19 @@
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(ZLIB REQUIRED)
+# zstd, for the encrypted log upload (explicit-listening-reports §4d): its CMake package
+# where it ships one (vcpkg, current distributions), else pkg-config (Ubuntu 22.04).
+find_package(zstd CONFIG QUIET)
+if(TARGET zstd::libzstd)
+    set(CIRRUS_ZSTD zstd::libzstd)
+elseif(TARGET zstd::libzstd_shared)
+    set(CIRRUS_ZSTD zstd::libzstd_shared)
+elseif(TARGET zstd::libzstd_static)
+    set(CIRRUS_ZSTD zstd::libzstd_static)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CIRRUS_ZSTD_PC REQUIRED IMPORTED_TARGET libzstd)
+    set(CIRRUS_ZSTD PkgConfig::CIRRUS_ZSTD_PC)
+endif()
 find_package(Qt6 REQUIRED COMPONENTS Network Sql Multimedia Gui)
 # Some covers are WebP (the image hosts still label them image/jpg); decoding them needs
 # the WebP image plugin from Qt Image Formats. Without it those covers are refused.
@@ -57,6 +71,7 @@ target_sources(cirrus_domain INTERFACE
     domain/playback/playback_types.h
     domain/playback/listening_types.h
     domain/playback/listening_state_types.h
+    domain/playback/listening_stats_types.h
     domain/playback/playback_observation_types.h
     domain/playback/listening_history.h
     domain/playback/listening_report.h
@@ -216,6 +231,8 @@ elseif(WIN32)
 endif()
 
 add_library(cirrus_netease_protocol STATIC
+    infrastructure/netease/protocol/client_log.cpp
+    infrastructure/netease/protocol/client_log.h
     infrastructure/netease/protocol/eapi_request_profile.cpp
     infrastructure/netease/protocol/eapi_request_profile.h
     infrastructure/netease/protocol/form_encoding.cpp
@@ -236,7 +253,7 @@ add_library(cirrus_netease_protocol STATIC
 
 target_compile_features(cirrus_netease_protocol PUBLIC cxx_std_20)
 target_include_directories(cirrus_netease_protocol PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core cirrus_logging PRIVATE OpenSSL::Crypto ZLIB::ZLIB)
+target_link_libraries(cirrus_netease_protocol PUBLIC Qt6::Core cirrus_logging PRIVATE OpenSSL::Crypto ZLIB::ZLIB ${CIRRUS_ZSTD})
 
 add_library(cirrus_netease_network STATIC
     infrastructure/netease/network/http_transport.cpp
@@ -322,7 +339,7 @@ target_link_libraries(cirrus_resource_cache PUBLIC cirrus_application cirrus_sto
 
 # System keyring (QtKeychain system package). Plaintext fallback is disabled.
 find_package(Qt6Keychain REQUIRED)
-# A static QtKeychain (the Windows packages, docs/tasks/release.md §5) exports nothing:
+# A static QtKeychain (the Windows packages, packaging/README.md) exports nothing:
 # its users must say so, or MSVC looks for dllimport symbols.
 get_target_property(cirrus_keychain_type qt6keychain TYPE)
 if(cirrus_keychain_type STREQUAL "STATIC_LIBRARY")

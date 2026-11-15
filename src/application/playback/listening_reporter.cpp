@@ -2,6 +2,7 @@
 #include "listening_session.h"
 #include "logging/log.h"
 #include <QThread>
+#include <QTimeZone>
 
 namespace cirrus::application
 {
@@ -42,10 +43,19 @@ ListeningReporter::ListeningReporter(BackendFacade& facade, ListeningSession& se
             &ListeningReporter::recordChanged);
     connect(&session, &ListeningSession::playbackChanged, this,
             &ListeningReporter::playbackChanged);
-    connect(&facade, &BackendFacade::listeningReportCompleted, this, [this](quint64 id) {
-        if (m_inFlight.remove(id) && m_inFlight.isEmpty() && m_flushDone)
-            finishFlush();
-    });
+    connect(&facade, &BackendFacade::listeningReportCompleted, this,
+            [this](quint64 id, SessionToken, const ListeningReportResult& result) {
+                if (id == m_activeId) {
+                    m_activeId = 0;
+                    if (result.outcome != ReportOutcome::Acknowledged)
+                        m_activeAt = {}; // try again before the next report
+                }
+                if (m_inFlight.remove(id) && m_inFlight.isEmpty() && m_flushDone)
+                    finishFlush();
+            });
+    connect(&facade, &BackendFacade::sessionChanged, this, &ListeningReporter::markActive);
+    connect(&facade, &BackendFacade::stateChanged, this, &ListeningReporter::markActive);
+    markActive();
 }
 
 ListeningReporter::~ListeningReporter() = default;
@@ -68,6 +78,11 @@ void ListeningReporter::recordChanged(const StoredListeningRecord& row)
 
 void ListeningReporter::playbackChanged(const PlaybackSnapshot& snapshot)
 {
+    if (snapshot.durationMs && *snapshot.durationMs > 0 && validMusicId(snapshot.song.value)) {
+        if (m_durations.size() > 64)
+            m_durations.clear();
+        m_durations.insert(snapshot.song.value, qMin<qint64>(*snapshot.durationMs / 1000, 86400));
+    }
     if (snapshot.state == PlaybackState::Paused) {
         if (!m_pause.isActive())
             m_pause.start();
@@ -102,6 +117,9 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
     ListeningReport report{QUuid::createUuid(), row.song, row.song.value, action,
                            action == ListeningReportAction::Play ? row.playedMs / 1000 : 0};
     report.source = ListeningReportSource::Song; // played as itself, unless we know better
+    report.quality = row.actualQuality.size() <= 16 ? row.actualQuality : QString();
+    report.durationSeconds = m_durations.value(row.song.value);
+    report.startedAtMs = qMax<qint64>(0, row.startedAtMs);
     const char* origin = "none";
     if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
         auto known = report;
@@ -114,8 +132,37 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
     return Prepared{report, origin};
 }
 
+QDateTime ListeningReporter::dayStart(const QDateTime& now)
+{
+    QDateTime start(now.date(), QTime(6, 0), now.timeZone());
+    return now < start ? start.addDays(-1) : start;
+}
+
+void ListeningReporter::markActive()
+{
+    const auto session = m_facade.snapshot();
+    if (session.phase != SessionPhase::Authenticated || m_activeId)
+        return;
+    const auto now = m_clock ? m_clock() : QDateTime::currentDateTime();
+    if (session.accountId == m_activeAccount && m_activeAt.isValid() && m_activeAt >= dayStart(now))
+        return;
+    ListeningReport report;
+    report.eventId = QUuid::createUuid();
+    report.action = ListeningReportAction::ActiveClient;
+    const auto id = m_facade.reportListening(report);
+    qCDebug(lcReport) << log::event("report.active") << log::field("event", report.eventId)
+                      << log::field("queued", id != 0);
+    if (!id)
+        return; // not ready yet: the next session change or report tries again
+    m_activeId = id;
+    m_activeAccount = session.accountId;
+    m_activeAt = now;
+    m_inFlight.insert(id);
+}
+
 void ListeningReporter::send(const Prepared& prepared, const StoredListeningRecord& row)
 {
+    markActive(); // a new day (6:00) or a failed one: the web player's activeclient first
     const auto& report = prepared.report;
     qCDebug(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
                       << log::field("action", report.action) << log::field("song", row.song.value)

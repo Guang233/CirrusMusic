@@ -7,7 +7,7 @@ namespace cirrus::netease
 
 // Reference pc profile, not hardware detection. The composition root must supply
 // a stable device ID; this component does not generate/persist anonymous tokens.
-enum class EapiProfile { Pc, ListeningLogOsx };
+enum class EapiProfile { Pc };
 struct EapiRequestMetadata {
     QString deviceId;
     qint64 timestampMs = 0;

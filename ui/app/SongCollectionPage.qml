@@ -23,15 +23,23 @@ Item {
     required property LoadableModel model
     required property SongListModel songs
     property string title
-    // Where the songs come from (Playback.Origin and its id), for the listening reports.
+    // Where the songs come from (Playback.Origin, its id and name), for the listening
+    // reports and the local statistics.
     property int origin: Playback.NoOrigin
     property string originId
+    property string originName: title
     property string coverKey
     property string coverGlyph: Symbols.queue_music
     // Drawn instead of the cover art (fills the size it gets: 200, 140 or 32).
     property Component cover: null
     // A round cover (artists): the skeleton matches.
     property bool roundCover: false
+    // The header cover a card's cover flies to (CoverFlight, expressive.md §5).
+    property Item flightCover: null
+    readonly property bool flightRound: roundCover
+    readonly property real flightRadius: Theme.shape.large
+    readonly property bool flightReady: state_.contentOpacity > 0.99
+                                        && ((flightCover as Cover)?.ready ?? true)
     // Right of the cover: the type label, title and the page's lines.
     property Component infoContent: null
     // Under the cover, full width (e.g. a description in narrow windows), while
@@ -81,6 +89,7 @@ Item {
     property bool showCover: true
     property bool albumColumn: true
     property bool reasonColumn: false
+    property string reasonTitle: qsTr("推荐理由")
     property bool numberByPosition: false
     property bool showAlbumAction: true
     property bool showLiked: true
@@ -135,7 +144,7 @@ Item {
         if (playsVoices)
             App.player.playVoices(keys, 0);
         else
-            App.player.playSongs(keys, 0, page.origin, page.originId);
+            App.player.playSongs(keys, 0, page.origin, page.originId, page.originName);
     }
 
     clip: true
@@ -255,7 +264,11 @@ Item {
     component Cover: Item {
         id: coverItem
         property real radius: Theme.shape.large
+        // Its picture is shown (or there is none).
+        readonly property bool ready: page.cover ? ((custom.item as CoverArt)?.ready ?? true)
+                                                 : art.ready || page.coverKey === ""
         CoverArt {
+            id: art
             anchors.fill: parent
             visible: !page.cover
             radius: coverItem.radius
@@ -263,6 +276,7 @@ Item {
             coverKey: page.coverKey
         }
         Loader {
+            id: custom
             anchors.fill: parent
             active: page.cover !== null
             sourceComponent: page.cover
@@ -273,6 +287,7 @@ Item {
         id: songTable
         origin: page.origin
         originId: page.originId
+        originName: page.originName
         anchors.fill: parent
         opacity: state_.contentOpacity
         visible: opacity > 0
@@ -286,6 +301,7 @@ Item {
         showCover: page.showCover
         albumColumn: page.albumColumn
         reasonColumn: page.reasonColumn
+        reasonTitle: page.reasonTitle
         numberByPosition: page.numberByPosition
         showAlbumAction: page.showAlbumAction
         showLiked: page.showLiked
@@ -297,6 +313,7 @@ Item {
         onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)
         onArtistRequested: key => page.shell.openArtist(key)
+        onSongRequested: key => page.shell.openSong(key)
         onCommentsRequested: (key, title, artistText, coverKey) =>
                              page.shell.openSongComments(key, title, artistText, coverKey)
         // Typing on the table goes on in the find field.
@@ -326,6 +343,7 @@ Item {
                     id: cover
                     width: page.wide ? 200 : 140
                     height: width
+                    Component.onCompleted: page.flightCover = cover
                 }
                 Loader {
                     id: info
@@ -348,21 +366,25 @@ Item {
                 id: actions
                 x: songTable.rowX
                 width: songTable.rowWidth
-                height: 40
+                height: 56
                 visible: page.showActions
                 Component.onCompleted: page.headerActions = actions
 
+                // The main action is a medium button (expressive.md §3.3), the rest small.
                 Row {
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
                     Button {
                         visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
+                        size: Md.Medium
                         glyph: Symbols.play_arrow
                         text: page.playText
                         onClicked: page.playAll()
                     }
                     Loader {
+                        anchors.verticalCenter: parent.verticalCenter
                         sourceComponent: page.actionsContent
                     }
                 }

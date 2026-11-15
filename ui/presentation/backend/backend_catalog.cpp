@@ -4,8 +4,11 @@
 #include "music_requests.h"
 
 #include "application/backend/backend_facade.h"
+#include "domain/music/discovery_browse_types.h"
 #include "domain/music/discovery_types.h"
+#include "domain/music/introduction_types.h"
 #include "domain/music/recommendation_history_types.h"
+#include "domain/music/song_wiki_text_types.h"
 #include "infrastructure/runtime/backend_runtime.h"
 
 #include <QDateTime>
@@ -31,6 +34,33 @@ std::optional<domain::SearchPage> searchPage(const QString& text, PageRequest pa
 }
 
 CollectionItem searchArtistOf(const domain::SearchArtist& artist) { return artistOf(artist); }
+
+// The two wiki reads overlap and the service gives one row per person: rows next to each
+// other with the same label become one ("作曲: A / B"), and a row saying what a tag card
+// already says (曲风, BPM) is left out. Sections left empty go.
+void tidyWiki(SongWiki& wiki)
+{
+    QHash<QString, QString> cardText;
+    for (const SongWiki::Card& card : std::as_const(wiki.cards))
+        cardText.insert(card.title.trimmed(), card.values.join(QStringLiteral(" / ")));
+    QList<SongWiki::Section> sections;
+    for (SongWiki::Section& section : wiki.sections) {
+        QList<SongWiki::Row> rows;
+        for (const SongWiki::Row& row : std::as_const(section.rows)) {
+            const QString label = row.label.trimmed();
+            if (cardText.value(label) == row.text && cardText.contains(label))
+                continue;
+            if (!rows.isEmpty() && rows.last().label.trimmed() == label)
+                rows.last().text += QStringLiteral(" / ") + row.text;
+            else
+                rows.append(row);
+        }
+        section.rows = rows;
+        if (!section.rows.isEmpty() || !section.description.trimmed().isEmpty())
+            sections.append(std::move(section));
+    }
+    wiki.sections = std::move(sections);
+}
 
 SongInfo programOf(const domain::Program& program)
 {
@@ -478,6 +508,173 @@ Request BackendCatalog::similarArtists(const QString& key, Reply<QList<Collectio
                 for (const auto& artist : found->artists)
                     artists.append(searchArtistOf(artist));
             return artists;
+        });
+}
+
+// Both of the service's wiki reads (docs/ui/pages/song.md §1): the tag cards, and the
+// two text sections. Each may fail or be empty on its own; the wiki fails only when
+// both reads do.
+Request BackendCatalog::songWiki(const SongInfo& song, Reply<SongWiki> reply)
+{
+    if (!domain::validMusicId(song.key) || !domain::validMusicId(song.albumKey) ||
+        song.title.isEmpty())
+        return replyLater(
+            this, std::move(reply),
+            Outcome<SongWiki>{std::nullopt, false, Failure{failure::Rejected, std::nullopt}});
+
+    struct State {
+        SongWiki wiki;
+        int pending = 2;
+        int failed = 0;
+        std::optional<Failure> failure;
+        Reply<SongWiki> reply;
+        Request cards;
+        Request sections;
+    };
+    auto state = std::make_shared<State>();
+    state->reply = std::move(reply);
+    const auto settle = [](const std::shared_ptr<State>& state, std::optional<Failure> failure) {
+        if (failure) {
+            ++state->failed;
+            state->failure = failure;
+        }
+        if (--state->pending > 0)
+            return;
+        state->cards.release();
+        state->sections.release();
+        if (state->failed == 2) {
+            state->reply(Outcome<SongWiki>{std::nullopt, false, state->failure});
+            return;
+        }
+        tidyWiki(state->wiki);
+        state->reply(Outcome<SongWiki>{std::move(state->wiki)});
+    };
+
+    const QString key = song.key;
+    state->cards = read<domain::SongWikiSummary>(
+        m_requests, [key](BackendFacade& facade) { return facade.songWikiSummary({key}); },
+        Reply<QList<SongWiki::Card>>([state, settle](Outcome<QList<SongWiki::Card>> outcome) {
+            if (outcome.value)
+                state->wiki.cards = std::move(*outcome.value);
+            settle(state, outcome.value ? std::nullopt : outcome.failure);
+        }),
+        [](const domain::SongWikiSummary& summary) {
+            QList<SongWiki::Card> cards;
+            for (const auto& card : summary.cards) {
+                QStringList values;
+                for (const QString& value : card.values)
+                    if (!value.trimmed().isEmpty())
+                        values << value;
+                if (values.isEmpty())
+                    continue;
+                QString title = card.title;
+                if (title.trimmed().isEmpty()) {
+                    switch (card.kind) {
+                    case domain::SongWikiKind::Tags:
+                        title = BackendCatalog::tr("曲风");
+                        break;
+                    case domain::SongWikiKind::BusinessTags:
+                        title = BackendCatalog::tr("标签");
+                        break;
+                    case domain::SongWikiKind::Language:
+                        title = BackendCatalog::tr("语种");
+                        break;
+                    case domain::SongWikiKind::Bpm:
+                        title = QStringLiteral("BPM");
+                        break;
+                    }
+                }
+                cards.append({title, values});
+            }
+            return cards;
+        });
+
+    // The text read wants the song as the service gave it and the session it was read on.
+    domain::Song source;
+    source.id = {song.key};
+    source.title = song.title;
+    source.album = domain::AlbumReference{domain::AlbumId{song.albumKey}, song.albumTitle, {}};
+    state->sections = read<domain::SongWikiText>(
+        m_requests,
+        [source](BackendFacade& facade) -> quint64 {
+            const auto query = domain::SongWikiTextQuery::fromSong(facade.snapshot().token, source);
+            return query ? facade.songWikiText(*query) : MusicRequests::Refused;
+        },
+        Reply<QList<SongWiki::Section>>([state, settle](Outcome<QList<SongWiki::Section>> outcome) {
+            if (outcome.value)
+                state->wiki.sections = std::move(*outcome.value);
+            settle(state, outcome.value ? std::nullopt : outcome.failure);
+        }),
+        [](const domain::SongWikiText& text) {
+            QList<SongWiki::Section> sections;
+            for (const auto& found : text.sections) {
+                SongWiki::Section section{found.label, found.description.value_or(QString()), {}};
+                for (const auto& item : found.items) {
+                    QStringList parts;
+                    if (item.content && !item.content->trimmed().isEmpty())
+                        parts << *item.content;
+                    for (const QString& part : item.texts.value_or(QStringList()))
+                        if (!part.trimmed().isEmpty())
+                            parts << part;
+                    if (!parts.isEmpty())
+                        section.rows.append({item.label, parts.join(QStringLiteral(" / "))});
+                }
+                if (!section.rows.isEmpty() || !section.description.trimmed().isEmpty())
+                    sections.append(std::move(section));
+            }
+            return sections;
+        });
+
+    return Request([state] {
+        state->cards.cancel();
+        state->sections.cancel();
+    });
+}
+
+Request BackendCatalog::similarSongs(const QString& key, Reply<QList<SongInfo>> reply)
+{
+    if (!domain::validMusicId(key))
+        return replyLater(this, std::move(reply), Outcome<QList<SongInfo>>{QList<SongInfo>{}});
+    return read<domain::DiscoveryBrowsePage>(
+        m_requests,
+        [key](BackendFacade& facade) {
+            return facade.discover({domain::SimilarSongsQuery{{key}, {50, 0}}});
+        },
+        std::move(reply),
+        [key](const domain::DiscoveryBrowsePage& page) {
+            QList<SongInfo> songs;
+            QStringList seen{key}; // the song itself, and repeats, are left out
+            if (const auto* found = std::get_if<domain::DiscoverySongs>(&page.content))
+                for (const auto& song : found->songs)
+                    if (!seen.contains(song.id.value)) {
+                        seen << song.id.value;
+                        songs.append(songOf(song));
+                    }
+            return songs;
+        });
+}
+
+Request BackendCatalog::similarPlaylists(const QString& key, Reply<QList<CollectionItem>> reply)
+{
+    if (!domain::validMusicId(key))
+        return replyLater(this, std::move(reply),
+                          Outcome<QList<CollectionItem>>{QList<CollectionItem>{}});
+    return read<domain::DiscoveryBrowsePage>(
+        m_requests,
+        [key](BackendFacade& facade) {
+            return facade.discover({domain::SimilarPlaylistsQuery{{key}, {50, 0}}});
+        },
+        std::move(reply),
+        [](const domain::DiscoveryBrowsePage& page) {
+            QList<CollectionItem> playlists;
+            QStringList seen;
+            if (const auto* found = std::get_if<domain::DiscoveryPlaylists>(&page.content))
+                for (const auto& playlist : found->playlists)
+                    if (!seen.contains(playlist.id.value)) {
+                        seen << playlist.id.value;
+                        playlists.append(playlistOf(playlist));
+                    }
+            return playlists;
         });
 }
 

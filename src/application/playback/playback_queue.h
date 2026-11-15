@@ -12,8 +12,10 @@ class PlaybackQueue
     explicit PlaybackQueue(RandomIndex random = {});
     // Pure value restoration; no player, load token or historical traversal is restored.
     bool restore(const domain::QueueSnapshot& saved);
-    bool replace(const QList<domain::SongId>& songs);
-    bool append(const QList<domain::SongId>& songs, bool playNext = false);
+    // Where each song was picked from: one per song, or none. Appended songs share one.
+    bool replace(const QList<domain::SongId>& songs, const QList<domain::PlayOrigin>& origins = {});
+    bool append(const QList<domain::SongId>& songs, bool playNext = false,
+                const domain::PlayOrigin& origin = {});
     bool select(QUuid id);
     bool next(bool naturalEnd = false, bool ignoreSingleRepeat = false);
     bool previous();

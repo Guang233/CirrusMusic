@@ -91,6 +91,7 @@ inline SongInfo songOf(const domain::Song& song)
         info.coverKey = coverKey(song.album->cover);
     }
     info.durationMs = song.durationMs.value_or(-1);
+    info.publishedAtMs = song.publishedAtMs.value_or(0);
     return info;
 }
 

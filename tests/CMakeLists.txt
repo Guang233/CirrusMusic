@@ -50,6 +50,11 @@ target_link_libraries(tst_storage PRIVATE cirrus_storage Qt6::Test)
 add_test(NAME storage COMMAND tst_storage)
 set_tests_properties(storage PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_listening_stats unit/listening_stats_test.cpp)
+target_link_libraries(tst_listening_stats PRIVATE cirrus_listening_state Qt6::Test)
+add_test(NAME listening_stats COMMAND tst_listening_stats)
+set_tests_properties(listening_stats PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_secrets unit/secrets_test.cpp)
 target_link_libraries(tst_secrets PRIVATE cirrus_bootstrap Qt6::Test)
 add_test(NAME secrets COMMAND tst_secrets)
@@ -224,6 +229,11 @@ target_link_libraries(tst_listening_reporter PRIVATE cirrus_application Qt6::Tes
 add_test(NAME listening_reporter COMMAND tst_listening_reporter)
 set_tests_properties(listening_reporter PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_client_log unit/client_log_test.cpp)
+target_link_libraries(tst_client_log PRIVATE cirrus_netease_protocol Qt6::Test)
+add_test(NAME client_log COMMAND tst_client_log)
+set_tests_properties(client_log PROPERTIES TIMEOUT 15)
+
 qt_add_executable(tst_listening_report unit/listening_report_test.cpp)
 target_link_libraries(tst_listening_report PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME listening_report COMMAND tst_listening_report)
@@ -279,15 +289,10 @@ target_link_libraries(tst_podcast_reads PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME podcast_reads COMMAND tst_podcast_reads)
 set_tests_properties(podcast_reads PROPERTIES TIMEOUT 30)
 
-# Does not compile since 2c164a7 (an ambiguous `detail` in entity_search_test.cpp:42);
-# reported to the maintainer. Off until it is fixed, so full builds and CI stay green.
-option(CIRRUS_TEST_ENTITY_SEARCH "Build tst_entity_search (known not to compile)" OFF)
-if(CIRRUS_TEST_ENTITY_SEARCH)
-    qt_add_executable(tst_entity_search unit/entity_search_test.cpp)
-    target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test OpenSSL::Crypto)
-    add_test(NAME entity_search COMMAND tst_entity_search)
-    set_tests_properties(entity_search PROPERTIES TIMEOUT 25)
-endif()
+qt_add_executable(tst_entity_search unit/entity_search_test.cpp)
+target_link_libraries(tst_entity_search PRIVATE cirrus_netease_music Qt6::Test OpenSSL::Crypto)
+add_test(NAME entity_search COMMAND tst_entity_search)
+set_tests_properties(entity_search PROPERTIES TIMEOUT 25)
 
 qt_add_executable(tst_together_http unit/together_http_test.cpp support/synthetic_together_http.h)
 target_link_libraries(tst_together_http PRIVATE cirrus_netease_music Qt6::Test)

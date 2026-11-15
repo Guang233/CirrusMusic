@@ -10,14 +10,15 @@ import Cirrus.Presentation
 // first three in primary); no sorting or find.
 SongCollectionPage {
     id: page
+    origin: Playback.FromRanking
+    originId: App.session.accountKey
 
     model: pageModel
     songs: pageModel.songs
     title: qsTr("听歌排行")
     cover: GlyphTile {
         glyph: Symbols.leaderboard
-        color: Theme.color.tertiaryContainer
-        contentColor: Theme.color.onTertiaryContainer
+        tone: Md.Tertiary
     }
     sortable: false
     findable: false
@@ -44,7 +45,7 @@ SongCollectionPage {
             text: qsTr("听歌排行")
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLarge.font : Theme.type.headlineSmall.font
+            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -61,6 +62,14 @@ SongCollectionPage {
             elide: Text.ElideRight
             color: Theme.color.onSurfaceVariant
             font: Theme.type.bodyMedium.font
+        }
+        // The local statistics, the other way round (pages/stats.md §2.8).
+        Button {
+            x: -leftPadding
+            variant: Md.Text
+            trailingGlyph: Symbols.chevron_right
+            text: qsTr("这台电脑上的听歌统计")
+            onClicked: page.shell.openStats()
         }
     }
 

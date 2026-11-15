@@ -23,9 +23,21 @@ namespace cirrus::storage
 {
 namespace
 {
+thread_local Refusal t_refusal;
+
+// Records why a check failed and returns false, so `return refuse("mode");` reads as the rule.
+bool refuse(const char* reason, long error = 0)
+{
+    t_refusal = {reason, error};
+    return false;
+}
+
 bool absoluteAndClean(const QString& path)
 {
-    return !path.isEmpty() && QDir::isAbsolutePath(path) && QDir::cleanPath(path) == path;
+    t_refusal = {};
+    if (path.isEmpty() || !QDir::isAbsolutePath(path) || QDir::cleanPath(path) != path)
+        return refuse("not_absolute_clean");
+    return true;
 }
 
 #if defined(Q_OS_WIN)
@@ -94,22 +106,29 @@ bool writableByOthers(PACL dacl)
 bool privateHandle(HANDLE handle, bool directory)
 {
     BY_HANDLE_FILE_INFORMATION info{};
-    if (!GetFileInformationByHandle(handle, &info) ||
-        (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ||
-        bool(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != directory ||
-        (!directory && info.nNumberOfLinks != 1))
-        return false;
+    if (!GetFileInformationByHandle(handle, &info))
+        return refuse("file_information", long(GetLastError()));
+    if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+        return refuse("reparse_point");
+    if (bool(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != directory)
+        return refuse(directory ? "not_directory" : "not_file");
+    if (!directory && info.nNumberOfLinks != 1)
+        return refuse("links");
     PSID owner = nullptr;
     PACL dacl = nullptr;
     PSECURITY_DESCRIPTOR descriptor = nullptr;
-    if (GetSecurityInfo(handle, SE_FILE_OBJECT,
-                        OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, &owner, nullptr,
-                        &dacl, nullptr, &descriptor) != ERROR_SUCCESS)
-        return false;
+    if (const DWORD error = GetSecurityInfo(handle, SE_FILE_OBJECT,
+                                            OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
+                                            &owner, nullptr, &dacl, nullptr, &descriptor);
+        error != ERROR_SUCCESS)
+        return refuse("security_info", long(error));
     // A null DACL grants everyone everything.
-    const bool good = owner && ours(owner) && dacl && !writableByOthers(dacl);
+    const char* reason = !owner || !ours(owner)   ? "owner"
+                         : !dacl                  ? "null_acl"
+                         : writableByOthers(dacl) ? "acl_writable_by_others"
+                                                  : nullptr;
     LocalFree(descriptor);
-    return good;
+    return reason ? refuse(reason) : true;
 }
 
 // Opens the object itself, not what a reparse point (symlink, junction) leads to.
@@ -137,7 +156,7 @@ bool isPrivateDirectory(const QString& dir)
         return false;
     const HANDLE handle = openForCheck(dir, true);
     if (handle == INVALID_HANDLE_VALUE)
-        return false;
+        return refuse("open", long(GetLastError()));
     const bool good = privateHandle(handle, true);
     CloseHandle(handle);
     return good;
@@ -146,18 +165,21 @@ bool isPrivateDirectory(const QString& dir)
 bool makePrivateDirectory(const QString& dir)
 {
     // The new directory inherits its parent's ACL; isPrivateDirectory() checks the result.
-    if (absoluteAndClean(dir) && !CreateDirectoryW(native(dir).c_str(), nullptr) &&
-        GetLastError() != ERROR_ALREADY_EXISTS)
-        return false;
+    if (absoluteAndClean(dir) && !CreateDirectoryW(native(dir).c_str(), nullptr)) {
+        if (const DWORD error = GetLastError(); error != ERROR_ALREADY_EXISTS)
+            return refuse("create", long(error));
+    }
     return isPrivateDirectory(dir);
 }
 
 bool isPrivateFileOrAbsent(const QString& path)
 {
+    t_refusal = {};
     const HANDLE handle = openForCheck(path, false);
     if (handle == INVALID_HANDLE_VALUE) {
         const auto error = GetLastError();
-        return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;
+        return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND ||
+               refuse("open", long(error));
     }
     const bool good = privateHandle(handle, false);
     CloseHandle(handle);
@@ -166,12 +188,15 @@ bool isPrivateFileOrAbsent(const QString& path)
 
 std::unique_ptr<QFile> openPrivateFile(const QString& path)
 {
+    t_refusal = {};
     const HANDLE handle =
         CreateFileW(native(path).c_str(), GENERIC_READ | GENERIC_WRITE | READ_CONTROL,
                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_ALWAYS,
                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
-    if (handle == INVALID_HANDLE_VALUE)
+    if (handle == INVALID_HANDLE_VALUE) {
+        refuse("open", long(GetLastError()));
         return {};
+    }
     if (!privateHandle(handle, false)) {
         CloseHandle(handle);
         return {};
@@ -179,11 +204,13 @@ std::unique_ptr<QFile> openPrivateFile(const QString& path)
     const int fd = _open_osfhandle(reinterpret_cast<intptr_t>(handle), _O_RDWR | _O_BINARY);
     if (fd < 0) {
         CloseHandle(handle);
+        refuse("descriptor");
         return {};
     }
     auto file = std::make_unique<QFile>(path);
     if (!file->open(fd, QIODevice::ReadWrite, QFileDevice::AutoCloseHandle)) {
         _close(fd);
+        refuse("qfile_open");
         return {};
     }
     return file;
@@ -193,19 +220,31 @@ std::unique_ptr<QFile> openPrivateFile(const QString& path)
 
 bool isPrivateDirectory(const QString& dir)
 {
-    if (getuid() != geteuid() || getgid() != getegid() || !absoluteAndClean(dir))
+    if (!absoluteAndClean(dir))
         return false;
+    if (getuid() != geteuid() || getgid() != getegid())
+        return refuse("setuid");
     struct stat info{};
     auto bytes = QFile::encodeName(dir);
-    if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) || info.st_uid != geteuid() ||
-        (info.st_mode & 0777) != 0700)
-        return false;
+    if (lstat(bytes.constData(), &info))
+        return refuse("stat", errno);
+    if (!S_ISDIR(info.st_mode))
+        return refuse("not_directory");
+    if (info.st_uid != geteuid())
+        return refuse("owner");
+    if ((info.st_mode & 0777) != 0700)
+        return refuse("mode");
     auto ancestor = QFileInfo(dir).absolutePath();
     while (true) {
         bytes = QFile::encodeName(ancestor);
-        if (lstat(bytes.constData(), &info) || !S_ISDIR(info.st_mode) ||
-            (info.st_uid != 0 && info.st_uid != geteuid()) || (info.st_mode & 0022))
-            return false;
+        if (lstat(bytes.constData(), &info))
+            return refuse("ancestor_stat", errno);
+        if (!S_ISDIR(info.st_mode))
+            return refuse("ancestor_not_directory");
+        if (info.st_uid != 0 && info.st_uid != geteuid())
+            return refuse("ancestor_owner");
+        if (info.st_mode & 0022)
+            return refuse("ancestor_writable");
         if (ancestor == QStringLiteral("/"))
             break;
         ancestor = QFileInfo(ancestor).absolutePath();
@@ -218,34 +257,40 @@ bool makePrivateDirectory(const QString& dir)
     if (absoluteAndClean(dir) && !QFileInfo::exists(dir)) {
         const auto bytes = QFile::encodeName(dir);
         if (::mkdir(bytes.constData(), 0700) != 0 && errno != EEXIST)
-            return false;
+            return refuse("create", errno);
     }
     return isPrivateDirectory(dir);
 }
 
 bool isPrivateFileOrAbsent(const QString& path)
 {
+    t_refusal = {};
     struct stat info{};
     const auto bytes = QFile::encodeName(path);
     if (lstat(bytes.constData(), &info) == 0)
-        return privateFileInfo(info);
-    return errno == ENOENT;
+        return privateFileInfo(info) || refuse("file_not_private");
+    return errno == ENOENT || refuse("stat", errno);
 }
 
 std::unique_ptr<QFile> openPrivateFile(const QString& path)
 {
+    t_refusal = {};
     const auto bytes = QFile::encodeName(path);
     const int fd = ::open(bytes.constData(), O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
-    if (fd < 0)
+    if (fd < 0) {
+        refuse("open", errno);
         return {};
+    }
     struct stat info{};
     if (fstat(fd, &info) != 0 || !privateFileInfo(info)) {
         ::close(fd);
+        refuse("file_not_private");
         return {};
     }
     auto file = std::make_unique<QFile>(path);
     if (!file->open(fd, QIODevice::ReadWrite, QFileDevice::AutoCloseHandle)) {
         ::close(fd);
+        refuse("qfile_open");
         return {};
     }
     return file;
@@ -253,11 +298,13 @@ std::unique_ptr<QFile> openPrivateFile(const QString& path)
 
 #else
 
-bool isPrivateDirectory(const QString&) { return false; }
+bool isPrivateDirectory(const QString&) { return refuse("unsupported_system"); }
 bool makePrivateDirectory(const QString&) { return false; }
 bool isPrivateFileOrAbsent(const QString&) { return false; }
 std::unique_ptr<QFile> openPrivateFile(const QString&) { return {}; }
 
 #endif
+
+Refusal lastRefusal() { return t_refusal; }
 
 } // namespace cirrus::storage

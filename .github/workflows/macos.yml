@@ -1,4 +1,4 @@
-# macOS build and tests, called by CI when asked (docs/tasks/release.md §7). A trial: no
+# macOS build and tests, called by CI when asked (packaging/README.md). A trial: no
 # package yet (this round ships no macOS build). Apple Silicon runner, Qt from the Qt
 # installer, FFmpeg and OpenSSL from Homebrew, QtKeychain from packaging/deps/.
 name: macOS
@@ -37,7 +37,7 @@ jobs:
       # coreutils: sha256sum for packaging/deps/versions.sh.
       - name: Homebrew packages
         run: |
-          brew install --quiet ninja pkgconf coreutils ffmpeg openssl@3
+          brew install --quiet ninja pkgconf coreutils ffmpeg openssl@3 zstd
           echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
 
       - name: Cache QtKeychain
@@ -64,10 +64,8 @@ jobs:
       - name: QML lint
         run: cmake --build build --target all_qmllint
 
-      # Same exclusions as ci.yml (§7.1).
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"

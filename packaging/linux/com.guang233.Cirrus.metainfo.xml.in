@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- AppStream metadata (software centres, AUR helpers). project_license is added once
-     the maintainer picks the project's license (docs/tasks/release.md §6). -->
+<!-- AppStream metadata (software centres, AUR helpers). -->
 <component type="desktop-application">
   <id>com.guang233.Cirrus</id>
   <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
   <name>Cirrus</name>
   <summary>Third-party NetEase Cloud Music client</summary>
   <summary xml:lang="zh-CN">网易云音乐第三方客户端</summary>

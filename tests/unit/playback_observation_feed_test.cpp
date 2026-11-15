@@ -232,10 +232,9 @@ class PlaybackObservationFeedTest final : public QObject
         QVERIFY(!feed.mailbox()->take());
         QVERIFY(h.owner.setVolume(0.25f));
         h.publisher.changed(old->snapshot);
-        QVERIFY(!feed.mailbox()->take()); // control-only revision cannot reauthorize
-        const auto active = h.owner.queue().active;
-        QVERIFY(!active.isNull());
-        QVERIFY(h.owner.select(active));
+        QVERIFY(!feed.mailbox()->take());         // control-only revision cannot reauthorize
+        QVERIFY(h.owner.queue().active.isNull()); // a phase change resets the queue
+        QVERIFY(h.owner.replaceQueue({{"1"}}));
         h.state();
         QTRY_VERIFY(h.publisher.validatedExport().has_value());
         auto current = feed.mailbox()->take();
@@ -260,7 +259,8 @@ class PlaybackObservationFeedTest final : public QObject
         QTest::qWait(1);
         QVERIFY(!h.publisher.validatedExport());
         QVERIFY(!feed.mailbox()->take());
-        QVERIFY(h.owner.select(h.owner.queue().active));
+        QVERIFY(h.owner.replaceQueue(
+            {{"1"}})); // a phase change resets the queue (55458e5): a fresh load
         h.state();
         QTRY_VERIFY(h.publisher.validatedExport().has_value());
         QVERIFY(feed.mailbox()->take());
@@ -319,17 +319,19 @@ class PlaybackObservationFeedTest final : public QObject
         h.state();
         QTRY_VERIFY(h.publisher.validatedExport().has_value());
         bool once = false, selected = false, authorizedInside = false;
-        QObject::connect(&h.publisher, &PlaybackObservationPublisher::contextRetired, &h.publisher,
-                         [&](ObservationBinding) {
-                             if (once)
-                                 return;
-                             once = true;
-                             h.session(SessionPhase::Guest);
-                             selected = h.owner.select(h.owner.queue().active);
-                             h.state(4, 4);
-                             QCoreApplication::processEvents(); // nested coherent capture
-                             authorizedInside = h.publisher.validatedExport().has_value();
-                         });
+        QObject::connect(
+            &h.publisher, &PlaybackObservationPublisher::contextRetired, &h.publisher,
+            [&](ObservationBinding) {
+                if (once)
+                    return;
+                once = true;
+                h.session(SessionPhase::Guest);
+                selected = h.owner.replaceQueue(
+                    {{"1"}}); // a phase change resets the queue (55458e5): a fresh load
+                h.state(4, 4);
+                QCoreApplication::processEvents(); // nested coherent capture
+                authorizedInside = h.publisher.validatedExport().has_value();
+            });
         PlaybackObservationFeed feed(h.publisher);
         QVERIFY(feed.setEnabled(true));
         auto old = feed.mailbox()->take();

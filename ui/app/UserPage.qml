@@ -12,7 +12,9 @@ import Cirrus.Presentation
 // Each tab loads when first shown; Ctrl+PageUp/PageDown switch tabs.
 SongCollectionPage {
     id: page
-    origin: Playback.NoOrigin
+    // Only the listening ranking plays songs here.
+    origin: Playback.FromRanking
+    originId: pageModel.userKey
 
     property alias userKey: pageModel.userKey
     // 0 playlists, 1 listening ranking, 2 follows, 3 fans.
@@ -137,7 +139,7 @@ SongCollectionPage {
                 text: pageModel.nickname
                 elide: Text.ElideRight
                 color: Theme.color.onSurface
-                font: page.wide ? Theme.type.headlineLarge.font : Theme.type.headlineSmall.font
+                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
                 Accessible.role: Accessible.Heading
             }
             // The level, as a small label.

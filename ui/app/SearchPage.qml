@@ -266,6 +266,7 @@ Item {
         onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)
         onArtistRequested: key => page.shell.openArtist(key)
+        onSongRequested: key => page.shell.openSong(key)
         onCommentsRequested: (key, title, artistText, coverKey) =>
                              page.shell.openSongComments(key, title, artistText, coverKey)
         onPodcastRequested: key => page.shell.openPodcast(key)
@@ -280,7 +281,7 @@ Item {
                 text: page.query
                 elide: Text.ElideRight
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
             }
 
@@ -517,7 +518,7 @@ Item {
             Text {
                 text: qsTr("热门搜索")
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
             }
             Repeater {

@@ -27,4 +27,13 @@ namespace cirrus::storage
 // on POSIX (readers use their own handles).
 [[nodiscard]] std::unique_ptr<QFile> openPrivateFile(const QString& path);
 
+// Why the last check on this thread said no: a short fixed id ("mode", "owner",
+// "ancestor_writable", "acl", "open" …) and the system's error number when a call failed
+// (errno, or GetLastError() on Windows), else 0. For the log; reset by every check.
+struct Refusal {
+    const char* reason = nullptr;
+    long error = 0;
+};
+[[nodiscard]] Refusal lastRefusal();
+
 } // namespace cirrus::storage

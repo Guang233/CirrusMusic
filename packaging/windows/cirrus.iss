@@ -1,4 +1,4 @@
-; The Windows installer (docs/tasks/release.md §5). Built by the release workflow:
+; The Windows installer (packaging/README.md). Built by the release workflow:
 ;   iscc /DAppVersion=0.1.0 /DStageDir=<installed tree> /DOutputDir=<dir> packaging\windows\cirrus.iss
 ; Installs for the current user by default (no administrator rights); the first page
 ; offers installing for all users instead.

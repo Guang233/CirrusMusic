@@ -210,8 +210,8 @@ class LinuxObservationServiceTest final : public QObject
         h.phase(SessionPhase::Guest);
         QTest::qWait(40);
         QVERIFY(!h.publisher.validatedExport());
-        const auto active = h.listening.queue().active;
-        QVERIFY(h.listening.select(active));
+        QVERIFY(h.listening.queue().active.isNull()); // a phase change resets the queue
+        QVERIFY(h.listening.replaceQueue({{"1"}}));
         h.state();
         QTRY_VERIFY(h.publisher.validatedExport().has_value());
         service.close();

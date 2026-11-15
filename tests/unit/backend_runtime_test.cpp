@@ -19,6 +19,7 @@
 #include "infrastructure/runtime/backend_runtime.h"
 #include "infrastructure/secrets/tracked_secret_store.h"
 #include "infrastructure/storage/installation_store.h"
+#include "infrastructure/storage/listening_state_store.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -925,7 +926,7 @@ void BackendRuntimeTest::closeWhileDatabaseOpening()
     QCOMPARE(started.size(), 0);
     QCOMPARE(state->requests.load(), 0);
     // Must be released even when shutdown overtakes DatabaseWorker::opened().
-    storage::DatabaseWorker db(config.databasePath, storage::InstallationStore::migrations());
+    storage::DatabaseWorker db(config.databasePath, storage::ListeningStateStore::migrations());
     QSignalSpy opened(&db, &storage::DatabaseWorker::opened);
     db.open();
     QVERIFY(opened.wait(3000));
@@ -1081,7 +1082,8 @@ void BackendRuntimeTest::listeningReportThroughThread()
     const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
     seed(config.databasePath, *state);
     auto plans = loginPlans();
-    plans.append(QList<Plan>{Plan{R"({"code":200})"}, Plan{R"({"code":500})"}, Plan{"", 200, -1}});
+    plans.append(QList<Plan>{Plan{R"({"code":200,"data":{"successfiles":{files}}})"},
+                             Plan{R"({"code":500})"}, Plan{"", 200, -1}});
     BackendRuntime runtime(config, factories(state, gate, plans));
     auto& f = runtime.facade();
     QSignalSpy started(&f, &BackendFacade::started), stopped(&f, &BackendFacade::stopped);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain/music/resource_cache_types.h"
 #include "sources.h"
 
 #include <QCache>
@@ -36,6 +37,7 @@ class BackendImages : public QObject, public ImageSource
   private:
     struct Fetch;
     void finish(const QString& id, Outcome<QByteArray> outcome);
+    void warnFailed(cirrus::domain::CacheError error);
 
     std::unique_ptr<ImageSource> m_fallback;
     CacheQueue* m_queue;
@@ -44,6 +46,7 @@ class BackendImages : public QObject, public ImageSource
     // "url@size" -> the image hosts' bytes; cost in KiB.
     QCache<QString, QByteArray> m_bytes{64 * 1024};
     quint64 m_nextWaiter = 0;
+    quint32 m_warned = 0; // the CacheErrors cover.failed has warned about (bits)
 };
 
 // The resource cache's size and clearing (Settings › Storage).

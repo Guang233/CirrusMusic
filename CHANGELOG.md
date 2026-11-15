@@ -1,17 +1,35 @@
-# Changelog
+# 更新日志
 
-All notable changes to Cirrus. Versions follow [Semantic Versioning](https://semver.org/);
-before 1.0 a minor version may change anything. The release workflow uses the section
-of a version as the notes of its GitHub release (docs/tasks/release.md §7).
+Cirrus 各版本的改动。版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)；1.0 之前，次版本号的升级也可能有不兼容的改动。发布工作流把每个版本的小节用作 GitHub Release 的说明（packaging/README.md）。
 
 ## [Unreleased]
 
-## [0.1.0]
+## [0.1.0] - 2026-11-15
 
-First test build for friends.
+第一个公开版本，支持 Linux 和 Windows；暂不提供 macOS 版。
 
-- Discover, search, daily recommendations, personal FM, charts and playlists.
-- Album, artist, playlist, podcast and user pages; comments.
-- Your library: playlists, saved albums and artists, liked songs, listening ranking.
-- Sign in with a QR code; the sign-in is kept in the system keyring.
-- Player page with lyrics; media keys and the system's media controls (MPRIS).
+### 音乐
+
+- 发现：推荐歌单、歌单分类与精品歌单、排行榜、歌手筛选、新碟与周榜／月榜。
+- 每日推荐（含历史日推）、私人 FM。
+- 搜索：综合、单曲、歌手、专辑、歌单、播客、声音，搜索历史与建议。
+- 歌单、专辑、歌手、播客、用户主页；歌曲页（百科、相似歌曲、相似歌单）。
+- 评论：查看、排序、楼层、点赞（暂不能发表和回复）。
+- 音乐库：创建和收藏的歌单、收藏的专辑和歌手、我喜欢的音乐、最近播放、听歌排行；新建歌单、红心、收藏、关注。
+- 本地听歌统计：按天／周／月的收听时长、时段与星期分布、歌曲／歌手／专辑排行、连续收听天数。
+
+### 播放
+
+- 自己的音频引擎：边下边播、无缝衔接、精确跳转、预载下一首；歌曲缓存可设上限和清除。
+- 音质选择；按网易云的响度信息做音量均衡（默认关）。
+- 播放页：流光、模糊封面、纯色、静态背景；逐字歌词、翻译和注音；队列（拖动排序、下一首播放、加入队列）。
+- 记住上次的队列、进度、音量、播放顺序和窗口状态。
+- 听歌记录同步到网易云（最近播放、听歌排行、听歌足迹）。
+- 媒体键与系统媒体控制（Linux 的 MPRIS）；托盘、关闭到托盘、单实例。
+
+### 界面
+
+- Material 3 Expressive 风格，配色跟随封面或自定义主题色，亮色／暗色。
+- 自绘或系统标题栏；键盘可以完成所有操作。
+- 登录：扫码、手机号（验证码或密码）、邮箱；登录状态保存在系统钥匙串里。
+- 诊断：日志文件、一天内的详细日志、可附说明的诊断包。

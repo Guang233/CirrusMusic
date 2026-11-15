@@ -56,9 +56,16 @@ T.ProgressBar {
     }
 
     contentItem: Shape {
+        id: shape
         implicitWidth: 40
         implicitHeight: 40
         preferredRendererType: Shape.CurveRenderer
+
+        // Drawn again after the window comes back from the tray (a Qt bug).
+        ShapeRefresh {
+            id: refresh
+            target: shape
+        }
 
         // Track: the rest of the circle, determinate only.
         ShapePath {
@@ -67,6 +74,7 @@ T.ProgressBar {
             strokeWidth: control.thickness
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
+            startX: refresh.offset
             PathAngleArc {
                 centerX: control.availableWidth / 2
                 centerY: control.availableHeight / 2
@@ -82,6 +90,7 @@ T.ProgressBar {
             strokeWidth: control.thickness
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
+            startX: refresh.offset
             PathAngleArc {
                 centerX: control.availableWidth / 2
                 centerY: control.availableHeight / 2

@@ -299,7 +299,8 @@ class PlaybackObservationTest final : public QObject
         QTest::qWait(1);
         QCOMPARE(h.publisher.snapshot().status, ObservationStatus::Unavailable);
         QVERIFY(!h.publisher.document(old.binding, old.lyricsRevision));
-        QVERIFY(h.owner.select(h.owner.queue().active)); // explicit fresh load only
+        QVERIFY(h.owner.queue().active.isNull());              // a phase change resets the queue
+        QVERIFY(h.owner.replaceQueue({{"9007199254740993"}})); // explicit fresh load only
         QTRY_VERIFY(h.publisher.snapshot().song.has_value());
         QVERIFY(h.publisher.snapshot().binding != old.binding);
         QCOMPARE(h.publisher.snapshot().lyricsState, LyricsState::Loading);

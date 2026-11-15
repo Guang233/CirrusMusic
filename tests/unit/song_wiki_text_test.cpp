@@ -337,11 +337,38 @@ class SongWikiTextTest : public QObject
         QVERIFY(!page.sections[1].description);
         QCOMPARE(*page.sections[1].items[0].content, " synthetic content ");
     }
+    // The service sends null for empty optional fields (2026-11-13); these mutations are
+    // accepted (nullMeansMissing), the rest of malformed() stays rejected.
+    static bool acceptedMutation(int k) { return k == 8 || k == 11 || k == 13 || k == 18; }
     void malformed_data()
     {
         QTest::addColumn<int>("kind");
         for (int k = 0; k <= 50; ++k)
-            QTest::newRow(qPrintable(QString::number(k))) << k;
+            if (!acceptedMutation(k))
+                QTest::newRow(qPrintable(QString::number(k))) << k;
+    }
+    void nullMeansMissing()
+    {
+        SessionCoordinator session;
+        const auto q = wikiTextQuery(session.snapshot().token);
+        const auto map = [&](int k) {
+            const auto r = mapMusicResponse(q, ::malformed(k));
+            if (!std::holds_alternative<SongWikiText>(r))
+                qFatal("mutation %d was rejected", k);
+            return std::get<SongWikiText>(r);
+        };
+        // content: null on a row with short texts: kept, without content.
+        auto page = map(8);
+        QCOMPARE(page.sections[0].items.size(), 2);
+        QVERIFY(!page.sections[0].items[0].content);
+        QVERIFY(page.sections[0].items[0].texts);
+        // A row left with neither content nor texts (null or missing) is left out.
+        QCOMPARE(map(11).sections[0].items.size(), 1);
+        QCOMPARE(map(13).sections[0].items.size(), 1);
+        // desc: null is no description.
+        page = map(18);
+        QVERIFY(!page.sections[0].description);
+        QCOMPARE(page.sections[0].items.size(), 2);
     }
     void malformed()
     {

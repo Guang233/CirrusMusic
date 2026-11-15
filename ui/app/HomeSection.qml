@@ -16,6 +16,8 @@ Column {
     property bool showsAll: false
     property LoadableModel model
     property Component skeleton
+    // At the right of the title once there is content, instead of "查看全部" (e.g. play all).
+    property Component trailing: null
     default property alias content: body.data
 
     signal allRequested
@@ -30,11 +32,10 @@ Column {
     visible: hasContent || failed || loading
     spacing: 12
 
-    Spring {
-        id: reveal
-        target: section.hasContent ? 1 : 0
-        spec: Theme.motion.standardDefaultSpatial
-        threshold: 0.002
+    Reveal {
+        target: body
+        shown: section.hasContent
+        once: false
     }
 
     Item {
@@ -43,12 +44,13 @@ Column {
 
         Text {
             anchors.left: parent.left
-            anchors.right: allButton.visible ? allButton.left : parent.right
+            anchors.right: allButton.visible ? allButton.left
+                         : trailingLoader.active ? trailingLoader.left : parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: section.title
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: Theme.type.titleLarge.font
+            font: Theme.type.titleLargeEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Button {
@@ -62,6 +64,13 @@ Column {
             text: qsTr("查看全部")
             trailingGlyph: Symbols.chevron_right
             onClicked: section.allRequested()
+        }
+        Loader {
+            id: trailingLoader
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            active: section.trailing !== null && section.hasContent && !allButton.visible
+            sourceComponent: section.trailing
         }
     }
 
@@ -104,9 +113,5 @@ Column {
         id: body
         width: section.width
         visible: section.hasContent
-        opacity: reveal.value
-        transform: Translate {
-            y: 16 * (1 - reveal.value)
-        }
     }
 }

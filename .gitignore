@@ -94,3 +94,7 @@ CMakeLists.txt.user*
 !/.vscode/extensions.json
 !/.vscode/tasks.json
 !/.vscode/launch.json
+
+# The internal notes (a private repository, cloned here) and the agent notes in it.
+/docs/
+/AGENTS.md

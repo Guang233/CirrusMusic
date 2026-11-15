@@ -3,6 +3,7 @@
 #include "account.h"
 #include "playback.h"
 #include "request.h"
+#include "stats_types.h"
 #include "types.h"
 
 #include <QByteArray>
@@ -38,6 +39,12 @@ class CatalogSource
     virtual Request artistIntroduction(const QString& key, Reply<ArtistIntroduction> reply) = 0;
     // The service may want a signed-in account.
     virtual Request similarArtists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
+    // The song page (docs/ui/pages/song.md): the song's wiki (both of the service's wiki
+    // reads; a part that fails is left out unless both do), and songs and playlists like
+    // it. The wiki needs the song as read (its title and album).
+    virtual Request songWiki(const SongInfo& song, Reply<SongWiki> reply) = 0;
+    virtual Request similarSongs(const QString& key, Reply<QList<SongInfo>> reply) = 0;
+    virtual Request similarPlaylists(const QString& key, Reply<QList<CollectionItem>> reply) = 0;
 
     // Search: completions for what is typed, trending keywords, and paged results.
     virtual Request suggestions(const QString& text, Reply<QList<SearchSuggestion>> reply) = 0;
@@ -198,6 +205,20 @@ class CacheSource
     virtual void setAudioCapacity(qint64 bytes) = 0;
 };
 
+// Local listening statistics (docs/ui/pages/stats.md): the account's plays on this
+// computer, or the guest's.
+class StatsSource
+{
+  public:
+    virtual ~StatsSource() = default;
+    virtual Request stats(const StatsQuery& query, Reply<ListeningStats> reply) = 0;
+    // Clears the account's local listening history (never the service's records).
+    virtual Request clear(Reply<bool> reply) = 0;
+    // Called when what stats() reads changed: a play was recorded, song details arrived,
+    // a clear. Possibly often; never synchronously from a command.
+    virtual void setChangedHandler(std::function<void()> changed) = 0;
+};
+
 // A song's lyrics, all languages and versions.
 class LyricsSource
 {
@@ -304,6 +325,7 @@ struct Sources {
     std::unique_ptr<CommentSource> comments;
     std::unique_ptr<CacheSource> cache;
     std::unique_ptr<LyricsSource> lyrics;
+    std::unique_ptr<StatsSource> stats;
 };
 
 } // namespace cirrus::ui

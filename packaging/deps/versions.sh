@@ -1,4 +1,4 @@
-# Pinned versions of what the packages bundle (docs/tasks/release.md §3). Sourced by the
+# Pinned versions of what the packages bundle (packaging/README.md). Sourced by the
 # build scripts and the workflows; bump a version together with its SHA-256.
 QT_VERSION=6.11.2
 FFMPEG_VERSION=9.0.2

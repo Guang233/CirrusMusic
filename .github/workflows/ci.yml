@@ -1,4 +1,4 @@
-# Builds and tests every push to master and every pull request (docs/tasks/release.md §7).
+# Builds and tests every push to master and every pull request (packaging/README.md).
 # Linux always; Windows only when asked (Run workflow, or the release workflow), since its
 # runner minutes count double on a private repository. macOS (a trial, build and tests,
 # no package) only when asked: its minutes count ten times. "Build packages" (Run workflow)
@@ -126,17 +126,12 @@ jobs:
       - name: QML lint
         run: cmake --build build --target all_qmllint
 
-      # Known failures, excluded until fixed (AGENTS.md "Build and verify"):
-      # backend_runtime (closeWhileDatabaseOpening), playback_observation,
-      # playback_observation_feed, linux_observation_service; audio_store
-      # (interruptWakesOneRead is timing-dependent: fails about half the runs alone).
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
           dbus-run-session --
           ctest --test-dir build --output-on-failure --no-tests=error --parallel 4
-          -E "^(backend_runtime|playback_observation|playback_observation_feed|linux_observation_service|audio_store)$"
 
   windows:
     name: Windows build

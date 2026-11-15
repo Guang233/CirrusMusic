@@ -1,4 +1,5 @@
 #include "listening_state_service.h"
+#include "logging/log.h"
 
 #include <QPointer>
 #include <QThread>
@@ -36,6 +37,8 @@ ListeningStateService::ListeningStateService(application::ListeningSession& list
     m_historyTimer.setSingleShot(true);
     m_historyTimer.setInterval(5000);
     connect(&m_historyTimer, &QTimer::timeout, this, &ListeningStateService::flushHistory);
+    m_songTimer.setSingleShot(true);
+    connect(&m_songTimer, &QTimer::timeout, this, &ListeningStateService::requestMissingSongs);
     connect(&listening, &application::ListeningSession::listeningRecordChanged, this,
             &ListeningStateService::recordChanged, Qt::DirectConnection);
     connect(&listening, &application::ListeningSession::historyCleared, this,
@@ -92,6 +95,8 @@ void ListeningStateService::contextChanged()
     m_source = source;
     ++m_historyEpoch; // pending page data is never delivered into a different live account
     m_loadId = 0;
+    m_songsAsked.clear();
+    scheduleSongs(15000); // details missing from earlier runs, after start-up settles
     if (!m_listening.queue().entries.isEmpty() ||
         m_listening.mode() != domain::ListeningMode::Queue)
         return;
@@ -138,24 +143,72 @@ void ListeningStateService::deliver(ListeningStateResult result)
     Q_ASSERT(QThread::currentThread() == thread());
     if (!m_pending.remove(result.id))
         return;
-    m_clearRequests.remove(result.id);
+    // The guest's account is empty: tell "a guest write" from "not a write" by presence.
+    const auto scope = m_clearRequests.contains(result.id)   ? m_clearRequests.take(result.id)
+                       : m_historyWrites.contains(result.id) ? m_historyWrites.take(result.id)
+                                                             : std::optional<QString>{};
+    if (result.error == StorageError::None && live() && scope && *scope == m_source.accountId) {
+        const QPointer<ListeningStateService> alive(this);
+        emit storedHistoryChanged();
+        if (!alive)
+            return;
+    }
     const QPointer<ListeningStateService> guard(this);
     if (m_historyReads.contains(result.id)) {
         const auto read = m_historyReads.take(result.id);
         auto error = result.error;
         if (!live() || read.source != m_source || read.epoch != m_historyEpoch)
             error = StorageError::NotOpen;
-        else if (error == StorageError::None && !result.history)
+        else if (error == StorageError::None && (read.stats ? !result.stats : !result.history))
             error = StorageError::Corrupt;
-        emit historyPageReady(result.id, error,
-                              error == StorageError::None ? std::move(*result.history)
-                                                          : domain::ListeningHistoryPage{});
+        if (read.stats)
+            emit statsReady(result.id, error,
+                            error == StorageError::None ? std::move(*result.stats)
+                                                        : domain::ListeningStats{});
+        else
+            emit historyPageReady(result.id, error,
+                                  error == StorageError::None ? std::move(*result.history)
+                                                              : domain::ListeningHistoryPage{});
+        if (guard && !m_closed && !m_historyTimer.isActive())
+            flushHistory();
+        return;
+    }
+    const bool songsCurrent = live() && m_songSource == m_source && m_songEpoch == m_historyEpoch;
+    if (result.id == m_songRead) {
+        m_songRead = 0;
+        // The same songs as last time: they could not be found; stop until history changes.
+        if (!m_closed && result.error == StorageError::None && songsCurrent &&
+            !result.missingSongs.isEmpty() && result.missingSongs != m_songsAsked) {
+            m_songsAsked = result.missingSongs;
+            m_songTicket = ++m_nextTicket;
+            qCDebug(lcStorage) << log::event("listening.songs_wanted")
+                               << log::field("count", result.missingSongs.size());
+            emit songsWanted(m_songTicket, result.missingSongs);
+        }
+        if (guard && !m_closed && !m_historyTimer.isActive())
+            flushHistory();
+        return;
+    }
+    if (result.id == m_songSave) {
+        m_songSave = 0;
+        if (result.error != StorageError::None) {
+            qCWarning(lcStorage) << log::event("listening.songs_save_failed")
+                                 << log::field("err", result.error);
+            emit storageFailed(result.error);
+        } else if (songsCurrent) {
+            emit storedHistoryChanged();
+            if (!guard)
+                return;
+            scheduleSongs(0); // the next batch
+        }
         if (guard && !m_closed && !m_historyTimer.isActive())
             flushHistory();
         return;
     }
     if (result.error != StorageError::None)
         emit storageFailed(result.error);
+    else
+        scheduleSongs(3000); // a record may have a new song
     if (!guard)
         return;
     if (!m_closed && result.id == m_loadId) {
@@ -240,6 +293,7 @@ QList<ListeningStateJob> ListeningStateService::historyJobs(qsizetype maximumJob
         } else {
             job.operation = ListeningStateOperation::SaveHistory;
             job.accountId = m_historyDirty.first().accountId;
+            m_historyWrites.insert(job.id, job.accountId);
             for (auto it = m_historyDirty.begin();
                  it != m_historyDirty.end() && job.records.size() < 64;)
                 if (it->accountId == job.accountId) {
@@ -295,12 +349,105 @@ quint64 ListeningStateService::historyPage(int pageSize,
     emit requested(std::move(job));
     return id;
 }
+quint64 ListeningStateService::stats(domain::ListeningStatsQuery query)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (live() && !m_historyClears.contains(m_source.accountId) &&
+        !m_clearRequests.values().contains(m_source.accountId))
+        flushHistory(); // FIFO on the database thread: the records just heard count
+    if (!live() || m_historyClears.contains(m_source.accountId) ||
+        m_clearRequests.values().contains(m_source.accountId) || !query.isValid() ||
+        m_pending.size() >= 7 || m_historyReads.size() >= 2 ||
+        m_nextId == std::numeric_limits<quint64>::max()) {
+        emit storageFailed(StorageError::Query);
+        return 0;
+    }
+    ListeningStateJob job;
+    const auto id = job.id = ++m_nextId;
+    job.operation = ListeningStateOperation::LoadStats;
+    job.accountId = m_source.accountId;
+    job.stats = query;
+    m_pending.insert(id);
+    m_historyReads.insert(id, {m_source, m_historyEpoch, true});
+    emit requested(std::move(job));
+    return id;
+}
+void ListeningStateService::scheduleSongs(int delayMs)
+{
+    // A pending start is never brought forward: start-up writes do not cut its wait short.
+    if (m_closed || m_songRead || m_songTicket || m_songSave || m_songTimer.isActive())
+        return;
+    m_songTimer.start(delayMs);
+}
+void ListeningStateService::requestMissingSongs()
+{
+    if (m_closed || !live() || m_songRead || m_songTicket || m_songSave)
+        return;
+    if (m_pending.size() >= 6 || m_historyClears.contains(m_source.accountId) ||
+        m_clearRequests.values().contains(m_source.accountId)) {
+        scheduleSongs(5000);
+        return;
+    }
+    if (m_nextId == std::numeric_limits<quint64>::max())
+        return;
+    m_songSource = m_source;
+    m_songEpoch = m_historyEpoch;
+    ListeningStateJob job;
+    m_songRead = job.id = ++m_nextId;
+    job.operation = ListeningStateOperation::MissingSongs;
+    job.accountId = m_source.accountId;
+    m_pending.insert(job.id);
+    emit requested(std::move(job));
+}
+void ListeningStateService::resolveSongs(quint64 ticket, const QList<domain::Song>& songs,
+                                         const QList<domain::SongId>& unavailable, bool ok)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!ticket || ticket != m_songTicket)
+        return;
+    m_songTicket = 0;
+    if (!ok) {
+        qCInfo(lcStorage) << log::event("listening.songs_lookup_failed")
+                          << log::field("count", m_songsAsked.size());
+        m_songsAsked.clear();
+        scheduleSongs(10 * 60 * 1000); // not again right away; new records also try
+        return;
+    }
+    if (m_closed || !live() || m_songSource != m_source || m_songEpoch != m_historyEpoch)
+        return;
+    // Only what was asked for, so a confused answer cannot add details to other songs.
+    const auto asked = [this](const domain::SongId& id) { return m_songsAsked.contains(id); };
+    ListeningStateJob job;
+    job.operation = ListeningStateOperation::SaveSongs;
+    job.accountId = m_source.accountId;
+    for (const auto& song : songs)
+        if (asked(song.id) && job.songs.size() < 100)
+            job.songs.append(song);
+    for (const auto& id : unavailable)
+        if (asked(id) && job.unavailable.size() < 100)
+            job.unavailable.append(id);
+    if (job.songs.isEmpty() && job.unavailable.isEmpty())
+        return;
+    if (m_pending.size() >= 7 || m_nextId == std::numeric_limits<quint64>::max()) {
+        m_songsAsked.clear(); // ask again later
+        scheduleSongs(5000);
+        return;
+    }
+    qCDebug(lcStorage) << log::event("listening.songs_resolved")
+                       << log::field("found", job.songs.size())
+                       << log::field("unavailable", job.unavailable.size());
+    m_songSave = job.id = ++m_nextId;
+    m_pending.insert(job.id);
+    emit requested(std::move(job));
+}
 QList<ListeningStateJob> ListeningStateService::close()
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_closed)
         return {};
     m_closed = true;
+    m_songTimer.stop();
+    m_songTicket = 0;
     m_loadId = 0;
     ++m_historyEpoch;
     m_timer.stop();

@@ -19,11 +19,6 @@ if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
 
-# Content of downloaded design from Figma to Qt or similar
-if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/importedcontent/CMakeLists.txt")
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/importedcontent)
-endif()
-
 # QML modules, the product entry (appCirrusMusic) and the gallery; see docs/ui/README.md.
 add_subdirectory(ui)
 

@@ -107,6 +107,7 @@ Item {
         iconSize: root.compact ? 20 : 22
         glyph: Symbols.favorite
         iconFill: liked ? 1 : 0
+        pops: true
         text: liked ? qsTr("取消喜欢") : qsTr("喜欢")
         onClicked: {
             if (!App.session.signedIn)

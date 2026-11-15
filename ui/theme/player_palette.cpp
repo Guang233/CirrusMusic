@@ -90,14 +90,35 @@ double PlayerPalette::toneLow() const { return (m_dark ? kDark : kLight).gridLow
 double PlayerPalette::toneHigh() const { return (m_dark ? kDark : kLight).gridHigh; }
 double PlayerPalette::chromaFactor() const { return (m_dark ? kDark : kLight).gridChroma; }
 
+PlayerPalette::Tint PlayerPalette::tint() const
+{
+    Tint tint;
+    if (!m_palette.valid || m_palette.grid.size() != kGridCells)
+        return tint;
+    // Gray cells barely vote: their hue is noise (every neutral is hue 209 in HCT).
+    double x = 0, y = 0, chromaSum = 0;
+    for (const QColor& color : m_palette.grid) {
+        const mcu::Hct cell = toHct(color);
+        const double angle = cell.get_hue() * std::numbers::pi / 180.0;
+        x += cell.get_chroma() * std::cos(angle);
+        y += cell.get_chroma() * std::sin(angle);
+        chromaSum += cell.get_chroma();
+    }
+    tint.hue = std::atan2(y, x) * 180.0 / std::numbers::pi;
+    if (tint.hue < 0)
+        tint.hue += 360.0;
+    tint.chroma = std::hypot(x, y) / kGridCells;
+    tint.neutral = m_palette.monochrome || chromaSum / kGridCells < kNeutralChroma;
+    return tint;
+}
+
 QList<QColor> PlayerPalette::computeColors() const
 {
     const Levels& levels = m_dark ? kDark : kLight;
     QList<QColor> colors(ColorCount);
     const bool valid = m_palette.valid && m_palette.grid.size() == kGridCells;
 
-    // Grid; meanwhile the chroma-weighted mean hue (gray cells don't vote) and the
-    // darkest cell.
+    // Grid; meanwhile the darkest cell.
     QList<mcu::Hct> cells;
     double lowest = 100, highest = 0;
     for (int i = 0; i < kGridCells; ++i) {
@@ -108,7 +129,6 @@ QList<QColor> PlayerPalette::computeColors() const
     const double span = std::max(highest - lowest, kMinToneSpan);
     const double middle = (lowest + highest) / 2;
 
-    double x = 0, y = 0, chromaSum = 0;
     mcu::Hct darkest(0, 0, 100);
     for (int i = 0; i < kGridCells; ++i) {
         const mcu::Hct& cell = cells[i];
@@ -117,27 +137,19 @@ QList<QColor> PlayerPalette::computeColors() const
         // A black and white cover stays gray (its slight tints would turn green or cyan).
         const double chroma = m_palette.monochrome ? 0.0 : cell.get_chroma() * levels.gridChroma;
         colors[i] = fromHct(cell.get_hue(), chroma, tone);
-        const double angle = cell.get_hue() * std::numbers::pi / 180.0;
-        x += cell.get_chroma() * std::cos(angle);
-        y += cell.get_chroma() * std::sin(angle);
-        chromaSum += cell.get_chroma();
         if (cell.get_tone() < darkest.get_tone())
             darkest = cell;
     }
-    double hue = std::atan2(y, x) * 180.0 / std::numbers::pi;
-    if (hue < 0)
-        hue += 360.0;
-    const bool neutral = m_palette.monochrome || chromaSum / kGridCells < kNeutralChroma;
-    const double contentChroma = neutral ? 0.0 : levels.contentChroma;
-    colors[Content] = fromHct(hue, contentChroma, levels.content);
-    colors[ContentVariant] = fromHct(hue, contentChroma, levels.contentVariant);
-    colors[Glare] = fromHct(hue, std::min(contentChroma, kGlareChroma), kGlareTone);
 
-    const mcu::Hct main = valid && !m_palette.dominant.isEmpty()
-                              ? toHct(m_palette.dominant.constFirst())
-                              : mcu::Hct(0, 0, 50);
-    const double solidChroma = m_palette.monochrome ? 0.0 : main.get_chroma() * levels.gridChroma;
-    colors[Solid] = fromHct(main.get_hue(), solidChroma, levels.solidTone);
+    const Tint tint = this->tint();
+    const double contentChroma = tint.neutral ? 0.0 : levels.contentChroma;
+    colors[Content] = fromHct(tint.hue, contentChroma, levels.content);
+    colors[ContentVariant] = fromHct(tint.hue, contentChroma, levels.contentVariant);
+    colors[Glare] = fromHct(tint.hue, std::min(contentChroma, kGlareChroma), kGlareTone);
+    // The background's own hue and colorfulness, not the most common color: that is
+    // often white or black, whose hue is noise.
+    colors[Solid] =
+        fromHct(tint.hue, tint.neutral ? 0.0 : tint.chroma * levels.gridChroma, levels.solidTone);
     colors[Shadow] = fromHct(darkest.get_hue(), m_palette.monochrome ? 0.0 : darkest.get_chroma(),
                              levels.shadowTone);
     return colors;
@@ -168,8 +180,14 @@ void PlayerPalette::updateScheme(bool animate)
     if (!m_theme)
         return;
     const SpringSpec spec = Motion::spec(Motion::SlowEffects);
-    const QColor seed =
-        m_palette.valid ? m_palette.seed : QColor(0x80, 0x80, 0x80); // gray: monochrome
+    // The background's hue, so the panels match the background and the text. Neutral
+    // with them: a gray seed gets the monochrome scheme (Theme::computeColors). The
+    // chroma matters to the variants that follow the source's (Content, Fidelity); it
+    // stays above the monochrome cut.
+    const Tint tint = this->tint();
+    constexpr double kMinSeedChroma = 8.0;
+    const QColor seed = tint.neutral ? QColor(0x80, 0x80, 0x80)
+                                     : fromHct(tint.hue, std::max(tint.chroma, kMinSeedChroma), 50);
     m_scheme->transitionTo(m_theme->computeColors(seed, m_dark),
                            animate && !Motion::reducedMotion() ? spec.duration() : 0,
                            spec.easing());

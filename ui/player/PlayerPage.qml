@@ -93,6 +93,8 @@ FocusScope {
     property int restoreVisibility: Window.Windowed
 
     signal commentsRequested
+    // The playing song's own page (song.md §3).
+    signal songRequested
     signal artistRequested(string key)
     signal albumRequested(string key)
     signal addToPlaylistRequested(string key, string title)
@@ -639,6 +641,7 @@ FocusScope {
                         moreAfterText: page.headerAtBottom
                         titleSize: Math.max(22, Math.min(32, page.layout.cover.width / 20))
                         onCommentsRequested: page.commentsRequested()
+                        onSongRequested: page.songRequested()
                         onArtistRequested: key => page.artistRequested(key)
                         onAlbumRequested: key => page.albumRequested(key)
                         onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key,

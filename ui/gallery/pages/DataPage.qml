@@ -27,6 +27,11 @@ ControlPage {
         id: playlist
         playlistKey: "pl-01"
     }
+    // The fake 75-day listening history (FakeStats).
+    StatsPageModel {
+        id: stats
+        range: statsRange.currentRange
+    }
 
     component Label: Text {
         color: Theme.color.onSurfaceVariant
@@ -334,6 +339,198 @@ ControlPage {
             id: mini
             width: parent.width
             y: 12
+        }
+    }
+
+    SectionTitle {
+        text: qsTr("听歌统计")
+    }
+    Caption {
+        text: qsTr("StatsPageModel 读 75 天的假记录：趋势柱（BarChart）、四个数字（StatTile）、排行行（RankRow、SongList 的排行模式）、节奏图（HeatGrid）。悬停或 Tab 进去用方向键看提示。")
+    }
+    RowLayout {
+        spacing: 16
+        ConnectedButtonGroup {
+            id: statsRange
+            property int currentRange: 0
+            exclusive: true
+            Repeater {
+                model: [qsTr("周"), qsTr("月"), qsTr("年"), qsTr("全部")]
+                delegate: Button {
+                    required property string modelData
+                    required property int index
+                    size: Md.XSmall
+                    variant: Md.Tonal
+                    checkable: true
+                    checked: statsRange.currentRange === index
+                    text: modelData
+                    onClicked: statsRange.currentRange = index
+                }
+            }
+        }
+        IconButton {
+            glyph: Symbols.chevron_left
+            text: qsTr("上一段")
+            enabled: stats.canGoBack
+            onClicked: stats.goBack()
+        }
+        Text {
+            text: stats.periodTitle
+            color: Theme.color.onSurface
+            font: Theme.type.titleMedium.font
+        }
+        IconButton {
+            glyph: Symbols.chevron_right
+            text: qsTr("下一段")
+            enabled: stats.canGoForward
+            onClicked: stats.goForward()
+        }
+        Switch {
+            checked: stats.byTime
+            onToggled: stats.byTime = checked
+            Accessible.name: qsTr("按时长")
+        }
+        Text {
+            text: qsTr("按时长")
+            color: Theme.color.onSurfaceVariant
+            font: Theme.type.labelLarge.font
+        }
+    }
+    Rectangle {
+        Layout.preferredWidth: 960
+        Layout.preferredHeight: 260
+        radius: Theme.shape.extraLarge
+        color: Theme.color.primaryContainer
+        Column {
+            id: statsHeadline
+            x: 28
+            y: 28
+            width: 300
+            spacing: 6
+            Text {
+                text: stats.headline
+                color: Theme.color.onPrimaryContainer
+                font: Theme.type.titleMedium.font
+            }
+            Text {
+                text: stats.durationText
+                color: Theme.color.onPrimaryContainer
+                font: Theme.type.displaySmall.font
+            }
+            Text {
+                text: stats.compareText
+                color: Theme.color.onPrimaryContainer
+                font: Theme.type.bodyMedium.font
+            }
+        }
+        BarChart {
+            x: statsHeadline.x + statsHeadline.width + 24
+            y: 24
+            width: parent.width - x - 28
+            height: parent.height - 48
+            bars: stats.bars
+            scaleTop: stats.chartTop
+            grid: stats.grid
+            peak: stats.peak
+            peakText: stats.peakText
+            textColor: Theme.color.onPrimaryContainer
+            onActivated: index => stats.openBar(index)
+        }
+    }
+    Row {
+        spacing: 16
+        Repeater {
+            model: [[stats.plays, qsTr("次播放")], [stats.songCount, qsTr("首歌")],
+                [stats.artistCount, qsTr("位歌手")], [stats.newSongs, qsTr("首新歌")]]
+            delegate: StatTile {
+                required property var modelData
+                width: 228
+                value: App.format.count(modelData[0])
+                label: modelData[1]
+            }
+        }
+    }
+    RowLayout {
+        spacing: 32
+        SongList {
+            Layout.preferredWidth: 560
+            Layout.preferredHeight: contentHeight
+            Layout.alignment: Qt.AlignTop
+            interactive: false
+            sideMargin: 0
+            bottomMargin: 0
+            model: stats.songs
+            rankValues: stats.songValues
+        }
+        Column {
+            Layout.preferredWidth: 368
+            Layout.alignment: Qt.AlignTop
+            spacing: 2
+            Repeater {
+                model: stats.artists
+                delegate: RankRow {
+                    required property var modelData
+                    required property int index
+                    width: 368
+                    rank: index + 1
+                    text: modelData.title
+                    glyph: Symbols.person
+                    roundCover: true
+                    fraction: modelData.fraction
+                    valueText: modelData.text
+                    clickable: modelData.clickable
+                }
+            }
+            Repeater {
+                model: stats.albums
+                delegate: RankRow {
+                    required property var modelData
+                    required property int index
+                    width: 368
+                    rank: index + 1
+                    text: modelData.title
+                    coverKey: modelData.coverKey
+                    showCover: true
+                    glyph: Symbols.album
+                    fraction: modelData.fraction
+                    valueText: modelData.text
+                    clickable: modelData.clickable
+                }
+            }
+        }
+    }
+    RowLayout {
+        spacing: 32
+        Column {
+            Layout.alignment: Qt.AlignTop
+            spacing: 12
+            HeatGrid {
+                levels: stats.heat
+                tips: stats.heatTips
+            }
+            Text {
+                text: stats.heatSummary
+                color: Theme.color.onSurfaceVariant
+                font: Theme.type.bodyMedium.font
+            }
+        }
+        Column {
+            Layout.preferredWidth: 360
+            Layout.alignment: Qt.AlignTop
+            spacing: 2
+            Repeater {
+                model: stats.origins
+                delegate: RankRow {
+                    required property var modelData
+                    required property int index
+                    width: 360
+                    rank: index + 1
+                    text: modelData.title
+                    fraction: modelData.fraction
+                    valueText: modelData.text
+                    clickable: modelData.clickable
+                }
+            }
         }
     }
 }

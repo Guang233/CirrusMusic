@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Linux packages (docs/tasks/release.md §4): a deb that installs into
+# Builds the Linux packages (packaging/README.md): a deb that installs into
 # /opt/cirrus with its own Qt, and an AppImage. Both carry the same deployed tree.
 #
 #   packaging/linux/build-packages.sh <qt prefix> <deps prefix> <out dir> [deb|appimage|stage]...
@@ -36,9 +36,11 @@ cmake --build "$build" --parallel "${JOBS:-4}"
 install_tree() {
     rm -rf "$1"
     DESTDIR="$1" cmake --install "$build" --prefix "$2"
-    # Debug symbols are not shipped.
+    # Debug symbols are not shipped. Only files that still have them: stripping Qt's
+    # already stripped libraries again (binutils 2.38) breaks the alignment of its
+    # FFmpeg's libavutil.so.59, which then no longer loads.
     find "$1" -type f \( -name '*.so*' -o -perm -u+x \) -exec sh -c \
-        'file -b "$1" | grep -q ELF && strip --strip-unneeded "$1"' _ {} \;
+        'file -b "$1" | grep -q "^ELF.*not stripped" && strip --strip-unneeded "$1"' _ {} \;
 }
 
 make_deb() {
@@ -49,7 +51,9 @@ make_deb() {
     mv "$stage/opt/cirrus/share/applications" "$stage/opt/cirrus/share/metainfo" \
        "$stage/opt/cirrus/share/icons" "$stage/usr/share/"
     ln -s /opt/cirrus/bin/cirrus "$stage/usr/bin/cirrus"
-    cp "$root/packaging/THIRD-PARTY-NOTICES.md" "$stage/usr/share/doc/$pkg/copyright"
+    # Cirrus's own license, then the third-party software it ships.
+    { cat "$root/LICENSE"; echo; cat "$root/packaging/THIRD-PARTY-NOTICES.md"; } \
+        >"$stage/usr/share/doc/$pkg/copyright"
 
     # Dependencies on the system's libraries (everything not in the bundle).
     local tmp; tmp=$(mktemp -d)
@@ -64,7 +68,9 @@ make_deb() {
         find "$stage/opt/cirrus" -name '*.so*' -printf '%h\n' | sort -u)
     local depends
     depends=$(cd "$tmp" && dpkg-shlibdeps -O --ignore-missing-info "${libdirs[@]}" \
-        -e"${elves[@]}" 2>/dev/null | sed -n 's/^shlibs:Depends=//p')
+        -e"${elves[@]}" 2> >(grep -v 'warning:' >&2) | sed -n 's/^shlibs:Depends=//p')
+    # Qt's TLS takes the system's root certificates (not a library, so not found above).
+    depends+=", ca-certificates"
     rm -rf "$tmp"
 
     mkdir -p "$stage/DEBIAN"

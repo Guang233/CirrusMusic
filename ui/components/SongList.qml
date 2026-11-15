@@ -16,10 +16,26 @@ ListView {
     property bool showCovers: true
     property bool showAlbum: true
     property bool playsOnActivate: true
-    // Where these songs come from (Playback.Origin and its id), for the listening reports.
+    // Where these songs come from (Playback.Origin, its id and name), for the listening
+    // reports and the local statistics.
     property int origin: Playback.NoOrigin
     property string originId
+    property string originName
     property real sideMargin: 24
+    // A ranking (stats.md §2.5): [{fraction, text}] by row. Rows then show their rank
+    // beside the cover and a bar with the value instead of the duration; songs without
+    // details (unavailable) can't be played.
+    property var rankValues: []
+    readonly property bool ranked: rankValues.length > 0
+    // Shows only the first rows (0: all), e.g. a section that expands in place: the last
+    // shown row gets the segmented list's bottom corners. Set the height to match
+    // (`heightFor`).
+    property int rowLimit: 0
+    readonly property int shownRows: rowLimit > 0 ? Math.min(count, rowLimit) : count
+    // The height of `rows` two-line rows (a row is 72, with 2 between rows).
+    function heightFor(rows: int): real {
+        return rows > 0 ? rows * 72 + (rows - 1) * spacing : 0;
+    }
     // Off on the album's own page.
     property bool showAlbumAction: true
     // Paged lists load the next page as the end comes near (set footer to a
@@ -34,6 +50,8 @@ ListView {
 
     signal activated(int index)
     signal albumRequested(string key)
+    // "歌曲详情": the song's own page.
+    signal songRequested(string key)
     signal artistRequested(string key)
 
     readonly property SongListModel songs: model as SongListModel
@@ -60,11 +78,12 @@ ListView {
 
     onActivated: index => {
         if (playsOnActivate && songs)
-            App.player.playSongs(songs.keys(), index, list.origin, list.originId);
+            App.player.playSongs(songs.keys(), index, list.origin, list.originId, list.originName);
     }
 
     delegate: ListItem {
         id: row
+        required property string key
 
         required property int index
         required property string title
@@ -77,27 +96,50 @@ ListView {
         required property string durationText
         required property bool loaded
         required property bool current
+        required property bool unavailable
+        readonly property var rankValue: list.rankValues[index] ?? null
 
         x: list.sideMargin
         width: list.width - 2 * list.sideMargin
         segmented: true
         first: index === 0
-        last: index === list.count - 1
+        last: index === list.shownRows - 1
         containerColor: ColorScope.scheme.surfaceContainer
         highlighted: current
         text: !loaded ? "" : secondaryTitle !== "" ? qsTr("%1（%2）").arg(title).arg(secondaryTitle)
                                                    : title
         supportingText: list.showAlbum && albumTitle !== "" ? artistText + " · " + albumTitle
                                                             : artistText
+        enabled: !(list.ranked && unavailable)
         onClicked: list.activated(index)
 
-        leading: list.showCovers ? coverComponent : numberComponent
+        leading: list.ranked ? rankComponent : list.showCovers ? coverComponent : numberComponent
         trailing: Component {
             Row {
                 spacing: 4
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: row.rankValue !== null
+                    width: Math.min(160, list.width * 0.22)
+                    height: 8
+                    Rectangle {
+                        width: Math.max(height, parent.width * (row.rankValue?.fraction ?? 0))
+                        height: parent.height
+                        radius: height / 2
+                        color: ColorScope.scheme.primary
+                    }
+                }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: row.loaded
+                    visible: row.rankValue !== null
+                    leftPadding: 12
+                    text: row.rankValue?.text ?? ""
+                    color: ColorScope.scheme.onSurfaceVariant
+                    font: Fonts.tabular(Theme.type.labelLarge.font)
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: row.loaded && row.rankValue === null
                     text: row.durationText
                     color: ColorScope.scheme.onSurfaceVariant
                     font: Theme.type.labelSmall.font
@@ -111,7 +153,7 @@ ListView {
                     enabled: row.loaded
                     glyph: Symbols.more_vert
                     text: qsTr("更多")
-                    onClicked: songMenu.openFor(row, row.albumKey, row.artists, more, 0, more.height)
+                    onClicked: songMenu.openFor(row, row.key, row.albumKey, row.artists, more, 0, more.height)
                 }
             }
         }
@@ -119,7 +161,7 @@ ListView {
         TapHandler {
             acceptedButtons: Qt.RightButton
             enabled: row.loaded
-            onTapped: eventPoint => songMenu.openFor(row, row.albumKey, row.artists, row,
+            onTapped: eventPoint => songMenu.openFor(row, row.key, row.albumKey, row.artists, row,
                                                      eventPoint.position.x, eventPoint.position.y)
         }
 
@@ -129,6 +171,26 @@ ListView {
                 width: 48
                 height: 48
                 coverKey: row.coverKey
+            }
+        }
+        Component {
+            id: rankComponent
+            Row {
+                spacing: 8
+                Text {
+                    width: 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: row.index + 1
+                    color: row.index < 3 ? ColorScope.scheme.primary
+                                         : ColorScope.scheme.onSurfaceVariant
+                    font: Fonts.tabular(Theme.type.titleSmall.font)
+                }
+                CoverArt {
+                    width: 48
+                    height: 48
+                    coverKey: row.coverKey
+                }
             }
         }
         Component {
@@ -155,7 +217,7 @@ ListView {
 
         // Details still on their way: placeholder bars instead of text.
         Column {
-            x: row.leftPadding + (list.showCovers ? 60 : 44)
+            x: row.leftPadding + (list.ranked ? 92 : list.showCovers ? 60 : 44)
             anchors.verticalCenter: parent.verticalCenter
             visible: !row.loaded
             spacing: 8
@@ -175,12 +237,14 @@ ListView {
 
         // The row the menu is open for.
         property Item row: null
+        property string songKey
         property string albumKey
         property var artists: []
 
-        function openFor(target: Item, album: string, songArtists: var, anchor: Item, x: real,
-                         y: real): void {
+        function openFor(target: Item, song: string, album: string, songArtists: var,
+                         anchor: Item, x: real, y: real): void {
             row = target;
+            songKey = song;
             albumKey = album;
             artists = songArtists;
             popup(anchor, x, y);
@@ -188,6 +252,11 @@ ListView {
 
         onClosed: row = null
 
+        MenuItem {
+            glyph: Symbols.info
+            text: qsTr("歌曲详情")
+            onTriggered: list.songRequested(songMenu.songKey)
+        }
         MenuItem {
             visible: list.showAlbumAction
             height: visible ? implicitHeight : 0
@@ -205,7 +274,7 @@ ListView {
                 text: qsTr("查看歌手：%1").arg(modelData.name)
                 onTriggered: list.artistRequested(modelData.key)
             }
-            onObjectAdded: (index, object) => songMenu.insertItem(index + 1, object as MenuItem)
+            onObjectAdded: (index, object) => songMenu.insertItem(index + 2, object as MenuItem)
             onObjectRemoved: (index, object) => songMenu.removeItem(object as MenuItem)
         }
     }

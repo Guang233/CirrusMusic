@@ -20,6 +20,8 @@ Item {
     property bool moreAfterText: false
 
     signal commentsRequested
+    // The song's own page (the title, or "歌曲详情").
+    signal songRequested
     signal artistRequested(string key)
     signal albumRequested(string key)
     signal addToPlaylistRequested(string key, string title)
@@ -43,12 +45,31 @@ Item {
 
         Text {
             id: titleText
-            width: parent.width
+            width: Math.min(parent.width, implicitWidth)
             text: root.song.title
             elide: Text.ElideRight
             color: root.colors.content
             font: Fonts.font(700, root.compact ? 17 : root.titleSize)
             Accessible.role: Accessible.Heading
+
+            HoverHandler {
+                id: titleHover
+                enabled: root.song.key !== "" && !root.song.voice
+                cursorShape: Qt.PointingHandCursor
+            }
+            TapHandler {
+                enabled: titleHover.enabled
+                onTapped: root.songRequested()
+            }
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 2
+                height: 1
+                color: parent.color
+                visible: titleHover.hovered
+            }
         }
         Text {
             id: artist
@@ -99,6 +120,12 @@ Item {
     Menu {
         id: menu
         MenuItem {
+            text: qsTr("歌曲详情")
+            glyph: Symbols.info
+            enabled: !root.song.voice
+            onTriggered: root.songRequested()
+        }
+        MenuItem {
             text: qsTr("评论")
             glyph: Symbols.comment
             enabled: !root.song.voice
@@ -115,7 +142,7 @@ Item {
                 onTriggered: root.artistRequested(modelData.key)
             }
             // After 评论.
-            onObjectAdded: (index, object) => menu.insertItem(index + 1, object as MenuItem)
+            onObjectAdded: (index, object) => menu.insertItem(index + 2, object as MenuItem)
             onObjectRemoved: (index, object) => menu.removeItem(object as MenuItem)
         }
         MenuItem {

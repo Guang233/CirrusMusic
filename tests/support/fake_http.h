@@ -95,7 +95,19 @@ class FakeManager : public QNetworkAccessManager
         Q_ASSERT(operation == PostOperation);
         requests.append(request);
         bodies.append(outgoing ? outgoing->readAll() : QByteArray{});
-        return new FakeReply(request, plans.isEmpty() ? Plan{} : plans.takeFirst(), this);
+        auto plan = plans.isEmpty() ? Plan{} : plans.takeFirst();
+        // `{files}` in a reply: the multipart file names of the request, a JSON list.
+        if (plan.body.contains("{files}")) {
+            QByteArrayList names;
+            const auto& body = bodies.last();
+            for (qsizetype at = body.indexOf("filename=\""); at >= 0;
+                 at = body.indexOf("filename=\"", at + 1)) {
+                const auto start = at + 10;
+                names.append('"' + body.mid(start, body.indexOf('"', start) - start) + '"');
+            }
+            plan.body.replace("{files}", '[' + names.join(',') + ']');
+        }
+        return new FakeReply(request, plan, this);
     }
 };
 

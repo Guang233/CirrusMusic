@@ -51,6 +51,7 @@ Item {
         visible: tabState.loadState === LoadState.Error
                  || tabState.loadState === LoadState.Offline
         glyph: Symbols.error
+        tone: Md.Error
         message: tabState.model.error.message
         actionText: qsTr("重试")
         actionGlyph: Symbols.refresh
@@ -61,6 +62,7 @@ Item {
         width: Math.min(parent.width, 360)
         visible: tabState.loadState === LoadState.SignedOut
         glyph: Symbols.account_circle
+        tone: Md.Primary
         message: tabState.signedOutText !== "" ? tabState.signedOutText
                                                : tabState.model.error.message
         actionText: qsTr("登录")

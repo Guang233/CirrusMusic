@@ -5,8 +5,8 @@
 namespace cirrus::ui
 {
 
-// The app icon (window, tray): bitmaps rendered by tools/ui/make_icon.py, since its
-// soft cloud filters need a full SVG renderer.
+// The app icon (window, tray): bitmaps rendered by tools/ui/make_icon.py; the sizes up
+// to 32 are a simplified drawing, which one SVG could not give.
 [[nodiscard]] inline QIcon appIcon()
 {
     QIcon icon;

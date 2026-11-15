@@ -21,4 +21,5 @@ Material Symbols 的子集属于修改后的文件，再分发时须保留本说
 | 字体 | 来源 | 许可 | 备注 |
 | --- | --- | --- | --- |
 | Google Sans Flex 4.005 | google/fonts 提交 `a0e3dbcd`，`ofl/googlesansflex/GoogleSansFlex[GRAD,ROND,opsz,slnt,wdth,wght].ttf`，SHA-256 `c31a482fbecbf2e07e6890134d20078723aadf732c9b9c6c9a44f86f8265b6fe`，约 4.1 MB | OFL-1.1，另有商标说明 | 只覆盖 535 个拉丁字符；商标说明限制修改版使用其名称，若采用应原样分发。阶段 0 曾短暂引入（提交 `8240729`），已撤出 |
+| HarmonyOS Sans SC 2.400（华为） | 维护者下载的字体包，7 个静态字重 Thin 250–Black 900（没有 800），共约 57 MB | 字体包和名字表里都没有许可文本 | 2026-11-12 与 MiSans 在应用里并排对比后，维护者选了 MiSans。差别：行高 1.17 em（MiSans 1.33），x 高度 0.50（MiSans 0.53）；没有可变字重轴，字重动画只能分档跳 |
 | Noto Sans SC（可变） | google/fonts `ofl/notosanssc/NotoSansSC[wght].ttf`，约 17.8 MB | OFL-1.1 | 中文显示统一的方案，未下载 |

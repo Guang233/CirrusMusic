@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the FFmpeg that Linux packages bundle (docs/tasks/release.md §3): shared, LGPL
+# Builds the FFmpeg that Linux packages bundle (packaging/README.md): shared, LGPL
 # (no --enable-gpl, no external libraries) and only what the audio decoder opens, the
 # MP3 and FLAC demuxers and decoders (src/infrastructure/media/audio_decoder.cpp).
 # Its sonames (libavcodec.so.63 …) differ from the FFmpeg 7.1 that Qt Multimedia ships

@@ -68,7 +68,7 @@ Item {
             if (playWhenReady && (state === LoadState.Ready || state === LoadState.Partial)) {
                 playWhenReady = false;
                 if (songs.count > 0)
-                    App.player.playSongs(songs.keys(), 0, Playback.FromPlaylist, playlistKey);
+                    App.player.playSongs(songs.keys(), 0, Playback.FromPlaylist, playlistKey, title);
             }
         }
     }
@@ -133,11 +133,13 @@ Item {
 
     // A song list as a card: the liked playlist (primary container, plays), recently
     // played and the ranking (surface container). `strip`: the 72 px row of narrow
-    // windows, like the home page's FM strip.
+    // windows, like the home page's FM strip. The icon sits on a tonal circle in the tone
+    // of the page it opens (expressive.md §4); on the liked card it is inverted.
     component ListCard: T.AbstractButton {
         id: card
 
         property string glyph
+        property int tone: Md.Secondary
         property string subtitle
         property bool hero: false
         property bool strip: !page.wide
@@ -154,14 +156,14 @@ Item {
             cursorShape: Qt.PointingHandCursor
         }
         contentItem: Item {
-            Icon {
+            IconContainer {
                 id: cardIcon
                 x: card.strip ? 16 : 24
                 y: card.strip ? (parent.height - height) / 2 : 24
                 glyph: card.glyph
-                size: card.strip ? 28 : 40
-                fill: 1
-                color: card.hero ? Theme.color.onPrimaryContainer : Theme.color.primary
+                size: card.strip ? 40 : 56
+                tone: card.hero ? Md.Primary : card.tone
+                inverted: card.hero
             }
             Column {
                 x: card.strip ? cardIcon.x + cardIcon.width + 16 : 24
@@ -173,7 +175,7 @@ Item {
                     text: card.text
                     elide: Text.ElideRight
                     color: card.contentColor
-                    font: card.strip ? Theme.type.titleMedium.font : Theme.type.titleLarge.font
+                    font: card.strip ? Theme.type.titleMedium.font : Theme.type.titleLargeEmphasized.font
                 }
                 Text {
                     width: parent.width
@@ -269,18 +271,30 @@ Item {
             Text {
                 text: qsTr("音乐库")
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
+            }
+
+            // The cards, then the collections, rise in when they first arrive.
+            Reveal {
+                target: listCards
+                shown: pageState.showsContent
+            }
+            Reveal {
+                target: collections
+                shown: collections.visible
+                order: 1
             }
 
             // Song lists: a row of cards when wide, strips under each other otherwise.
             Flow {
+                id: listCards
                 width: parent.width
                 spacing: page.wide ? 16 : 8
 
                 ListCard {
                     id: likedCard
-                    width: page.wide ? (parent.width - 32) * 0.4 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.34 : parent.width
                     hero: true
                     enabled: App.library.likedPlaylistKey !== ""
                     glyph: Symbols.favorite
@@ -298,7 +312,7 @@ Item {
                     }
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
                     glyph: Symbols.history
                     text: qsTr("最近播放")
                     subtitle: overview.lastPlayedTitle !== ""
@@ -306,13 +320,28 @@ Item {
                     onClicked: page.shell.openRecent()
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 32) * 0.3 : parent.width
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
                     glyph: Symbols.leaderboard
+                    tone: Md.Tertiary
                     text: qsTr("听歌排行")
                     subtitle: overview.weekTopTitle !== ""
                               ? qsTr("本周：%1").arg(overview.weekTopTitle)
                               : qsTr("看看这周常听什么")
                     onClicked: page.shell.openRanking()
+                }
+                ListCard {
+                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
+                    glyph: Symbols.bar_chart
+                    tone: Md.Primary
+                    text: qsTr("听歌统计")
+                    subtitle: weekStats.state === LoadState.Ready && !weekStats.periodEmpty
+                              ? qsTr("本周 %1").arg(weekStats.durationText) : ""
+                    onClicked: page.shell.openStats()
+                    // This week's time; follows new plays by itself.
+                    StatsPageModel {
+                        id: weekStats
+                        songLimit: 5
+                    }
                 }
             }
 
@@ -371,6 +400,7 @@ Item {
                          ? qsTr("还没有创建的歌单") : qsTr("还没有收藏的歌单")
             }
             CollectionGrid {
+                id: collections
                 x: -8
                 width: parent.width + 16
                 visible: page.tabModel.state === LoadState.Ready

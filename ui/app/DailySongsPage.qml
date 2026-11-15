@@ -72,7 +72,7 @@ SongCollectionPage {
                                : qsTr("每日推荐")
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLarge.font : Theme.type.headlineSmall.font
+            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Text {

@@ -2,6 +2,8 @@
 #include "../support/fake_http.h"
 #include "application/backend/backend_facade.h"
 #include "infrastructure/netease/music/listening_report_gateway.h"
+#include "infrastructure/netease/protocol/client_log.h"
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSignalSpy>
@@ -55,6 +57,8 @@ struct Harness {
         Plan seed{R"({"code":200,"unikey":"synthetic"})"};
         seed.headers.append(std::pair<QByteArray, QByteArray>{
             "Set-Cookie", "MUSIC_U=synthetic-original; Domain=.music.163.com; Path=/"});
+        seed.headers.append(std::pair<QByteArray, QByteArray>{
+            "Set-Cookie", "__csrf=synthetic-csrf; Domain=.music.163.com; Path=/"});
         http->plans.prepend(seed);
         QSignalSpy done(&client, &SessionApiClient::completed);
         QVERIFY(client.submit(session.snapshot().token, ApiOperation::QrKey));
@@ -117,15 +121,29 @@ class ListeningReportTest : public QObject
         r = report();
         r.eventId = {};
         QVERIFY(!r.isValid());
-        for (auto op : {ApiOperation::ListeningStart, ApiOperation::ListeningPlay}) {
+        ListeningReport active; // about no song
+        active.eventId = QUuid::createUuid();
+        active.action = ListeningReportAction::ActiveClient;
+        QVERIFY(active.isValid());
+        active.playedSeconds = 1;
+        QVERIFY(!active.isValid());
+        for (auto op : {ApiOperation::ListeningStart, ApiOperation::ListeningPlay,
+                        ApiOperation::ListeningActive}) {
             const auto c = operationContract(op);
             QVERIFY(c);
-            QCOMPARE(c->logicalPath, "/api/feedback/weblog");
+            QCOMPARE(c->logicalPath, "/api/clientlog/encrypt/upload");
             QCOMPARE(c->responseLimit, 64 * 1024);
-            QCOMPARE(c->protocol, Protocol::Eapi);
+            QCOMPARE(c->protocol, Protocol::Api);
             QVERIFY(requiresAccountCookie(op));
-            QCOMPARE(c->destination, OfficialDestination::ListeningLog);
-            auto p = QJsonObject{{"id", "9007199254740993"}, {"source", "list"}, {"sourceId", "2"}};
+            QCOMPARE(c->destination, OfficialDestination::ClientLog);
+            if (op == ApiOperation::ListeningActive) {
+                QVERIFY(operationPayload(op, {}));
+                QVERIFY(!operationPayload(op, {{"id", "1"}}));
+                continue;
+            }
+            auto p = QJsonObject{{"id", "9007199254740993"}, {"source", "list"},
+                                 {"sourceId", "2"},          {"duration", 200},
+                                 {"quality", "exhigh"},      {"started", qint64(1794655361000)}};
             if (op == ApiOperation::ListeningPlay) {
                 p.insert("time", 35);
                 p.insert("end", "ui");
@@ -134,8 +152,10 @@ class ListeningReportTest : public QObject
             p.insert("url", "arbitrary");
             QVERIFY(!operationPayload(op, p));
         }
-        const QJsonObject play{
-            {"id", "1"}, {"source", "list"}, {"sourceId", "2"}, {"time", 35}, {"end", "playend"}};
+        const QJsonObject play{{"id", "1"},          {"source", "list"},
+                               {"sourceId", "2"},    {"time", 35},
+                               {"end", "playend"},   {"duration", 200},
+                               {"quality", "hires"}, {"started", qint64(1794655361000)}};
         const auto with = [&](const char* key, QJsonValue value) {
             auto p = play;
             p.insert(key, value);
@@ -147,73 +167,110 @@ class ListeningReportTest : public QObject
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("end", "skip")));
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("source", "fm")));
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("sourceId", "keywords")));
-        auto searched = with("source", "search");
-        searched.insert("sourceId", "富士山下");
-        const auto search = operationPayload(ApiOperation::ListeningPlay, searched);
-        QVERIFY(search);
-        const auto logs =
-            QJsonDocument::fromJson(search->value("logs").toString().toUtf8()).array();
-        const auto json = logs.first().toObject().value("json").toObject();
-        QCOMPARE(json.value("source").toString(), "search");
-        QCOMPARE(json.value("sourceId").toString(), "富士山下");
-        QCOMPARE(json.value("content").toString(), QString());
-        QVERIFY(!operationPayload(ApiOperation::ListeningStart,
-                                  {{"id", "1"}, {"source", "list"}, {"sourceId", "0"}}));
-        const auto log = officialRequestUrl(Protocol::Eapi, u"/api/feedback/weblog",
-                                            OfficialDestination::ListeningLog);
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("quality", "a b")));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("duration", -1)));
+        const auto recordOf = [](ApiOperation op, const QJsonObject& p) {
+            const auto records = operationPayload(op, p)->value("records").toArray();
+            [&] { QCOMPARE(records.size(), 1); }();
+            return records.first().toObject();
+        };
+        // The Android client's `_pld` / `_plv` (explicit-listening-reports §4d), in its UA stream.
+        const auto done = recordOf(ApiOperation::ListeningPlay, play);
+        QCOMPARE(done.value("stream").toString(), "ua");
+        QCOMPARE(done.value("action").toString(), "_pld");
+        const auto pld = done.value("data").toObject();
+        QCOMPARE(pld.value("_eventcode").toString(), "_pld");
+        QCOMPARE(pld.value("id"), QJsonValue(1)); // a number, as the client sends it
+        QCOMPARE(pld.value("type").toString(), "song");
+        QCOMPARE(pld.value("time"), QJsonValue(35));
+        QCOMPARE(pld.value("realtime"), QJsonValue(35));
+        QCOMPARE(pld.value("progressTime"), QJsonValue(35));
+        QCOMPARE(pld.value("end").toString(), "playend");
+        QCOMPARE(pld.value("source").toString(), "list");
+        QCOMPARE(pld.value("sourceId").toString(), "2");
+        QCOMPARE(pld.value("resource_time"), QJsonValue(200));
+        QCOMPARE(pld.value("startlogtime"), QJsonValue(qint64(1794655361))); // seconds
+        QCOMPARE(pld.value("format").toString(), "flac");
+        QCOMPARE(pld.value("audioLevel").toString(), "hires");
+        const auto start =
+            recordOf(ApiOperation::ListeningStart, {{"id", "1"},
+                                                    {"source", "list"},
+                                                    {"sourceId", "2"},
+                                                    {"duration", 200},
+                                                    {"quality", ""},
+                                                    {"started", qint64(1794655361000)}});
+        QCOMPARE(start.value("action").toString(), "_plv");
+        const auto plv = start.value("data").toObject();
+        QCOMPARE(plv.value("time"), QJsonValue(0));
+        QVERIFY(!plv.contains("end"));
+        QCOMPARE(plv.value("audioLevel").toString(), "exhigh");
+        const auto client = recordOf(ApiOperation::ListeningActive, {});
+        QCOMPARE(client.value("stream").toString(), "bi");
+        QCOMPARE(client.value("action").toString(), "activeclient");
+        QVERIFY(!operationPayload(ApiOperation::ListeningStart, {{"id", "1"},
+                                                                 {"source", "list"},
+                                                                 {"sourceId", "0"},
+                                                                 {"duration", 200},
+                                                                 {"quality", ""},
+                                                                 {"started", 0}}));
+        const auto log = officialRequestUrl(Protocol::Api, u"/api/clientlog/encrypt/upload",
+                                            OfficialDestination::ClientLog);
         QVERIFY(log);
-        QCOMPARE(log->host(), "clientlog.music.163.com");
-        QCOMPARE(log->path(), "/eapi/feedback/weblog");
-        QVERIFY(!officialRequestUrl(Protocol::Weapi, u"/api/feedback/weblog",
-                                    OfficialDestination::ListeningLog));
-        QVERIFY(!officialRequestUrl(Protocol::Eapi, u"/api/song/like/get",
-                                    OfficialDestination::ListeningLog));
+        QCOMPARE(log->host(), "clientlogsf.music.163.com");
+        QCOMPARE(log->path(), "/api/clientlog/encrypt/upload");
+        QCOMPARE(log->query(), "multiupload=true");
+        QVERIFY(!officialRequestUrl(Protocol::Weapi, u"/api/clientlog/encrypt/upload",
+                                    OfficialDestination::ClientLog));
+        QVERIFY(!officialRequestUrl(Protocol::Api, u"/api/song/like/get",
+                                    OfficialDestination::ClientLog));
         QCOMPARE(officialRequestUrl(Protocol::Eapi, u"/api/song/like/get")->host(),
                  "interfacepc.music.163.com");
     }
     void eachActionIsOneRequest()
     {
+        // The Android client's log upload (explicit-listening-reports §4d). A reply that
+        // doesn't list our file is a rejection.
         Plan response{R"({"code":200})"};
         response.headers.append(std::pair<QByteArray, QByteArray>{
             "Set-Cookie", "MUSIC_U=synthetic-rotation; Domain=.music.163.com; Path=/"});
-        Harness h({response, Plan{R"({"code":200})"}});
+        Harness h({response, Plan{R"({"code":200,"data":{"successfiles":[]}})"},
+                   Plan{R"({"code":200})"}});
         QSignalSpy done(&h.gateway, &IListeningReportGateway::completed);
-        for (auto action : {ListeningReportAction::StartPlay, ListeningReportAction::Play}) {
-            const auto r = report(action);
+        int sent = 0;
+        for (auto action : {ListeningReportAction::StartPlay, ListeningReportAction::Play,
+                            ListeningReportAction::ActiveClient}) {
+            auto r = report(action);
+            if (action == ListeningReportAction::ActiveClient)
+                r = ListeningReport{QUuid::createUuid(), {}, {}, action, 0};
             QVERIFY(h.submit(r));
-            QTRY_COMPARE(done.size(), action == ListeningReportAction::StartPlay ? 1 : 2);
-            QCOMPARE(result(done).outcome, ReportOutcome::Acknowledged);
-            QCOMPARE(result(done).eventId, r.eventId);
-            QCOMPARE(result(done).action, action);
+            ++sent;
+            QTRY_COMPARE(done.size(), sent);
+            QCOMPARE(result(done).outcome, ReportOutcome::Rejected);
+            QCOMPARE(result(done).providerCode, std::optional<int>(-2));
             const auto& request = h.http->requests.last();
-            QCOMPARE(request.url().host(), "clientlog.music.163.com");
-            QCOMPARE(request.url().path(), "/eapi/feedback/weblog");
-            const auto wire = decodeEapiRequest(h.http->bodies.last());
-            QVERIFY(wire);
-            QCOMPARE(wire->logicalPath, "/api/feedback/weblog");
-            const auto header = wire->payload.value("header").toObject();
-            QCOMPARE(header.value("os").toString(), "osx");
-            QCOMPARE(header.value("osver").toString(), "15.5");
-            QCOMPARE(header.value("appver").toString(), "3.1.10.5100");
-            QCOMPARE(header.value("MUSIC_U").toString(),
-                     "synthetic-original"); // response Cookies ignored
-            QVERIFY(request.rawHeader("User-Agent").startsWith("Mozilla/5.0 (Macintosh;"));
-            QVERIFY(request.rawHeader("Cookie").contains("os=osx"));
-            const auto rows =
-                QJsonDocument::fromJson(wire->payload.value("logs").toString().toUtf8()).array();
-            QCOMPARE(rows.size(), 1);
-            const auto row = rows.first().toObject(), json = row.value("json").toObject();
-            QCOMPARE(row.value("action").toString(),
-                     action == ListeningReportAction::Play ? "play" : "startplay");
-            QCOMPARE(json.value("id").toString(), "9007199254740993");
-            QCOMPARE(json.value("content").toString(), "id=2");
-            if (action == ListeningReportAction::Play) {
-                QCOMPARE(json.value("time").toInt(), 35);
-                QCOMPARE(json.value("source").toString(), "list");
-                QCOMPARE(json.value("sourceId").toString(), "2");
-                QCOMPARE(json.value("end").toString(), "ui");
-            } else
-                QVERIFY(!json.contains("time"));
+            QCOMPARE(request.url().host(), "clientlogsf.music.163.com");
+            QCOMPARE(request.url().path(), "/api/clientlog/encrypt/upload");
+            QCOMPARE(request.url().query(), "multiupload=true");
+            QVERIFY(request.rawHeader("Content-Type").startsWith("multipart/form-data; boundary="));
+            QVERIFY(request.rawHeader("User-Agent").startsWith("NeteaseMusic/9.5.61"));
+            const auto cookie = request.rawHeader("Cookie");
+            QVERIFY(cookie.contains("MUSIC_U=synthetic-original")); // response Cookies ignored
+            QVERIFY(cookie.contains("; os=android;"));
+            QVERIFY(cookie.contains("; deviceId=" + androidDeviceId("synthetic-report") + ';'));
+            QVERIFY(!cookie.contains("synthetic-report")); // never the PC-format id
+            QVERIFY(cookie.contains("__csrf=synthetic-csrf"));
+            const auto& body = h.http->bodies.last();
+            QVERIFY(body.startsWith("--"));
+            QVERIFY(body.contains(
+                "Content-Disposition: form-data; name=\"file\"; filename=\""
+                "flush_" +
+                QByteArray(action == ListeningReportAction::ActiveClient ? "bi_" : "ua_")));
+            if (const auto path = qEnvironmentVariable("CIRRUS_NCBL_UPLOADS"); !path.isEmpty()) {
+                QFile file(path + u'/' + QString::number(sent) + u".multipart");
+                QVERIFY(file.open(QIODevice::WriteOnly));
+                file.write(body);
+            }
+            QVERIFY(body.contains("\r\n\r\nNCBL"));
             QCOMPARE(h.http->requests.size(), done.size() + 1); // no automatic second action
         }
     }
@@ -223,8 +280,11 @@ class ListeningReportTest : public QObject
         QTest::addColumn<int>("status");
         QTest::addColumn<ReportOutcome>("outcome");
         QTest::addColumn<ReportError>("error");
-        QTest::newRow("accepted") << QByteArray(R"({"code":200})") << 200
-                                  << ReportOutcome::Acknowledged << ReportError::None;
+        QTest::newRow("accepted") << QByteArray(R"({"code":200,"data":{"successfiles":{files}}})")
+                                  << 200 << ReportOutcome::Acknowledged << ReportError::None;
+        QTest::newRow("not listed")
+            << QByteArray(R"({"code":200,"data":{"successfiles":[]}})") << 200
+            << ReportOutcome::Rejected << ReportError::ProviderRejected;
         QTest::newRow("rejected") << QByteArray(R"({"code":500})") << 200 << ReportOutcome::Rejected
                                   << ReportError::ProviderRejected;
         QTest::newRow("missing-code")

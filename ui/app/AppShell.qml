@@ -102,7 +102,10 @@ Item {
         forwardEntries = [];
         sections = sections.concat([section]);
         rail.currentIndex = section;
-        stack.push(component, properties, transition);
+        const handoff = CoverHandoff.take();
+        const page = stack.push(component, properties, transition);
+        if (transition === PageStack.Kind.Forward)
+            coverFlight.forward(handoff, page);
     }
 
     function openPlaylist(key: string) {
@@ -157,6 +160,16 @@ Item {
     }
 
     // The song's comments, from a song list or the mini player.
+    // A song's own page: wiki and similar songs, playlists (pages/song.md).
+    function openSong(key: string) {
+        if (key === "")
+            return;
+        shell.go(songPage, {
+            shell: shell,
+            songKey: key
+        });
+    }
+
     function openSongComments(key: string, title: string, artistText: string,
                               coverKey: string) {
         openComments(CommentsPageModel.Song, key, title, artistText, coverKey);
@@ -263,6 +276,22 @@ Item {
         });
     }
 
+    // The local listening statistics (pages/stats.md), and its full song ranking for a
+    // range and period (StatsPageModel.range, offset).
+    function openStats() {
+        shell.go(statsPage, {
+            shell: shell
+        });
+    }
+
+    function openStatsSongs(range: int, offset: int) {
+        shell.go(statsSongsPage, {
+            shell: shell,
+            range: range,
+            offset: offset
+        });
+    }
+
     // Today's recommended songs, or a past day's ("yyyy-MM-dd", album-daily.md §2.1).
     function openDaily(date: string) {
         shell.go(dailySongsPage, {
@@ -301,6 +330,7 @@ Item {
         const leaving = stack.entries[stack.entries.length - 1];
         if (!stack.pop())
             return;
+        coverFlight.backward(leaving.item, stack.currentItem);
         // An editing page left is done with, not something to go forward to.
         if (leaving.component !== playlistOrderPage)
             forwardEntries = forwardEntries.concat([{
@@ -390,6 +420,18 @@ Item {
         RankingPage {}
     }
     Component {
+        id: songPage
+        SongPage {}
+    }
+    Component {
+        id: statsPage
+        StatsPage {}
+    }
+    Component {
+        id: statsSongsPage
+        StatsSongsPage {}
+    }
+    Component {
         id: dailySongsPage
         DailySongsPage {}
     }
@@ -412,6 +454,12 @@ Item {
             onCurrentItemChanged: if (currentItem)
                                       App.diagnostics.pageShown(currentItem, depth,
                                                                 entries[entries.length - 1].properties)
+        }
+        // A card's cover flying to the page it opened, and back (expressive.md §5).
+        CoverFlight {
+            id: coverFlight
+            anchors.fill: stack
+            current: stack.currentItem
         }
 
         Repeater {
@@ -479,6 +527,7 @@ Item {
                 onPlaylistRequested: key => shell.openPlaylist(key)
                 onLikedRequested: shell.openLikedPlaylist()
                 onRecentRequested: shell.openRecent()
+                onStatsRequested: shell.openStats()
                 onSignInRequested: shell.openLogin()
             }
         }

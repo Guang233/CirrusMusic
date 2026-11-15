@@ -18,7 +18,8 @@ namespace cirrus::ui
 //   fills the area the compositor gave it.
 // - `showWindowMenu()` opens the compositor's window menu (right click on the title bar).
 // Other platforms (X11, Windows) cannot rely on a compositor for translucency here,
-// so their frame has no shadow margin and square corners.
+// so their frame has no shadow margin. On Windows 11 the system rounds the corners
+// (DWM corner preference; square while maximized or fullscreen); X11 stays square.
 class WindowFrame : public QObject
 {
     Q_OBJECT
@@ -64,6 +65,7 @@ class WindowFrame : public QObject
   private:
     void update();
     void watchSurface();
+    void updateCorners();
     [[nodiscard]] bool readTiled() const;
 
     QPointer<QQuickWindow> m_window;
@@ -76,6 +78,8 @@ class WindowFrame : public QObject
     int m_margin = 0;
     int m_appliedMargin = 0;
     QRegion m_appliedMask;
+    WId m_cornerWindow = 0; // the native window the corner preference was set on
+    int m_appliedCorner = -1;
     bool m_watchingSurface = false;
 };
 

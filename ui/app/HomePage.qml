@@ -296,6 +296,7 @@ Item {
         width: Math.min(parent.width - 48, 480)
         visible: page.allFailed
         glyph: Symbols.wifi_off
+        tone: Md.Neutral
         title: qsTr("连不上网易云音乐")
         message: qsTr("检查网络后重试。")
         actionText: qsTr("重试")

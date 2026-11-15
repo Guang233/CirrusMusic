@@ -46,6 +46,48 @@ QString originsKey(const QString& account)
            (account.isEmpty() ? QStringLiteral("guest") : account);
 }
 
+// Where a song came from, as the backend keeps it for the local statistics
+// (domain::PlayOrigin): a chart is a playlist; search keywords stay here (reports only).
+// Always valid: the backend refuses a queue with an invalid origin.
+domain::PlayOrigin storedOrigin(const PlayOrigin& origin)
+{
+    using Kind = domain::PlayOriginKind;
+    QString name = origin.name;
+    name.remove(QChar::Null);
+    if (name.size() > 256) {
+        name.truncate(256);
+        if (name.back().isHighSurrogate())
+            name.chop(1);
+    }
+    if (!name.isValidUtf16())
+        name.clear();
+    const auto named = [&](Kind kind) {
+        return domain::validMusicId(origin.id) ? domain::PlayOrigin{kind, origin.id, name}
+                                               : domain::PlayOrigin{Kind::Other, {}, {}};
+    };
+    switch (origin.kind) {
+    case playback::FromPlaylist:
+    case playback::FromChart:
+        return named(Kind::Playlist);
+    case playback::FromAlbum:
+        return named(Kind::Album);
+    case playback::FromArtist:
+        return named(Kind::Artist);
+    case playback::FromRanking:
+        return named(Kind::Ranking);
+    case playback::FromDaily:
+        return {Kind::DailySongs, {}, {}};
+    case playback::FromSearch:
+        return {Kind::Search, {}, {}};
+    case playback::FromRecent:
+        return {Kind::Recent, {}, {}};
+    case playback::FromSong:
+        return {Kind::Other, {}, {}};
+    default:
+        return {};
+    }
+}
+
 domain::AudioQuality quality()
 {
     const int value = AppSettings().audioQuality();
@@ -607,7 +649,10 @@ void BackendPlayback::startQueue(const QStringList& keys, int index,
         start -= from;
     }
     loadOrigins(); // this account's, before replacing them
-    if (!m_session->replaceQueue(ids, start, quality()) || !m_session) {
+    QList<domain::PlayOrigin> stored;
+    for (const auto& origin : std::as_const(idOrigins))
+        stored.append(storedOrigin(origin));
+    if (!m_session->replaceQueue(ids, start, quality(), stored) || !m_session) {
         qCWarning(lcUi) << log::event("player.play_refused");
         return;
     }
@@ -638,8 +683,9 @@ void BackendPlayback::loadOrigins()
     for (const QVariant& value : groups) {
         const QVariantMap group = value.toMap();
         const PlayOrigin origin{group.value(QStringLiteral("o")).toInt(),
-                                group.value(QStringLiteral("i")).toString()};
-        if (origin.kind <= playback::NoOrigin || origin.kind > playback::FromSong)
+                                group.value(QStringLiteral("i")).toString(),
+                                group.value(QStringLiteral("n")).toString()};
+        if (origin.kind <= playback::NoOrigin || origin.kind > playback::FromRanking)
             continue;
         for (const QString& entry : group.value(QStringLiteral("e")).toStringList())
             if (const QUuid id(entry); !id.isNull())
@@ -664,6 +710,7 @@ void BackendPlayback::saveOrigins() const
     for (const auto& [origin, entries] : groups)
         list.append(QVariantMap{{QStringLiteral("o"), origin.kind},
                                 {QStringLiteral("i"), origin.id},
+                                {QStringLiteral("n"), origin.name},
                                 {QStringLiteral("e"), entries}});
     QSettings settings;
     if (list.isEmpty())
@@ -863,7 +910,7 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
     QSet<QUuid> before;
     for (const auto& entry : m_session->queue().entries)
         before.insert(entry.id);
-    if (!m_session->append(ids, next)) {
+    if (!m_session->append(ids, next, storedOrigin(origin))) {
         qCWarning(lcUi) << log::event("player.add_refused");
         return false;
     }

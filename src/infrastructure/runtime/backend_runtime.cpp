@@ -762,6 +762,32 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
         connect(worker, &BackendWorker::cacheDelivered, m_cache,
                 &cache::ResourceCacheService::deliver, Qt::QueuedConnection);
     }
+    if (m_state && m_resourceQueries) {
+        // Details of heard songs for the statistics: the resource cache first, the network
+        // for the rest (docs/api/local-listening-history.md §6).
+        auto tickets = std::make_shared<QHash<quint64, quint64>>(); // query id -> ticket
+        connect(m_state, &storage::ListeningStateService::songsWanted, this,
+                [this, tickets](quint64 ticket, const QList<domain::SongId>& songs) {
+                    const auto id = m_resourceQueries->details(application::DetailQuery{songs},
+                                                               domain::CacheReadMode::PreferCache);
+                    if (id)
+                        tickets->insert(id, ticket);
+                    else
+                        m_state->resolveSongs(ticket, {}, {}, false);
+                });
+        connect(m_resourceQueries, &cache::CachedMusicQueryService::completed, this,
+                [this, tickets](const cache::CachedMusicResult& result) {
+                    const auto ticket = tickets->take(result.id);
+                    if (!ticket)
+                        return;
+                    const auto* details =
+                        result.value ? std::get_if<domain::SongDetails>(&*result.value) : nullptr;
+                    if (details)
+                        m_state->resolveSongs(ticket, details->songs, details->missing, true);
+                    else
+                        m_state->resolveSongs(ticket, {}, {}, false);
+                });
+    }
     connect(m_facade, &BackendFacade::closeRequested, this, [this, worker] {
         if (m_resourceQueries)
             m_resourceQueries->close();

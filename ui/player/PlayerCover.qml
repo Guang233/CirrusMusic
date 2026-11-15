@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
@@ -92,12 +93,20 @@ Item {
 
         // The glare, opposite the pointer, as strong as the tilt.
         Shape {
+            id: glare
             anchors.fill: parent
             visible: opacity > 0.01
             opacity: Math.min(1, Math.hypot(tiltX.value, tiltY.value))
             preferredRendererType: Shape.CurveRenderer
 
+            // Drawn again after the window comes back from the tray (a Qt bug).
+            ShapeRefresh {
+                id: glareRefresh
+                target: glare
+            }
+
             ShapePath {
+                startX: glareRefresh.offset
                 strokeWidth: -1
                 fillGradient: RadialGradient {
                     centerX: drawn.width * (0.5 - 0.5 * tiltX.value)

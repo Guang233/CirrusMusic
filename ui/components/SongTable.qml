@@ -42,6 +42,7 @@ Item {
     property bool albumColumn: true
     // A recommendation reason column, between title and album; hides with the album's.
     property bool reasonColumn: false
+    property string reasonTitle: qsTr("推荐理由")
     // Numbers are the place in the list (an album's track numbers), not the shown row:
     // finding keeps them.
     property bool numberByPosition: false
@@ -51,9 +52,11 @@ Item {
     property bool voices: false
     // Numbers are ranks: the first three in primary (the listening ranking).
     property bool ranked: false
-    // Where these songs come from (Playback.Origin and its id), for the listening reports.
+    // Where these songs come from (Playback.Origin, its id and name), for the listening
+    // reports and the local statistics.
     property int origin: Playback.NoOrigin
     property string originId
+    property string originName
     // Voices can't play until the backend can (search.md §3.4).
     readonly property bool playable: !voices || App.player.canPlayVoices
     readonly property ListView view: list
@@ -107,6 +110,8 @@ Item {
     signal albumRequested(string key)
     signal podcastRequested(string key)
     signal artistRequested(string key)
+    // "歌曲详情" for one song (not voices): the song's own page.
+    signal songRequested(string key)
     // "查看评论" for one song (not voices).
     signal commentsRequested(string key, string title, string artistText, string coverKey)
     signal typed(string text)
@@ -137,7 +142,8 @@ Item {
         if (voices)
             App.player.playVoices(keys, keys.indexOf(key));
         else
-            App.player.playSongs(keys, keys.indexOf(key), table.origin, table.originId);
+            App.player.playSongs(keys, keys.indexOf(key), table.origin, table.originId,
+                                 table.originName);
     }
     function isMissing(row: int): bool {
         return songs.data(songs.index(row, 0), SongListModel.MissingRole) === true;
@@ -319,7 +325,7 @@ Item {
             width: table.reasonWidth
             anchors.verticalCenter: parent.verticalCenter
             visible: table.showReason
-            text: qsTr("推荐理由")
+            text: table.reasonTitle
             color: ColorScope.scheme.onSurfaceVariant
             font: Theme.type.labelMedium.font
         }
@@ -817,6 +823,7 @@ Item {
                         checkable: true
                         checked: row.liked
                         iconFill: row.liked ? 1 : 0
+                        pops: true
                         glyph: Symbols.favorite
                         text: row.liked ? qsTr("取消喜欢") : qsTr("喜欢")
                         onToggled: {
@@ -917,7 +924,8 @@ Item {
                 else if (table.voices)
                     App.player.playVoices(songMenu.keys, 0);
                 else
-                    App.player.playSongs(songMenu.keys, 0, table.origin, table.originId);
+                    App.player.playSongs(songMenu.keys, 0, table.origin, table.originId,
+                                         table.originName);
             }
         }
         MenuItem {
@@ -925,14 +933,16 @@ Item {
             height: visible ? implicitHeight : 0
             glyph: Symbols.queue_play_next
             text: qsTr("下一首播放")
-            onTriggered: App.player.addSongs(songMenu.keys, true, table.origin, table.originId)
+            onTriggered: App.player.addSongs(songMenu.keys, true, table.origin, table.originId,
+                                             table.originName)
         }
         MenuItem {
             visible: !table.voices
             height: visible ? implicitHeight : 0
             glyph: Symbols.add_to_queue
             text: qsTr("加到播放队列")
-            onTriggered: App.player.addSongs(songMenu.keys, false, table.origin, table.originId)
+            onTriggered: App.player.addSongs(songMenu.keys, false, table.origin, table.originId,
+                                             table.originName)
         }
         MenuSeparator {
             visible: !table.voices
@@ -951,6 +961,13 @@ Item {
             text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
                                          : qsTr("收藏到歌单…")
             onTriggered: table.addToPlaylistRequested(songMenu.keys)
+        }
+        MenuItem {
+            visible: songMenu.songCount === 1 && !table.voices
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.info
+            text: qsTr("歌曲详情")
+            onTriggered: table.songRequested(songMenu.key)
         }
         MenuItem {
             visible: songMenu.songCount === 1 && !table.voices

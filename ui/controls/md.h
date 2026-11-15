@@ -28,4 +28,9 @@ Q_ENUM_NS(WidthMode)
 // Position inside a ConnectedButtonGroup; decides which corners stay fully round.
 enum GroupPosition { Alone, First, Middle, Last };
 Q_ENUM_NS(GroupPosition)
+
+// Container color role: the container is the role's `*Container` color and the content its
+// `on*Container` (Neutral: surfaceContainerHighest and onSurfaceVariant).
+enum Tone { Primary, Secondary, Tertiary, Error, Neutral };
+Q_ENUM_NS(Tone)
 } // namespace cirrus::ui::md

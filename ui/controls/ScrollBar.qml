@@ -3,7 +3,8 @@ import QtQuick.Templates as T
 import Cirrus.Theme
 
 // Overlay scroll bar: a 4 px bar that widens to 8 px under the pointer and fades
-// out 1 s after scrolling stops.
+// out 1 s after scrolling stops. A vertical one also fixes its Flickable's mouse wheel on
+// Qt 6.12 under Wayland (WheelFilter), so every scroll view gets that.
 //   ScrollBar.vertical: ScrollBar {}
 T.ScrollBar {
     id: control
@@ -19,6 +20,13 @@ T.ScrollBar {
     padding: 2
     visible: policy !== T.ScrollBar.AlwaysOff
     minimumSize: orientation === Qt.Horizontal ? height / width : width / height
+
+    // Qt's own wheel scrolling, 120 px a notch at the usual 3 lines (Qt's 72 px felt slow,
+    // 2026-11-14), and wheel notches stay notches on Qt 6.12 under Wayland (WheelFilter).
+    WheelFilter {
+        target: control.orientation === Qt.Vertical ? control.parent as Flickable : null
+        scale: 5 / 3
+    }
 
     Spring {
         id: thickness

@@ -199,7 +199,10 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
              ? !validCommentV3Token(request.commentV3Token)
              : !request.commentV3Token.isEmpty()) ||
         (!request.commentV3Token.isEmpty() &&
-         request.destination != OfficialDestination::Default)) {
+         request.destination != OfficialDestination::Default) ||
+        !validHeaderValue(request.contentType, 128) ||
+        (request.destination == OfficialDestination::ClientLog) !=
+            request.contentType.startsWith("multipart/form-data; boundary=")) {
         pending->forcedError = TransportError::InvalidRequest;
         finish(id);
         return;
@@ -213,8 +216,11 @@ void HttpTransport::start(quint64 id, const TransportRequest& request)
     QNetworkRequest wire(*url);
     if (pending->resends > 0) // the HTTP/2 connection was lost: this time over HTTP/1.1
         wire.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
-    wire.setHeader(QNetworkRequest::ContentTypeHeader,
-                   QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
+    if (request.contentType.isEmpty())
+        wire.setHeader(QNetworkRequest::ContentTypeHeader,
+                       QStringLiteral("application/x-www-form-urlencoded;charset=utf-8"));
+    else
+        wire.setRawHeader("Content-Type", request.contentType);
     wire.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                       QNetworkRequest::ManualRedirectPolicy);
     wire.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);

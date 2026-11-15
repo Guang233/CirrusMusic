@@ -18,6 +18,11 @@ Item {
     // Decode size; the item's size in device pixels by default.
     property size sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio),
                                       Math.ceil(height * Screen.devicePixelRatio))
+    // A cover that arrives shows at once instead of fading in (the flying cover, which
+    // must not start from the placeholder).
+    property bool immediate: false
+    // The cover is decoded and fully shown (no fade or load pending).
+    readonly property bool ready: pending === null && !fade.running && base.status === Image.Ready
 
     readonly property bool masked: GraphicsInfo.api !== GraphicsInfo.Software
                                    && GraphicsInfo.api !== GraphicsInfo.Unknown
@@ -54,6 +59,10 @@ Item {
     // Called once the incoming layer has loaded or failed: fades it in, or fades the
     // shown cover out to the placeholder when there is nothing to show.
     function reveal(layer: Image): void {
+        if (immediate) {
+            settle();
+            return;
+        }
         const loaded = layer.status === Image.Ready;
         if (!loaded && base.status !== Image.Ready) {
             settle();

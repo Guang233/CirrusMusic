@@ -106,6 +106,14 @@ SettingsGroup {
         actionEnabled: App.settings.searchHistory.length > 0
         onTriggered: clearHistoryDialog.open()
     }
+    // Only the current account's (or the guest's) plays (pages/stats.md §7).
+    ActionSetting {
+        text: qsTr("本地听歌记录")
+        supportingText: qsTr("用于听歌统计")
+        actionText: App.stats.clearing ? qsTr("正在清除…") : qsTr("清除…")
+        actionEnabled: !App.stats.clearing
+        onTriggered: clearStatsDialog.open()
+    }
 
     Connections {
         target: App.cache
@@ -114,6 +122,13 @@ SettingsGroup {
         }
         function onAudioCleared(ok: bool) {
             group.shell.notify(ok ? qsTr("已清除歌曲缓存") : qsTr("没能清除歌曲缓存，请稍后再试"));
+        }
+    }
+    Connections {
+        target: App.stats
+        function onCleared(ok: bool) {
+            group.shell.notify(ok ? qsTr("已清除本地听歌记录")
+                                  : qsTr("没能清除本地听歌记录，请稍后再试"));
         }
     }
 
@@ -132,6 +147,14 @@ SettingsGroup {
         acceptText: qsTr("清除")
         rejectText: qsTr("取消")
         onAccepted: App.cache.clearAudio()
+    }
+    Dialog {
+        id: clearStatsDialog
+        title: qsTr("清除这台电脑上的听歌记录？")
+        supportingText: qsTr("听歌统计会清零，网易云上的记录不受影响。")
+        acceptText: qsTr("清除")
+        rejectText: qsTr("取消")
+        onAccepted: App.stats.clear()
     }
     Dialog {
         id: clearHistoryDialog

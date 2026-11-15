@@ -45,6 +45,8 @@ qt_add_qml_module(cirrus_presentation
         album_page_model.cpp
         artist_page_model.h
         artist_page_model.cpp
+        song_page_model.h
+        song_page_model.cpp
         user_page_model.h
         user_page_model.cpp
         podcast_page_model.h
@@ -55,6 +57,9 @@ qt_add_qml_module(cirrus_presentation
         discover_models.cpp
         cache_status.h
         cache_status.cpp
+        stats_types.h
+        stats_model.h
+        stats_model.cpp
         diagnostics.h
         diagnostics.cpp
         diagnostic_report.h

@@ -42,6 +42,8 @@ struct TransportRequest {
     QList<std::pair<QByteArray, QByteArray>> xeapiHeaders;
     QByteArray commentV3Token; // only two closed XEAPI comment paths, not arbitrary headers
     OfficialDestination destination = OfficialDestination::Default;
+    // ClientLog only: the multipart Content-Type (with its boundary) of the upload.
+    QByteArray contentType;
     // Reads only: a connection that closed before any response (HTTP/2 "connection
     // closed", remote host closed) is tried again over HTTP/1.1, at once and, closed
     // again, a second later. Never for writes.

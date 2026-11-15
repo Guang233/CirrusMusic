@@ -91,7 +91,7 @@ Item {
             if (playWhenReady && (state === LoadState.Ready || state === LoadState.Partial)) {
                 playWhenReady = false;
                 if (songs.count > 0)
-                    App.player.playSongs(songs.keys(), 0, Playback.FromChart, playlistKey);
+                    App.player.playSongs(songs.keys(), 0, Playback.FromChart, playlistKey, title);
             }
         }
     }
@@ -213,7 +213,7 @@ Item {
             Text {
                 text: qsTr("发现")
                 color: Theme.color.onSurface
-                font: Theme.type.headlineMedium.font
+                font: Theme.type.headlineMediumEmphasized.font
                 Accessible.role: Accessible.Heading
             }
 
@@ -319,7 +319,7 @@ Item {
                     visible: charts.charts.count > 0
                     text: qsTr("官方榜")
                     color: Theme.color.onSurface
-                    font: Theme.type.titleLarge.font
+                    font: Theme.type.titleLargeEmphasized.font
                     Accessible.role: Accessible.Heading
                 }
                 Grid {
@@ -350,7 +350,7 @@ Item {
                     topPadding: 8
                     text: qsTr("全部榜单")
                     color: Theme.color.onSurface
-                    font: Theme.type.titleLarge.font
+                    font: Theme.type.titleLargeEmphasized.font
                     Accessible.role: Accessible.Heading
                 }
                 CollectionGrid {

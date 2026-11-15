@@ -11,6 +11,7 @@ import Cirrus.Presentation
 // sorting or find. Ctrl+PageUp/PageDown switch tabs.
 SongCollectionPage {
     id: page
+    origin: Playback.FromRecent
 
     // 0 songs, 1 playlists, 2 albums, 3 podcasts, 4 voices.
     property int currentTab: 0
@@ -88,7 +89,7 @@ SongCollectionPage {
             text: qsTr("最近播放")
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLarge.font : Theme.type.headlineSmall.font
+            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
         Text {

@@ -4,9 +4,43 @@
 
 namespace cirrus::domain
 {
+// Where a queued song was picked from, kept with the queue and each listening record for
+// local statistics (docs/api/local-listening-history.md §6). Values are stored: append only.
+// Personal FM is ListeningMode::PersonalFm, not an origin.
+enum class PlayOriginKind {
+    None,       // not given (older queues, other callers)
+    Playlist,   // id: playlist (liked songs and charts are playlists)
+    Album,      // id: album
+    Artist,     // id: artist (their top songs)
+    DailySongs, // today's recommended songs; no id
+    Search,     // search results; no id, never the keywords
+    Recent,     // recently played; no id
+    Ranking,    // a user's play ranking; id: that user
+    Other
+};
+CIRRUS_LOG_ENUM(PlayOriginKind, None, Playlist, Album, Artist, DailySongs, Search, Recent, Ranking,
+                Other)
+struct PlayOrigin {
+    PlayOriginKind kind = PlayOriginKind::None;
+    QString id;   // provider id for Playlist/Album/Artist/Ranking, else empty
+    QString name; // its title when queued (shown in statistics), <=256 characters
+    friend bool operator==(const PlayOrigin&, const PlayOrigin&) = default;
+};
+inline bool validPlayOrigin(const PlayOrigin& origin)
+{
+    const bool needsId =
+        origin.kind == PlayOriginKind::Playlist || origin.kind == PlayOriginKind::Album ||
+        origin.kind == PlayOriginKind::Artist || origin.kind == PlayOriginKind::Ranking;
+    return origin.kind >= PlayOriginKind::None && origin.kind <= PlayOriginKind::Other &&
+           (needsId ? validMusicId(origin.id) : origin.id.isEmpty()) &&
+           (origin.kind != PlayOriginKind::None || origin.name.isEmpty()) &&
+           origin.name.size() <= 256 && origin.name.isValidUtf16() &&
+           !origin.name.contains(QChar::Null);
+}
 struct QueueEntry {
     QUuid id;
     SongId song;
+    PlayOrigin origin{};
 };
 enum class ListeningMode { Queue, PersonalFm };
 enum class QueueOrder { Sequential, Shuffle };

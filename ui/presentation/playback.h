@@ -23,9 +23,11 @@ enum Repeat { RepeatOff, RepeatAll, RepeatOne };
 Q_ENUM_NS(Repeat)
 enum Mode { Queue, PersonalFm };
 Q_ENUM_NS(Mode)
-// Where songs were played from, for the listening reports (integration.md §6.1): the
-// page's playlist, album, artist, chart, the daily recommendations, a search (the id is
-// the keywords) or a song's own page. NoOrigin: none of these.
+// Where songs were played from, for the listening reports (integration.md §6.1) and the
+// local statistics (pages/stats.md): the page's playlist, album, artist, chart, the daily
+// recommendations, a search (the id is the keywords), a song's own page, the recently
+// played songs or a listening ranking (the id is its user's key). NoOrigin: none of these.
+// Stored with the queue: append only.
 enum Origin {
     NoOrigin,
     FromPlaylist,
@@ -34,7 +36,9 @@ enum Origin {
     FromChart,
     FromDaily,
     FromSearch,
-    FromSong
+    FromSong,
+    FromRecent,
+    FromRanking
 };
 Q_ENUM_NS(Origin)
 
@@ -49,10 +53,12 @@ Q_ENUM_NS(Origin)
 namespace cirrus::ui
 {
 
-// playback::Origin and its id (a playlist's key, the search's keywords…).
+// playback::Origin, its id (a playlist's key, the search's keywords…) and its name (the
+// playlist's title…, shown in the statistics; may be empty).
 struct PlayOrigin {
     int kind = playback::NoOrigin;
     QString id;
+    QString name;
     friend bool operator==(const PlayOrigin&, const PlayOrigin&) = default;
 };
 

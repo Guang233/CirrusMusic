@@ -1,4 +1,4 @@
-# What `cmake --install` puts where (docs/tasks/release.md §2). Packages build with
+# What `cmake --install` puts where (packaging/README.md). Packages build with
 # BUILD_TESTING=OFF and CIRRUS_BUILD_GALLERY=OFF: only the app is installed.
 #
 # Linux (GNU layout under CMAKE_INSTALL_PREFIX):
@@ -6,7 +6,7 @@
 #   share/applications/com.guang233.Cirrus.desktop
 #   share/metainfo/com.guang233.Cirrus.metainfo.xml
 #   share/icons/hicolor/<N>x<N>/apps/com.guang233.Cirrus.png, scalable/apps/….svg
-#   share/doc/cirrus/      third-party notices and license texts
+#   share/doc/cirrus/      Cirrus's license (MIT), third-party notices and license texts
 # Windows: the executable and its DLLs in the prefix itself (CMAKE_INSTALL_BINDIR=.),
 #   notices in licenses/.
 # CIRRUS_DEPLOY_QT also copies the Qt runtime and the non-system libraries (FFmpeg,
@@ -27,6 +27,7 @@ else()
     set(cirrus_doc_dir "${CMAKE_INSTALL_DATAROOTDIR}/doc/cirrus")
 endif()
 install(FILES
+        "${PROJECT_SOURCE_DIR}/LICENSE"
         "${PROJECT_SOURCE_DIR}/packaging/THIRD-PARTY-NOTICES.md"
     DESTINATION "${cirrus_doc_dir}")
 install(FILES

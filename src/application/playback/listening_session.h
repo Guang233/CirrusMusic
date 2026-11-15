@@ -31,13 +31,17 @@ class ListeningSession final : public QObject
         return mode() == domain::ListeningMode::PersonalFm && m_fmWaiting;
     }
     [[nodiscard]] bool fmBlocked() const { return waitingForFm() && m_fmBlocked; }
+    // `origins`: where each song was picked from (one per song, or none), kept for local
+    // statistics.
     bool replaceQueue(const QList<domain::SongId>& songs, qsizetype startIndex = 0,
-                      domain::AudioQuality quality = domain::AudioQuality::Standard);
+                      domain::AudioQuality quality = domain::AudioQuality::Standard,
+                      const QList<domain::PlayOrigin>& origins = {});
     // Storage composition only. Never load/play/query during restoration.
     bool restoreQueue(const domain::QueueSnapshot& saved, domain::SessionSnapshot expected,
                       std::pair<quint64, quint64> expectedIntent);
     [[nodiscard]] domain::SessionToken queueContext() const { return m_queueContext; }
-    bool append(const QList<domain::SongId>& songs, bool playNext = false);
+    bool append(const QList<domain::SongId>& songs, bool playNext = false,
+                const domain::PlayOrigin& origin = {});
     bool select(QUuid entry);
     bool remove(QUuid entry);
     // Moves an entry to place `to` of playOrder(); playback goes on.

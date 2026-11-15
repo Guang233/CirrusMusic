@@ -1,7 +1,7 @@
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
 # The executable's file name. Development builds keep appCirrusMusic (docs, launch
-# configs); packages name it cirrus (Linux) or Cirrus (Windows), docs/tasks/release.md §2.
+# configs); packages name it cirrus (Linux) or Cirrus (Windows), packaging/README.md.
 set(CIRRUS_EXECUTABLE "appCirrusMusic" CACHE STRING "File name of the app executable")
 
 qt_add_executable(appCirrusMusic
@@ -35,6 +35,9 @@ qt_add_qml_module(appCirrusMusic
         GlyphTile.qml
         RecentPage.qml
         RankingPage.qml
+        StatsPage.qml
+        StatsSongsPage.qml
+        SongPage.qml
         LoginDialog.qml
         AddToPlaylistDialog.qml
         ChartCard.qml
@@ -151,6 +154,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_UI_MPRIS)
     target_link_libraries(appCirrusMusic PRIVATE Qt6::DBus)
 elseif(WIN32)
+    # The executable's icon and version information (cirrus.rc.in).
+    set(CIRRUS_ICO "${CMAKE_CURRENT_SOURCE_DIR}/icons/cirrus.ico")
+    file(TO_CMAKE_PATH "${CIRRUS_ICO}" CIRRUS_ICO)
+    configure_file(cirrus.rc.in "${CMAKE_CURRENT_BINARY_DIR}/cirrus.rc" @ONLY)
+    target_sources(appCirrusMusic PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/cirrus.rc")
     # C++/WinRT from the Windows SDK (MSVC).
     option(CIRRUS_UI_SMTC "Windows media controls (SMTC); needs MSVC and the Windows SDK" ON)
     if(CIRRUS_UI_SMTC)
