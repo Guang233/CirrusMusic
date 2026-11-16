@@ -49,10 +49,16 @@ Window {
 
     minimumWidth: 480 + 2 * windowFrame.margin
     minimumHeight: 360 + 2 * windowFrame.margin
+    // Frameless, the window still says it can be minimized and maximized and has a system
+    // menu. Windows gives a window whose flags are spelled out only what they name (the
+    // usual set comes with a bare Qt.Window alone): without the minimize style, clicking
+    // the taskbar button of the active window does not minimize it, and Win+Down does
+    // nothing.
     flags: titleBar === TitleBarMode.System ? Qt.Window
          : titleBar === TitleBarMode.Custom && macOS
            ? Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
-         : Qt.Window | Qt.FramelessWindowHint
+         : Qt.Window | Qt.FramelessWindowHint | Qt.WindowSystemMenuHint
+           | Qt.WindowMinMaxButtonsHint
     // Translucent where the frame can have a shadow margin (Wayland): the alpha channel
     // is chosen when the native window is created, and the margin needs it. `surface`
     // paints the opaque part. Elsewhere opaque: there is no margin, and on Windows a
