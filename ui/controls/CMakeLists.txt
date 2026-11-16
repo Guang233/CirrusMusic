@@ -24,6 +24,7 @@ qt_add_qml_module(cirrus_ui_controls
         ButtonContainer.qml
         Button.qml
         IconButton.qml
+        Fab.qml
         ButtonGroupLayout.qml
         StandardButtonGroup.qml
         ConnectedButtonGroup.qml
