@@ -1161,7 +1161,8 @@ class FakeCatalog : public QObject, public CatalogSource
             const auto seed = userSeed(key);
             const int created = int(seed % 4), saved = int((seed >> 8) % 6);
             for (int i = 0; i < created + saved && !all.isEmpty(); ++i) {
-                items << m_samples->playlistItem(all.at(int((seed >> 16) + i) % all.size()));
+                const auto pick = ((seed >> 16) + size_t(i)) % size_t(all.size());
+                items << m_samples->playlistItem(all.at(qsizetype(pick)));
                 items.last().created = i < created;
             }
             return Outcome<QList<CollectionItem>>{items};
