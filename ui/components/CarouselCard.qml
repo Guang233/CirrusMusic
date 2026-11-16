@@ -19,7 +19,7 @@ T.AbstractButton {
     property bool current: false
 
     // 0 while small, 1 from about a medium item up: the words fade with it.
-    readonly property real room: Math.max(0, Math.min(1, (width - 96) / 48))
+    readonly property real room: Math.max(0, Math.min(1, (width - 112) / 40))
 
     focusPolicy: Qt.NoFocus
     Accessible.name: text

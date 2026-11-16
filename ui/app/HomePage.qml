@@ -343,6 +343,7 @@ Item {
                     Repeater {
                         model: charts.charts
                         ChartCard {
+                            required property int index
                             required property string key
                             required property string title
                             required updateLabel
@@ -351,6 +352,7 @@ Item {
                             width: (chartFlow.width - (chartFlow.columns - 1) * chartFlow.spacing)
                                    / chartFlow.columns
                             text: title
+                            badge: index
                             onClicked: page.shell.openPlaylist(key)
                         }
                     }
