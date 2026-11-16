@@ -269,10 +269,47 @@ Item {
                     title: qsTr("每日推荐歌单")
                     model: dailyPlaylists
                     skeleton: CardsPlaceholder {}
+                    // Pages the carousel, while there is more than it shows.
+                    trailing: Row {
+                        visible: dailyCarousel.end > 0
+                        spacing: 4
+                        IconButton {
+                            enabled: dailyCarousel.canGoBack
+                            variant: Md.Tonal
+                            glyph: Symbols.chevron_left
+                            text: qsTr("往前")
+                            onClicked: dailyCarousel.back()
+                        }
+                        IconButton {
+                            enabled: dailyCarousel.canGoForward
+                            variant: Md.Tonal
+                            glyph: Symbols.chevron_right
+                            text: qsTr("往后")
+                            onClicked: dailyCarousel.forward()
+                        }
+                    }
 
-                    Cards {
-                        room: dailySection.width
+                    Carousel {
+                        id: dailyCarousel
+                        width: dailySection.width
+                        height: Math.min(264, largeWidth)
+                        preferredItemWidth: 232
                         model: dailyPlaylists.items
+                        onActivated: index => (itemAt(index) as CarouselCard).trigger()
+                        delegate: CarouselCard {
+                            required property int index
+                            required property string key
+                            required property string title
+                            required kind
+                            required coverKey
+                            text: title
+                            largeWidth: dailyCarousel.largeWidth
+                            current: dailyCarousel.currentShown && dailyCarousel.currentIndex === index
+                            onClicked: {
+                                dailyCarousel.currentIndex = index;
+                                page.shell.openCollection(kind, key);
+                            }
+                        }
                     }
                 }
             }
