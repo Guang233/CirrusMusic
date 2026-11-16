@@ -62,7 +62,7 @@ SongCollectionPage {
 
         Text {
             text: page.history ? qsTr("历史日推") : qsTr("推荐")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Text {
@@ -71,7 +71,7 @@ SongCollectionPage {
                                                          .arg(page.day.getDate())
                                : qsTr("每日推荐")
             elide: Text.ElideRight
-            color: Theme.color.onSurface
+            color: page.infoColor
             font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
@@ -80,7 +80,7 @@ SongCollectionPage {
             text: page.history ? qsTr("那一天根据你的口味生成的歌")
                                : qsTr("根据你的口味生成，每天 6:00 更新")
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Text {
@@ -88,12 +88,12 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         Button {
             id: historyButton

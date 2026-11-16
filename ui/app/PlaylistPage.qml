@@ -90,7 +90,7 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
             Button {
@@ -122,7 +122,7 @@ SongCollectionPage {
 
         Text {
             text: qsTr("歌单")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         // The title; the account's own playlist can be edited from here.
@@ -138,7 +138,7 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: page.infoColor
                 font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
                 Accessible.role: Accessible.Heading
             }
@@ -172,7 +172,7 @@ SongCollectionPage {
                 text: [creatorButton.visible ? "" : pageModel.creator, pageModel.updatedText]
                       .filter(s => s !== "").join(" · ")
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -194,7 +194,7 @@ SongCollectionPage {
                 return parts.join(" · ");
             }
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
     }
@@ -202,7 +202,7 @@ SongCollectionPage {
     extraContent: Extras {}
     showExtra: !page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         // Someone else's playlist (P5).
         Button {

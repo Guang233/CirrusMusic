@@ -13,6 +13,9 @@ import Cirrus.Presentation
 // Pages with tabs (artist.md) add a tab row under the actions, pinned under the
 // compact bar once scrolled there, and show other content than songs in `bodyContent`.
 // Podcasts (search.md §3.4) list their voices in the same table (`voices`).
+// Wide pages (`twoPane`, docs/ui/redesign-md3e.md §7) take the cover, the page's lines and
+// the actions out of the table's header into a pane on the left that stays put, in the
+// cover's colors (CoverScheme); the find field and the tabs stay on top of the table.
 // The header's parts are components, since they live inside the table's header:
 //   SongCollectionPage { model: pageModel; songs: pageModel.songs; title: …
 //       infoContent: Column { … }; actionsContent: Row { … } }
@@ -34,10 +37,13 @@ Item {
     property Component cover: null
     // A round cover (artists): the skeleton matches.
     property bool roundCover: false
-    // The header cover a card's cover flies to (CoverFlight, expressive.md §5).
-    property Item flightCover: null
+    // The cover a card's cover flies to (CoverFlight, expressive.md §5): the pane's or
+    // the header's.
+    readonly property Item flightCover: twoPane ? paneCover : headerCover
+    property Item headerCover: null
+    property Item paneCover: null
     readonly property bool flightRound: roundCover
-    readonly property real flightRadius: Theme.shape.large
+    readonly property real flightRadius: twoPane ? Theme.shape.extraLarge : Theme.shape.large
     readonly property bool flightReady: state_.contentOpacity > 0.99
                                         && ((flightCover as Cover)?.ready ?? true)
     // Right of the cover: the type label, title and the page's lines.
@@ -46,7 +52,7 @@ Item {
     // `showExtra`.
     property Component extraContent: null
     property bool showExtra: true
-    // After "播放全部" (a Row of buttons).
+    // After "播放全部": a Flow of buttons (one row in the header, wrapping in the pane).
     property Component actionsContent: null
     // Under the actions (notices), while `showNotice`.
     property Component noticeContent: null
@@ -106,6 +112,19 @@ Item {
     readonly property alias pageState: state_
     // Below this the header stacks (playlist.md §3.2).
     readonly property bool wide: width >= 840
+    // The info pane beside the table, and its width.
+    readonly property bool twoPane: width >= 1000
+    readonly property real paneWidth: Math.round(Math.max(320, Math.min(380, width * 0.3)))
+    // The colors `infoContent` and `extraContent` write in: on the page, or on the pane
+    // (a container in the cover's colors).
+    readonly property color infoColor: twoPane ? tint.scheme.onPrimaryContainer
+                                               : Theme.color.onSurface
+    readonly property color infoVariantColor: twoPane ? Qt.alpha(tint.scheme.onPrimaryContainer, 0.8)
+                                                      : Theme.color.onSurfaceVariant
+    readonly property color infoAccentColor: twoPane ? tint.scheme.onPrimaryContainer
+                                                     : Theme.color.primary
+    // Something for the bar over the table to hold while `twoPane`.
+    readonly property bool hasToolbar: findable && hasSongs
     readonly property bool hasSongs: songs.count > 0
     // The in-page find, shared by the header's field and the compact bar's.
     property string findText
@@ -119,13 +138,15 @@ Item {
     // 0–1 as the header's action row scrolls under the top: the compact bar slides in.
     // Without the action row, the tabs take its place.
     readonly property Item compactAnchor: showActions ? headerActions : headerTabs
-    readonly property real compactProgress: compactAnchor
+    // With the pane the bar is always there, holding the find field only.
+    readonly property real compactProgress: twoPane ? 1 : compactAnchor
         ? Math.max(0, Math.min(1, (songTable.scrolled - compactAnchor.y - compactAnchor.height
                                    + 96) / 56)) : 0
     // The header's tabs have scrolled under the compact bar: the pinned copy shows.
-    readonly property bool tabsPinned: tabsContent !== null && headerTabs !== null
-                                       && headerTabs.y - songTable.scrolled
-                                          < compactBar.y + compactBar.height
+    readonly property bool tabsPinned: tabsContent !== null
+                                       && (twoPane || (headerTabs !== null
+                                                       && headerTabs.y - songTable.scrolled
+                                                          < compactBar.y + compactBar.height))
 
     signal removeRequested(list<string> keys)
 
@@ -155,9 +176,138 @@ Item {
         filterText: page.findText
     }
 
+    // The pane's colors: the cover's.
+    CoverScheme {
+        id: tint
+        cover: page.twoPane && page.coverKey !== ""
+               ? "image://cover/" + encodeURIComponent(page.coverKey) : ""
+        dark: Theme.dark
+    }
+
+    // The info pane (docs/ui/redesign-md3e.md §7): cover, the page's lines, the play
+    // button at the hero's size and the actions. It ends above the mini player; what
+    // does not fit scrolls inside it.
+    Rectangle {
+        id: pane
+        readonly property real inner: width - 64
+        readonly property bool loading: page.model.state === LoadState.Loading
+                                        && state_.contentOpacity < 0.01
+        ColorScope.scheme: tint.scheme
+        x: 24
+        y: 24
+        width: page.paneWidth
+        height: Math.min(paneFlick.contentHeight,
+                         page.height - y - Math.max(24, PageInsets.bottom))
+        visible: page.twoPane && opacity > 0
+        opacity: loading ? 1 : state_.contentOpacity
+        radius: 40
+        color: ColorScope.scheme.primaryContainer
+        clip: true
+
+        Flickable {
+            id: paneFlick
+            anchors.fill: parent
+            contentHeight: (pane.loading ? paneSkeleton.height : paneColumn.height) + 64
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar {}
+
+            Column {
+                id: paneColumn
+                x: 32
+                y: 32
+                width: pane.inner
+                spacing: 20
+                visible: !pane.loading
+
+                Cover {
+                    id: paneCoverItem
+                    // Smaller in short windows, so the actions stay in view.
+                    readonly property real size: Math.max(160, Math.min(pane.inner, page.height - 560))
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: size
+                    height: size
+                    radius: page.roundCover ? width / 2 : Theme.shape.extraLarge
+                    Component.onCompleted: page.paneCover = paneCoverItem
+                }
+                Loader {
+                    width: parent.width
+                    active: page.twoPane
+                    sourceComponent: page.infoContent
+                }
+                Loader {
+                    width: parent.width
+                    visible: page.extraContent !== null && page.showExtra
+                    active: page.twoPane
+                    sourceComponent: page.extraContent
+                }
+                Column {
+                    width: parent.width
+                    visible: page.showActions
+                    spacing: 12
+                    // The page's main action at the hero's size, the rest small.
+                    Button {
+                        visible: page.showPlay
+                        enabled: page.canPlay
+                        variant: Md.Filled
+                        size: Md.Large
+                        glyph: Symbols.play_arrow
+                        // Short: the pane says what it plays.
+                        text: qsTr("播放")
+                        Accessible.name: page.playText
+                        onClicked: page.playAll()
+                    }
+                    // A Flow here wraps to the pane's width.
+                    Loader {
+                        width: parent.width
+                        active: page.twoPane
+                        sourceComponent: page.actionsContent
+                    }
+                }
+            }
+
+            Column {
+                id: paneSkeleton
+                x: 32
+                y: 32
+                width: pane.inner
+                spacing: 20
+                visible: pane.loading
+
+                component Bone: Skeleton {
+                    color: Qt.alpha(ColorScope.scheme.onPrimaryContainer, 0.12)
+                }
+                Bone {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: paneCoverItem.size
+                    height: width
+                    radius: page.roundCover ? width / 2 : Theme.shape.extraLarge
+                }
+                Bone {
+                    width: 40
+                    height: 12
+                }
+                Bone {
+                    width: Math.min(240, pane.inner)
+                    height: 32
+                }
+                Bone {
+                    width: Math.min(200, pane.inner)
+                    height: 14
+                }
+                Bone {
+                    width: 200
+                    height: 96
+                    radius: 48
+                }
+            }
+        }
+    }
+
     PageState {
         id: state_
         anchors.fill: parent
+        anchors.leftMargin: songTable.anchors.leftMargin
         model: page.model
         emptyInContent: true
         signedOutText: page.signedOutText
@@ -174,6 +324,7 @@ Item {
                     x: songTable.rowX
                     width: songTable.rowWidth
                     height: skeletonCover.height
+                    visible: !page.twoPane
 
                     Skeleton {
                         id: skeletonCover
@@ -216,6 +367,7 @@ Item {
                     height: 40
                     Row {
                         spacing: 8
+                        visible: !page.twoPane
                         Repeater {
                             model: page.actionSkeletons
                             Skeleton {
@@ -227,9 +379,10 @@ Item {
                         }
                     }
                     Skeleton {
-                        anchors.right: parent.right
+                        x: page.twoPane ? 0 : parent.width - width
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(240, parent.width / 3)
+                        width: page.twoPane ? Math.min(360, parent.width)
+                                            : Math.min(240, parent.width / 3)
                         height: 36
                         radius: height / 2
                     }
@@ -289,6 +442,7 @@ Item {
         originId: page.originId
         originName: page.originName
         anchors.fill: parent
+        anchors.leftMargin: page.twoPane ? pane.x + pane.width : 0
         opacity: state_.contentOpacity
         visible: opacity > 0
         songs: sortedModel
@@ -329,7 +483,9 @@ Item {
         headerContent: Column {
             id: header
 
-            topPadding: 24
+            // With the pane, the rows start under the bar over the table (and the tabs).
+            topPadding: page.twoPane ? compactBar.height
+                                       + (page.tabsContent ? page.tabsHeight + 8 : 0) : 24
             bottomPadding: 16
             spacing: 24
             Component.onCompleted: page.headerContent = header
@@ -338,18 +494,20 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 height: Math.max(cover.height, info.height)
+                visible: !page.twoPane
 
                 Cover {
                     id: cover
                     width: page.wide ? 200 : 140
                     height: width
-                    Component.onCompleted: page.flightCover = cover
+                    Component.onCompleted: page.headerCover = cover
                 }
                 Loader {
                     id: info
                     x: cover.width + 24
                     width: parent.width - x
                     anchors.verticalCenter: page.wide ? undefined : cover.verticalCenter
+                    active: !page.twoPane
                     sourceComponent: page.infoContent
                 }
             }
@@ -357,7 +515,8 @@ Item {
             Loader {
                 x: songTable.rowX
                 width: songTable.rowWidth
-                visible: page.extraContent !== null && page.showExtra
+                visible: page.extraContent !== null && page.showExtra && !page.twoPane
+                active: !page.twoPane
                 sourceComponent: page.extraContent
             }
 
@@ -367,7 +526,7 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 height: 56
-                visible: page.showActions
+                visible: page.showActions && !page.twoPane
                 Component.onCompleted: page.headerActions = actions
 
                 // The main action is a medium button (expressive.md §3.3), the rest small.
@@ -385,6 +544,7 @@ Item {
                     }
                     Loader {
                         anchors.verticalCenter: parent.verticalCenter
+                        active: !page.twoPane
                         sourceComponent: page.actionsContent
                     }
                 }
@@ -403,7 +563,7 @@ Item {
                 x: songTable.rowX
                 width: songTable.rowWidth
                 height: page.tabsHeight
-                visible: page.tabsContent !== null
+                visible: page.tabsContent !== null && !page.twoPane
                 // Hidden while the pinned copy shows, so they don't both show.
                 opacity: page.tabsPinned ? 0 : 1
                 sourceComponent: page.tabsContent
@@ -442,12 +602,14 @@ Item {
         }
     }
 
-    // Slides in, following the scroll, once the header's actions have gone.
+    // Slides in, following the scroll, once the header's actions have gone. With the
+    // pane it is the bar over the table: always there, holding the find field.
     Rectangle {
         id: compactBar
+        x: songTable.x
         // Leaves the table's scroll bar uncovered.
-        width: parent.width - songTable.scrollBarWidth
-        height: 56
+        width: songTable.width - songTable.scrollBarWidth
+        height: page.twoPane ? (page.hasToolbar ? 76 : 24) : 56
         y: -height * (1 - page.compactProgress)
         visible: page.compactProgress > 0
         color: Theme.color.surface
@@ -472,6 +634,7 @@ Item {
                 x: 8
                 width: 32
                 height: 32
+                visible: !page.twoPane
                 anchors.verticalCenter: parent.verticalCenter
                 radius: page.roundCover ? width / 2 : Theme.shape.small
             }
@@ -480,6 +643,7 @@ Item {
                 width: (compactActions.item ? compactActions.x
                         : compactPlay.visible ? compactPlay.x : parent.width) - x - 12
                 anchors.verticalCenter: parent.verticalCenter
+                visible: !page.twoPane
                 text: page.title
                 elide: Text.ElideRight
                 color: Theme.color.onSurface
@@ -490,12 +654,13 @@ Item {
                 x: (compactPlay.visible ? compactPlay.x
                     : compactFind.visible ? compactFind.x : parent.width) - width - 12
                 anchors.verticalCenter: parent.verticalCenter
+                active: !page.twoPane
                 sourceComponent: page.compactActionsContent
             }
             IconButton {
                 id: compactPlay
                 x: (compactFind.visible ? compactFind.x : parent.width) - width - 12
-                visible: page.showPlay
+                visible: page.showPlay && !page.twoPane
                 anchors.verticalCenter: parent.verticalCenter
                 enabled: page.canPlay
                 variant: Md.Filled
@@ -506,18 +671,20 @@ Item {
             }
             FindField {
                 id: compactFind
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(240, parent.width / 3)
-                visible: page.findable
+                x: page.twoPane ? 0 : parent.width - width
+                // Under the top margin the pane keeps.
+                y: page.twoPane ? 24 : (parent.height - height) / 2
+                width: page.twoPane ? Math.min(360, parent.width) : Math.min(240, parent.width / 3)
+                visible: page.findable && (!page.twoPane || page.hasSongs)
             }
         }
     }
 
     // The tabs, pinned under the compact bar once the header's have scrolled there.
     Rectangle {
+        x: songTable.x
         y: compactBar.y + compactBar.height
-        width: parent.width - songTable.scrollBarWidth
+        width: songTable.width - songTable.scrollBarWidth
         height: page.tabsHeight
         visible: page.tabsPinned
         color: Theme.color.surface

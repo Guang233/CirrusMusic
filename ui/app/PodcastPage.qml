@@ -74,7 +74,7 @@ SongCollectionPage {
             maximumLineCount: 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -91,7 +91,7 @@ SongCollectionPage {
 
         Text {
             text: qsTr("播客")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Text {
@@ -100,7 +100,7 @@ SongCollectionPage {
             wrapMode: Text.Wrap
             maximumLineCount: 2
             elide: Text.ElideRight
-            color: Theme.color.onSurface
+            color: page.infoColor
             font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
@@ -109,7 +109,7 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Description {
@@ -121,7 +121,7 @@ SongCollectionPage {
     extraContent: Description {}
     showExtra: !page.wide && pageModel.description !== ""
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         Button {
             variant: Md.Tonal
@@ -131,7 +131,6 @@ SongCollectionPage {
         }
         // Newest or oldest first; loads from the start.
         ConnectedButtonGroup {
-            anchors.verticalCenter: parent.verticalCenter
             exclusive: true
             Button {
                 variant: Md.Tonal

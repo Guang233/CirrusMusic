@@ -138,7 +138,7 @@ SongCollectionPage {
                 anchors.verticalCenter: parent.verticalCenter
                 text: pageModel.nickname
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: page.infoColor
                 font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
                 Accessible.role: Accessible.Heading
             }
@@ -150,12 +150,12 @@ SongCollectionPage {
                 width: levelText.implicitWidth + 12
                 height: 20
                 radius: height / 2
-                color: Theme.color.secondaryContainer
+                color: ColorScope.scheme.secondaryContainer
                 Text {
                     id: levelText
                     anchors.centerIn: parent
                     text: qsTr("Lv.%1").arg(pageModel.level)
-                    color: Theme.color.onSecondaryContainer
+                    color: ColorScope.scheme.onSecondaryContainer
                     font: Theme.type.labelSmall.font
                 }
             }
@@ -197,7 +197,7 @@ SongCollectionPage {
             maximumLineCount: 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -221,7 +221,7 @@ SongCollectionPage {
         onClicked: page.currentTab = tab
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         FollowButton {}
         Button {

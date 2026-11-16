@@ -119,7 +119,7 @@ SongCollectionPage {
 
         Text {
             text: qsTr("歌手")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Column {
@@ -130,7 +130,7 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: page.infoColor
                 font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
                 Accessible.role: Accessible.Heading
             }
@@ -139,7 +139,7 @@ SongCollectionPage {
                 visible: pageModel.aliasText !== ""
                 text: pageModel.aliasText
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -148,7 +148,7 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Brief {
@@ -169,7 +169,7 @@ SongCollectionPage {
             maximumLineCount: 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -181,7 +181,7 @@ SongCollectionPage {
         }
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         Button {
             variant: Md.Tonal

@@ -37,14 +37,14 @@ SongCollectionPage {
 
         Text {
             text: qsTr("音乐库")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Text {
             width: parent.width
             text: qsTr("听歌排行")
             elide: Text.ElideRight
-            color: Theme.color.onSurface
+            color: page.infoColor
             font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
@@ -52,7 +52,7 @@ SongCollectionPage {
             width: parent.width
             text: pageModel.allTime ? qsTr("所有时间里听得最多的歌") : qsTr("最近一周听得最多的歌")
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Text {
@@ -60,7 +60,7 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         // The local statistics, the other way round (pages/stats.md §2.8).

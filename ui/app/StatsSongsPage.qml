@@ -44,14 +44,14 @@ SongCollectionPage {
 
         Text {
             text: qsTr("听歌统计")
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Text {
             width: parent.width
             text: page.title
             elide: Text.ElideRight
-            color: Theme.color.onSurface
+            color: page.infoColor
             font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
             Accessible.role: Accessible.Heading
         }
@@ -60,7 +60,7 @@ SongCollectionPage {
             text: pageModel.range === StatsPageModel.AllTime ? qsTr("所有时间")
                                                              : pageModel.periodTitle
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
     }

@@ -54,7 +54,7 @@ SongCollectionPage {
             maximumLineCount: 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -71,7 +71,7 @@ SongCollectionPage {
 
         Text {
             text: pageModel.type
-            color: Theme.color.primary
+            color: page.infoAccentColor
             font: Theme.type.labelLarge.font
         }
         Column {
@@ -82,7 +82,7 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
+                color: page.infoColor
                 font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
                 Accessible.role: Accessible.Heading
             }
@@ -91,7 +91,7 @@ SongCollectionPage {
                 visible: pageModel.aliasText !== ""
                 text: pageModel.aliasText
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -106,7 +106,7 @@ SongCollectionPage {
                     required property var modelData
                     Text {
                         text: artist.modelData.name
-                        color: Theme.color.onSurface
+                        color: page.infoColor
                         font: Theme.type.titleMedium.font
                         // Underlined while hovered, like the table's links.
                         Rectangle {
@@ -129,7 +129,7 @@ SongCollectionPage {
                     Text {
                         visible: artist.index < pageModel.artists.length - 1
                         text: qsTr(" / ")
-                        color: Theme.color.onSurfaceVariant
+                        color: page.infoVariantColor
                         font: Theme.type.titleMedium.font
                     }
                 }
@@ -140,14 +140,14 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.releaseText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Text {
             width: parent.width
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Notes {
@@ -159,7 +159,7 @@ SongCollectionPage {
     extraContent: Notes {}
     showExtra: !page.wide && pageModel.description !== ""
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         Button {
             variant: Md.Tonal
