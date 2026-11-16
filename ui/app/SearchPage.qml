@@ -505,6 +505,7 @@ Item {
         anchors.fill: parent
         visible: page.query === ""
         contentHeight: hot.implicitHeight + 48
+        bottomMargin: PageInsets.bottom
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 

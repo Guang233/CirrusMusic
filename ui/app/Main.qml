@@ -110,6 +110,7 @@ AppWindow {
         opacity: 1 - Theme.motion.segment(player.progress, 0.5, 0.6)
         visible: !player.covering
         onPlayerRequested: player.open()
+        onQueueRequested: player.openQueue()
         onUncoverRequested: player.close()
         onCoveredNotice: text => player.notify(text)
     }

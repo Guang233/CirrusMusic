@@ -332,7 +332,7 @@ ControlPage {
         }
     }
     Item {
-        Layout.preferredWidth: 720
+        Layout.preferredWidth: 1000
         Layout.preferredHeight: mini.implicitHeight + mini.bottomMargin + 12
 
         MiniPlayer {

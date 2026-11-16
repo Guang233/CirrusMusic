@@ -132,6 +132,7 @@ PageScaffold {
         id: flick
         anchors.fill: parent
         contentHeight: groups.implicitHeight + 48
+        bottomMargin: PageInsets.bottom
         clip: true
         // Overshoots and springs back at the ends.
         boundsBehavior: Flickable.DragAndOvershootBounds

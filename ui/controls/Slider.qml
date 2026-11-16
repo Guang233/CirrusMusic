@@ -23,6 +23,9 @@ T.Slider {
     property bool showValueLabel: false
     property string valueText: Math.round(value).toString()
     property list<color> trackColors
+    // The rest of the track on a container of another role (the mini player on
+    // PrimaryContainer): this color, when set.
+    property color inactiveTint: "transparent"
 
     readonly property real gap: 6
     readonly property real innerRadius: 2
@@ -32,7 +35,8 @@ T.Slider {
                                        : enabled ? ColorScope.scheme.primary
                                                  : Qt.alpha(ColorScope.scheme.onSurface,
                                                             Theme.state.disabledContent)
-    readonly property color inactiveColor: enabled ? ColorScope.scheme.secondaryContainer
+    readonly property color inactiveColor: inactiveTint.a > 0 ? inactiveTint
+                                         : enabled ? ColorScope.scheme.secondaryContainer
                                                    : Qt.alpha(ColorScope.scheme.onSurface,
                                                               Theme.state.disabledContainer)
 

@@ -158,6 +158,7 @@ Item {
         anchors.fill: parent
         visible: !page.allFailed
         contentHeight: column.height + 48
+        bottomMargin: PageInsets.bottom
         // Overshoots and springs back at the ends.
         boundsBehavior: Flickable.DragAndOvershootBounds
         ScrollBar.vertical: ScrollBar {}

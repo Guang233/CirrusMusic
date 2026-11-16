@@ -108,6 +108,12 @@ FocusScope {
         wake();
         controls.playButton.forceActiveFocus(Qt.OtherFocusReason);
     }
+    // With the queue panel showing: the mini player's queue button.
+    function openQueue(): void {
+        open();
+        if (opened)
+            sheet = 1;
+    }
     function close(): void {
         if (!opened)
             return;

@@ -7,7 +7,8 @@ import Cirrus.Presentation
 
 // The shell (docs/ui/pages/shell.md): navigation rail and a rounded content panel
 // with the page stack, in a frame that the top bar (TopBar, in the window's title
-// bar row) continues; the mini player sits under the panel. Large windows (≥ 1200)
+// bar row) continues; the mini player floats over the bottom of the panel (pages
+// scroll under it, PageInsets). Large windows (≥ 1200)
 // keep the rail expanded beside the panel and push it when toggled; narrower ones
 // keep it collapsed and expand it over the panel with a scrim. Crossing the
 // breakpoint switches without animation (motion-choreography.md §5). Pages get
@@ -51,8 +52,9 @@ Item {
     readonly property Item miniSeek: miniPlayer.seekItem
     property alias miniFlying: miniPlayer.flying
 
-    // The mini player asks for the player page.
+    // The mini player asks for the player page, or for it with the queue open.
     signal playerRequested
+    signal queueRequested
     // Something on top (the player page) should give way, e.g. for the settings.
     signal uncoverRequested
     // A notice while covered: whatever covers the shell shows it.
@@ -442,7 +444,7 @@ Item {
         id: panel
         x: shell.navWidth
         width: shell.width - x - 8
-        height: shell.height - 8 - miniPlayer.reservedHeight
+        height: shell.height - 8
         radius: Theme.shape.largeIncreased
         color: Theme.color.surface
 
@@ -477,19 +479,28 @@ Item {
         Snackbar {
             id: snackbar
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: 16 + miniPlayer.reservedHeight
         }
     }
 
     MiniPlayer {
         id: miniPlayer
         onOpenRequested: shell.playerRequested()
+        onQueueRequested: shell.queueRequested()
+        onLoginRequested: shell.openLogin()
         onCommentsRequested: {
             const song = App.player.current;
             shell.openSongComments(song.key, song.title, song.artistText, song.coverKey);
         }
         x: panel.x
         width: panel.width
-        y: shell.height - implicitHeight - bottomMargin
+        y: panel.y + panel.height - implicitHeight - bottomMargin
+    }
+    // Pages keep their last rows clear of the bar.
+    Binding {
+        target: PageInsets
+        property: "bottom"
+        value: miniPlayer.reservedHeight
     }
 
     // Blocks the content while the rail floats over it.

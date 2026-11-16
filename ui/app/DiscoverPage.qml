@@ -198,6 +198,7 @@ Item {
         id: flick
         anchors.fill: parent
         contentHeight: content.implicitHeight + 24
+        bottomMargin: PageInsets.bottom
         boundsBehavior: Flickable.DragAndOvershootBounds
         ScrollBar.vertical: ScrollBar {}
         onContentYChanged: page.loadMoreIfNear()
