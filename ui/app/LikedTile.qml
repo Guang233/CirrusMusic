@@ -50,10 +50,10 @@ Rectangle {
     }
 
     Icon {
-        x: tile.width - width * 0.72
-        y: tile.height - height * 0.74
+        x: tile.width - width * 0.8
+        y: tile.height - height * 0.8
         glyph: Symbols.favorite
-        size: Math.round(Math.min(tile.width, tile.height) * 0.95)
+        size: Math.round(Math.min(tile.width, tile.height) * 0.9)
         fill: 1
         color: Qt.alpha(Theme.color.primary, 0.2)
     }

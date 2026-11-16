@@ -91,7 +91,7 @@ Rectangle {
 
     Row {
         id: plot
-        readonly property real barHeight: Math.max(16, Math.min(48, tile.height - 140))
+        readonly property real barHeight: Math.max(16, Math.min(48, tile.height - 136))
         x: 24
         y: tile.height - barHeight - 24
         width: tile.width - 48

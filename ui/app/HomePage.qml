@@ -216,7 +216,7 @@ Item {
                     y: page.bento ? fm.height + page.gap
                      : page.wide ? fm.y : fm.y + fm.height + page.gap
                     width: topRow.tileWidth
-                    height: page.bento ? fm.height : page.wide ? 180 : 160
+                    height: page.bento ? fm.height : 180
                 }
                 WeekTile {
                     shell: page.shell
