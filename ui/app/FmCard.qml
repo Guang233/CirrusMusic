@@ -1,14 +1,16 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import M3Shapes
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// Personal FM beside "today" on the home page (docs/ui/pages/home.md §5): art and
-// buttons on top, the words at the bottom. Shows what FM is playing once it plays,
-// otherwise what it is. `strip`: the 72 px row of
-// medium and narrow windows.
+// Personal FM beside "today" on the home page (docs/ui/redesign-md3e.md §6.2), in the
+// tertiary container so it reads as a different thing from everything around it. The
+// play button is a scalloped shape that turns while FM plays. Shows what FM is playing
+// once it plays, otherwise what it is. `strip`: the 72 px row of medium and narrow
+// windows, with ordinary buttons.
 Rectangle {
     id: card
 
@@ -19,9 +21,10 @@ Rectangle {
                                            || App.player.fmWaiting)
     readonly property bool playing: fm && (App.player.status === Playback.Playing || loading)
     readonly property bool hasSong: fm && App.player.current.key !== ""
+    readonly property color content: Theme.color.onTertiaryContainer
 
-    radius: strip ? Theme.shape.large : Theme.shape.extraLarge
-    color: Theme.color.surfaceContainerHigh
+    radius: strip ? Theme.shape.large : 40
+    color: Theme.color.tertiaryContainer
     clip: true
 
     // Play or pause FM; starts it when something else is playing.
@@ -32,27 +35,31 @@ Rectangle {
             App.player.startFm();
     }
 
-    // Cover of the FM song, or the radio glyph.
+    // Cover of the FM song, or the radio glyph on a faint disc.
     Item {
         id: art
         x: card.strip ? 16 : 24
         y: card.strip ? (card.height - height) / 2 : 24
-        width: card.strip ? 40 : (card.hasSong ? 72 : 48)
+        width: card.strip ? 40 : 44
         height: width
 
+        Rectangle {
+            anchors.fill: parent
+            visible: !card.hasSong
+            radius: width / 2
+            color: Qt.alpha(card.content, 0.16)
+            Icon {
+                anchors.centerIn: parent
+                glyph: Symbols.radio
+                size: 24
+                color: card.content
+            }
+        }
         CoverArt {
             anchors.fill: parent
             visible: card.hasSong
             coverKey: App.player.current.coverKey
-            radius: card.strip ? Theme.shape.small : Theme.shape.large
-        }
-        Icon {
-            anchors.centerIn: parent
-            visible: !card.hasSong
-            glyph: Symbols.radio
-            size: card.strip ? 28 : 40
-            fill: 1
-            color: Theme.color.tertiary
+            radius: Theme.shape.medium
         }
     }
 
@@ -60,36 +67,72 @@ Rectangle {
         id: texts
         x: card.strip ? art.x + art.width + 16 : 24
         y: card.strip ? (card.height - height) / 2 : card.height - height - 24
-        width: (card.strip ? buttons.x - 16 : card.width - 24) - x
+        width: (card.strip ? buttons.x : shapeButton.x) - 16 - x
         spacing: 2
         Text {
             width: parent.width
             text: card.hasSong ? App.player.current.title : qsTr("私人 FM")
             elide: Text.ElideRight
-            color: Theme.color.onSurface
-            font: card.strip ? Theme.type.titleMedium.font : Theme.type.titleLarge.font
+            color: card.content
+            font: card.strip ? Theme.type.titleMedium.font
+                : card.hasSong ? Theme.type.titleLargeEmphasized.font : Fonts.font(800, 34)
         }
         Text {
             width: parent.width
             text: card.hasSong ? qsTr("私人 FM · %1").arg(App.player.current.artistText)
                                : qsTr("按你的口味一直放下去")
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: card.content
+            opacity: 0.85
             font: Theme.type.bodyMedium.font
         }
     }
 
+    // The card's own play button, and "next" above the words once FM plays.
+    ShapeButton {
+        id: shapeButton
+        visible: !card.strip
+        x: card.width - width - 24
+        anchors.verticalCenter: parent.verticalCenter
+        size: Math.min(112, card.height - 48)
+        tone: Md.Tertiary
+        shape: MaterialShape.Cookie12Sided
+        spinning: card.playing && !card.loading
+        glyph: card.loading ? "" : card.playing ? Symbols.pause : Symbols.play_arrow
+        text: card.loading ? qsTr("正在加载") : card.playing ? qsTr("暂停私人 FM")
+                                                            : qsTr("播放私人 FM")
+        onClicked: card.toggle()
+
+        LoadingIndicator {
+            anchors.centerIn: parent
+            implicitWidth: 36
+            implicitHeight: 36
+            visible: card.loading
+            color: Theme.color.onTertiary
+        }
+    }
+    IconButton {
+        visible: !card.strip && card.fm
+        x: art.x + art.width + 8
+        anchors.verticalCenter: art.verticalCenter
+        enabled: !App.player.fmWaiting
+        tint: card.content
+        glyph: Symbols.skip_next
+        iconFill: 1
+        text: qsTr("下一首")
+        onClicked: App.player.next()
+    }
+
     Row {
         id: buttons
-        x: card.width - width - (card.strip ? 16 : 24)
-        y: card.strip ? (card.height - height) / 2 : 24
+        visible: card.strip
+        x: card.width - width - 16
+        y: (card.height - height) / 2
         spacing: 8
 
         IconButton {
-            id: playButton
             anchors.verticalCenter: parent.verticalCenter
             variant: Md.Filled
-            size: card.strip ? Md.Small : Md.Medium
             widthMode: Md.Wide
             shape: card.playing ? Md.Square : Md.Round
             glyph: card.loading ? "" : card.playing ? Symbols.pause : Symbols.play_arrow
@@ -110,8 +153,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             visible: card.fm
             enabled: !App.player.fmWaiting
-            variant: Md.Tonal
-            size: card.strip ? Md.Small : Md.Medium
+            tint: card.content
             glyph: Symbols.skip_next
             iconFill: 1
             text: qsTr("下一首")

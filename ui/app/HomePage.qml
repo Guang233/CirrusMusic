@@ -5,20 +5,26 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// The home page (docs/ui/pages/home.md): "today" and personal FM on top, the songs
-// played lately, today's and recommended playlists, charts, new albums and popular
-// artists; guests get the sign-in invitation instead of the private parts. Every
-// section loads and fails on its own.
+// The home page (docs/ui/pages/home.md, redesigned in docs/ui/redesign-md3e.md §6):
+// containers of different sizes and roles on top ("today" as the hero; personal FM,
+// the liked songs and this week's listening beside it), then the songs played lately
+// beside today's playlists, then quiet shelves: recommended playlists, charts, new
+// albums and popular artists. Guests get the sign-in invitation instead of the private
+// parts. Every section loads and fails on its own.
 Item {
     id: page
 
     required property AppShell shell
 
     readonly property bool signedIn: App.session.signedIn
-    // Content column: at most 1200 wide, centered (§4).
-    readonly property real columnWidth: Math.min(width - 48, 1200)
+    // Content column: at most 1280 wide, centered.
+    readonly property real columnWidth: Math.min(width - 48, 1280)
     readonly property bool wide: columnWidth >= 792
-    readonly property bool narrow: width < 600
+    // Room for two things side by side: the hero beside a column of tiles, the songs
+    // played lately beside today's playlists. Narrower, they stack.
+    readonly property bool bento: signedIn && columnWidth >= 1000
+    readonly property real sideWidth: Math.round(Math.max(360, Math.min(436, columnWidth * 0.34)))
+    readonly property real gap: 12
 
     // Everything the account can see failed: one page-level message instead.
     readonly property bool allFailed: {
@@ -68,20 +74,22 @@ Item {
     }
 
     component Placeholder: Column {
+        id: rowsPlaceholder
         spacing: 8
         Repeater {
             model: 3
             Skeleton {
-                width: page.columnWidth
+                width: rowsPlaceholder.width
                 height: 64
                 radius: Theme.shape.large
             }
         }
     }
     component CardsPlaceholder: Row {
+        id: cardsPlaceholder
         spacing: 16
         Repeater {
-            model: Math.max(1, Math.floor(page.columnWidth / 176))
+            model: Math.max(1, Math.floor(cardsPlaceholder.width / 176))
             Skeleton {
                 width: 160
                 height: 200
@@ -92,20 +100,23 @@ Item {
 
     // One row of cards, as many as fit.
     component Cards: CollectionGrid {
-        width: page.columnWidth + 16
+        property real room: page.columnWidth
+        width: room + 16
         x: -8
         minimumCardWidth: 176
         maximumRows: 1
         onActivated: (kind, key) => page.shell.openCollection(kind, key)
     }
 
-    // A few songs in one or two segmented columns; a row plays the section's songs.
+    // The first `limit` songs in one or two segmented columns; a row plays the section's
+    // songs.
     component SongColumns: Row {
         id: songColumns
         required property SongListModel songs
-        readonly property int columns: page.wide ? 2 : 1
-        readonly property int perColumn: Math.ceil(songs.count / columns)
-        width: page.columnWidth
+        property int columns: 1
+        property int limit: 6
+        readonly property int shown: Math.min(songs.count, limit)
+        readonly property int perColumn: Math.ceil(shown / columns)
         spacing: 16
         Repeater {
             model: songColumns.columns
@@ -126,7 +137,7 @@ Item {
                         required property string coverKey
                         required property string durationText
                         required property bool current
-                        readonly property int lastRow: Math.min(songColumns.songs.count,
+                        readonly property int lastRow: Math.min(songColumns.shown,
                                                              songColumn.firstRow
                                                              + songColumns.perColumn) - 1
                         width: songColumn.width
@@ -170,53 +181,98 @@ Item {
             width: page.columnWidth
             spacing: 40
 
-            // Today and personal FM: side by side when wide, FM as a strip below otherwise.
+            // The hero and the tiles. Wide enough: "today" beside a column (FM over the
+            // liked songs and this week); less wide: the three in a row under it; narrow:
+            // FM as a strip, then the two tiles.
             Item {
+                id: topRow
+                readonly property real tileWidth: page.bento ? (page.sideWidth - page.gap) / 2
+                                                : page.wide ? 212 : (width - page.gap) / 2
                 width: column.width
-                height: today.height + (fm.visible && !page.wide ? fm.height + 12 : 0)
+                height: page.bento || !page.signedIn ? today.height : liked.y + liked.height
 
                 TodayCard {
                     id: today
                     shell: page.shell
                     daily: daily
-                    compact: page.narrow
-                    width: fm.visible && page.wide ? parent.width - 280 - 16 : parent.width
-                    height: page.narrow ? 200 : 280
+                    width: page.bento ? parent.width - page.sideWidth - page.gap : parent.width
+                    height: implicitHeight
                 }
                 FmCard {
                     id: fm
                     visible: page.signedIn
                     strip: !page.wide
-                    x: page.wide ? today.width + 16 : 0
-                    y: page.wide ? 0 : today.height + 12
-                    width: page.wide ? 280 : parent.width
-                    height: page.wide ? 280 : 72
+                    x: page.bento ? today.width + page.gap : 0
+                    y: page.bento ? 0 : today.height + page.gap
+                    width: page.bento ? page.sideWidth
+                         : page.wide ? parent.width - 2 * (topRow.tileWidth + page.gap) : parent.width
+                    height: page.bento ? (today.height - page.gap) / 2 : page.wide ? 180 : 72
+                }
+                LikedTile {
+                    id: liked
+                    shell: page.shell
+                    visible: page.signedIn
+                    x: page.bento ? fm.x : page.wide ? fm.width + page.gap : 0
+                    y: page.bento ? fm.height + page.gap
+                     : page.wide ? fm.y : fm.y + fm.height + page.gap
+                    width: topRow.tileWidth
+                    height: page.bento ? fm.height : page.wide ? 180 : 160
+                }
+                WeekTile {
+                    shell: page.shell
+                    visible: page.signedIn
+                    x: liked.x + liked.width + page.gap
+                    y: liked.y
+                    width: topRow.tileWidth
+                    height: liked.height
                 }
             }
 
-            HomeSection {
+            // The songs played lately and today's playlists: side by side when there is
+            // room, one under the other otherwise.
+            Item {
+                id: pair
+                readonly property real leftWidth: page.bento ? Math.round(width * 0.41) : width
+                readonly property real recentHeight: recentSection.visible ? recentSection.height : 0
+                readonly property real dailyHeight: dailySection.visible ? dailySection.height : 0
                 width: column.width
-                visible: page.signedIn && (hasContent || failed || loading)
-                title: qsTr("最近听过")
-                showsAll: true
-                model: recent
-                skeleton: Placeholder {}
-                onAllRequested: page.shell.openRecent()
+                visible: recentSection.visible || dailySection.visible
+                height: page.bento ? Math.max(recentHeight, dailyHeight)
+                                   : recentHeight + dailyHeight
+                                     + (recentSection.visible && dailySection.visible ? 40 : 0)
 
-                SongColumns {
-                    songs: recent.songs
+                HomeSection {
+                    id: recentSection
+                    width: pair.leftWidth
+                    visible: page.signedIn && (hasContent || failed || loading)
+                    title: qsTr("最近听过")
+                    showsAll: true
+                    model: recent
+                    skeleton: Placeholder {}
+                    onAllRequested: page.shell.openRecent()
+
+                    SongColumns {
+                        width: recentSection.width
+                        songs: recent.songs
+                        columns: !page.bento && page.wide ? 2 : 1
+                        limit: page.bento ? 4 : 6
+                    }
                 }
-            }
 
-            HomeSection {
-                width: column.width
-                visible: page.signedIn && (hasContent || failed || loading)
-                title: qsTr("每日推荐歌单")
-                model: dailyPlaylists
-                skeleton: CardsPlaceholder {}
+                HomeSection {
+                    id: dailySection
+                    x: page.bento && recentSection.visible ? pair.leftWidth + 24 : 0
+                    y: page.bento || !recentSection.visible ? 0 : pair.recentHeight + 40
+                    width: pair.width - x
+                    visible: page.signedIn && (hasContent || failed || loading)
+                    title: qsTr("每日推荐歌单")
+                    model: dailyPlaylists
+                    skeleton: CardsPlaceholder {}
 
-                Cards {
-                    model: dailyPlaylists.items
+                    Cards {
+                        room: dailySection.width
+                        model: dailyPlaylists.items
+                    }
                 }
             }
 

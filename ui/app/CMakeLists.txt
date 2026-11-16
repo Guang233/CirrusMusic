@@ -69,6 +69,8 @@ qt_add_qml_module(appCirrusMusic
         HomePage.qml
         TodayCard.qml
         FmCard.qml
+        LikedTile.qml
+        WeekTile.qml
         HomeSection.qml
         SidebarRow.qml
         RailPlaylists.qml
