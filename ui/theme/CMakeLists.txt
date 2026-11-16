@@ -25,6 +25,8 @@ qt_add_qml_module(cirrus_ui_theme
         cover_palette.cpp
         player_palette.h
         player_palette.cpp
+        cover_scheme.h
+        cover_scheme.cpp
         theme.h
         theme.cpp
         system_appearance.h
