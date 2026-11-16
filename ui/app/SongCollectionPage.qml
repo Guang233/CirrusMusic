@@ -190,14 +190,17 @@ Item {
     Rectangle {
         id: pane
         readonly property real inner: width - 64
+        // The height there is: down to the mini player.
+        readonly property real room: page.height - y - Math.max(24, PageInsets.bottom)
+        // Short windows: a smaller play button.
+        readonly property bool compact: room < 640
         readonly property bool loading: page.model.state === LoadState.Loading
                                         && state_.contentOpacity < 0.01
         ColorScope.scheme: tint.scheme
         x: 24
         y: 24
         width: page.paneWidth
-        height: Math.min(paneFlick.contentHeight,
-                         page.height - y - Math.max(24, PageInsets.bottom))
+        height: Math.min(paneFlick.contentHeight, room)
         visible: page.twoPane && opacity > 0
         opacity: loading ? 1 : state_.contentOpacity
         radius: 40
@@ -222,8 +225,12 @@ Item {
 
                 Cover {
                     id: paneCoverItem
-                    // Smaller in short windows, so the actions stay in view.
-                    readonly property real size: Math.max(160, Math.min(pane.inner, page.height - 560))
+                    // What is under it, and the size that leaves that in view.
+                    readonly property real rest: paneInfo.height + paneColumn.spacing
+                        + (paneExtra.wanted ? paneExtra.height + paneColumn.spacing : 0)
+                        + (page.showActions ? paneActions.height + paneColumn.spacing : 0)
+                    readonly property real size: Math.round(
+                        Math.max(120, Math.min(pane.inner, pane.room - 64 - rest)))
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: size
                     height: size
@@ -231,17 +238,21 @@ Item {
                     Component.onCompleted: page.paneCover = paneCoverItem
                 }
                 Loader {
+                    id: paneInfo
                     width: parent.width
                     active: page.twoPane
                     sourceComponent: page.infoContent
                 }
                 Loader {
+                    id: paneExtra
+                    readonly property bool wanted: page.extraContent !== null && page.showExtra
                     width: parent.width
-                    visible: page.extraContent !== null && page.showExtra
+                    visible: wanted
                     active: page.twoPane
                     sourceComponent: page.extraContent
                 }
                 Column {
+                    id: paneActions
                     width: parent.width
                     visible: page.showActions
                     spacing: 12
@@ -250,7 +261,7 @@ Item {
                         visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
-                        size: Md.Large
+                        size: pane.compact ? Md.Medium : Md.Large
                         glyph: Symbols.play_arrow
                         // Short: the pane says what it plays.
                         text: qsTr("播放")
@@ -296,9 +307,9 @@ Item {
                     height: 14
                 }
                 Bone {
-                    width: 200
-                    height: 96
-                    radius: 48
+                    width: pane.compact ? 140 : 200
+                    height: pane.compact ? 56 : 96
+                    radius: height / 2
                 }
             }
         }

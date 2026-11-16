@@ -194,7 +194,7 @@ SongCollectionPage {
             id: signature
             width: parent.width
             text: pageModel.signature
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
             color: page.infoVariantColor

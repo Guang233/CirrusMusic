@@ -166,7 +166,7 @@ SongCollectionPage {
             id: brief
             width: parent.width
             text: pageModel.description
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
             color: page.infoVariantColor

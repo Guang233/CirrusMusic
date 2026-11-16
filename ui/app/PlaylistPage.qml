@@ -88,7 +88,7 @@ SongCollectionPage {
                 width: parent.width
                 text: pageModel.description
                 wrapMode: Text.Wrap
-                maximumLineCount: 2
+                maximumLineCount: page.twoPane ? 4 : 2
                 elide: Text.ElideRight
                 color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
