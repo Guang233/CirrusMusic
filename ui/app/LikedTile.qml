@@ -11,7 +11,7 @@ Rectangle {
     id: tile
 
     required property AppShell shell
-    readonly property color content: Theme.color.onSecondaryContainer
+    readonly property color content: Theme.color.onSurface
     readonly property bool known: App.library.likedPlaylistKey !== ""
 
     // Plays the liked playlist: its songs load when asked.
@@ -23,7 +23,7 @@ Rectangle {
     }
 
     radius: 40
-    color: Theme.color.secondaryContainer
+    color: Theme.color.surfaceContainerHigh
     clip: true
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("我喜欢的音乐")
@@ -55,7 +55,15 @@ Rectangle {
         glyph: Symbols.favorite
         size: Math.round(Math.min(tile.width, tile.height) * 0.95)
         fill: 1
-        color: Qt.alpha(tile.content, 0.12)
+        color: Qt.alpha(Theme.color.primary, 0.2)
+    }
+    // The heart runs off the tile: its corner there is covered, not clipped.
+    PanelCorner {
+        x: tile.width - radius
+        y: tile.height - radius
+        radius: tile.radius
+        rotation: 180
+        color: Theme.color.surface
     }
     StateLayer {
         anchors.fill: parent
@@ -81,8 +89,7 @@ Rectangle {
             visible: App.library.likedCount > 0
             text: qsTr("%n 首", "", App.library.likedCount)
             elide: Text.ElideRight
-            color: tile.content
-            opacity: 0.85
+            color: Theme.color.onSurfaceVariant
             font: Theme.type.bodyMedium.font
         }
     }

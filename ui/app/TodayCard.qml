@@ -157,11 +157,14 @@ Rectangle {
                     App.player.playSongs(card.daily.songs.keys(), 0, Playback.FromDaily);
             }
         }
-        Button {
+        // The whole list; the card itself opens it too.
+        IconButton {
             visible: card.hasSongs
             variant: Md.Tonal
             size: card.buttonSize
             shape: Md.Square
+            widthMode: Md.Narrow
+            glyph: Symbols.queue_music
             text: qsTr("全部 %n 首", "", card.songCount)
             onClicked: card.shell.openDaily("")
         }

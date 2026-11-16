@@ -233,18 +233,19 @@ Item {
             Item {
                 id: pair
                 readonly property real leftWidth: page.bento ? Math.round(width * 0.41) : width
-                readonly property real recentHeight: recentSection.visible ? recentSection.height : 0
-                readonly property real dailyHeight: dailySection.visible ? dailySection.height : 0
+                readonly property bool hasRecent: page.signedIn && recentSection.wanted
+                readonly property bool hasDaily: page.signedIn && dailySection.wanted
+                readonly property real recentHeight: hasRecent ? recentSection.height : 0
+                readonly property real dailyHeight: hasDaily ? dailySection.height : 0
                 width: column.width
-                visible: recentSection.visible || dailySection.visible
+                visible: hasRecent || hasDaily
                 height: page.bento ? Math.max(recentHeight, dailyHeight)
-                                   : recentHeight + dailyHeight
-                                     + (recentSection.visible && dailySection.visible ? 40 : 0)
+                                   : recentHeight + dailyHeight + (hasRecent && hasDaily ? 40 : 0)
 
                 HomeSection {
                     id: recentSection
                     width: pair.leftWidth
-                    visible: page.signedIn && (hasContent || failed || loading)
+                    visible: pair.hasRecent
                     title: qsTr("最近听过")
                     showsAll: true
                     model: recent
@@ -261,10 +262,10 @@ Item {
 
                 HomeSection {
                     id: dailySection
-                    x: page.bento && recentSection.visible ? pair.leftWidth + 24 : 0
-                    y: page.bento || !recentSection.visible ? 0 : pair.recentHeight + 40
+                    x: page.bento && pair.hasRecent ? pair.leftWidth + 24 : 0
+                    y: page.bento || !pair.hasRecent ? 0 : pair.recentHeight + 40
                     width: pair.width - x
-                    visible: page.signedIn && (hasContent || failed || loading)
+                    visible: pair.hasDaily
                     title: qsTr("每日推荐歌单")
                     model: dailyPlaylists
                     skeleton: CardsPlaceholder {}

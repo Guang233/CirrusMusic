@@ -29,8 +29,11 @@ Column {
     readonly property bool failed: loadState === LoadState.Error
                                    || loadState === LoadState.Offline
     readonly property bool loading: loadState === LoadState.Loading
+    // Something to show. Layout around the section reads this, not `visible` (which is
+    // false whenever a parent is hidden).
+    readonly property bool wanted: hasContent || failed || loading
 
-    visible: hasContent || failed || loading
+    visible: wanted
     spacing: 12
 
     Reveal {

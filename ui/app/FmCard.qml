@@ -6,9 +6,10 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// Personal FM beside "today" on the home page (docs/ui/redesign-md3e.md §6.2), in the
-// tertiary container so it reads as a different thing from everything around it. The
-// play button is a scalloped shape that turns while FM plays. Shows what FM is playing
+// Personal FM beside "today" on the home page (docs/ui/redesign-md3e.md §6.2): a tonal
+// container with the play button as a scalloped shape in the tertiary color, which
+// turns while FM plays. The tertiary role is on the button only: as the container it is
+// far brighter than "today" in the dark scheme and takes over the page. Shows what FM is playing
 // once it plays, otherwise what it is. `strip`: the 72 px row of medium and narrow
 // windows, with ordinary buttons.
 Rectangle {
@@ -21,10 +22,10 @@ Rectangle {
                                            || App.player.fmWaiting)
     readonly property bool playing: fm && (App.player.status === Playback.Playing || loading)
     readonly property bool hasSong: fm && App.player.current.key !== ""
-    readonly property color content: Theme.color.onTertiaryContainer
+    readonly property color content: Theme.color.onSecondaryContainer
 
     radius: strip ? Theme.shape.large : 40
-    color: Theme.color.tertiaryContainer
+    color: Theme.color.secondaryContainer
     clip: true
 
     // Play or pause FM; starts it when something else is playing.
