@@ -564,14 +564,17 @@ Item {
                 width: table.rowWidth
                 height: parent.height
 
+                // Selected rows and the playing one are SecondaryContainer; the playing
+                // one is rounder (redesign-md3e.md §7.3).
                 Spring {
                     id: selection
-                    target: row.selected ? 1 : 0
+                    target: row.selected || row.current ? 1 : 0
                     spec: Theme.motion.defaultEffects
                 }
                 Spring {
                     id: corner
-                    target: row.selected ? Theme.shape.large
+                    target: row.current ? Theme.shape.largeIncreased
+                          : row.selected ? Theme.shape.large
                           : row.hovered || row.showsFocus ? Theme.shape.medium
                           : Theme.shape.extraSmall
                     spec: Theme.motion.fastSpatial
