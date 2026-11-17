@@ -117,10 +117,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("歌手")
             color: page.infoAccentColor
-            font: Theme.type.labelLarge.font
+            chip: page.twoPane
         }
         Column {
             width: parent.width
@@ -131,7 +131,7 @@ SongCollectionPage {
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: page.infoColor
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             Text {
@@ -183,15 +183,16 @@ SongCollectionPage {
 
     actionsContent: Flow {
         spacing: 8
-        Button {
-            variant: Md.Tonal
+        PageAction {
+            iconOnly: page.twoPane
             glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
             text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
             onClicked: page.toggleFollowed()
         }
         // A musician's own account (docs/ui/pages/user.md §4).
-        Button {
+        PageAction {
             visible: pageModel.userKey !== ""
+            iconOnly: page.twoPane
             variant: Md.Text
             glyph: Symbols.person
             text: qsTr("用户主页")

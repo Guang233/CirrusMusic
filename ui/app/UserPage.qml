@@ -139,7 +139,7 @@ SongCollectionPage {
                 text: pageModel.nickname
                 elide: Text.ElideRight
                 color: page.infoColor
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             // The level, as a small label.
@@ -223,9 +223,16 @@ SongCollectionPage {
 
     actionsContent: Flow {
         spacing: 8
-        FollowButton {}
-        Button {
+        PageAction {
+            visible: !pageModel.own && pageModel.state === LoadState.Ready
+            iconOnly: page.twoPane
+            glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
+            text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
+            onClicked: page.toggleFollowed()
+        }
+        PageAction {
             visible: pageModel.artistKey !== ""
+            iconOnly: page.twoPane
             variant: Md.Text
             glyph: Symbols.mic
             text: qsTr("歌手主页")

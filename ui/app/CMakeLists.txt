@@ -21,6 +21,8 @@ qt_add_qml_module(appCirrusMusic
         Main.qml
         AppShell.qml
         SongCollectionPage.qml
+        PageAction.qml
+        KindLabel.qml
         PlaylistPage.qml
         PlaylistOrderPage.qml
         AlbumPage.qml

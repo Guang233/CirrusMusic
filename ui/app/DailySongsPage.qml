@@ -60,10 +60,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: page.history ? qsTr("历史日推") : qsTr("推荐")
             color: page.infoAccentColor
-            font: Theme.type.labelLarge.font
+            chip: page.twoPane
         }
         Text {
             width: parent.width
@@ -72,7 +72,7 @@ SongCollectionPage {
                                : qsTr("每日推荐")
             elide: Text.ElideRight
             color: page.infoColor
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -95,9 +95,9 @@ SongCollectionPage {
 
     actionsContent: Flow {
         spacing: 8
-        Button {
+        PageAction {
             id: historyButton
-            variant: Md.Tonal
+            iconOnly: page.twoPane
             glyph: Symbols.history
             text: qsTr("历史日推")
             onClicked: {

@@ -115,6 +115,10 @@ Item {
     // The info pane beside the table, and its width.
     readonly property bool twoPane: width >= 1000
     readonly property real paneWidth: Math.round(Math.max(320, Math.min(380, width * 0.3)))
+    // The title's type: heavy and large in the pane (redesign-md3e.md §7.1).
+    readonly property font titleFont: twoPane ? Fonts.font(800, 44)
+                                    : wide ? Theme.type.headlineLargeEmphasized.font
+                                           : Theme.type.headlineSmallEmphasized.font
     // The colors `infoContent` and `extraContent` write in: on the page, or on the pane
     // (a container in the cover's colors).
     readonly property color infoColor: twoPane ? tint.scheme.onPrimaryContainer
@@ -197,13 +201,13 @@ Item {
         readonly property bool loading: page.model.state === LoadState.Loading
                                         && state_.contentOpacity < 0.01
         ColorScope.scheme: tint.scheme
-        x: 24
-        y: 24
+        x: 32
+        y: 16
         width: page.paneWidth
         height: Math.min(paneFlick.contentHeight, room)
         visible: page.twoPane && opacity > 0
         opacity: loading ? 1 : state_.contentOpacity
-        radius: 40
+        radius: 48
         color: ColorScope.scheme.primaryContainer
         clip: true
 
@@ -220,7 +224,7 @@ Item {
                 x: 32
                 y: 32
                 width: pane.inner
-                spacing: 20
+                spacing: 18
                 visible: !pane.loading
 
                 Cover {
@@ -251,26 +255,28 @@ Item {
                     active: page.twoPane
                     sourceComponent: page.extraContent
                 }
-                Column {
+                // The page's main action at the hero's size; the others (square icon
+                // buttons as tall, PageAction) beside it, or on the next line.
+                Flow {
                     id: paneActions
                     width: parent.width
                     visible: page.showActions
-                    spacing: 12
-                    // The page's main action at the hero's size, the rest small.
+                    spacing: 8
                     Button {
                         visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
                         size: pane.compact ? Md.Medium : Md.Large
                         glyph: Symbols.play_arrow
+                        iconFill: 1
                         // Short: the pane says what it plays.
                         text: qsTr("播放")
+                        font: pane.compact ? labelStyle.font : Fonts.font(700, 24)
                         Accessible.name: page.playText
                         onClicked: page.playAll()
                     }
-                    // A Flow here wraps to the pane's width.
+                    // At its own size: the actions' Flow keeps one row.
                     Loader {
-                        width: parent.width
                         active: page.twoPane
                         sourceComponent: page.actionsContent
                     }
@@ -392,9 +398,9 @@ Item {
                     Skeleton {
                         x: page.twoPane ? 0 : parent.width - width
                         anchors.verticalCenter: parent.verticalCenter
-                        width: page.twoPane ? Math.min(360, parent.width)
+                        width: page.twoPane ? Math.min(400, parent.width)
                                             : Math.min(240, parent.width / 3)
-                        height: 36
+                        height: page.twoPane ? 48 : 36
                         radius: height / 2
                     }
                 }
@@ -453,7 +459,9 @@ Item {
         originId: page.originId
         originName: page.originName
         anchors.fill: parent
-        anchors.leftMargin: page.twoPane ? pane.x + pane.width : 0
+        // Rows 12 from the pane and 32 from the panel's edge (the table keeps 24).
+        anchors.leftMargin: page.twoPane ? pane.x + pane.width - 12 : 0
+        anchors.rightMargin: page.twoPane ? 8 : 0
         opacity: state_.contentOpacity
         visible: opacity > 0
         songs: sortedModel
@@ -620,7 +628,7 @@ Item {
         x: songTable.x
         // Leaves the table's scroll bar uncovered.
         width: songTable.width - songTable.scrollBarWidth
-        height: page.twoPane ? (page.hasToolbar ? 76 : 24) : 56
+        height: page.twoPane ? (page.hasToolbar ? 72 : 16) : 56
         y: -height * (1 - page.compactProgress)
         visible: page.compactProgress > 0
         color: Theme.color.surface
@@ -683,10 +691,69 @@ Item {
             FindField {
                 id: compactFind
                 x: page.twoPane ? 0 : parent.width - width
-                // Under the top margin the pane keeps.
-                y: page.twoPane ? 24 : (parent.height - height) / 2
-                width: page.twoPane ? Math.min(360, parent.width) : Math.min(240, parent.width / 3)
+                // Level with the pane's top, as tall as the search field.
+                y: page.twoPane ? pane.y : (parent.height - height) / 2
+                width: page.twoPane ? Math.min(400, sortButton.x - 16) : Math.min(240, parent.width / 3)
+                height: page.twoPane ? 48 : 36
+                leftPadding: page.twoPane ? 52 : 44
+                font: page.twoPane ? Theme.type.bodyLarge.font : Theme.type.bodyMedium.font
                 visible: page.findable && (!page.twoPane || page.hasSongs)
+            }
+            // The order, beside the find field (the column titles sort too).
+            Button {
+                id: sortButton
+                readonly property list<string> names: [qsTr("默认顺序"), qsTr("按标题"),
+                    qsTr("按专辑"), qsTr("按时长")]
+                x: page.twoPane && visible ? parent.width - width : parent.width
+                y: pane.y + 4
+                visible: page.twoPane && page.sortable && page.hasSongs
+                variant: Md.Tonal
+                size: Md.Small
+                glyph: Symbols.sort
+                text: names[sortedModel.sortField]
+                      + (sortedModel.sortField !== SortedSongsModel.Original && sortedModel.descending
+                         ? qsTr("（倒序）") : "")
+                function sortBy(field: int): void {
+                    sortedModel.sortField = field;
+                    sortedModel.descending = false;
+                }
+                onClicked: sortMenu.popup(sortButton, 0, sortButton.height + 4)
+
+                Menu {
+                    id: sortMenu
+                    MenuItem {
+                        checkable: true
+                        checked: sortedModel.sortField === 0
+                        text: sortButton.names[0]
+                        onTriggered: sortButton.sortBy(0)
+                    }
+                    MenuItem {
+                        checkable: true
+                        checked: sortedModel.sortField === 1
+                        text: sortButton.names[1]
+                        onTriggered: sortButton.sortBy(1)
+                    }
+                    MenuItem {
+                        checkable: true
+                        checked: sortedModel.sortField === 2
+                        text: sortButton.names[2]
+                        onTriggered: sortButton.sortBy(2)
+                    }
+                    MenuItem {
+                        checkable: true
+                        checked: sortedModel.sortField === 3
+                        text: sortButton.names[3]
+                        onTriggered: sortButton.sortBy(3)
+                    }
+                    MenuSeparator {}
+                    MenuItem {
+                        enabled: sortedModel.sortField !== SortedSongsModel.Original
+                        checkable: true
+                        checked: sortedModel.descending
+                        text: qsTr("倒序")
+                        onTriggered: sortedModel.descending = !sortedModel.descending
+                    }
+                }
             }
         }
     }

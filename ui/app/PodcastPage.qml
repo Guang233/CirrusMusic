@@ -89,10 +89,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("播客")
             color: page.infoAccentColor
-            font: Theme.type.labelLarge.font
+            chip: page.twoPane
         }
         Text {
             width: parent.width
@@ -101,7 +101,7 @@ SongCollectionPage {
             maximumLineCount: 2
             elide: Text.ElideRight
             color: page.infoColor
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -123,8 +123,8 @@ SongCollectionPage {
 
     actionsContent: Flow {
         spacing: 8
-        Button {
-            variant: Md.Tonal
+        PageAction {
+            iconOnly: page.twoPane
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏播客")
             onClicked: page.toggleSubscribed()

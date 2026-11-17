@@ -79,17 +79,17 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("音乐库")
             color: page.infoAccentColor
-            font: Theme.type.labelLarge.font
+            chip: page.twoPane
         }
         Text {
             width: parent.width
             text: qsTr("最近播放")
             elide: Text.ElideRight
             color: page.infoColor
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {

@@ -88,7 +88,7 @@ SongCollectionPage {
                 width: parent.width
                 text: pageModel.description
                 wrapMode: Text.Wrap
-                maximumLineCount: page.twoPane ? 4 : 2
+                maximumLineCount: 2
                 elide: Text.ElideRight
                 color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
@@ -120,10 +120,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("歌单")
             color: page.infoAccentColor
-            font: Theme.type.labelLarge.font
+            chip: page.twoPane
         }
         // The title; the account's own playlist can be edited from here.
         Item {
@@ -139,7 +139,7 @@ SongCollectionPage {
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: page.infoColor
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             IconButton {
@@ -148,6 +148,7 @@ SongCollectionPage {
                 anchors.verticalCenter: parent.verticalCenter
                 // "我喜欢的音乐" keeps its title.
                 visible: pageModel.own && !pageModel.likedList
+                variant: page.twoPane ? Md.Tonal : Md.Standard
                 glyph: Symbols.edit
                 text: qsTr("编辑歌单信息")
                 onClicked: editDialog.open()
@@ -178,12 +179,6 @@ SongCollectionPage {
                 font: Theme.type.bodyMedium.font
             }
         }
-        Extras {
-            width: parent.width
-            visible: page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
-            topPadding: 4
-            bottomPadding: 4
-        }
         // Counts the service gave; unknown ones are left out, not shown as 0.
         Text {
             width: parent.width
@@ -199,6 +194,12 @@ SongCollectionPage {
             color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
+        Extras {
+            width: parent.width
+            visible: page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
+            topPadding: 4
+            bottomPadding: 4
+        }
     }
 
     extraContent: Extras {}
@@ -207,14 +208,15 @@ SongCollectionPage {
     actionsContent: Flow {
         spacing: 8
         // Someone else's playlist (P5).
-        Button {
+        PageAction {
             visible: !pageModel.own && App.library.canSavePlaylists
-            variant: Md.Tonal
+            iconOnly: page.twoPane
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
             onClicked: page.toggleSubscribed()
         }
-        Button {
+        PageAction {
+            iconOnly: page.twoPane
             variant: Md.Text
             glyph: Symbols.comment
             text: pageModel.commentCount > 0
@@ -227,6 +229,11 @@ SongCollectionPage {
         IconButton {
             id: moreButton
             visible: pageModel.own
+            // In the pane: square and as tall as the play button, like the PageActions.
+            variant: page.twoPane ? Md.Tonal : Md.Standard
+            size: page.twoPane ? Md.Large : Md.Small
+            shape: page.twoPane ? Md.Square : Md.Round
+            widthMode: page.twoPane ? Md.Narrow : Md.Default
             glyph: Symbols.more_vert
             text: qsTr("更多")
             onClicked: moreMenu.popup(moreButton, 0, moreButton.height + 4)
