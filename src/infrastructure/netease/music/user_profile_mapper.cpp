@@ -163,7 +163,8 @@ MusicResult mapUserProfileResponse(const UserProfileQuery& query, const QJsonObj
     if (const auto* q = std::get_if<UserPlaylistsQuery>(&query.action)) {
         auto result = mapLibraryResponse(MyPlaylistsQuery{q->userId, q->page}, object);
         if (auto* page = std::get_if<MyPlaylistsPage>(&result))
-            return UserProfilePage{query, UserPlaylists{page->playlists, page->hasMore}};
+            return UserProfilePage{query,
+                                   UserPlaylists{page->playlists, page->hasMore, page->nextOffset}};
         return result;
     }
     const auto& q = std::get<UserRankingQuery>(query.action);

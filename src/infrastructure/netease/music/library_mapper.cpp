@@ -97,20 +97,18 @@ MusicResult mapLibraryResponse(const MusicQuery& query, const QJsonObject& objec
         page.query = *q;
         if (!values.isArray())
             return invalidBecause("playlist");
-        // With more to come the service sends one row past the limit (101 for 100,
-        // measured 2026-11-10): the next page's first, left for that page.
-        auto rows = values.toArray();
-        const bool extra = rows.size() == q->page.limit + 1;
-        if (extra)
-            rows.removeLast();
-        if (rows.size() > q->page.limit)
-            return invalidBecause("rows");
-        if (!pageInfo(object, true, rows.size(), page.total, page.hasMore))
+        // The first page puts rows on top of `limit` that the offset does not count: the
+        // liked-songs playlist (limit 2: [liked, A, B], then offset 2: [C, D]; `more` false
+        // at 26 of 26; measured 2026-11-17), and for the signed-in account's own list more
+        // than one (issue #2). All are kept; the next page starts at offset + limit, and
+        // its rows may repeat these, so readers drop ids they have.
+        const auto rows = values.toArray();
+        if (!pageInfo(object, true, 0, page.total, page.hasMore))
             return invalidBecause("page");
-        if (extra)
-            page.hasMore = true;
+        page.nextOffset = q->page.offset + q->page.limit;
+        QSet<QString> seen;
         qsizetype i = -1;
-        for (const auto value : std::as_const(rows)) {
+        for (const auto value : rows) {
             ++i;
             if (!value.isObject())
                 return invalidBecause("row", i);
@@ -148,7 +146,10 @@ MusicResult mapLibraryResponse(const MusicQuery& query, const QJsonObject& objec
                 p.accountLikedSongs = *p.creatorId == *account;
             p.title = row.value(QStringLiteral("name")).toString();
             p.cover = imageFrom(row.value(QStringLiteral("coverImgUrl")));
-            page.playlists.append(p);
+            if (!seen.contains(p.id.value)) {
+                seen.insert(p.id.value);
+                page.playlists.append(p);
+            }
         }
         return page;
     }

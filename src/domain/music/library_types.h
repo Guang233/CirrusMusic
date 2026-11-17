@@ -38,9 +38,13 @@ struct LibraryPlaylist {
 };
 struct MyPlaylistsPage {
     MyPlaylistsQuery query;
+    // The first page may carry rows the service does not count toward the offset (the
+    // liked-songs playlist on top of `limit`), so a page may hold more than `limit` rows.
     QList<LibraryPlaylist> playlists;
     std::optional<qint64> total;
     std::optional<bool> hasMore;
+    // The service offset the next page starts at (not query offset + rows, for the above).
+    int nextOffset = 0;
 };
 struct LikedSongIds {
     QString accountId;
