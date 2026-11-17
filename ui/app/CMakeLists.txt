@@ -73,6 +73,7 @@ qt_add_qml_module(appCirrusMusic
         WeekTile.qml
         HomeSection.qml
         SidebarRow.qml
+        RailCovers.qml
         RailPlaylists.qml
         RailAccount.qml
         SearchField.qml

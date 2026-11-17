@@ -542,6 +542,13 @@ Item {
                 onSignInRequested: shell.openLogin()
             }
         }
+        collapsedContent: Component {
+            RailCovers {
+                library: myLibrary
+                selectedKey: shell.openPlaylistKey
+                onPlaylistRequested: key => shell.openPlaylist(key)
+            }
+        }
         footer: Component {
             RailAccount {
                 progress: rail.progress
