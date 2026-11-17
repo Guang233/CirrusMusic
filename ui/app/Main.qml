@@ -90,9 +90,13 @@ AppWindow {
         value: App.settings.customFontFamily
     }
 
-    // The frame (top bar and rail) is SurfaceContainer; pages sit on a Surface panel.
+    // The frame (rail) is SurfaceContainer; pages sit on a Surface panel that reaches up
+    // under the title bar row, so back, search and the window buttons are on the panel.
     showTitle: false
     surfaceColor: Theme.color.surfaceContainer
+    titleOverContent: true
+    titleContentHeight: 72
+    titleTopInset: shell.panelTop
     titleContent: TopBar {
         id: topBar
         anchors.fill: parent
@@ -103,6 +107,7 @@ AppWindow {
     AppShell {
         id: shell
         anchors.fill: parent
+        topInset: window.titleHeight
         searchField: topBar.searchField
         covered: player.opened
         miniFlying: player.flying

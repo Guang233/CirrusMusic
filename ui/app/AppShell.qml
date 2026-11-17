@@ -6,8 +6,10 @@ import Cirrus.Components
 import Cirrus.Presentation
 
 // The shell (docs/ui/pages/shell.md): navigation rail and a rounded content panel
-// with the page stack, in a frame that the top bar (TopBar, in the window's title
-// bar row) continues; the mini player floats over the bottom of the panel (pages
+// with the page stack. The shell starts at the window's top: the title bar row (with
+// the TopBar) lies over its first `topInset`, the rail below it, and the panel
+// reaches up under the row, so back, search and the window buttons sit on the panel
+// (redesign-md3e.md §8); the mini player floats over the bottom of the panel (pages
 // scroll under it, PageInsets). Large windows (≥ 1200)
 // keep the rail expanded beside the panel and push it when toggled; narrower ones
 // keep it collapsed and expand it over the panel with a scrim. Crossing the
@@ -17,6 +19,10 @@ Item {
     id: shell
 
     readonly property bool large: width >= 1200
+    // The title bar row's height over the shell (pages start under it), and where the
+    // panel starts.
+    property real topInset: 0
+    readonly property real panelTop: 8
     readonly property bool canGoBack: stack.depth > 1
     readonly property bool canGoForward: forwardEntries.length > 0
     // Width the rail takes beside the panel (the floating rail does not push).
@@ -443,14 +449,16 @@ Item {
     Rectangle {
         id: panel
         x: shell.navWidth
+        y: shell.panelTop
         width: shell.width - x - 8
-        height: shell.height - 8
+        height: shell.height - y - 8
         radius: Theme.shape.largeIncreased
         color: Theme.color.surface
 
         PageStack {
             id: stack
             anchors.fill: parent
+            anchors.topMargin: Math.max(0, shell.topInset - panel.y)
             clip: true
             // The trail in the log: which page, with which ids (logging-v2 §4.1).
             onCurrentItemChanged: if (currentItem)
@@ -506,6 +514,7 @@ Item {
     // Blocks the content while the rail floats over it.
     MouseArea {
         anchors.fill: parent
+        anchors.topMargin: shell.topInset
         visible: !shell.large && rail.progress > 0
         hoverEnabled: true
         onClicked: rail.expanded = false
@@ -526,6 +535,7 @@ Item {
     NavigationRail {
         id: rail
         anchors.top: parent.top
+        anchors.topMargin: shell.topInset
         anchors.bottom: parent.bottom
         modal: !shell.large
         minimumExpandedWidth: 272
