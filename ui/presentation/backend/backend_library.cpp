@@ -70,10 +70,12 @@ CollectionItem savedArtistOf(const domain::SavedArtist& artist)
 
 ResultPage<CollectionItem> playlistsPageOf(const domain::MyPlaylistsPage& found)
 {
-    return pageOf<domain::MyPlaylistsPage, CollectionItem>(
+    auto page = pageOf<domain::MyPlaylistsPage, CollectionItem>(
         found, found.playlists, [account = found.query.accountId](const auto& playlist) {
             return libraryPlaylistOf(playlist, account);
         });
+    page.next = found.nextOffset;
+    return page;
 }
 
 template <class T> QList<T> entitiesOf(const auto& recent, auto map)
@@ -88,6 +90,9 @@ template <class T> QList<T> entitiesOf(const auto& recent, auto map)
 // Every playlist of the account, a page at a time, up to kMostPlaylists.
 struct PlaylistsRead {
     QList<CollectionItem> items;
+    QSet<QString> keys;
+    // The service's offset, not items.size(): its first page has rows it does not count.
+    int offset = 0;
     Request current;
 };
 
@@ -96,7 +101,7 @@ void readPlaylists(QPointer<MusicRequests> requests, std::shared_ptr<PlaylistsRe
 {
     if (!requests)
         return;
-    const int offset = int(state->items.size());
+    const int offset = state->offset;
     state->current = read<domain::MyPlaylistsPage>(
         requests.data(),
         [offset](BackendFacade& facade) {
@@ -117,9 +122,19 @@ void readPlaylists(QPointer<MusicRequests> requests, std::shared_ptr<PlaylistsRe
                 return;
             }
             const auto& page = *outcome.value;
-            state->items << page.items;
-            const bool more = page.hasMore.value_or(page.items.size() >= kPage) &&
-                              !page.items.isEmpty() && state->items.size() < kMostPlaylists;
+            // A page's rows may repeat the first page's extra ones; each playlist once.
+            for (const auto& item : page.items) {
+                if (!state->keys.contains(item.key)) {
+                    state->keys.insert(item.key);
+                    state->items.append(item);
+                }
+            }
+            const int next = int(page.next.value_or(state->offset + kPage));
+            const bool advanced = next > state->offset;
+            state->offset = next;
+            const bool more = advanced && page.hasMore.value_or(page.items.size() >= kPage) &&
+                              !page.items.isEmpty() && state->items.size() < kMostPlaylists &&
+                              state->offset < kMostPlaylists;
             if (more)
                 readPlaylists(requests, state, reply);
             else

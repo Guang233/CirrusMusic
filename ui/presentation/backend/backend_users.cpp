@@ -8,6 +8,8 @@
 #include "application/backend/backend_facade.h"
 #include "domain/music/user_profile_types.h"
 
+#include <QSet>
+
 namespace cirrus::ui
 {
 namespace
@@ -105,6 +107,7 @@ Request BackendCatalog::userPlaylists(const QString& key, Reply<QList<Collection
     struct Fetch {
         QString key;
         QList<CollectionItem> items;
+        QSet<QString> keys;
         Request current;
         Reply<QList<CollectionItem>> reply;
     };
@@ -137,11 +140,18 @@ Request BackendCatalog::userPlaylists(const QString& key, Reply<QList<Collection
                             done({fetch->items, true, std::nullopt});
                         return;
                     }
-                    for (const auto& playlist : page.value->playlists)
+                    // A page's rows may repeat the first page's extra ones; each once.
+                    for (const auto& playlist : page.value->playlists) {
+                        if (fetch->keys.contains(playlist.id.value))
+                            continue;
+                        fetch->keys.insert(playlist.id.value);
                         fetch->items.append(userPlaylistOf(playlist, fetch->key));
-                    const int nextOffset = offset + int(page.value->playlists.size());
+                    }
+                    // The service's offset, not rows read: its first page has rows it
+                    // does not count.
+                    const int nextOffset = page.value->nextOffset;
                     if (page.value->hasMore == true && !page.value->playlists.isEmpty() &&
-                        nextOffset < kMaxPlaylists)
+                        nextOffset > offset && nextOffset < kMaxPlaylists)
                         (*next)(nextOffset);
                     else
                         std::exchange(fetch->reply, {})({fetch->items, false, std::nullopt});

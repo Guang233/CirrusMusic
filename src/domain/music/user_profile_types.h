@@ -82,6 +82,7 @@ struct UserList {
 struct UserPlaylists {
     QList<LibraryPlaylist> playlists; // created and saved together; creatorId tells them apart
     std::optional<bool> hasMore;
+    int nextOffset = 0; // as MyPlaylistsPage::nextOffset
 };
 struct UserRanking {
     QList<RankedSong> songs;

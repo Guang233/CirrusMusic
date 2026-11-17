@@ -190,18 +190,32 @@ class LibraryTest : public QObject
                 mapMusicResponse(query(kind, "1", {1, 0}), response)));
             QVERIFY(!std::holds_alternative<MusicFailure>(mapMusicResponse(query(kind), response)));
         }
-        // Playlists: with more to come the service sends one row past the limit (measured
-        // 2026-11-10), the next page's first; it is left out and means more. Two past is
-        // not a page.
-        const QJsonArray rows{QJsonObject{{"id", 1}}, QJsonObject{{"id", 2}},
-                              QJsonObject{{"id", 3}}};
+        // Playlists: the first page has rows on top of `limit` the offset does not count
+        // (measured 2026-11-17: limit 2 gives [liked, A, B], offset 2 gives [C, D]; and
+        // more than one for the account's own list, issue #2). All are kept, `more` is
+        // the service's, and the next page starts at offset + limit.
+        const QJsonArray rows{
+            QJsonObject{{"id", 1}, {"specialType", 5}, {"creator", QJsonObject{{"userId", 1}}}},
+            QJsonObject{{"id", 2}}, QJsonObject{{"id", 3}}, QJsonObject{{"id", 4}}};
         const auto page = std::get<MyPlaylistsPage>(mapMusicResponse(
             query(0, "1", {2, 0}), {{"code", 200}, {"playlist", rows}, {"more", false}}));
-        QCOMPARE(page.playlists.size(), 2);
-        QCOMPARE(page.playlists.last().id.value, QString("2"));
-        QCOMPARE(page.hasMore, std::optional<bool>(true));
-        QVERIFY(std::holds_alternative<MusicFailure>(
-            mapMusicResponse(query(0, "1", {1, 0}), {{"code", 200}, {"playlist", rows}})));
+        QCOMPARE(page.playlists.size(), 4);
+        QCOMPARE(page.playlists.first().accountLikedSongs, std::optional<bool>(true));
+        QCOMPARE(page.playlists.last().id.value, QString("4"));
+        QCOMPARE(page.hasMore, std::optional<bool>(false));
+        QCOMPARE(page.nextOffset, 2);
+        const auto later = std::get<MyPlaylistsPage>(mapMusicResponse(
+            query(0, "1", {2, 2}), {{"code", 200}, {"playlist", rows}, {"more", true}}));
+        QCOMPARE(later.hasMore, std::optional<bool>(true));
+        QCOMPARE(later.nextOffset, 4);
+        // A row the page repeats is listed once.
+        auto repeated = rows;
+        repeated.append(QJsonObject{{"id", 2}});
+        QCOMPARE(std::get<MyPlaylistsPage>(
+                     mapMusicResponse(query(0, "1", {2, 0}),
+                                      {{"code", 200}, {"playlist", repeated}, {"more", false}}))
+                     .playlists.size(),
+                 4);
         QJsonArray ids;
         for (int i = 1; i <= LikedSongIds::MaximumIds; ++i)
             ids.append(i);
