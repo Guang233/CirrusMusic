@@ -98,6 +98,7 @@ SongCollectionPage {
         PageAction {
             id: historyButton
             iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: Symbols.history
             text: qsTr("历史日推")
             onClicked: {

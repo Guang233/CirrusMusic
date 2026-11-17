@@ -226,6 +226,7 @@ SongCollectionPage {
         PageAction {
             visible: !pageModel.own && pageModel.state === LoadState.Ready
             iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
             text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
             onClicked: page.toggleFollowed()
@@ -233,6 +234,7 @@ SongCollectionPage {
         PageAction {
             visible: pageModel.artistKey !== ""
             iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.mic
             text: qsTr("歌手主页")

@@ -115,6 +115,8 @@ Item {
     // The info pane beside the table, and its width.
     readonly property bool twoPane: width >= 1000
     readonly property real paneWidth: Math.round(Math.max(320, Math.min(380, width * 0.3)))
+    // The pane's actions are as tall as its play button (smaller in short windows).
+    readonly property int paneActionSize: pane.compact ? Md.Medium : Md.Large
     // The title's type: heavy and large in the pane (redesign-md3e.md §7.1).
     readonly property font titleFont: twoPane ? Fonts.font(800, 44)
                                     : wide ? Theme.type.headlineLargeEmphasized.font

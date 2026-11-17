@@ -211,12 +211,14 @@ SongCollectionPage {
         PageAction {
             visible: !pageModel.own && App.library.canSavePlaylists
             iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
             onClicked: page.toggleSubscribed()
         }
         PageAction {
             iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.comment
             text: pageModel.commentCount > 0
@@ -231,7 +233,7 @@ SongCollectionPage {
             visible: pageModel.own
             // In the pane: square and as tall as the play button, like the PageActions.
             variant: page.twoPane ? Md.Tonal : Md.Standard
-            size: page.twoPane ? Md.Large : Md.Small
+            size: page.twoPane ? page.paneActionSize : Md.Small
             shape: page.twoPane ? Md.Square : Md.Round
             widthMode: page.twoPane ? Md.Narrow : Md.Default
             glyph: Symbols.more_vert

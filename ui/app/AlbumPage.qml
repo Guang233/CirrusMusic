@@ -163,12 +163,14 @@ SongCollectionPage {
         spacing: 8
         PageAction {
             iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
             onClicked: page.toggleSubscribed()
         }
         PageAction {
             iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.comment
             text: pageModel.commentCount > 0

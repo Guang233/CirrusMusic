@@ -185,6 +185,7 @@ SongCollectionPage {
         spacing: 8
         PageAction {
             iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
             text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
             onClicked: page.toggleFollowed()
@@ -193,6 +194,7 @@ SongCollectionPage {
         PageAction {
             visible: pageModel.userKey !== ""
             iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.person
             text: qsTr("用户主页")

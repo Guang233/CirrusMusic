@@ -13,6 +13,8 @@ Item {
     property string text
     property int variant: Md.Tonal
     property bool iconOnly: false
+    // The pane form's size: as tall as the pane's play button (SongCollectionPage.paneActionSize).
+    property int size: Md.Large
     // Filled icon (e.g. a saved state).
     property real iconFill: 0
     readonly property Item control: iconOnly ? iconButton : button
@@ -37,7 +39,7 @@ Item {
         anchors.fill: parent
         visible: action.iconOnly
         variant: Md.Tonal
-        size: Md.Large
+        size: action.size
         shape: Md.Square
         widthMode: Md.Narrow
         glyph: action.glyph
