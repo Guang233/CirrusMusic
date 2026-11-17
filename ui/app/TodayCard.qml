@@ -32,12 +32,14 @@ Rectangle {
     readonly property int tier: width >= 640 ? 2 : width >= 420 ? 1 : 0
     readonly property real pad: tier === 2 ? 40 : tier === 1 ? 32 : 24
     readonly property int buttonSize: [Md.Medium, Md.Large, Md.XLarge][tier]
+    // "All N songs" in words where the covers keep room beside it, else as an icon.
+    readonly property bool allInWords: tier === 2 && width - pad - 456 - 32 >= 220
     // Room for the covers beside the buttons.
     readonly property real artRoom: width - pad - actions.width - 32
     readonly property bool showArt: tier === 2 && hasSongs && artRoom >= 200
     readonly property color content: Theme.color.onPrimaryContainer
 
-    implicitHeight: lines.height + actions.height + [16, 20, 28][tier] + pad + (tier === 2 ? 32 : 24)
+    implicitHeight: lines.height + actions.height + [16, 20, 24][tier] + (tier === 2 ? 32 : 24) * 2
     radius: tier === 0 ? Theme.shape.extraLarge : 48
     color: Theme.color.primaryContainer
     clip: true
@@ -90,7 +92,7 @@ Rectangle {
             font: Fonts.font(800, size)
             // MiSans's line box is much taller than its glyphs.
             lineHeightMode: Text.FixedHeight
-            lineHeight: Math.round(size * 1.16)
+            lineHeight: Math.round(size * 1.12)
             verticalAlignment: Text.AlignVCenter
             Accessible.role: Accessible.Heading
         }
@@ -149,7 +151,9 @@ Rectangle {
             variant: Md.Filled
             size: card.buttonSize
             glyph: card.playing ? Symbols.pause : Symbols.play_arrow
+            iconFill: 1
             text: card.playing ? qsTr("暂停") : qsTr("播放")
+            font: card.tier === 2 ? Fonts.font(700, 32) : labelStyle.font
             onClicked: {
                 if (card.active)
                     App.player.playPause();
@@ -158,8 +162,20 @@ Rectangle {
             }
         }
         // The whole list; the card itself opens it too.
+        Button {
+            visible: card.hasSongs && card.allInWords
+            variant: Md.Tonal
+            size: card.buttonSize
+            shape: Md.Square
+            leftPadding: 32
+            rightPadding: 32
+            width: implicitContentWidth + 64
+            text: qsTr("全部 %n 首", "", card.songCount)
+            font: Fonts.font(700, 22)
+            onClicked: card.shell.openDaily("")
+        }
         IconButton {
-            visible: card.hasSongs
+            visible: card.hasSongs && !card.allInWords
             variant: Md.Tonal
             size: card.buttonSize
             shape: Md.Square

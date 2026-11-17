@@ -55,7 +55,7 @@ Column {
             text: section.title
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: Theme.type.titleLargeEmphasized.font
+            font: Fonts.font(700, 22)
             Accessible.role: Accessible.Heading
         }
         IconButton {

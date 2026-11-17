@@ -13,6 +13,8 @@ T.Button {
     property int shape: Md.Round
     property string glyph
     property string trailingGlyph
+    // The leading icon's FILL axis: 1 for a solid icon (e.g. a hero's play button).
+    property real iconFill: 0
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
@@ -143,6 +145,7 @@ T.Button {
                 visible: control.glyph !== ""
                 glyph: control.glyph
                 size: control.iconSize
+                fill: control.iconFill
                 color: control.contentColor
             }
             Text {
