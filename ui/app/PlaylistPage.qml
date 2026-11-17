@@ -153,9 +153,11 @@ SongCollectionPage {
                 onClicked: editDialog.open()
             }
         }
-        // The creator (opens their user page), then when it was updated.
+        // The creator (opens their user page), then when it was updated; the button's
+        // label lines up with the text above.
         Row {
-            width: parent.width
+            x: creatorButton.visible ? -creatorButton.leftPadding : 0
+            width: parent.width - x
             spacing: 4
             Button {
                 id: creatorButton
@@ -178,7 +180,7 @@ SongCollectionPage {
         }
         Extras {
             width: parent.width
-            visible: page.wide
+            visible: page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
             topPadding: 4
             bottomPadding: 4
         }
