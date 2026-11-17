@@ -272,6 +272,10 @@ Item {
                         // Short: the pane says what it plays.
                         text: qsTr("播放")
                         font: pane.compact ? labelStyle.font : Fonts.font(700, 24)
+                        // 172 wide at Large: two square actions fit beside it.
+                        leftPadding: pane.compact ? sidePadding : 40
+                        rightPadding: leftPadding
+                        width: implicitContentWidth + leftPadding + rightPadding
                         Accessible.name: page.playText
                         onClicked: page.playAll()
                     }
@@ -625,9 +629,10 @@ Item {
     // pane it is the bar over the table: always there, holding the find field.
     Rectangle {
         id: compactBar
-        x: songTable.x
-        // Leaves the table's scroll bar uncovered.
-        width: songTable.width - songTable.scrollBarWidth
+        // Beside the pane (the table reaches under its edge), leaving the table's scroll
+        // bar uncovered.
+        x: page.twoPane ? pane.x + pane.width : songTable.x
+        width: songTable.x + songTable.width - songTable.scrollBarWidth - x
         height: page.twoPane ? (page.hasToolbar ? 72 : 16) : 56
         y: -height * (1 - page.compactProgress)
         visible: page.compactProgress > 0
@@ -644,7 +649,7 @@ Item {
         }
 
         Item {
-            x: songTable.rowX
+            x: songTable.x + songTable.rowX - compactBar.x
             width: songTable.rowWidth
             height: parent.height
 
@@ -760,9 +765,9 @@ Item {
 
     // The tabs, pinned under the compact bar once the header's have scrolled there.
     Rectangle {
-        x: songTable.x
+        x: compactBar.x
         y: compactBar.y + compactBar.height
-        width: songTable.width - songTable.scrollBarWidth
+        width: compactBar.width
         height: page.tabsHeight
         visible: page.tabsPinned
         color: Theme.color.surface
@@ -776,7 +781,7 @@ Item {
             blocking: true
         }
         Loader {
-            x: songTable.rowX
+            x: songTable.x + songTable.rowX - compactBar.x
             width: songTable.rowWidth
             height: parent.height
             active: page.tabsContent !== null
