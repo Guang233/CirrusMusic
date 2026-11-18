@@ -113,6 +113,9 @@ class AppSettings : public QObject
     // Player page (docs/ui/pages/player.md §9.2).
     // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
     CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)
+    // The page's style: 0 the default (Apple Music-like), 1 Material (MD3 Expressive,
+    // docs/ui/pages/player-expressive.md).
+    CIRRUS_SETTING(int, playerStyle, setPlayerStyle, "player/style", 0)
     // Where the controls are on wide windows: 0 under the cover, 1 at the bottom.
     CIRRUS_SETTING(int, playerControls, setPlayerControls, "player/controls", 0)
     // The title and artist: 0 under the cover, 1 in the bottom row.

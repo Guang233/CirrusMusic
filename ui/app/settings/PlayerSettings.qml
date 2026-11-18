@@ -11,6 +11,19 @@ SettingsGroup {
     hue: "pink"
 
     ChoiceSetting {
+        text: qsTr("风格")
+        // 0 the default (Apple Music-like), 1 Material (docs/ui/pages/player-expressive.md).
+        options: [{
+                value: 0,
+                text: qsTr("默认")
+            }, {
+                value: 1,
+                text: qsTr("Material")
+            }]
+        value: App.settings.playerStyle
+        onChosen: value => App.settings.playerStyle = value
+    }
+    ChoiceSetting {
         text: qsTr("明暗")
         options: [{
                 value: 0,
@@ -26,6 +39,9 @@ SettingsGroup {
         onChosen: value => App.settings.playerTheme = value
     }
     ChoiceSetting {
+        // The Material style has a solid background of its own; these rows are the
+        // default style's.
+        shown: App.settings.playerStyle === 0
         text: qsTr("背景")
         // Stored values: 0 flowing light, 3 still light, 1 blurred cover, 2 solid.
         options: [{
@@ -45,7 +61,7 @@ SettingsGroup {
         onChosen: value => App.settings.playerBackground = value
     }
     ChoiceSetting {
-        shown: App.settings.playerBackground === 0
+        shown: App.settings.playerStyle === 0 && App.settings.playerBackground === 0
         text: qsTr("流动速度")
         options: [{
                 value: 0,
@@ -61,11 +77,13 @@ SettingsGroup {
         onChosen: value => App.settings.playerFlowSpeed = value
     }
     SwitchSetting {
+        shown: App.settings.playerStyle === 0
         text: qsTr("封面立体倾斜")
         value: App.settings.playerTilt
         onSwitched: value => App.settings.playerTilt = value
     }
     ChoiceSetting {
+        shown: App.settings.playerStyle === 0
         text: qsTr("控制区位置")
         options: [{
                 value: 0,
@@ -78,6 +96,7 @@ SettingsGroup {
         onChosen: value => App.settings.playerControls = value
     }
     ChoiceSetting {
+        shown: App.settings.playerStyle === 0
         text: qsTr("歌名位置")
         options: [{
                 value: 0,
@@ -102,6 +121,7 @@ SettingsGroup {
         onChosen: value => App.settings.playerTimeRight = value
     }
     MenuSetting {
+        shown: App.settings.playerStyle === 0
         text: qsTr("自动隐藏控件")
         options: [{
                 value: 0,

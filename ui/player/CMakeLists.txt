@@ -28,6 +28,8 @@ qt_add_qml_module(cirrus_ui_player
         PlayerQueue.qml
         PlayerSheet.qml
         SongInfoDialog.qml
+        ExpressivePlayer.qml
+        ExpressiveNowPlaying.qml
 )
 
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)
