@@ -157,6 +157,12 @@ FocusScope {
 
     property rect miniBarRect: Qt.rect(0, height, width, 0)
     property rect miniCoverRect
+    // The mini player's capsule and cover as they look, where the panel and the flying
+    // cover start: the panel grows out of the capsule (its color and corners), the
+    // cover morphs from its shape (a circle) to the page cover's.
+    readonly property real miniBarRadius: (miniBar as Rectangle)?.radius ?? Theme.shape.large
+    readonly property color miniBarColor: (miniBar as Rectangle)?.color ?? Theme.color.surfaceContainer
+    readonly property real miniCoverRadius: (miniCover as CoverArt)?.radius ?? Theme.shape.small
     property rect coverRect
     property rect miniTitleRect
     property rect miniControlsRect
@@ -477,9 +483,24 @@ FocusScope {
                                                 Theme.motion.lerp(miniBarRect.width, width, p),
                                                 Theme.motion.lerp(miniBarRect.height, height, p))
                                       : Qt.rect(0, 0, width, height)
-    readonly property real panelRadius: Theme.motion.lerp(Theme.shape.large,
-                                                          appWindow.cornerRadius,
-                                                          Math.min(1, Math.max(0, p)))
+    // From the capsule's corners (round ends) to the window's, never rounder than half
+    // the panel's height.
+    readonly property real panelRadius: Math.min(panelRect.height / 2,
+                                                 Theme.motion.lerp(miniBarRadius,
+                                                                   appWindow.cornerRadius,
+                                                                   Math.min(1, Math.max(0, p))))
+
+    // The capsule floats: the panel keeps its shadow while it is still small.
+    Elevation {
+        x: panel.x
+        y: panel.y
+        width: panel.width
+        height: panel.height
+        radius: page.panelRadius
+        level: Theme.elevation.level1
+        opacity: page.miniBar && !page.reduced
+                 ? panel.opacity * (1 - Theme.motion.segment(page.p, 0.1, 0.4)) : 0
+    }
 
     Item {
         id: panel
@@ -488,9 +509,10 @@ FocusScope {
         width: Math.max(0, page.panelRect.width)
         height: Math.max(0, page.panelRect.height)
         clip: page.p < 0.999
-        // Over the last stretch near the mini player it fades, so the mini player shows
-        // through instead of appearing at once when the page is gone.
-        opacity: page.miniBar && !page.reduced ? Theme.motion.segment(page.p, 0, 0.3) : 1
+        // It starts as the capsule (same place, color and corners) and is opaque almost
+        // at once, so the capsule seems to open up; the capsule's own buttons fade under
+        // it over that first stretch, and come back the same way when it closes.
+        opacity: page.miniBar && !page.reduced ? Theme.motion.segment(page.p, 0, 0.08) : 1
 
         PlayerBackground {
             anchors.fill: parent
@@ -498,11 +520,11 @@ FocusScope {
             colors: colors
             flowing: App.player.status === Playback.Playing
         }
-        // The mini player's frame color, fading into the page's background.
+        // The capsule's color, fading into the page's background.
         Rectangle {
             anchors.fill: parent
             radius: page.panelRadius
-            color: Theme.color.surfaceContainer
+            color: page.miniBarColor
             opacity: page.miniBar && !page.reduced ? 1 - Theme.motion.segment(page.p, 0, 0.5) : 0
             visible: opacity > 0
         }
@@ -959,13 +981,23 @@ FocusScope {
 
     // The flying cover.
     CoverArt {
+        id: flyingCover
         readonly property real t: page.p
         visible: page.flying
         x: Theme.motion.lerp(page.miniCoverRect.x, page.coverRect.x, t)
         y: Theme.motion.lerp(page.miniCoverRect.y, page.coverRect.y, t)
         width: Theme.motion.lerp(page.miniCoverRect.width, page.coverRect.width, t)
         height: Theme.motion.lerp(page.miniCoverRect.height, page.coverRect.height, t)
-        radius: Theme.motion.lerp(Theme.shape.small, Theme.shape.medium, Math.min(1, Math.max(0, t)))
+        // The roundness relative to the size goes from the mini cover's to the page
+        // cover's, so a circle morphs into a rounded square along the way instead of
+        // turning square at the start (a radius lerp in pixels falls behind the size).
+        radius: {
+            const t = Math.min(1, Math.max(0, flyingCover.t));
+            const from = page.miniCoverRect.width > 0 ? page.miniCoverRadius / page.miniCoverRect.width
+                                                      : 0;
+            const to = page.coverRect.width > 0 ? cover.radius / page.coverRect.width : 0;
+            return width * Theme.motion.lerp(from, to, t);
+        }
         coverKey: App.player.current.coverKey
         // The page cover's decode (cached), not a new one every frame of the flight.
         sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
