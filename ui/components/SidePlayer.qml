@@ -22,6 +22,8 @@ Rectangle {
     property real topInset: 64
     // While the player page's copies fly, the cover is hidden.
     property bool flying: false
+    // The right corners, on the window's edge: the window's own radius.
+    property real edgeRadius: 0
 
     readonly property Item bar: root
     readonly property Item coverItem: coverBox
@@ -73,6 +75,8 @@ Rectangle {
     // A step above the frame (SurfaceContainer), so the pane reads as its own card.
     color: ColorScope.scheme.surfaceContainerHigh
     radius: Theme.shape.extraLarge
+    topRightRadius: edgeRadius
+    bottomRightRadius: edgeRadius
     clip: true
 
     CoverScheme {
@@ -107,18 +111,22 @@ Rectangle {
         clip: true
         ScrollBar.vertical: ScrollBar {}
 
-        Column {
+        // Laid out with anchors and implicit heights, not positioners: the player page
+        // measures the cover, title, buttons and seek bar while the shell is hidden
+        // behind it, when every `visible` here reads false and a Column would collapse.
+        Item {
             id: column
+            readonly property real gap: 16
             x: 28
             width: root.inner
-            spacing: 16
+            height: group.y + group.height + (upNext.shown > 0 ? 8 + upNext.height : 0)
 
             // The cover, as large as the pane leaves room for (the up-next list keeps
             // at least two rows on tall windows).
             Item {
                 id: coverBox
                 readonly property real rest: texts.height + seekBox.height + transport.height
-                                             + group.height + 4 * column.spacing + 24
+                                             + likeButton.implicitHeight + 4 * column.gap + 24
                 width: Math.round(Math.max(160, Math.min(root.inner, flick.height - rest - 160)))
                 height: width
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -167,12 +175,15 @@ Rectangle {
                 }
             }
 
-            Column {
+            Item {
                 id: texts
+                anchors.top: coverBox.bottom
+                anchors.topMargin: column.gap
                 width: parent.width
-                spacing: 2
+                height: titleText.implicitHeight + 2 + artistText.implicitHeight
 
                 Text {
+                    id: titleText
                     width: parent.width
                     text: App.player.current.title
                     elide: Text.ElideRight
@@ -180,7 +191,9 @@ Rectangle {
                     font: Fonts.font(700, 22)
                 }
                 Text {
+                    id: artistText
                     readonly property bool failed: App.player.status === Playback.Failed
+                    y: titleText.implicitHeight + 2
                     width: parent.width
                     text: failed ? App.player.failureMessage : App.player.current.artistText
                     elide: Text.ElideRight
@@ -197,10 +210,12 @@ Rectangle {
 
             // The seek bar and the times under it. Dragging only previews; the seek
             // happens on release (as the mini player's).
-            Column {
+            Item {
                 id: seekBox
+                anchors.top: texts.bottom
+                anchors.topMargin: column.gap
                 width: parent.width
-                spacing: 2
+                height: seek.implicitHeight + 2 + elapsed.implicitHeight
 
                 Slider {
                     id: seek
@@ -244,8 +259,9 @@ Rectangle {
                     }
                 }
                 Item {
+                    y: seek.implicitHeight + 2
                     width: parent.width
-                    height: elapsed.height
+                    height: elapsed.implicitHeight
                     Text {
                         id: elapsed
                         text: App.format.duration(seek.shownMs)
@@ -264,11 +280,14 @@ Rectangle {
             }
 
             // Previous, play or pause, next: the largest buttons of the shell.
-            Row {
+            Item {
                 id: transport
+                readonly property real spacing: 8
                 readonly property real side: Math.min(96, (width - 2 * spacing) / 3.4)
+                anchors.top: seekBox.bottom
+                anchors.topMargin: column.gap
                 width: parent.width
-                spacing: 8
+                height: playButton.implicitHeight
 
                 IconButton {
                     width: transport.side
@@ -283,6 +302,7 @@ Rectangle {
                 }
                 IconButton {
                     id: playButton
+                    x: transport.side + transport.spacing
                     width: transport.width - 2 * transport.side - 2 * transport.spacing
                     variant: Md.Filled
                     size: Md.Large
@@ -301,6 +321,7 @@ Rectangle {
                     }
                 }
                 IconButton {
+                    x: transport.width - width
                     width: transport.side
                     variant: Md.Tonal
                     size: Md.Large
@@ -316,7 +337,9 @@ Rectangle {
             // Play mode, like, volume, the queue and the player page.
             ConnectedButtonGroup {
                 id: group
-                readonly property int count: likeButton.visible ? 5 : 4
+                anchors.top: transport.bottom
+                anchors.topMargin: column.gap
+                readonly property int count: root.isSong ? 5 : 4
                 readonly property real itemWidth: (width - (count - 1) * spacing) / count
                 width: parent.width
 
@@ -380,6 +403,8 @@ Rectangle {
                 id: upNext
                 readonly property int first: App.player.queueIndex + 1
                 readonly property int shown: Math.max(0, Math.min(6, App.player.queue.count - first))
+                anchors.top: group.bottom
+                anchors.topMargin: 8
                 width: parent.width
                 visible: shown > 0
                 spacing: 8

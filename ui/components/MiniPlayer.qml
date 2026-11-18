@@ -178,17 +178,20 @@ Item {
                 opacity: root.flying ? 0 : 1
             }
 
-            Column {
+            // Implicit heights, not a Column: the player page measures this while the
+            // shell is hidden, when a Column of "invisible" lines would collapse.
+            Item {
                 id: texts
+                height: miniTitle.implicitHeight + 2 + miniArtist.implicitHeight
                 anchors.left: cover.right
                 anchors.leftMargin: 12
                 anchors.right: root.tier === 0 ? controls.left : root.showLike ? likeButton.left
                                                                                : center.left
                 anchors.rightMargin: root.showLike ? 8 : 16
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
 
                 Text {
+                    id: miniTitle
                     width: parent.width
                     text: App.player.current.title
                     elide: Text.ElideRight
@@ -196,7 +199,9 @@ Item {
                     font: Theme.type.titleSmall.font
                 }
                 Text {
+                    id: miniArtist
                     readonly property bool failed: App.player.status === Playback.Failed
+                    y: miniTitle.implicitHeight + 2
                     width: parent.width
                     text: failed ? App.player.failureMessage : App.player.current.artistText
                     elide: Text.ElideRight

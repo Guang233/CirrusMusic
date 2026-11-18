@@ -108,6 +108,7 @@ AppWindow {
         id: shell
         anchors.fill: parent
         topInset: window.titleHeight
+        windowCornerRadius: window.cornerRadius
         searchField: topBar.searchField
         covered: player.opened
         miniFlying: player.flying

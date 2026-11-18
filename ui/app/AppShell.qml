@@ -23,6 +23,8 @@ Item {
     // panel starts.
     property real topInset: 0
     readonly property real panelTop: 8
+    // The window's corner radius (rounded frames): what reaches its corners rounds so.
+    property real windowCornerRadius: 0
     readonly property bool canGoBack: stack.depth > 1
     readonly property bool canGoForward: forwardEntries.length > 0
     // Width the rail takes beside the panel (the floating rail does not push).
@@ -474,7 +476,7 @@ Item {
         id: panel
         x: shell.navWidth
         y: shell.panelTop
-        width: shell.width - x - 8 - dock.value * (shell.sideWidth + 8)
+        width: shell.width - x - 8 - dock.value * shell.sideWidth
         height: shell.height - y - 8
         radius: Theme.shape.largeIncreased
         color: Theme.color.surface
@@ -524,12 +526,13 @@ Item {
     }
     SidePlayer {
         id: sidePlayer
-        x: shell.width - dock.value * (shell.sideWidth + 8)
-        y: shell.panelTop
+        // Flush with the window's top, right and bottom edges.
+        x: shell.width - dock.value * shell.sideWidth
         width: shell.sideWidth
-        height: shell.height - y - 8
+        height: shell.height
         visible: dock.value > 0.001
-        topInset: shell.topInset - shell.panelTop
+        edgeRadius: shell.windowCornerRadius
+        topInset: shell.topInset
         flying: shell.miniFlying && shell.docked
         onOpenRequested: shell.playerRequested()
         onQueueRequested: shell.queueRequested()
