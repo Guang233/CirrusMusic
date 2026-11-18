@@ -111,7 +111,7 @@ Item {
 
         Row {
             anchors.right: parent.right
-            anchors.rightMargin: 4
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 

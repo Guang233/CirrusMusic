@@ -80,7 +80,7 @@ Item {
         maximumLineCount: 2
         elide: Text.ElideRight
         color: root.tones.ink
-        font: Theme.type.headlineMediumEmphasized.font
+        font: Fonts.font(600, 28)
         Accessible.role: Accessible.Heading
     }
     Text {
