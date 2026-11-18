@@ -107,6 +107,9 @@ class AppSettings : public QObject
 
     // The mini player's progress bar waves while playing (docs/ui/README.md §6.2).
     CIRRUS_SETTING(bool, miniWave, setMiniWave, "miniPlayer/wave", true)
+    // The mini player docked as a pane on the right of the window instead of floating
+    // over the bottom of the content (docs/ui/redesign-md3e.md §11).
+    CIRRUS_SETTING(bool, miniDocked, setMiniDocked, "miniPlayer/docked", false)
     // Player page (docs/ui/pages/player.md §9.2).
     // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
     CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)

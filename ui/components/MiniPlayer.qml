@@ -20,6 +20,8 @@ Item {
     readonly property bool active: App.player.status !== Playback.Empty
     // From the bottom edge of the area it floats over.
     property real bottomMargin: 16
+    // Out of the way (the player docked as a side pane): it slides away.
+    property bool hidden: false
     // What the bar covers at the bottom, with a little air above it.
     readonly property real reservedHeight: (implicitHeight + bottomMargin + 8) * reveal.value
     property real maximumWidth: 960
@@ -78,6 +80,8 @@ Item {
     signal openRequested
     // The player page with its queue panel.
     signal queueRequested
+    // The player as a pane on the right instead (SidePlayer).
+    signal dockRequested
     // The current song's comments (not for voices).
     signal commentsRequested
     // Liking needs the sign-in first.
@@ -94,7 +98,7 @@ Item {
 
     Spring {
         id: reveal
-        target: root.active ? 1 : 0
+        target: root.active && !root.hidden ? 1 : 0
         spec: Theme.motion.standardDefaultSpatial
         threshold: 0.001
         Component.onCompleted: snapTo(target)
@@ -441,9 +445,9 @@ Item {
             tone: Md.Tertiary
             restElevation: Theme.elevation.level2
             hoverElevation: Theme.elevation.level3
-            glyph: Symbols.lyrics
-            text: qsTr("播放页")
-            onClicked: root.openRequested()
+            glyph: Symbols.right_panel_open
+            text: qsTr("转为侧边播放器")
+            onClicked: root.dockRequested()
         }
     }
 }

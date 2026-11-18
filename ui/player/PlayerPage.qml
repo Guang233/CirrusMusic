@@ -21,6 +21,11 @@ FocusScope {
     // the page slides up instead.
     property Item miniBar
     property Item miniCover
+    // A mini cover cut to a shape (MaterialShape, -1 none) and turned, as the docked
+    // side player's is; `miniCoverCorner` its corner radius when it isn't a CoverArt.
+    property int miniCoverShape: -1
+    property real miniCoverRotation: 0
+    property real miniCoverCorner: -1
     // The mini player's title, buttons and seek bar: they fly to the page's title,
     // transport buttons and progress bar, cross-fading with them.
     property Item miniTitle
@@ -162,7 +167,11 @@ FocusScope {
     // cover morphs from its shape (a circle) to the page cover's.
     readonly property real miniBarRadius: (miniBar as Rectangle)?.radius ?? Theme.shape.large
     readonly property color miniBarColor: (miniBar as Rectangle)?.color ?? Theme.color.surfaceContainer
-    readonly property real miniCoverRadius: (miniCover as CoverArt)?.radius ?? Theme.shape.small
+    readonly property real miniCoverRadius: miniCoverCorner >= 0 ? miniCoverCorner
+                                          : (miniCover as CoverArt)?.radius ?? Theme.shape.small
+    // The shape and turn the flight starts from, taken when it starts.
+    property int flyShape: -1
+    property real flyTurn: 0
     property rect coverRect
     property rect miniTitleRect
     property rect miniControlsRect
@@ -174,6 +183,10 @@ FocusScope {
             miniBarRect = rectOf(miniBar);
         if (miniCover)
             miniCoverRect = rectOf(miniCover);
+        flyShape = miniCoverShape;
+        // The nearest upright turn of the shape is where it lands (its symmetry).
+        const turn = miniCoverRotation % 360;
+        flyTurn = turn > 180 ? turn - 360 : turn;
         miniTitleRect = rectOf(miniTitle);
         miniControlsRect = rectOf(miniControls);
         miniSeekRect = rectOf(miniSeek);
@@ -979,11 +992,25 @@ FocusScope {
         mode: 2
     }
 
-    // The flying cover.
+    // The flying cover. From a shaped mini cover, a copy cut to that shape (and turned
+    // as it was) fades into it over the first part of the way.
+    CoverArt {
+        visible: page.flying && page.flyShape >= 0
+        x: flyingCover.x
+        y: flyingCover.y
+        width: flyingCover.width
+        height: flyingCover.height
+        rotation: page.flyTurn * (1 - Math.min(1, Math.max(0, flyingCover.t)))
+        opacity: 1 - Theme.motion.segment(flyingCover.t, 0, 0.4)
+        shape: page.flyShape
+        coverKey: App.player.current.coverKey
+        sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
+    }
     CoverArt {
         id: flyingCover
         readonly property real t: page.p
         visible: page.flying
+        opacity: page.flyShape >= 0 ? Theme.motion.segment(t, 0, 0.4) : 1
         x: Theme.motion.lerp(page.miniCoverRect.x, page.coverRect.x, t)
         y: Theme.motion.lerp(page.miniCoverRect.y, page.coverRect.y, t)
         width: Theme.motion.lerp(page.miniCoverRect.width, page.coverRect.width, t)

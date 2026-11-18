@@ -51,12 +51,29 @@ Item {
     property bool covered: false
     // For the player page's shared elements (MiniPlayer.bar, coverItem, titleItem,
     // controlsItem, seekItem, flying).
-    readonly property Item miniBar: miniPlayer.bar
-    readonly property Item miniCover: miniPlayer.coverItem
-    readonly property Item miniTitle: miniPlayer.titleItem
-    readonly property Item miniControls: miniPlayer.controlsItem
-    readonly property Item miniSeek: miniPlayer.seekItem
-    property alias miniFlying: miniPlayer.flying
+    // The player docked as a pane on the right (SidePlayer, App.settings.miniDocked)
+    // where the content keeps at least 640 beside it; else the floating mini player.
+    readonly property real sideWidth: Math.round(Math.max(340, Math.min(396, width * 0.27)))
+    readonly property bool canDock: width - navWidth - sideWidth - 24 >= 640
+    readonly property bool docked: App.settings.miniDocked && canDock
+    readonly property bool sideShown: docked && App.player.status !== Playback.Empty
+    // The content panel's right edge and middle, in the shell (the top bar centres the
+    // search on it).
+    readonly property real panelRight: panel.x + panel.width
+    readonly property real panelCenter: panel.x + panel.width / 2
+    // Where the player page grows from and its shared elements fly from: the side
+    // pane's while docked, else the mini player's.
+    readonly property Item miniBar: docked ? sidePlayer.bar : miniPlayer.bar
+    readonly property Item miniCover: docked ? sidePlayer.coverItem : miniPlayer.coverItem
+    readonly property Item miniTitle: docked ? sidePlayer.titleItem : miniPlayer.titleItem
+    readonly property Item miniControls: docked ? sidePlayer.controlsItem : miniPlayer.controlsItem
+    readonly property Item miniSeek: docked ? sidePlayer.seekItem : miniPlayer.seekItem
+    // The side pane's cover is cut to a shape and turns: the page's flying cover
+    // starts from it (-1: none, a plain rounded cover).
+    readonly property int miniCoverShape: docked ? sidePlayer.coverShape : -1
+    readonly property real miniCoverRotation: docked ? sidePlayer.coverRotation : 0
+    readonly property real miniCoverCorner: docked ? Theme.shape.extraLarge : -1
+    property bool miniFlying: false
 
     // The mini player asks for the player page, or for it with the queue open.
     signal playerRequested
@@ -212,7 +229,14 @@ Item {
             snackbar.show(text);
     }
     function focusMiniPlayer() {
-        miniPlayer.takeFocus();
+        if (docked)
+            sidePlayer.takeFocus();
+        else
+            miniPlayer.takeFocus();
+    }
+    // The player docked on the right, or floating again (remembered).
+    function setDocked(on: bool): void {
+        App.settings.miniDocked = on;
     }
 
     // "收藏到歌单" for `keys`: picks one of the account's playlists (sign-in first).
@@ -450,7 +474,7 @@ Item {
         id: panel
         x: shell.navWidth
         y: shell.panelTop
-        width: shell.width - x - 8
+        width: shell.width - x - 8 - dock.value * (shell.sideWidth + 8)
         height: shell.height - y - 8
         radius: Theme.shape.largeIncreased
         color: Theme.color.surface
@@ -491,9 +515,33 @@ Item {
         }
     }
 
+    // Slides the side pane in and narrows the panel (the rail's push, §5).
+    Spring {
+        id: dock
+        target: shell.sideShown ? 1 : 0
+        spec: Theme.motion.defaultSpatial
+        Component.onCompleted: snapTo(target)
+    }
+    SidePlayer {
+        id: sidePlayer
+        x: shell.width - dock.value * (shell.sideWidth + 8)
+        y: shell.panelTop
+        width: shell.sideWidth
+        height: shell.height - y - 8
+        visible: dock.value > 0.001
+        topInset: shell.topInset - shell.panelTop
+        flying: shell.miniFlying && shell.docked
+        onOpenRequested: shell.playerRequested()
+        onQueueRequested: shell.queueRequested()
+        onLoginRequested: shell.openLogin()
+    }
+
     MiniPlayer {
         id: miniPlayer
+        hidden: shell.docked
+        flying: shell.miniFlying && !shell.docked
         onOpenRequested: shell.playerRequested()
+        onDockRequested: shell.setDocked(true)
         onQueueRequested: shell.queueRequested()
         onLoginRequested: shell.openLogin()
         onCommentsRequested: {

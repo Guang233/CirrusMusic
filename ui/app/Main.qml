@@ -127,6 +127,9 @@ AppWindow {
         appWindow: window
         miniBar: shell.miniBar
         miniCover: shell.miniCover
+        miniCoverShape: shell.miniCoverShape
+        miniCoverRotation: shell.miniCoverRotation
+        miniCoverCorner: shell.miniCoverCorner
         miniTitle: shell.miniTitle
         miniControls: shell.miniControls
         miniSeek: shell.miniSeek

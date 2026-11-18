@@ -68,9 +68,8 @@ Item {
         id: field
         // Centred on the panel below where there is room, else after back and forward.
         readonly property real minX: history.x + history.width + 12
-        readonly property real maxRight: actionRow.x - 16
-        readonly property real panelCenter: bar.shell.navWidth
-                                            + (bar.shell.width - bar.shell.navWidth - 8) / 2
+        readonly property real maxRight: Math.min(actionRow.x, bar.shell.panelRight) - 16
+        readonly property real panelCenter: bar.shell.panelCenter
         x: Math.max(minX, Math.min(maxRight - width, panelCenter - width / 2))
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(0, Math.min(560, maxRight - minX))
@@ -93,5 +92,19 @@ Item {
         x: bar.width - width - 8
         anchors.verticalCenter: parent.verticalCenter
         spacing: 4
+
+        // Over the docked side player's top: its own buttons (the row lies over it).
+        IconButton {
+            visible: bar.shell.sideShown
+            glyph: Symbols.open_in_full
+            text: qsTr("打开播放页")
+            onClicked: bar.shell.playerRequested()
+        }
+        IconButton {
+            visible: bar.shell.sideShown
+            glyph: Symbols.right_panel_close
+            text: qsTr("变回悬浮播放条")
+            onClicked: bar.shell.setDocked(false)
+        }
     }
 }

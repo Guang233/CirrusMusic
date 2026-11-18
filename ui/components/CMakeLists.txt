@@ -18,6 +18,7 @@ qt_add_qml_module(cirrus_ui_components
         CoverArt.qml
         PlaybackClock.qml
         MiniPlayer.qml
+        SidePlayer.qml
         MiniVolume.qml
         Skeleton.qml
         ListSkeleton.qml
