@@ -126,12 +126,36 @@ Item {
             radius: height / 2
             color: ColorScope.scheme.primaryContainer
 
-            TapHandler {
-                onTapped: root.openRequested()
-            }
-            // A click anywhere free opens the player page.
-            HoverHandler {
+            // A click anywhere free opens the player page. A MouseArea, not a TapHandler:
+            // it takes the press, so what floats under the bar (a song table's rows) is
+            // not clicked or hovered through it.
+            MouseArea {
+                id: cardArea
+                // Over the bar itself, the cover or the title, not over a button.
+                property bool free: false
+                function update(): void {
+                    const at = card.childAt(mouseX, mouseY);
+                    free = containsMouse && (at === null || at === cardArea || at === cover
+                                             || at === texts);
+                }
+                anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                onPositionChanged: update()
+                onContainsMouseChanged: update()
+                onClicked: root.openRequested()
+            }
+            HoverHandler {
+                blocking: true
+            }
+            StateLayer {
+                anchors.fill: parent
+                radius: card.radius
+                color: root.content
+                hovered: cardArea.free
+                pressed: cardArea.pressed
+                pressX: cardArea.mouseX
+                pressY: cardArea.mouseY
             }
 
             CoverArt {
