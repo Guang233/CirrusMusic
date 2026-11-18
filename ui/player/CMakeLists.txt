@@ -30,6 +30,8 @@ qt_add_qml_module(cirrus_ui_player
         SongInfoDialog.qml
         ExpressivePlayer.qml
         ExpressiveNowPlaying.qml
+        ExpressiveSeek.qml
+        ExpressiveTones.qml
 )
 
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)

@@ -23,6 +23,9 @@ T.Button {
     // Standard icon buttons on a background of their own (the player page): this color
     // for the icon and the state layer, when set.
     property color tint: "transparent"
+    // Standard icon buttons with a container of the page's own tone (the player page's
+    // Material style): this color unselected; selected, Primary as a filled toggle.
+    property color containerTint: "transparent"
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
@@ -49,7 +52,8 @@ T.Button {
 
     readonly property color containerColor: {
         if (!enabled)
-            return variant === Md.Standard || variant === Md.Outlined && !toggled
+            return variant === Md.Standard && containerTint.a > 0 ? Qt.alpha(containerTint, containerTint.a * 0.5)
+                 : variant === Md.Standard || variant === Md.Outlined && !toggled
                     ? "transparent" : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer);
         switch (variant) {
         case Md.Filled:
@@ -62,12 +66,14 @@ T.Button {
             return Theme.mix(Qt.alpha(ColorScope.scheme.inverseSurface, 0), ColorScope.scheme.inverseSurface,
                              selection.value);
         default:
-            return "transparent";
+            return containerTint.a > 0 ? Theme.mix(containerTint, ColorScope.scheme.primary, selection.value)
+                                       : "transparent";
         }
     }
     readonly property color contentColor: {
         if (!enabled)
-            return Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent);
+            return Qt.alpha(variant === Md.Standard && tint.a > 0 ? tint : ColorScope.scheme.onSurface,
+                            Theme.state.disabledContent);
         switch (variant) {
         case Md.Filled:
             return checkable ? Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
@@ -81,6 +87,8 @@ T.Button {
                              selection.value);
         default:
             return inverse ? ColorScope.scheme.inverseOnSurface
+                 : containerTint.a > 0 ? Theme.mix(tint.a > 0 ? tint : ColorScope.scheme.onSurfaceVariant,
+                                                   ColorScope.scheme.onPrimary, selection.value)
                  : tint.a > 0 ? tint
                            : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.primary,
                                        selection.value);

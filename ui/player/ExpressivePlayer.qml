@@ -6,13 +6,13 @@ import Cirrus.Components
 import Cirrus.Presentation
 import Cirrus.Window
 
-// The player page in the Material style (docs/ui/pages/player-expressive.md): on the
-// cover scheme's Surface, a top app bar, the now-playing card (PrimaryContainer) and,
-// with lyrics, a lyrics card (SurfaceContainer) beside it, and a floating toolbar for
-// the play mode, volume, lyrics, the queue and the display settings. Narrow windows
-// with lyrics stack the lyrics card over a compact now-playing strip. The cards glide
-// when lyrics are shown or hidden. PlayerPage owns the opening transition, the side
-// panels and the keys; this item only lays out and asks.
+// The player page in the Material style (docs/ui/pages/player-expressive.md): the whole
+// page one color from the cover (PrimaryContainer; PlayerPage paints it) and everything
+// on it a tone of the same hue. A top bar (collapse, the views as connected buttons, the
+// song menu), the now-playing column and, with lyrics, the lyrics straight on the color
+// beside it. Narrow windows with lyrics show the lyrics alone over a seek pill. The
+// column glides when lyrics are shown or hidden. PlayerPage owns the opening
+// transition, the side panels and the keys; this item only lays out and asks.
 Item {
     id: root
 
@@ -26,45 +26,36 @@ Item {
     // Layout changes glide (off while the page opens or the window resizes).
     property bool animate: false
 
-    readonly property bool wide: width >= 1000
+    readonly property ExpressiveTones tones: ExpressiveTones {
+        scheme: root.colors.scheme
+    }
+    readonly property bool wide: width >= 900
     readonly property bool lyrics: view === 1
-    readonly property bool compactCard: !wide && lyrics
-    readonly property Item coverItem: card.coverItem
-    readonly property int coverShape: card.coverShape
-    readonly property real coverRotation: card.coverRotation
-    readonly property real coverRadius: card.coverRadius
-    readonly property Item playButton: card.playButton
+    readonly property bool split: wide && lyrics
+    readonly property bool lyricsOnly: !wide && lyrics
+    readonly property bool playing: App.player.status === Playback.Playing
+    readonly property bool loading: App.player.status === Playback.Loading
+
+    // What PlayerPage reads for the cover's flight, the focus and the side panels.
+    readonly property Item coverItem: column.coverItem
+    readonly property int coverShape: -1
+    readonly property real coverRotation: 0
+    readonly property real coverRadius: column.coverRadius
+    readonly property Item playButton: lyricsOnly ? pillPlay : column.playButton
     readonly property Item queueButton: queueToggle
     readonly property Item settingsButton: settingsToggle
-
-    // Where the cards and the toolbar go.
     readonly property real contentTop: 72
-    // The card's height below the cover, taken a turn later: it depends on the card's
-    // width (the title wraps), which follows cardRect.
-    property real cardRest: 0
-    readonly property real toolbarHeight: 64
-    readonly property rect cardRect: {
-        if (compactCard) {
-            const y = height - 16 - toolbarHeight - 16 - 96;
-            return Qt.rect(24, y, width - 48, 96);
-        }
-        if (wide && lyrics) {
-            const w = Math.round(Math.max(480, Math.min(600, width * 0.42)));
-            return Qt.rect(24, contentTop, w, card.coverSizeFor(w, height - contentTop - 36, w - 200));
-        }
-        const w = Math.min(640, width - 48);
-        return Qt.rect((width - w) / 2, contentTop, w,
-                       card.coverSizeFor(w, height - contentTop - 16 - toolbarHeight - 32, w - 296));
-    }
-    readonly property rect lyricsRect: compactCard
-                                       ? Qt.rect(24, contentTop, width - 48, cardRect.y - 16 - contentTop)
-                                       : Qt.rect(cardRect.x + cardRect.width + 16, contentTop,
-                                                 width - cardRect.x - cardRect.width - 16 - 24,
-                                                 cardRect.height)
-    readonly property real toolbarCenter: wide && lyrics ? lyricsRect.x + lyricsRect.width / 2
-                                                         : width / 2
-    readonly property real toolbarY: wide && lyrics ? lyricsRect.y + lyricsRect.height - 16 - toolbarHeight
-                                                    : height - 16 - toolbarHeight
+    readonly property real sheetBottom: height - 24
+    readonly property color sheetColor: tones.tray
+
+    // The column's area (the left 46% beside lyrics, else the page), width and place.
+    readonly property real area: split ? Math.round(width * 0.46) : width
+    readonly property real columnWidth: Math.min(440, area - (split ? 64 : 48))
+    readonly property real coverSize: Math.round(Math.max(200, Math.min(columnWidth,
+                                          height - contentTop - 24 - column.restHeight)))
+    readonly property real columnLeft: Math.round((area - columnWidth) / 2)
+    readonly property real columnTop: Math.round(contentTop + Math.max(0, (height - contentTop - 24
+                                                                           - column.implicitHeight) / 2))
 
     signal closeRequested
     signal fullScreenRequested
@@ -78,53 +69,17 @@ Item {
     signal copyRequested
     signal loginRequested
 
-    function settleRest(): void {
-        cardRest = card.restHeight;
+    // A spring that follows `to`, or jumps there while the layout doesn't animate.
+    component Follow: Spring {
+        property real to
+        spec: Theme.motion.defaultSpatial
+        onToChanged: root.animate ? target = to : snapTo(to)
+        Component.onCompleted: snapTo(to)
     }
 
-    // An item placed on `to`, gliding there on a spring while `animate`.
-    component Glide: Item {
-        id: glide
-        property rect to
-        function follow(): void {
-            if (root.animate) {
-                gx.target = to.x;
-                gy.target = to.y;
-                gw.target = to.width;
-                gh.target = to.height;
-            } else {
-                gx.snapTo(to.x);
-                gy.snapTo(to.y);
-                gw.snapTo(to.width);
-                gh.snapTo(to.height);
-            }
-        }
-        x: gx.value
-        y: gy.value
-        width: gw.value
-        height: gh.value
-        onToChanged: follow()
-        Component.onCompleted: follow()
-        Spring {
-            id: gx
-            spec: Theme.motion.defaultSpatial
-        }
-        Spring {
-            id: gy
-            spec: Theme.motion.defaultSpatial
-        }
-        Spring {
-            id: gw
-            spec: Theme.motion.defaultSpatial
-        }
-        Spring {
-            id: gh
-            spec: Theme.motion.defaultSpatial
-        }
-    }
-
-    // The top app bar; moves the window like the shell's title bar row.
+    // The top bar; moves the window like the shell's title bar row.
     TitleBar {
+        id: topBar
         anchors.left: parent.left
         anchors.right: parent.right
         height: root.contentTop
@@ -132,42 +87,108 @@ Item {
         frame: root.appWindow.frame
         windowControls: root.appWindow.titleBar !== TitleBarMode.System
         windowButtons: root.appWindow.customFrame && root.appWindow.visibility !== Window.FullScreen
-        buttonTint: ColorScope.scheme.onSurface
-        leadingInset: root.appWindow.titleBar === TitleBarMode.Custom && root.appWindow.macOS ? 72 : 12
+        buttonTint: root.tones.ink
+        leadingInset: root.appWindow.titleBar === TitleBarMode.Custom && root.appWindow.macOS ? 72 : 16
 
         IconButton {
             id: closeButton
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+            containerTint: root.tones.tray
+            tint: root.tones.ink
             glyph: Symbols.expand_more
             text: qsTr("关闭播放页")
             onClicked: root.closeRequested()
         }
         Text {
             anchors.left: closeButton.right
-            anchors.leftMargin: 8
+            anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             text: qsTr("正在播放")
-            color: ColorScope.scheme.onSurface
-            font: Theme.type.titleMedium.font
+            color: root.tones.ink
+            font: Theme.type.titleLarge.font
         }
-        IconButton {
+
+        Row {
             anchors.right: parent.right
             anchors.rightMargin: 4
             anchors.verticalCenter: parent.verticalCenter
-            glyph: root.appWindow.visibility === Window.FullScreen ? Symbols.fullscreen_exit
-                                                                   : Symbols.fullscreen
-            text: root.appWindow.visibility === Window.FullScreen ? qsTr("退出全屏") : qsTr("全屏")
-            onClicked: root.fullScreenRequested()
+            spacing: 8
+
+            // The views and panels: connected toggles, selected in Primary.
+            ConnectedButtonGroup {
+                anchors.verticalCenter: parent.verticalCenter
+
+                component ViewToggle: IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    widthMode: Md.Wide
+                    containerTint: root.tones.tray
+                    tint: root.tones.ink
+                    checkable: true
+                }
+                ViewToggle {
+                    checked: root.lyrics
+                    glyph: Symbols.lyrics
+                    text: qsTr("歌词")
+                    onClicked: {
+                        checked = Qt.binding(() => root.lyrics);
+                        root.viewRequested(root.lyrics ? 0 : 1);
+                    }
+                }
+                ViewToggle {
+                    id: queueToggle
+                    checked: root.sheet === 1
+                    glyph: Symbols.queue_music
+                    text: qsTr("播放队列")
+                    onClicked: {
+                        checked = Qt.binding(() => root.sheet === 1);
+                        root.sheetRequested(root.sheet === 1 ? 0 : 1);
+                    }
+                }
+                ViewToggle {
+                    id: settingsToggle
+                    visible: root.hasSettings
+                    checked: root.sheet === 2
+                    glyph: Symbols.tune
+                    text: qsTr("显示设置")
+                    onClicked: {
+                        checked = Qt.binding(() => root.sheet === 2);
+                        root.sheetRequested(root.sheet === 2 ? 0 : 2);
+                    }
+                }
+            }
+            IconButton {
+                id: moreButton
+                anchors.verticalCenter: parent.verticalCenter
+                containerTint: root.tones.tray
+                tint: root.tones.ink
+                glyph: Symbols.more_vert
+                text: qsTr("更多")
+                onClicked: songMenu.popup(moreButton, 0, moreButton.height + 4)
+            }
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                containerTint: root.tones.tray
+                tint: root.tones.ink
+                glyph: root.appWindow.visibility === Window.FullScreen ? Symbols.fullscreen_exit
+                                                                       : Symbols.fullscreen
+                text: root.appWindow.visibility === Window.FullScreen ? qsTr("退出全屏") : qsTr("全屏")
+                onClicked: root.fullScreenRequested()
+            }
         }
     }
 
-    // The lyrics card: the page's lyrics view (the same settings as the default style).
-    Glide {
-        id: lyricsBox
-        to: root.lyricsRect
+    // The lyrics, straight on the page's color (the same settings as the default style).
+    LyricsView {
+        x: root.split ? root.area + 16 : 32
+        y: root.contentTop
+        width: root.split ? root.width - x - 48 : root.width - 64
+        height: root.height - y - (root.split ? 24 : 24 + 72 + 16)
+        colors: root.colors
+        positionMs: root.positionMs
         opacity: lyricsFade.value
         visible: opacity > 0.01
+        onCopyRequested: root.copyRequested()
 
         Spring {
             id: lyricsFade
@@ -175,170 +196,139 @@ Item {
             spec: Theme.motion.defaultEffects
             Component.onCompleted: snapTo(target)
         }
-        Rectangle {
-            anchors.fill: parent
-            radius: 48
-            color: ColorScope.scheme.surfaceContainer
-            clip: true
+    }
 
-            LyricsView {
-                anchors.fill: parent
-                anchors.leftMargin: 32
-                anchors.rightMargin: 32
-                // Clear of the toolbar floating over the bottom.
-                anchors.bottomMargin: root.wide ? root.toolbarHeight + 16 : 0
-                colors: root.colors
-                positionMs: root.positionMs
-                visible: root.lyrics || lyricsFade.value > 0.01
-                onCopyRequested: root.copyRequested()
-            }
+    ExpressiveNowPlaying {
+        id: column
+        x: glideX.value
+        y: glideY.value
+        width: root.columnWidth
+        tones: root.tones
+        coverSize: root.coverSize
+        positionMs: root.positionMs
+        flying: root.flying
+        opacity: columnFade.value
+        visible: opacity > 0.01
+        enabled: !root.lyricsOnly
+        onArtistRequested: key => root.artistRequested(key)
+        onLoginRequested: root.loginRequested()
+
+        Follow {
+            id: glideX
+            to: root.columnLeft
+        }
+        Follow {
+            id: glideY
+            to: root.columnTop
+        }
+        Spring {
+            id: columnFade
+            target: root.lyricsOnly ? 0 : 1
+            spec: Theme.motion.defaultEffects
+            Component.onCompleted: snapTo(target)
         }
     }
 
-    Glide {
-        to: root.cardRect
+    // Narrow windows with lyrics: play, the times and the seek bar, next, on a pill.
+    Rectangle {
+        id: pill
+        x: 24
+        y: root.height - 24 - height
+        width: root.width - 48
+        height: 72
+        radius: height / 2
+        color: root.tones.tray
+        opacity: 1 - columnFade.value
+        visible: opacity > 0.01
+        enabled: root.lyricsOnly
 
-        ExpressiveNowPlaying {
-            id: card
-            // The cover's edge for a card `w` wide with `room` in height: what is
-            // left after the rest, within 160 and `widest`; the card's height.
-            function coverSizeFor(w: real, room: real, widest: real): real {
-                return Math.round(Math.max(160, Math.min(widest, room - root.cardRest))) + root.cardRest;
-            }
-            anchors.fill: parent
-            coverSize: Math.max(0, parent.height - restHeight)
-            compact: root.compactCard
-            positionMs: root.positionMs
-            flying: root.flying
-            onRestHeightChanged: Qt.callLater(root.settleRest)
-            Component.onCompleted: root.cardRest = restHeight
-            onArtistRequested: key => root.artistRequested(key)
-            onAlbumRequested: key => root.albumRequested(key)
-            onSongRequested: root.songRequested()
-            onCommentsRequested: root.commentsRequested()
-            onAddToPlaylistRequested: (key, title) => root.addToPlaylistRequested(key, title)
-            onCopyRequested: root.copyRequested()
-            onLoginRequested: root.loginRequested()
-        }
-    }
-
-    // The floating toolbar (MD3E, standard colors): the play mode and volume, then the
-    // views. Floating, so it has a shadow.
-    Item {
-        id: toolbar
-        readonly property int mode: App.player.repeat === Playback.RepeatOne ? 1
-                                  : App.player.order === Playback.Shuffle ? 2
-                                  : App.player.repeat === Playback.RepeatAll ? 0 : 3
-        function setMode(next: int): void {
-            switch (next) {
-            case 0:
-                App.player.setOrder(Playback.Sequential);
-                App.player.setRepeat(Playback.RepeatAll);
-                break;
-            case 1:
-                App.player.setRepeat(Playback.RepeatOne);
-                break;
-            case 2:
-                App.player.setOrder(Playback.Shuffle);
-                App.player.setRepeat(Playback.RepeatAll);
-                break;
-            default:
-                App.player.setOrder(Playback.Sequential);
-                App.player.setRepeat(Playback.RepeatOff);
-            }
-        }
-        width: tools.width + 16
-        height: root.toolbarHeight
-        x: Math.round(tbx.value - width / 2)
-        y: tby.value
-
-        Spring {
-            id: tbx
-            spec: Theme.motion.defaultSpatial
-            readonly property real to: root.toolbarCenter
-            onToChanged: root.animate ? target = to : snapTo(to)
-            Component.onCompleted: snapTo(to)
-        }
-        Spring {
-            id: tby
-            spec: Theme.motion.defaultSpatial
-            readonly property real to: root.toolbarY
-            onToChanged: root.animate ? target = to : snapTo(to)
-            Component.onCompleted: snapTo(to)
-        }
-
-        Elevation {
-            anchors.fill: bar
-            level: Theme.elevation.level3
-            radius: bar.radius
-        }
-        Rectangle {
-            id: bar
-            anchors.fill: parent
-            radius: height / 2
-            color: ColorScope.scheme.surfaceContainerHighest
-        }
-
-        // A view the toolbar toggles: selected, it takes a square tonal container.
-        component Toggle: IconButton {
-            anchors.verticalCenter: parent.verticalCenter
-            variant: checked ? Md.Tonal : Md.Standard
-            checkable: true
-        }
-
-        Row {
-            id: tools
+        IconButton {
+            id: pillPlay
             x: 8
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
+            variant: Md.Filled
+            size: Md.Medium
+            shape: root.playing || root.loading ? Md.Square : Md.Round
+            glyph: root.playing || root.loading ? Symbols.pause : Symbols.play_arrow
+            iconFill: 1
+            text: root.playing ? qsTr("暂停") : qsTr("播放")
+            onClicked: App.player.playPause()
+        }
+        Text {
+            id: pillElapsed
+            anchors.left: pillPlay.right
+            anchors.leftMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            text: App.format.duration(pillSeek.shownMs)
+            color: root.tones.inkVariant
+            font: Fonts.tabular(Theme.type.labelLarge.font)
+        }
+        ExpressiveSeek {
+            id: pillSeek
+            anchors.left: pillElapsed.right
+            anchors.leftMargin: 12
+            anchors.right: pillTotal.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            tones: root.tones
+            positionMs: root.positionMs
+            playing: root.playing
+        }
+        Text {
+            id: pillTotal
+            anchors.right: pillNext.left
+            anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            text: App.player.durationMs <= 0 ? "--:--" : App.format.duration(App.player.durationMs)
+            color: root.tones.inkVariant
+            font: Fonts.tabular(Theme.type.labelLarge.font)
+        }
+        IconButton {
+            id: pillNext
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            size: Md.Medium
+            containerTint: root.tones.trayButton
+            tint: root.tones.ink
+            enabled: App.player.canNext
+            glyph: Symbols.skip_next
+            iconFill: 1
+            text: qsTr("下一首")
+            onClicked: App.player.next()
+        }
+    }
 
-            IconButton {
-                anchors.verticalCenter: parent.verticalCenter
-                glyph: [Symbols.repeat, Symbols.repeat_one, Symbols.shuffle,
-                    Symbols.playlist_play][toolbar.mode]
-                text: [qsTr("列表循环"), qsTr("单曲循环"), qsTr("随机播放"),
-                    qsTr("顺序播放")][toolbar.mode]
-                onClicked: toolbar.setMode((toolbar.mode + 1) % 4)
-            }
-            MiniVolume {
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: 24
-                color: ColorScope.scheme.outlineVariant
-            }
-            Toggle {
-                checked: root.lyrics
-                glyph: Symbols.lyrics
-                text: qsTr("歌词")
-                onClicked: {
-                    checked = Qt.binding(() => root.lyrics);
-                    root.viewRequested(root.lyrics ? 0 : 1);
-                }
-            }
-            Toggle {
-                id: queueToggle
-                checked: root.sheet === 1
-                glyph: Symbols.queue_music
-                text: qsTr("播放队列")
-                onClicked: {
-                    checked = Qt.binding(() => root.sheet === 1);
-                    root.sheetRequested(root.sheet === 1 ? 0 : 1);
-                }
-            }
-            Toggle {
-                id: settingsToggle
-                visible: root.hasSettings
-                checked: root.sheet === 2
-                glyph: Symbols.tune
-                text: qsTr("显示设置")
-                onClicked: {
-                    checked = Qt.binding(() => root.sheet === 2);
-                    root.sheetRequested(root.sheet === 2 ? 0 : 2);
-                }
-            }
+    Menu {
+        id: songMenu
+        MenuItem {
+            text: qsTr("查看专辑")
+            glyph: Symbols.album
+            enabled: App.player.current.albumKey !== ""
+            onTriggered: root.albumRequested(App.player.current.albumKey)
+        }
+        MenuItem {
+            text: qsTr("歌曲详情")
+            glyph: Symbols.info
+            enabled: !App.player.current.voice
+            onTriggered: root.songRequested()
+        }
+        MenuItem {
+            text: qsTr("评论")
+            glyph: Symbols.comment
+            enabled: !App.player.current.voice
+            onTriggered: root.commentsRequested()
+        }
+        MenuItem {
+            text: qsTr("加入歌单")
+            glyph: Symbols.playlist_add
+            enabled: !App.player.current.voice
+            onTriggered: root.addToPlaylistRequested(App.player.current.key, App.player.current.title)
+        }
+        MenuItem {
+            text: qsTr("复制歌曲信息")
+            glyph: Symbols.content_copy
+            onTriggered: root.copyRequested()
         }
     }
 }
