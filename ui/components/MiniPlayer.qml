@@ -5,7 +5,9 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // The persistent mini player: a floating toolbar over the bottom of the content panel
-// with a button beside it that opens the player page (docs/ui/redesign-md3e.md §8).
+// with a button beside it that docks the player as a side pane instead (SidePlayer,
+// shown where there is room; docs/ui/redesign-md3e.md §8, §11). A click on the bar's
+// free space opens the player page.
 // The MD3E floating toolbar in its vibrant colors (androidx FloatingToolbarTokens): 64
 // high, fully round, PrimaryContainer, 16 from the edge, 8 inside each end, the FAB 8
 // beside it. One row: the cover and title, the like, a seek bar that waves while
@@ -22,10 +24,13 @@ Item {
     property real bottomMargin: 16
     // Out of the way (the player docked as a side pane): it slides away.
     property bool hidden: false
+    // There is room to dock it as a side pane: the button beside it offers that.
+    property bool canDock: true
     // What the bar covers at the bottom, with a little air above it.
     readonly property real reservedHeight: (implicitHeight + bottomMargin + 8) * reveal.value
     property real maximumWidth: 960
-    readonly property real barWidth: Math.max(0, Math.min(maximumWidth, width - 32 - fab.width - 8))
+    readonly property real barWidth: Math.max(0, Math.min(maximumWidth, width - 32
+                                                          - (canDock ? fab.width + 8 : 0)))
     // 2 wide: the seek bar with the times, and the extras; 1 medium: a shorter seek bar,
     // the time over the handle while dragging; 0 narrow: no seek bar, no "previous", a
     // progress ring around the play button.
@@ -114,7 +119,7 @@ Item {
         id: group
         x: Math.round((root.width - width) / 2)
         y: (1 - reveal.value) * (height + root.bottomMargin + 16)
-        width: root.barWidth + 8 + fab.width
+        width: root.barWidth + (root.canDock ? 8 + fab.width : 0)
         height: root.implicitHeight
 
         Elevation {
@@ -442,6 +447,7 @@ Item {
             id: fab
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            visible: root.canDock
             tone: Md.Tertiary
             restElevation: Theme.elevation.level2
             hoverElevation: Theme.elevation.level3

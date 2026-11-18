@@ -539,6 +539,7 @@ Item {
     MiniPlayer {
         id: miniPlayer
         hidden: shell.docked
+        canDock: shell.canDock
         flying: shell.miniFlying && !shell.docked
         onOpenRequested: shell.playerRequested()
         onDockRequested: shell.setDocked(true)
