@@ -32,7 +32,7 @@ Rectangle {
     readonly property var song: App.player.current
     readonly property real pad: 48
     // The height the full card needs below the cover.
-    readonly property real restHeight: 32 + 32 + titleRow.height + 8 + artistLine.implicitHeight
+    readonly property real restHeight: 32 + 24 + titleRow.height + 8 + artistLine.implicitHeight
                                        + 16 + 32 + 24 + seek.implicitHeight + 4
                                        + elapsed.implicitHeight + 24 + 96 + 32
 
@@ -81,7 +81,7 @@ Rectangle {
         id: titleRow
         visible: !root.compact
         x: root.pad
-        y: coverBox.y + coverBox.height + 32
+        y: coverBox.y + coverBox.height + 24
         width: root.width - 2 * root.pad
         height: Math.max(title.implicitHeight, likeButton.implicitHeight)
 

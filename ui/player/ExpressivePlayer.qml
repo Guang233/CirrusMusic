@@ -39,6 +39,9 @@ Item {
 
     // Where the cards and the toolbar go.
     readonly property real contentTop: 72
+    // The card's height below the cover, taken a turn later: it depends on the card's
+    // width (the title wraps), which follows cardRect.
+    property real cardRest: 0
     readonly property real toolbarHeight: 64
     readonly property rect cardRect: {
         if (compactCard) {
@@ -74,6 +77,10 @@ Item {
     signal addToPlaylistRequested(string key, string title)
     signal copyRequested
     signal loginRequested
+
+    function settleRest(): void {
+        cardRest = card.restHeight;
+    }
 
     // An item placed on `to`, gliding there on a spring while `animate`.
     component Glide: Item {
@@ -196,13 +203,15 @@ Item {
             // The cover's edge for a card `w` wide with `room` in height: what is
             // left after the rest, within 160 and `widest`; the card's height.
             function coverSizeFor(w: real, room: real, widest: real): real {
-                return Math.round(Math.max(160, Math.min(widest, room - restHeight))) + restHeight;
+                return Math.round(Math.max(160, Math.min(widest, room - root.cardRest))) + root.cardRest;
             }
             anchors.fill: parent
             coverSize: Math.max(0, parent.height - restHeight)
             compact: root.compactCard
             positionMs: root.positionMs
             flying: root.flying
+            onRestHeightChanged: Qt.callLater(root.settleRest)
+            Component.onCompleted: root.cardRest = restHeight
             onArtistRequested: key => root.artistRequested(key)
             onAlbumRequested: key => root.albumRequested(key)
             onSongRequested: root.songRequested()

@@ -448,11 +448,15 @@ FocusScope {
 
     // A side panel's place: the right of the page, between the top row and the bottom
     // row.
+    // In the Material style: a solid container (a tone above the lyrics card) on the
+    // cards' right edge, above the floating toolbar.
     component Sheet: PlayerSheet {
-        width: Math.min(440, page.width - 2 * page.sideMargin)
-        x: page.width - page.sideMargin / 2 - width
-        y: page.contentTop
-        height: page.contentBottom - y
+        width: Math.min(440, page.width - 2 * (page.expressiveItem ? 24 : page.sideMargin))
+        x: page.width - (page.expressiveItem ? 24 : page.sideMargin / 2) - width
+        y: page.expressiveItem ? page.expressiveItem.contentTop : page.contentTop
+        height: (page.expressiveItem ? page.expressiveItem.toolbarY - 16 : page.contentBottom) - y
+        color: page.expressiveItem ? ColorScope.scheme.surfaceContainerHigh
+                                   : Qt.alpha(ColorScope.scheme.surface, 0.8)
         onCloseRequested: page.sheet = 0
     }
 
