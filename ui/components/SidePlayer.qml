@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import M3Shapes
 import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
@@ -131,42 +130,12 @@ Rectangle {
                 height: width
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                CoverArt {
+                ShapedCover {
                     id: cover
                     anchors.fill: parent
                     opacity: root.flying ? 0 : 1
                     coverKey: App.player.current.coverKey
-                    shape: root.playing ? MaterialShape.Cookie12Sided : MaterialShape.Square
-                    radius: Theme.shape.extraLarge
-                    glyph: Symbols.music_note
-
-                    // Turns slowly while playing; settles upright (the square's quarter
-                    // turn) when paused.
-                    NumberAnimation on rotation {
-                        id: turning
-                        running: root.playing && !Theme.motion.reduced && root.visible
-                        from: cover.rotation % 360
-                        to: cover.rotation % 360 + 360
-                        duration: 24000
-                        loops: Animation.Infinite
-                    }
-                    NumberAnimation {
-                        id: settle
-                        target: cover
-                        property: "rotation"
-                        duration: Theme.motion.defaultSpatial.duration
-                        easing: Theme.motion.defaultSpatial.easing
-                    }
-                    Connections {
-                        target: turning
-                        function onRunningChanged() {
-                            if (turning.running)
-                                return;
-                            settle.from = cover.rotation % 360;
-                            settle.to = Math.round(cover.rotation % 360 / 90) * 90;
-                            settle.start();
-                        }
-                    }
+                    playing: root.playing
                 }
                 MouseArea {
                     anchors.fill: parent
