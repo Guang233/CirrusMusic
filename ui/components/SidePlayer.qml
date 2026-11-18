@@ -180,7 +180,7 @@ Rectangle {
                 anchors.top: coverBox.bottom
                 anchors.topMargin: column.gap
                 width: parent.width
-                height: titleText.implicitHeight + 2 + artistText.implicitHeight
+                height: titleText.implicitHeight + 2 + artistLine.implicitHeight
 
                 Text {
                     id: titleText
@@ -191,7 +191,7 @@ Rectangle {
                     font: Fonts.font(700, 22)
                 }
                 Text {
-                    id: artistText
+                    id: artistLine
                     readonly property bool failed: App.player.status === Playback.Failed
                     y: titleText.implicitHeight + 2
                     width: parent.width
@@ -456,9 +456,9 @@ Rectangle {
                         first: place === 0
                         last: place === upNext.shown - 1
                         containerColor: ColorScope.scheme.surfaceContainerHighest
-                        text: title
-                        supportingText: artistText
-                        onClicked: App.player.playAt(index)
+                        text: row.title
+                        supportingText: row.artistText
+                        onClicked: App.player.playAt(row.index)
                         leading: Component {
                             CoverArt {
                                 width: 40
