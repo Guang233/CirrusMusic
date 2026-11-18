@@ -52,9 +52,9 @@ Item {
     // For the player page's shared elements (MiniPlayer.bar, coverItem, titleItem,
     // controlsItem, seekItem, flying).
     // The player docked as a pane on the right (SidePlayer, App.settings.miniDocked)
-    // where the content keeps at least 640 beside it; else the floating mini player.
+    // where the content keeps at least 700 beside it; else the floating mini player.
     readonly property real sideWidth: Math.round(Math.max(340, Math.min(396, width * 0.27)))
-    readonly property bool canDock: width - navWidth - sideWidth - 24 >= 640
+    readonly property bool canDock: width - navWidth - sideWidth - 24 >= 700
     readonly property bool docked: App.settings.miniDocked && canDock
     readonly property bool sideShown: docked && App.player.status !== Playback.Empty
     // The content panel's right edge and middle, in the shell (the top bar centres the

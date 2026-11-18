@@ -70,7 +70,8 @@ Rectangle {
     }
 
     ColorScope.scheme: tint.scheme
-    color: ColorScope.scheme.surfaceContainer
+    // A step above the frame (SurfaceContainer), so the pane reads as its own card.
+    color: ColorScope.scheme.surfaceContainerHigh
     radius: Theme.shape.extraLarge
     clip: true
 
@@ -429,7 +430,7 @@ Rectangle {
                         segmented: true
                         first: place === 0
                         last: place === upNext.shown - 1
-                        containerColor: ColorScope.scheme.surfaceContainerHigh
+                        containerColor: ColorScope.scheme.surfaceContainerHighest
                         text: title
                         supportingText: artistText
                         onClicked: App.player.playAt(index)
