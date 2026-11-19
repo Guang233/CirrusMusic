@@ -230,6 +230,11 @@ Item {
         else
             snackbar.show(text);
     }
+    // The same with one action (Snackbar.showAction); Main shows it on the player page
+    // while that covers the shell.
+    function notifyAction(text: string, action: string, handler: var) {
+        snackbar.showAction(text, action, handler);
+    }
     function focusMiniPlayer() {
         if (docked)
             sidePlayer.takeFocus();

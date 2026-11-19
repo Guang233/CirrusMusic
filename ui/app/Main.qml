@@ -233,6 +233,21 @@ AppWindow {
         }
     }
 
+    // A newer release found on its own (docs/tasks/update-check.md §4).
+    Connections {
+        target: App.updates
+        function onNotice(message: string) {
+            const open = () => updateDialog.open();
+            if (player.opened)
+                player.notifyAction(message, qsTr("查看"), open);
+            else
+                shell.notifyAction(message, qsTr("查看"), open);
+        }
+    }
+    UpdateDialog {
+        id: updateDialog
+    }
+
     CloseDialog {
         id: closeDialog
         onChosen: action => action === 1 ? window.hideToTray() : Desktop.quit()

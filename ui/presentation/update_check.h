@@ -34,8 +34,9 @@ class UpdateCheck : public QObject
     Q_PROPERTY(QString latestVersion READ latestVersion NOTIFY changed)
     Q_PROPERTY(QString title READ title NOTIFY changed)
     Q_PROPERTY(QString notes READ notes NOTIFY changed)
-    Q_PROPERTY(QDateTime publishedAt READ publishedAt NOTIFY changed)
-    Q_PROPERTY(QDateTime lastCheck READ lastCheck NOTIFY changed)
+    // Milliseconds since the epoch, 0 when unknown (for App.format).
+    Q_PROPERTY(qint64 publishedAt READ publishedAt NOTIFY changed)
+    Q_PROPERTY(qint64 lastCheck READ lastCheck NOTIFY changed)
     // Whether it checks on its own in this build (packaged, not on fake sources).
     Q_PROPERTY(bool canCheckAutomatically READ canCheckAutomatically CONSTANT)
 
@@ -56,8 +57,8 @@ class UpdateCheck : public QObject
     [[nodiscard]] QString latestVersion() const { return m_release.version; }
     [[nodiscard]] QString title() const { return m_release.title; }
     [[nodiscard]] QString notes() const { return m_release.notes; }
-    [[nodiscard]] QDateTime publishedAt() const { return m_release.published; }
-    [[nodiscard]] QDateTime lastCheck() const;
+    [[nodiscard]] qint64 publishedAt() const;
+    [[nodiscard]] qint64 lastCheck() const;
     [[nodiscard]] bool canCheckAutomatically() const;
 
     // The build's package ("linux", "windows", "aur"; empty for a development build),

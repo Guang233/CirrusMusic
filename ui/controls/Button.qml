@@ -20,7 +20,8 @@ T.Button {
     property real widthDelta: 0
     // A container in a tone of the surface's own (the side player), whatever the
     // variant: this color unselected with `tint` (else OnSurfaceVariant) content;
-    // selected, Primary / OnPrimary.
+    // selected, Primary / OnPrimary. A text button on its own takes `tint` for its
+    // content (InversePrimary on a snackbar).
     property color containerTint: "transparent"
     property color tint: "transparent"
 
@@ -83,7 +84,7 @@ T.Button {
             return Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.inverseOnSurface,
                              selection.value);
         case Md.Text:
-            return ColorScope.scheme.primary;
+            return tint.a > 0 ? tint : ColorScope.scheme.primary;
         case Md.Elevated:
             return Theme.mix(ColorScope.scheme.primary, ColorScope.scheme.onPrimary, selection.value);
         default:

@@ -68,6 +68,7 @@ qt_add_qml_module(appCirrusMusic
         settings/ExportLogsDialog.qml
         settings/ShortcutSettings.qml
         settings/AboutSettings.qml
+        settings/UpdateDialog.qml
         HomePage.qml
         TodayCard.qml
         FmCard.qml

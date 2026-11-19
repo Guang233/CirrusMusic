@@ -45,10 +45,14 @@ UpdateCheck::UpdateCheck(AppSettings* settings, bool offline, QObject* parent)
     connect(m_settings, &AppSettings::updatesAutoChanged, this, &UpdateCheck::schedule);
 }
 
-QDateTime UpdateCheck::lastCheck() const
+qint64 UpdateCheck::publishedAt() const
 {
-    const qint64 ms = m_settings->updatesLastCheck();
-    return ms > 0 ? QDateTime::fromMSecsSinceEpoch(ms) : QDateTime();
+    return m_release.published.isValid() ? m_release.published.toMSecsSinceEpoch() : 0;
+}
+
+qint64 UpdateCheck::lastCheck() const
+{
+    return std::max<qint64>(0, m_settings->updatesLastCheck());
 }
 
 bool UpdateCheck::canCheckAutomatically() const { return m_install != Development && !m_offline; }
@@ -149,6 +153,13 @@ void UpdateCheck::finish(QNetworkReply* reply, bool manual)
                                  log::message(reply->errorString()));
 
     m_settings->setUpdatesLastCheck(QDateTime::currentMSecsSinceEpoch());
+    // A failure is told only for a check by hand; one on its own leaves what was known.
+    if (status == Failed && !manual) {
+        status = updates::isNewer(m_release.version, QCoreApplication::applicationVersion())
+                     ? Available
+                     : Idle;
+        failure = NoFailure;
+    }
     setState(status, failure);
     // Found on its own: told once for each version (the about settings keep showing it).
     if (!manual && status == Available && m_settings->updatesNotified() != m_release.version) {

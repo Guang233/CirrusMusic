@@ -155,6 +155,9 @@ FocusScope {
     function notify(text: string): void {
         snackbar.show(text);
     }
+    function notifyAction(text: string, action: string, handler: var): void {
+        snackbar.showAction(text, action, handler);
+    }
     // Shows the hidden controls and starts counting again.
     function wake(): void {
         chromeHidden = false;
