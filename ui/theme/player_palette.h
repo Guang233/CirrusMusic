@@ -20,7 +20,9 @@ class Theme;
 //                  range (dark 15-35, light 82-94 at 70% chroma), row-major
 //  solid           the "solid" background: the background's hue (below) at tone 20 / 80
 //  content         text and icons: the background's hue at a low chroma, tone 85 / 15;
-//                  contentVariant is the secondary level (tone 68 / 32)
+//                  contentVariant is the secondary level (tone 68 / 32); with
+//                  `coverSeed`, the scheme's OnPrimaryContainer (and 72% of it over
+//                  PrimaryContainer)
 //  shadow          the cover's shadow: its darkest color, made darker
 //  glare           the light sliding over the tilted cover: near white in the content
 //                  hue, in both modes
@@ -105,6 +107,7 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     [[nodiscard]] Tint tint() const;
     [[nodiscard]] QList<QColor> computeColors() const;
     void update(bool animate);
+    [[nodiscard]] ColorScheme::Colors schemeColors() const;
     void updateScheme(bool animate);
     void blend(qreal progress);
 

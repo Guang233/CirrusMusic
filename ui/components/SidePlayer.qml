@@ -37,8 +37,10 @@ Rectangle {
     readonly property real coverRotation: 0
     readonly property real coverRadius: cover.radius
 
+    // The scheme the shell hands the pane (an attached property of the pane: inside
+    // the QtObject it would read the app's).
     readonly property PlayerTones tones: PlayerTones {
-        scheme: ColorScope.scheme
+        scheme: root.ColorScope.scheme
     }
     readonly property bool isSong: swap.song.key !== "" && !swap.song.voice
     readonly property bool playing: App.player.status === Playback.Playing
