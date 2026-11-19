@@ -60,10 +60,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: page.history ? qsTr("历史日推") : qsTr("推荐")
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         Text {
             width: parent.width
@@ -71,8 +71,8 @@ SongCollectionPage {
                                                          .arg(page.day.getDate())
                                : qsTr("每日推荐")
             elide: Text.ElideRight
-            color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            color: page.infoColor
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -80,7 +80,7 @@ SongCollectionPage {
             text: page.history ? qsTr("那一天根据你的口味生成的歌")
                                : qsTr("根据你的口味生成，每天 6:00 更新")
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Text {
@@ -88,16 +88,17 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
-        Button {
+        PageAction {
             id: historyButton
-            variant: Md.Tonal
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: Symbols.history
             text: qsTr("历史日推")
             onClicked: {

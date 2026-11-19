@@ -4,12 +4,14 @@ import QtQuick.Shapes
 import Cirrus.Theme
 import Cirrus.Controls
 
-// Minimize, maximize/restore and close for the custom title bar: extra-small
-// IconButtons (same state layer, ripple and press morph as other icon buttons) whose
+// Minimize, maximize/restore and close for the custom title bar: small IconButtons,
+// as the app's other icon buttons beside them (same state layer, ripple and press
+// morph), whose
 // symbols are drawn rather than taken from the icon font. Material Symbols' close
 // is 13 of 24 units wide against 18–20 for the squares, so the font's set looks
 // uneven here; the drawn set shares one box and Material Symbols' rounded stroke
-// (2 units of 24, about 1.75 px at the 20 px icon size).
+// (2 units of 24). The paths are written in a 20 px box and drawn at 24 px, the
+// icon size of the buttons around them.
 Row {
     id: root
 
@@ -35,11 +37,12 @@ Row {
     component WindowButton: IconButton {
         id: button
 
-        // ShapePaths in the 20×20 icon box; use `stroke` for their style.
+        // ShapePaths in the 20×20 box (drawn 1.2 times: 24 px); use `stroke` for
+        // their style (2 px drawn).
         default property alias paths: symbol.data
         readonly property real stroke: 1.75
 
-        size: Md.XSmall
+        size: Md.Small
         tint: root.tint
 
         contentItem: Item {
@@ -48,6 +51,7 @@ Row {
                 anchors.centerIn: parent
                 width: 20
                 height: 20
+                scale: 1.2
                 preferredRendererType: Shape.CurveRenderer
             }
         }

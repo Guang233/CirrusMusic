@@ -287,11 +287,13 @@ void BackendPlayback::update()
     }
 
     PlaybackSnapshot next;
-    next.mode = session.mode() == domain::ListeningMode::PersonalFm ? playback::PersonalFm
-                                                                    : playback::Queue;
+    // A Personal FM restored at startup shows as one; it plays on with resumeFm().
+    const bool restoredFm = session.restoredFm();
+    next.mode = session.mode() == domain::ListeningMode::PersonalFm || restoredFm
+                    ? playback::PersonalFm
+                    : playback::Queue;
     next.fmWaiting = session.waitingForFm();
     if (next.mode == playback::Queue) {
-        m_fmSongs.clear();
         const auto queue = session.queue();
         QHash<QUuid, QString> songs;
         for (const auto& entry : queue.entries)
@@ -306,11 +308,15 @@ void BackendPlayback::update()
                       : queue.repeat == domain::QueueRepeat::One ? playback::RepeatOne
                                                                  : playback::RepeatOff;
     } else {
+        // Its songs so far, oldest first; the one playing (or the last, while the next is
+        // fetched) current.
+        const auto songs = restoredFm ? session.queue() : session.fmQueue();
         m_entries.clear();
-        if (newLoad && !play.song.value.isEmpty())
-            m_fmSongs.append(play.song.value);
-        next.queue = m_fmSongs;
-        next.queueIndex = int(m_fmSongs.size()) - 1;
+        for (const auto& entry : songs.entries) {
+            m_entries.append(entry.id);
+            next.queue.append(entry.song.value);
+        }
+        next.queueIndex = int(m_entries.indexOf(songs.active));
         // The queue's modes stay for when it comes back.
         next.order = m_state.order;
         next.repeat = m_state.repeat;
@@ -348,9 +354,12 @@ void BackendPlayback::update()
 
     if (!live && m_kept)
         showKept(next, now);
-    else if (!live && next.mode == playback::Queue && next.queueIndex >= 0)
+    else if (!live && (next.mode == playback::Queue || restoredFm) && next.queueIndex >= 0)
         showRestored(next, now);
-    if (next.mode == playback::PersonalFm) {
+    if (restoredFm) {
+        next.canNext = true; // the next of its songs, or a new one
+        next.canPrevious = next.queueIndex > 0;
+    } else if (next.mode == playback::PersonalFm) {
         next.canNext = session.canGoNext();
         next.canPrevious = session.canGoPrevious();
     } else {
@@ -425,7 +434,7 @@ void BackendPlayback::savePosition(const PlaybackSnapshot& state, qint64 now, bo
     if (!stopped && settled())
         m_positionAccount = m_facade->snapshot().accountId;
     const QString& key = state.current.key;
-    if (key.isEmpty() || state.mode != playback::Queue || (!stopped && !settled()))
+    if (key.isEmpty() || (!stopped && !settled()))
         return;
     const bool due = stopped || key != m_savedKey || state.status != m_savedStatus ||
                      now - m_savedAt >= kSavePositionMs;
@@ -486,7 +495,23 @@ void BackendPlayback::playRestored()
         m_seekKey = key;
         m_seekSongMs = last->songMs;
     }
-    m_session->select(active);
+    if (m_session->restoredFm())
+        m_session->resumeFm(active, quality());
+    else
+        m_session->select(active);
+}
+
+bool BackendPlayback::resumeRestoredFm(int step)
+{
+    if (!m_session || !m_session->restoredFm())
+        return false;
+    const int row = m_state.queueIndex + step;
+    if (step < 0 && row < 0)
+        return true; // nothing before the first
+    m_seekKey.clear();
+    m_session->resumeFm(row >= 0 && row < m_entries.size() ? m_entries.at(row) : QUuid(),
+                        quality());
+    return true;
 }
 
 void BackendPlayback::showKept(PlaybackSnapshot& next, qint64 now)
@@ -778,6 +803,8 @@ void BackendPlayback::next()
             replay(row);
         return;
     }
+    if (resumeRestoredFm(1))
+        return;
     m_session->next();
 }
 
@@ -786,8 +813,10 @@ void BackendPlayback::previous()
     if (!m_session)
         return;
     ListeningSession& session = *m_session;
+    if (resumeRestoredFm(-1))
+        return;
     if (session.mode() == domain::ListeningMode::PersonalFm) {
-        session.previous(); // past its first seconds, the start of the song
+        session.previous(); // the song before (on the first one, back to its start)
         return;
     }
     // The one before in play order, as the queue shows it, always (not back to the start
@@ -835,6 +864,12 @@ void BackendPlayback::playAt(int index)
             replay(index);
         return;
     }
+    if (index == m_state.queueIndex && m_session->restoredFm()) {
+        playRestored(); // where it was
+        return;
+    }
+    if (resumeRestoredFm(index - m_state.queueIndex))
+        return;
     if (const QUuid entry = entryAt(index); !entry.isNull())
         m_session->select(entry);
 }

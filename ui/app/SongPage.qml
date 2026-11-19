@@ -104,6 +104,7 @@ Item {
         opacity: pageState.contentOpacity
         visible: opacity > 0
         contentHeight: content.implicitHeight + 48
+        bottomMargin: PageInsets.bottom
         boundsBehavior: Flickable.DragAndOvershootBounds
         ScrollBar.vertical: ScrollBar {}
 

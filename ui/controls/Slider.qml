@@ -11,20 +11,44 @@ import Cirrus.Theme
 // chroma); the handle is then OnSurface and there is no stop dot.
 //   Slider { from: 0; to: 100; value: 40; showValueLabel: true }
 //   Slider { from: 0; to: 360; trackColors: ["red", "yellow", "lime", "cyan", "blue", "magenta", "red"] }
-//   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing }
+// `roundHandle` makes the handle a dot at rest that stretches into a bar 1.2 tracks
+// wide while pressed or focused (the seek bars of the players; other sliders keep the
+// bar). `waveLength` and `waveSpeed` tune the wave.
+//   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing; roundHandle: true }
 T.Slider {
     id: control
 
     property real trackHeight: 16
     property real handleHeight: 44
+    property bool roundHandle: false
+    // The dot's diameter while `roundHandle` rests; pressed, the bar is 1.2 tracks wide.
+    property real dotSize: Math.max(12, trackHeight + 10)
+    // The wave's length and how far it travels a second.
+    property real waveLength: 32
+    property real waveSpeed: waveLength
     property bool wavy: false
     property bool waving: true
     property real waveAmplitude: 3
     property bool showValueLabel: false
     property string valueText: Math.round(value).toString()
     property list<color> trackColors
+    // The rest of the track on a container of another role (the mini player on
+    // PrimaryContainer): this color, when set.
+    property color inactiveTint: "transparent"
 
     readonly property real gap: 6
+    // The handle's size now (the dot stretching into the bar with `roundHandle`).
+    readonly property real handleWidthNow: Math.max(1, Theme.motion.lerp(dotSize, roundHandle ? trackHeight * 1.2
+                                                                                         : handleWidth.value,
+                                                                     barShape.value))
+    readonly property real handleHeightNow: Theme.motion.lerp(dotSize, handleHeight, barShape.value)
+    // How far the active part stops short of the handle's center, and where the
+    // inactive part starts past it. With `roundHandle` the active part runs under the
+    // dot and the inactive part starts 4 px past its edge (as PixelPlayer's); the bar
+    // keeps 4 px on both sides.
+    readonly property real gapBefore: roundHandle ? Theme.motion.lerp(0, handleWidthNow / 2 + 4, barShape.value)
+                                                  : gap
+    readonly property real gapAfter: roundHandle ? handleWidthNow / 2 + 4 : gap
     readonly property real innerRadius: 2
     readonly property real handleX: leftPadding + 2 + visualPosition * (availableWidth - 4)
     readonly property bool gradient: trackColors.length > 1
@@ -32,7 +56,8 @@ T.Slider {
                                        : enabled ? ColorScope.scheme.primary
                                                  : Qt.alpha(ColorScope.scheme.onSurface,
                                                             Theme.state.disabledContent)
-    readonly property color inactiveColor: enabled ? ColorScope.scheme.secondaryContainer
+    readonly property color inactiveColor: inactiveTint.a > 0 ? inactiveTint
+                                         : enabled ? ColorScope.scheme.secondaryContainer
                                                    : Qt.alpha(ColorScope.scheme.onSurface,
                                                               Theme.state.disabledContainer)
 
@@ -43,6 +68,13 @@ T.Slider {
     padding: 0
     orientation: Qt.Horizontal
 
+    // 0 the dot, 1 the bar.
+    Spring {
+        id: barShape
+        target: !control.roundHandle || control.pressed || control.visualFocus ? 1 : 0
+        spec: Theme.motion.fastSpatial
+        threshold: 0.01
+    }
     Spring {
         id: handleWidth
         target: control.pressed || control.visualFocus ? 2 : 4
@@ -105,14 +137,14 @@ T.Slider {
                     ctx.closePath();
                     ctx.fill();
                 };
-                bar(0, cut - control.gap, true);
-                bar(cut + control.gap, width, false);
+                bar(0, cut - control.gapBefore, true);
+                bar(cut + control.gapAfter, width, false);
             }
         }
 
         // Active part, left of the handle.
         Rectangle {
-            readonly property real end: control.handleX - control.leftPadding - control.gap
+            readonly property real end: control.handleX - control.leftPadding - control.gapBefore
             visible: end > 0 && !control.wavy && !control.gradient
             y: (parent.height - height) / 2
             width: Math.max(0, end)
@@ -125,7 +157,7 @@ T.Slider {
         }
 
         WaveLine {
-            readonly property real end: control.handleX - control.leftPadding - control.gap
+            readonly property real end: control.handleX - control.leftPadding - control.gapBefore
             visible: control.wavy && end > 0 && !control.gradient
             width: Math.max(control.trackHeight, end)
             height: parent.height
@@ -133,11 +165,13 @@ T.Slider {
             thickness: control.trackHeight
             waving: control.waving
             amplitude: control.waveAmplitude
+            wavelength: control.waveLength
+            speed: control.waveSpeed
         }
 
         // Inactive part, right of the handle.
         Rectangle {
-            readonly property real start: control.handleX - control.leftPadding + control.gap
+            readonly property real start: control.handleX - control.leftPadding + control.gapAfter
             visible: start < parent.width && !control.gradient
             x: start
             y: (parent.height - height) / 2
@@ -166,7 +200,8 @@ T.Slider {
         implicitHeight: control.handleHeight
         x: control.handleX - width / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: Math.max(1, handleWidth.value)
+        width: control.handleWidthNow
+        height: control.handleHeightNow
         radius: width / 2
         color: control.activeColor
 

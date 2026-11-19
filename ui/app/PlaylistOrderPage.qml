@@ -262,7 +262,7 @@ Item {
             model: orderModel.songs
             clip: true
             spacing: 2
-            bottomMargin: 24
+            bottomMargin: 24 + PageInsets.bottom
             boundsBehavior: Flickable.DragAndOvershootBounds
             // Wheel and touch scroll; mouse drags are for the handles.
             acceptedButtons: Qt.NoButton

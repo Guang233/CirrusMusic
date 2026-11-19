@@ -59,6 +59,8 @@ ListeningStateService::ListeningStateService(application::ListeningSession& list
         Qt::DirectConnection);
     connect(&listening, &application::ListeningSession::queueChanged, this,
             &ListeningStateService::queueChanged, Qt::DirectConnection);
+    connect(&listening, &application::ListeningSession::fmChanged, this,
+            &ListeningStateService::fmChanged, Qt::DirectConnection);
     connect(
         &listening, &application::ListeningSession::queueCleared, this,
         [this](domain::SessionSnapshot source) {
@@ -119,6 +121,23 @@ void ListeningStateService::queueChanged(const domain::QueueSnapshot& queue)
         return;
     m_loadId = 0; // append/remove/modes must win even if they don't alter playback revision
     m_save = ListeningStateJob{0, ListeningStateOperation::SaveQueue, m_source.accountId, queue};
+    if (m_listening.restoredFm())
+        m_save->mode = domain::ListeningMode::PersonalFm;
+    if (!m_timer.isActive())
+        m_timer.start();
+}
+void ListeningStateService::fmChanged()
+{
+    // Personal FM's songs so far, once it has one, replace the saved queue.
+    if (!live() || m_listening.mode() != domain::ListeningMode::PersonalFm ||
+        m_listening.queueContext() != m_source.token || m_restoring)
+        return;
+    const auto songs = m_listening.fmQueue();
+    if (songs.entries.isEmpty() || !domain::validSavedQueue(songs))
+        return;
+    m_loadId = 0;
+    m_save = ListeningStateJob{0, ListeningStateOperation::SaveQueue, m_source.accountId, songs};
+    m_save->mode = domain::ListeningMode::PersonalFm;
     if (!m_timer.isActive())
         m_timer.start();
 }
@@ -216,7 +235,8 @@ void ListeningStateService::deliver(ListeningStateResult result)
         if (result.error == StorageError::None && result.queue && live()) {
             const auto source = m_source;
             m_restoring = true;
-            const bool applied = m_listening.restoreQueue(*result.queue, source, m_restoreIntent);
+            const bool applied =
+                m_listening.restoreQueue(*result.queue, source, m_restoreIntent, result.mode);
             if (!guard)
                 return;
             m_restoring = false;

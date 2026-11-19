@@ -26,7 +26,7 @@ GridView {
     // Cards carry 8 px of padding, so the covers line up with the page margins.
     leftMargin: sideMargin - 8
     rightMargin: sideMargin - 8
-    bottomMargin: 24
+    bottomMargin: 24 + PageInsets.bottom
     cellWidth: (width - leftMargin - rightMargin) / columns
     cellHeight: cellWidth + 48
     clip: true

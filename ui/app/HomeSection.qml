@@ -5,7 +5,8 @@ import Cirrus.Controls
 import Cirrus.Components
 import Cirrus.Presentation
 
-// One section of the home page (docs/ui/pages/home.md §6): title, "see all", and its
+// One section of the home page (docs/ui/pages/home.md §6): title, "see all" (an icon
+// button at the right of the title), and its
 // own states. It loads and fails on its own: a skeleton while loading, one line with
 // retry when it failed, hidden when empty or signed out. The content rises in when
 // it first arrives.
@@ -28,8 +29,11 @@ Column {
     readonly property bool failed: loadState === LoadState.Error
                                    || loadState === LoadState.Offline
     readonly property bool loading: loadState === LoadState.Loading
+    // Something to show. Layout around the section reads this, not `visible` (which is
+    // false whenever a parent is hidden).
+    readonly property bool wanted: hasContent || failed || loading
 
-    visible: hasContent || failed || loading
+    visible: wanted
     spacing: 12
 
     Reveal {
@@ -46,23 +50,22 @@ Column {
             anchors.left: parent.left
             anchors.right: allButton.visible ? allButton.left
                          : trailingLoader.active ? trailingLoader.left : parent.right
+            anchors.rightMargin: allButton.visible ? 12 : 0
             anchors.verticalCenter: parent.verticalCenter
             text: section.title
             elide: Text.ElideRight
             color: Theme.color.onSurface
-            font: Theme.type.titleLargeEmphasized.font
+            font: Fonts.font(700, 22)
             Accessible.role: Accessible.Heading
         }
-        Button {
+        IconButton {
             id: allButton
             anchors.right: parent.right
-            anchors.rightMargin: -12
             anchors.verticalCenter: parent.verticalCenter
             visible: section.showsAll && section.hasContent
-            variant: Md.Text
-            size: Md.Small
+            variant: Md.Tonal
+            glyph: Symbols.arrow_forward
             text: qsTr("查看全部")
-            trailingGlyph: Symbols.chevron_right
             onClicked: section.allRequested()
         }
         Loader {

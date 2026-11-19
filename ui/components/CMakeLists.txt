@@ -1,7 +1,7 @@
 # Business-facing building blocks of the shell and pages (docs/ui/README.md §3.1).
 qt_add_library(cirrus_ui_components STATIC)
 
-set_source_files_properties(CoverHandoff.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(CoverHandoff.qml PageInsets.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(cirrus_ui_components
     URI Cirrus.Components
@@ -18,6 +18,14 @@ qt_add_qml_module(cirrus_ui_components
         CoverArt.qml
         PlaybackClock.qml
         MiniPlayer.qml
+        SidePlayer.qml
+        ShapedCover.qml
+        PlayerTones.qml
+        CoverColors.qml
+        SideLyrics.qml
+        SongSwap.qml
+        WavySeek.qml
+        MiniVolume.qml
         Skeleton.qml
         ListSkeleton.qml
         StateMessage.qml
@@ -26,6 +34,7 @@ qt_add_qml_module(cirrus_ui_components
         SongList.qml
         SongTable.qml
         SongTableSkeleton.qml
+        CarouselCard.qml
         CollectionCard.qml
         CollectionGrid.qml
         CollectionView.qml
@@ -37,6 +46,7 @@ qt_add_qml_module(cirrus_ui_components
         IconContainer.qml
         Reveal.qml
         CoverHandoff.qml
+        PageInsets.qml
         CoverFlight.qml
 )
 

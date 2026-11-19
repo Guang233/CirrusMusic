@@ -71,7 +71,7 @@ ListView {
 
     clip: true
     spacing: 2
-    bottomMargin: 24
+    bottomMargin: 24 + PageInsets.bottom
     // Overshoots and springs back at the ends.
     boundsBehavior: Flickable.DragAndOvershootBounds
     ScrollBar.vertical: ScrollBar {}

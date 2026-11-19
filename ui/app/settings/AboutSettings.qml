@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Cirrus.Theme
 import Cirrus.Controls
+import Cirrus.Presentation
 
 // The app, its version, and what it is built with.
 SettingsGroup {
@@ -74,6 +75,37 @@ SettingsGroup {
             }
         }
     }
+    // GitHub's latest release (docs/tasks/update-check.md §4).
+    ActionSetting {
+        readonly property int status: App.updates.status
+
+        text: qsTr("更新")
+        supportingText: {
+            switch (status) {
+            case UpdateCheck.Checking:
+                return qsTr("正在检查…");
+            case UpdateCheck.Available:
+                return qsTr("新版本 %1").arg(App.updates.latestVersion);
+            case UpdateCheck.UpToDate:
+                return qsTr("已是最新版本");
+            case UpdateCheck.Failed:
+                switch (App.updates.failure) {
+                case UpdateCheck.Limited:
+                    return qsTr("GitHub 暂时拒绝了请求，请稍后再试");
+                case UpdateCheck.Invalid:
+                    return qsTr("检查失败：GitHub 的回复无法识别");
+                default:
+                    return qsTr("检查失败：网络不可用");
+                }
+            default:
+                return App.updates.lastCheck > 0
+                        ? qsTr("上次检查：%1").arg(App.format.relativeTime(App.updates.lastCheck)) : "";
+            }
+        }
+        actionText: status === UpdateCheck.Available ? qsTr("查看") : qsTr("检查更新")
+        actionEnabled: status !== UpdateCheck.Checking
+        onTriggered: status === UpdateCheck.Available ? updateDialog.open() : App.updates.check()
+    }
     ActionSetting {
         text: qsTr("第三方许可")
         supportingText: ""
@@ -81,6 +113,9 @@ SettingsGroup {
         onTriggered: licensesDialog.open()
     }
 
+    UpdateDialog {
+        id: updateDialog
+    }
     Dialog {
         id: licensesDialog
         title: qsTr("第三方许可")

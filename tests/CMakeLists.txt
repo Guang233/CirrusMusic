@@ -363,3 +363,10 @@ set_tests_properties(resource_cache_store PROPERTIES TIMEOUT 30)
 qt_add_executable(tst_user_profile unit/user_profile_test.cpp support/synthetic_user_profile.h)
 target_link_libraries(tst_user_profile PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME user_profile COMMAND tst_user_profile)
+
+# The update check's pure parts: versions, the release answer, the notes (no network).
+qt_add_executable(tst_update_release unit/update_release_test.cpp
+    ${PROJECT_SOURCE_DIR}/ui/presentation/update_release.cpp)
+target_include_directories(tst_update_release PRIVATE ${PROJECT_SOURCE_DIR}/ui/presentation)
+target_link_libraries(tst_update_release PRIVATE Qt6::Test Qt6::Core)
+add_test(NAME update_release COMMAND tst_update_release)

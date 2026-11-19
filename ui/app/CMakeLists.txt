@@ -21,6 +21,8 @@ qt_add_qml_module(appCirrusMusic
         Main.qml
         AppShell.qml
         SongCollectionPage.qml
+        PageAction.qml
+        KindLabel.qml
         PlaylistPage.qml
         PlaylistOrderPage.qml
         AlbumPage.qml
@@ -66,11 +68,15 @@ qt_add_qml_module(appCirrusMusic
         settings/ExportLogsDialog.qml
         settings/ShortcutSettings.qml
         settings/AboutSettings.qml
+        settings/UpdateDialog.qml
         HomePage.qml
         TodayCard.qml
         FmCard.qml
+        LikedTile.qml
+        WeekTile.qml
         HomeSection.qml
         SidebarRow.qml
+        RailCovers.qml
         RailPlaylists.qml
         RailAccount.qml
         SearchField.qml
@@ -107,6 +113,11 @@ set_target_properties(appCirrusMusic PROPERTIES
 
 # Shown in Settings › About.
 target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_VERSION="${PROJECT_VERSION}")
+# The package this build goes into (docs/tasks/update-check.md §6): linux (the deb and
+# the AppImage), windows (the installer and the zip), aur; empty for development builds,
+# which never check for updates on their own.
+set(CIRRUS_PACKAGE "" CACHE STRING "Package of this build: linux, windows, aur or empty")
+target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_PACKAGE="${CIRRUS_PACKAGE}")
 # The commit, for the log's session header (docs/tasks/logging.md §6): checked at every
 # build; the header only changes (and main.cpp only rebuilds) when the commit does.
 set(CIRRUS_COMMIT_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/cirrus_commit.h")

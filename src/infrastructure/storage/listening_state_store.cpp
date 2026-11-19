@@ -60,7 +60,7 @@ StorageResult<ListeningStateResult> executeQueue(QSqlDatabase& db, const Listeni
     if (job.operation == ListeningStateOperation::LoadQueue) {
         QSqlQuery header(db);
         header.prepare(
-            QStringLiteral("SELECT active, queue_order, queue_repeat FROM playback_queue "
+            QStringLiteral("SELECT active, queue_order, queue_repeat, mode FROM playback_queue "
                            "WHERE account_id = ?"));
         header.addBindValue(job.accountId);
         if (!header.exec())
@@ -70,7 +70,9 @@ StorageResult<ListeningStateResult> executeQueue(QSqlDatabase& db, const Listeni
         const auto active = storedUuid(header.value(0).toString(), true);
         const auto order = storedInteger(header.value(1));
         const auto repeat = storedInteger(header.value(2));
-        if (!active || !order || *order < 0 || *order > 1 || !repeat || *repeat < 0 || *repeat > 2)
+        const auto mode = storedInteger(header.value(3));
+        if (!active || !order || *order < 0 || *order > 1 || !repeat || *repeat < 0 ||
+            *repeat > 2 || !mode || *mode < 0 || *mode > 1)
             return fail(StorageError::Corrupt);
         domain::QueueSnapshot queue{{},
                                     *active,
@@ -95,7 +97,9 @@ StorageResult<ListeningStateResult> executeQueue(QSqlDatabase& db, const Listeni
         }
         if (!domain::validSavedQueue(queue))
             return fail(StorageError::Corrupt);
-        return {StorageError::None, {job.id, StorageError::None, std::move(queue)}};
+        ListeningStateResult result{job.id, StorageError::None, std::move(queue)};
+        result.mode = static_cast<domain::ListeningMode>(*mode);
+        return {StorageError::None, std::move(result)};
     }
     if (job.operation != ListeningStateOperation::SaveQueue || !domain::validSavedQueue(job.queue))
         return fail(StorageError::Query);
@@ -113,13 +117,14 @@ StorageResult<ListeningStateResult> executeQueue(QSqlDatabase& db, const Listeni
     QSqlQuery header(db);
     header.prepare(
         QStringLiteral("INSERT INTO playback_queue(account_id, active, queue_order, "
-                       "queue_repeat) VALUES (?, ?, ?, ?) ON CONFLICT(account_id) DO "
+                       "queue_repeat, mode) VALUES (?, ?, ?, ?, ?) ON CONFLICT(account_id) DO "
                        "UPDATE SET active=excluded.active, queue_order=excluded.queue_order, "
-                       "queue_repeat=excluded.queue_repeat"));
+                       "queue_repeat=excluded.queue_repeat, mode=excluded.mode"));
     header.addBindValue(job.accountId);
     header.addBindValue(uuidText(job.queue.active));
     header.addBindValue(static_cast<int>(job.queue.order));
     header.addBindValue(static_cast<int>(job.queue.repeat));
+    header.addBindValue(job.mode == domain::ListeningMode::PersonalFm ? 1 : 0);
     if (!header.exec())
         return rollback();
     QSqlQuery insert(db);
@@ -893,6 +898,11 @@ QList<Migration> ListeningStateStore::migrations()
               "CASCADE)"),
           QStringLiteral("CREATE INDEX listening_song_artist_by_artist ON "
                          "listening_song_artist(account_id,artist_id)")}});
+    // v5: the saved queue may be Personal FM's songs so far (docs/api/fm-continuous-playback.md).
+    migrations.append(
+        {5,
+         {QStringLiteral("ALTER TABLE playback_queue ADD COLUMN mode INTEGER NOT NULL DEFAULT 0 "
+                         "CHECK(mode IN (0,1))")}});
     return migrations;
 }
 ListeningStateStore::ListeningStateStore(DatabaseWorker& database, QObject* parent)

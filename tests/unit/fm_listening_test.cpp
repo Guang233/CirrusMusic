@@ -191,6 +191,86 @@ class FmListeningTest : public QObject
         QCoreApplication::processEvents();
         QCOMPARE(h.plays(), 2);
     }
+    void goesBackThroughItsSongs()
+    {
+        Harness h;
+        QVERIFY(h.player.startFm());
+        h.batch({1, 2, 3});
+        QTRY_COMPARE(h.plays(), 1);
+        h.publish(PlaybackState::Playing, 500);
+        QVERIFY(!h.player.canGoPrevious()); // the first song, in its first seconds
+        QVERIFY(h.player.next());
+        QTRY_COMPARE(h.plays(), 2);
+        h.publish(PlaybackState::Playing, 500);
+        QCOMPARE(h.player.fmQueue().entries.size(), 2);
+        QVERIFY(h.player.queue().entries.isEmpty()); // queue() stays the ordinary one's
+        QVERIFY(h.player.canGoPrevious());
+        QVERIFY(h.player.previous());
+        QTRY_COMPARE(h.plays(), 3);
+        QCOMPARE(h.play().query.song.value, "1");
+        QCOMPARE(h.player.mode(), ListeningMode::PersonalFm);
+        // On through the songs so far before a new one, at the end and by hand.
+        h.publish(PlaybackState::Ended);
+        QTRY_COMPARE(h.plays(), 4);
+        QCOMPARE(h.play().query.song.value, "2");
+        QVERIFY(h.player.next());
+        QTRY_COMPARE(h.plays(), 5);
+        QCOMPARE(h.play().query.song.value, "3");
+        QCOMPARE(h.player.fmQueue().entries.size(), 3);
+        QVERIFY(h.player.select(h.player.fmQueue().entries.first().id));
+        QTRY_COMPARE(h.plays(), 6);
+        QCOMPARE(h.play().query.song.value, "1");
+        QCOMPARE(h.player.fmQueue().entries.size(), 3);
+    }
+    void restoredFmPlaysOn()
+    {
+        const auto saved = [] {
+            QueueSnapshot queue;
+            for (const char* id : {"1", "2"})
+                queue.entries.append({QUuid::createUuid(), {QString::fromLatin1(id)}, {}});
+            queue.active = queue.entries.last().id;
+            return queue;
+        }();
+        Harness h;
+        QVERIFY(h.player.restoreQueue(saved, h.f.snapshot(), h.player.intentRevision(),
+                                      ListeningMode::PersonalFm));
+        QVERIFY(h.player.restoredFm());
+        QCOMPARE(h.player.queue().entries.size(), 2);
+        QCOMPARE(h.plays(), 0);
+        QVERIFY(h.player.resumeFm(saved.active));
+        QTRY_COMPARE(h.plays(), 1);
+        QCOMPARE(h.play().query.song.value, "2");
+        QCOMPARE(h.player.mode(), ListeningMode::PersonalFm);
+        QVERIFY(!h.player.restoredFm());
+        QCOMPARE(h.player.fmQueue().entries.size(), 2);
+        h.publish(PlaybackState::Playing, 500);
+        QVERIFY(h.player.previous());
+        QTRY_COMPARE(h.plays(), 2);
+        QCOMPARE(h.play().query.song.value, "1");
+        QVERIFY(h.player.next());
+        QTRY_COMPARE(h.plays(), 3);
+        QVERIFY(h.player.next()); // past the last: a new song
+        QTRY_VERIFY(h.player.waitingForFm());
+        QTRY_COMPARE(h.batches(), 1);
+        h.batch({7});
+        QTRY_COMPARE(h.plays(), 4);
+        QCOMPARE(h.play().query.song.value, "7");
+        QCOMPARE(h.player.fmQueue().entries.size(), 3);
+
+        // From a new song at once: its songs so far stay.
+        Harness fresh;
+        QVERIFY(fresh.player.restoreQueue(saved, fresh.f.snapshot(), fresh.player.intentRevision(),
+                                          ListeningMode::PersonalFm));
+        QVERIFY(fresh.player.resumeFm({}));
+        QTRY_COMPARE(fresh.batches(), 1);
+        fresh.batch({8});
+        QTRY_COMPARE(fresh.plays(), 1);
+        QCOMPARE(fresh.play().query.song.value, "8");
+        QCOMPARE(fresh.player.fmQueue().entries.size(), 3);
+        // A guest's restored queue is never Personal FM.
+        Harness guest(false);
+        QVERIFY(!guest.player.resumeFm(saved.active));
+    }
     void waitingBatchPreservesPause()
     {
         Harness h;

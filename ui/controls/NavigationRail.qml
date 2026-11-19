@@ -26,6 +26,8 @@ Rectangle {
     property Component header
     property Component footer
     property Component expandedContent
+    // In the same place while collapsed (e.g. a few covers), `collapsedWidth` wide.
+    property Component collapsedContent
     property real minimumExpandedWidth: 220
     // Space above the header (or the items without one).
     property real topInset: 44
@@ -126,6 +128,20 @@ Rectangle {
             width: root.expandedWidth
             height: parent.height
             sourceComponent: root.expandedContent
+        }
+    }
+
+    Item {
+        y: expandedArea.y
+        width: root.collapsedWidth
+        height: expandedArea.height
+        clip: true
+        opacity: 1 - Theme.motion.segment(root.progress, 0, 0.5)
+        visible: opacity > 0 && root.collapsedContent !== null
+
+        Loader {
+            anchors.fill: parent
+            sourceComponent: root.collapsedContent
         }
     }
 

@@ -6,8 +6,8 @@ import Cirrus.Presentation
 
 // The app's top bar, in the window's title bar row (docs/ui/pages/shell.md §1): over
 // the rail the rail toggle and the app's name (the logo goes before it once there is
-// one), then back and forward, the search field, and on the right the app's own
-// actions. Window buttons, when the window has them, come after the actions (the
+// one), then, on the top of the content panel, back and forward, the search field
+// (centred on the panel) and on the right the app's own actions. Window buttons, when the window has them, come after the actions (the
 // title bar row adds them); the actions are never hidden. Empty space moves the
 // window (the title bar row handles that under this item).
 Item {
@@ -66,9 +66,13 @@ Item {
 
     SearchField {
         id: field
-        x: history.x + history.width + 12
+        // Centred on the panel below where there is room, else after back and forward.
+        readonly property real minX: history.x + history.width + 12
+        readonly property real maxRight: Math.min(actionRow.x, bar.shell.panelRight) - 16
+        readonly property real panelCenter: bar.shell.panelCenter
+        x: Math.max(minX, Math.min(maxRight - width, panelCenter - width / 2))
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(0, Math.min(400, actionRow.x - 16 - x))
+        width: Math.max(0, Math.min(560, maxRight - minX))
         history: bar.shell.searchModel.history
         hotKeywords: bar.shell.searchModel.hotKeywords
         suggestions: bar.shell.searchModel.suggestions
@@ -88,5 +92,19 @@ Item {
         x: bar.width - width - 8
         anchors.verticalCenter: parent.verticalCenter
         spacing: 4
+
+        // Over the docked side player's top: its own buttons (the row lies over it).
+        IconButton {
+            visible: bar.shell.sideShown
+            glyph: Symbols.open_in_full
+            text: qsTr("打开播放页")
+            onClicked: bar.shell.playerRequested()
+        }
+        IconButton {
+            visible: bar.shell.sideShown
+            glyph: Symbols.right_panel_close
+            text: qsTr("变回悬浮播放条")
+            onClicked: bar.shell.setDocked(false)
+        }
     }
 }

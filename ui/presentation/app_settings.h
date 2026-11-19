@@ -107,9 +107,25 @@ class AppSettings : public QObject
 
     // The mini player's progress bar waves while playing (docs/ui/README.md §6.2).
     CIRRUS_SETTING(bool, miniWave, setMiniWave, "miniPlayer/wave", true)
+    // The mini player docked as a pane on the right of the window instead of floating
+    // over the bottom of the content (docs/ui/redesign-md3e.md §11).
+    CIRRUS_SETTING(bool, miniDocked, setMiniDocked, "miniPlayer/docked", false)
+    // What the side player shows under its controls: 0 the lyrics, 1 the songs up next.
+    CIRRUS_SETTING(int, sideSection, setSideSection, "miniPlayer/sideSection", 0)
     // Player page (docs/ui/pages/player.md §9.2).
     // Light or dark: 0 follow the appearance, 1 always dark, 2 always light.
     CIRRUS_SETTING(int, playerTheme, setPlayerTheme, "player/theme", 0)
+    // The page's style: 0 the default (Apple Music-like), 1 Material (MD3 Expressive,
+    // docs/ui/pages/player-expressive.md).
+    CIRRUS_SETTING(int, playerStyle, setPlayerStyle, "player/style", 0)
+    // The cover colors of the Material style and the mini and side players: 0 tonal
+    // spot, 1 vibrant, 2 expressive, 3 fidelity (docs/ui/pages/player-expressive.md §1).
+    CIRRUS_SETTING(int, playerColorStyle, setPlayerColorStyle, "player/colorStyle", 0)
+    // The update check (docs/tasks/update-check.md): on its own (packaged builds only),
+    // when it last asked (ms since the epoch, 0 never), the version it last announced.
+    CIRRUS_SETTING(bool, updatesAuto, setUpdatesAuto, "updates/auto", true)
+    CIRRUS_SETTING(qint64, updatesLastCheck, setUpdatesLastCheck, "updates/lastCheck", 0)
+    CIRRUS_SETTING(QString, updatesNotified, setUpdatesNotified, "updates/notified", QString())
     // Where the controls are on wide windows: 0 under the cover, 1 at the bottom.
     CIRRUS_SETTING(int, playerControls, setPlayerControls, "player/controls", 0)
     // The title and artist: 0 under the cover, 1 in the bottom row.

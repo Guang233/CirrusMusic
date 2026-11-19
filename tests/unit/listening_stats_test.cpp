@@ -175,8 +175,9 @@ void ListeningStatsTest::upgradeKeepsVersion3Rows()
     }
     Fixture fixture(path);
     QVERIFY(fixture.ok);
+    // Up to the newest migration (v5 added the saved queue's mode).
     QCOMPARE(fixture.scalar(QStringLiteral("SELECT max(version) FROM schema_migrations")),
-             QStringLiteral("4"));
+             QString::number(ListeningStateStore::migrations().last().version));
     ListeningStateJob page;
     page.operation = ListeningStateOperation::LoadHistory;
     const auto loaded = fixture.run(page);
@@ -214,6 +215,13 @@ void ListeningStatsTest::queueAndRecordsKeepTheirOrigin()
     QCOMPARE(restored.queue->entries.size(), 2);
     QCOMPARE(restored.queue->entries[0].origin, playlist);
     QCOMPARE(restored.queue->entries[1].origin.kind, PlayOriginKind::Search);
+    QCOMPARE(restored.mode, ListeningMode::Queue);
+    saveQueue.mode = ListeningMode::PersonalFm; // its songs so far, saved as the queue
+    QCOMPARE(fixture.run(saveQueue).error, StorageError::None);
+    QCOMPARE(fixture.run(loadQueue).mode, ListeningMode::PersonalFm);
+    saveQueue.mode = ListeningMode::Queue;
+    QCOMPARE(fixture.run(saveQueue).error, StorageError::None);
+    QCOMPARE(fixture.run(loadQueue).mode, ListeningMode::Queue);
 
     auto row = record(QStringLiteral("1"), at(3, 9), 45000, ListeningEnd::Active, playlist);
     QCOMPARE(fixture.save({row}), StorageError::None);

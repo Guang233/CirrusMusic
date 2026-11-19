@@ -90,7 +90,7 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
             Button {
@@ -120,10 +120,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("歌单")
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         // The title; the account's own playlist can be edited from here.
         Item {
@@ -138,8 +138,8 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                color: page.infoColor
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             IconButton {
@@ -148,14 +148,17 @@ SongCollectionPage {
                 anchors.verticalCenter: parent.verticalCenter
                 // "我喜欢的音乐" keeps its title.
                 visible: pageModel.own && !pageModel.likedList
+                variant: page.twoPane ? Md.Tonal : Md.Standard
                 glyph: Symbols.edit
                 text: qsTr("编辑歌单信息")
                 onClicked: editDialog.open()
             }
         }
-        // The creator (opens their user page), then when it was updated.
+        // The creator (opens their user page), then when it was updated; the button's
+        // label lines up with the text above.
         Row {
-            width: parent.width
+            x: creatorButton.visible ? -creatorButton.leftPadding : 0
+            width: parent.width - x
             spacing: 4
             Button {
                 id: creatorButton
@@ -172,15 +175,9 @@ SongCollectionPage {
                 text: [creatorButton.visible ? "" : pageModel.creator, pageModel.updatedText]
                       .filter(s => s !== "").join(" · ")
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
-        }
-        Extras {
-            width: parent.width
-            visible: page.wide
-            topPadding: 4
-            bottomPadding: 4
         }
         // Counts the service gave; unknown ones are left out, not shown as 0.
         Text {
@@ -194,25 +191,34 @@ SongCollectionPage {
                 return parts.join(" · ");
             }
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
+        }
+        Extras {
+            width: parent.width
+            visible: page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
+            topPadding: 4
+            bottomPadding: 4
         }
     }
 
     extraContent: Extras {}
     showExtra: !page.wide && (pageModel.description !== "" || pageModel.tags.length > 0)
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
         // Someone else's playlist (P5).
-        Button {
+        PageAction {
             visible: !pageModel.own && App.library.canSavePlaylists
-            variant: Md.Tonal
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
             onClicked: page.toggleSubscribed()
         }
-        Button {
+        PageAction {
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.comment
             text: pageModel.commentCount > 0
@@ -225,6 +231,11 @@ SongCollectionPage {
         IconButton {
             id: moreButton
             visible: pageModel.own
+            // In the pane: square and as tall as the play button, like the PageActions.
+            variant: page.twoPane ? Md.Tonal : Md.Standard
+            size: page.twoPane ? page.paneActionSize : Md.Small
+            shape: page.twoPane ? Md.Square : Md.Round
+            widthMode: page.twoPane ? Md.Narrow : Md.Default
             glyph: Symbols.more_vert
             text: qsTr("更多")
             onClicked: moreMenu.popup(moreButton, 0, moreButton.height + 4)

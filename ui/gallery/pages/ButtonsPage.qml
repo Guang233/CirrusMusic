@@ -217,6 +217,27 @@ ControlPage {
         }
     }
     Caption {
+        text: qsTr("悬浮操作按钮（Fab）：主色、第二色、第三色容器")
+    }
+    Row {
+        spacing: 16
+        Fab {
+            glyph: Symbols.play_arrow
+            iconFill: 1
+            text: qsTr("播放")
+        }
+        Fab {
+            tone: Md.Secondary
+            glyph: Symbols.queue_music
+            text: qsTr("播放队列")
+        }
+        Fab {
+            tone: Md.Tertiary
+            glyph: Symbols.lyrics
+            text: qsTr("播放页")
+        }
+    }
+    Caption {
         text: qsTr("尺寸 XSmall–XLarge，宽度 窄／默认／宽")
     }
     Flow {

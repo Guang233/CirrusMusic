@@ -286,12 +286,16 @@ QColor Theme::resolveSeed() const
 
 ColorScheme::Colors Theme::computeColors(const QColor& seed, bool dark) const
 {
+    return computeColors(seed, dark, m_variant);
+}
+
+ColorScheme::Colors Theme::computeColors(const QColor& seed, bool dark, Variant wanted) const
+{
     const mcu::Hct source(seed.rgba() | 0xff000000u);
     // A near-gray seed has no meaningful hue; tinted variants would invent one
     // (a gray cover turned cyan), so such seeds always use the monochrome variant.
     constexpr double kAchromaticChroma = 5.0;
-    const Variant variant =
-        source.get_chroma() < kAchromaticChroma ? Variant::Monochrome : m_variant;
+    const Variant variant = source.get_chroma() < kAchromaticChroma ? Variant::Monochrome : wanted;
     const mcu::ts::DynamicScheme scheme(source, toMcu(variant), dark, m_contrast,
                                         m_specVersion == SpecVersion::Spec2025
                                             ? mcu::ts::SpecVersion::k2025

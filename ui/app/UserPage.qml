@@ -138,8 +138,8 @@ SongCollectionPage {
                 anchors.verticalCenter: parent.verticalCenter
                 text: pageModel.nickname
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                color: page.infoColor
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             // The level, as a small label.
@@ -150,12 +150,12 @@ SongCollectionPage {
                 width: levelText.implicitWidth + 12
                 height: 20
                 radius: height / 2
-                color: Theme.color.secondaryContainer
+                color: ColorScope.scheme.secondaryContainer
                 Text {
                     id: levelText
                     anchors.centerIn: parent
                     text: qsTr("Lv.%1").arg(pageModel.level)
-                    color: Theme.color.onSecondaryContainer
+                    color: ColorScope.scheme.onSecondaryContainer
                     font: Theme.type.labelSmall.font
                 }
             }
@@ -194,10 +194,10 @@ SongCollectionPage {
             id: signature
             width: parent.width
             text: pageModel.signature
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -221,11 +221,20 @@ SongCollectionPage {
         onClicked: page.currentTab = tab
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
-        FollowButton {}
-        Button {
+        PageAction {
+            visible: !pageModel.own && pageModel.state === LoadState.Ready
+            iconOnly: page.twoPane
+            size: page.paneActionSize
+            glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
+            text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
+            onClicked: page.toggleFollowed()
+        }
+        PageAction {
             visible: pageModel.artistKey !== ""
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.mic
             text: qsTr("歌手主页")

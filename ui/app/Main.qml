@@ -90,19 +90,30 @@ AppWindow {
         value: App.settings.customFontFamily
     }
 
-    // The frame (top bar and rail) is SurfaceContainer; pages sit on a Surface panel.
+    // The frame (rail) is SurfaceContainer; pages sit on a Surface panel that reaches up
+    // under the title bar row, so back, search and the window buttons are on the panel.
     showTitle: false
     surfaceColor: Theme.color.surfaceContainer
+    titleOverContent: true
+    titleContentHeight: 72
+    titleTopInset: shell.panelTop
     titleContent: TopBar {
         id: topBar
         anchors.fill: parent
         shell: shell
-        visible: !player.covering
+        // Faded out, not hidden, under the player page: hidden, the title row would
+        // count as empty and drop to its bare height, and the shell's top inset with
+        // it, so the side player (laid out under it) would move up while the page
+        // measures where its cover lands.
+        opacity: player.covering ? 0 : 1
+        enabled: !player.covering
     }
 
     AppShell {
         id: shell
         anchors.fill: parent
+        topInset: window.titleHeight
+        windowCornerRadius: window.cornerRadius
         searchField: topBar.searchField
         covered: player.opened
         miniFlying: player.flying
@@ -110,6 +121,7 @@ AppWindow {
         opacity: 1 - Theme.motion.segment(player.progress, 0.5, 0.6)
         visible: !player.covering
         onPlayerRequested: player.open()
+        onQueueRequested: player.openQueue()
         onUncoverRequested: player.close()
         onCoveredNotice: text => player.notify(text)
     }
@@ -121,6 +133,9 @@ AppWindow {
         appWindow: window
         miniBar: shell.miniBar
         miniCover: shell.miniCover
+        miniCoverShape: shell.miniCoverShape
+        miniCoverRotation: shell.miniCoverRotation
+        miniCoverCorner: shell.miniCoverCorner
         miniTitle: shell.miniTitle
         miniControls: shell.miniControls
         miniSeek: shell.miniSeek
@@ -216,6 +231,21 @@ AppWindow {
         function onShowRequested() {
             window.showFromTray();
         }
+    }
+
+    // A newer release found on its own (docs/tasks/update-check.md §4).
+    Connections {
+        target: App.updates
+        function onNotice(message: string) {
+            const open = () => updateDialog.open();
+            if (player.opened)
+                player.notifyAction(message, qsTr("查看"), open);
+            else
+                shell.notifyAction(message, qsTr("查看"), open);
+        }
+    }
+    UpdateDialog {
+        id: updateDialog
     }
 
     CloseDialog {

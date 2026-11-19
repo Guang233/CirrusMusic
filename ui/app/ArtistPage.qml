@@ -117,10 +117,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("歌手")
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         Column {
             width: parent.width
@@ -130,8 +130,8 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                color: page.infoColor
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             Text {
@@ -139,7 +139,7 @@ SongCollectionPage {
                 visible: pageModel.aliasText !== ""
                 text: pageModel.aliasText
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -148,7 +148,7 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Brief {
@@ -166,10 +166,10 @@ SongCollectionPage {
             id: brief
             width: parent.width
             text: pageModel.description
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -181,17 +181,20 @@ SongCollectionPage {
         }
     }
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
-        Button {
-            variant: Md.Tonal
+        PageAction {
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.followed ? Symbols.how_to_reg : Symbols.person_add
             text: pageModel.followed ? qsTr("已关注") : qsTr("关注")
             onClicked: page.toggleFollowed()
         }
         // A musician's own account (docs/ui/pages/user.md §4).
-        Button {
+        PageAction {
             visible: pageModel.userKey !== ""
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.person
             text: qsTr("用户主页")

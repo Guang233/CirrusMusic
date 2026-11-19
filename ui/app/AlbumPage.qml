@@ -51,10 +51,10 @@ SongCollectionPage {
             id: notes
             width: parent.width
             text: pageModel.description
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -69,10 +69,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: pageModel.type
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         Column {
             width: parent.width
@@ -82,8 +82,8 @@ SongCollectionPage {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                color: Theme.color.onSurface
-                font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+                color: page.infoColor
+                font: page.titleFont
                 Accessible.role: Accessible.Heading
             }
             Text {
@@ -91,7 +91,7 @@ SongCollectionPage {
                 visible: pageModel.aliasText !== ""
                 text: pageModel.aliasText
                 elide: Text.ElideRight
-                color: Theme.color.onSurfaceVariant
+                color: page.infoVariantColor
                 font: Theme.type.bodyMedium.font
             }
         }
@@ -106,7 +106,7 @@ SongCollectionPage {
                     required property var modelData
                     Text {
                         text: artist.modelData.name
-                        color: Theme.color.onSurface
+                        color: page.infoColor
                         font: Theme.type.titleMedium.font
                         // Underlined while hovered, like the table's links.
                         Rectangle {
@@ -129,7 +129,7 @@ SongCollectionPage {
                     Text {
                         visible: artist.index < pageModel.artists.length - 1
                         text: qsTr(" / ")
-                        color: Theme.color.onSurfaceVariant
+                        color: page.infoVariantColor
                         font: Theme.type.titleMedium.font
                     }
                 }
@@ -140,14 +140,14 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.releaseText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Text {
             width: parent.width
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Notes {
@@ -159,15 +159,18 @@ SongCollectionPage {
     extraContent: Notes {}
     showExtra: !page.wide && pageModel.description !== ""
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
-        Button {
-            variant: Md.Tonal
+        PageAction {
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏")
             onClicked: page.toggleSubscribed()
         }
-        Button {
+        PageAction {
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             variant: Md.Text
             glyph: Symbols.comment
             text: pageModel.commentCount > 0

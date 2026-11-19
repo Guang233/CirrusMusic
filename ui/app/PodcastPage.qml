@@ -71,10 +71,10 @@ SongCollectionPage {
             id: description
             width: parent.width
             text: pageModel.description
-            maximumLineCount: 1
+            maximumLineCount: page.twoPane ? 4 : 1
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Button {
@@ -89,10 +89,10 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("播客")
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         Text {
             width: parent.width
@@ -100,8 +100,8 @@ SongCollectionPage {
             wrapMode: Text.Wrap
             maximumLineCount: 2
             elide: Text.ElideRight
-            color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            color: page.infoColor
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -109,7 +109,7 @@ SongCollectionPage {
             visible: text !== ""
             text: pageModel.countText
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
         Description {
@@ -121,17 +121,17 @@ SongCollectionPage {
     extraContent: Description {}
     showExtra: !page.wide && pageModel.description !== ""
 
-    actionsContent: Row {
+    actionsContent: Flow {
         spacing: 8
-        Button {
-            variant: Md.Tonal
+        PageAction {
+            iconOnly: page.twoPane
+            size: page.paneActionSize
             glyph: pageModel.subscribed ? Symbols.bookmark_added : Symbols.bookmark_add
             text: pageModel.subscribed ? qsTr("已收藏") : qsTr("收藏播客")
             onClicked: page.toggleSubscribed()
         }
         // Newest or oldest first; loads from the start.
         ConnectedButtonGroup {
-            anchors.verticalCenter: parent.verticalCenter
             exclusive: true
             Button {
                 variant: Md.Tonal

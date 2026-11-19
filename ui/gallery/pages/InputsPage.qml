@@ -199,7 +199,7 @@ ControlPage {
         text: qsTr("滑块")
     }
     Caption {
-        text: qsTr("把手为竖条，与轨道两侧留 6 px 间隙；按下或键盘焦点时变细。第二个拖动时显示数值。")
+        text: qsTr("把手为竖条，与轨道两侧留 6 px 间隙；按下或键盘焦点时变细。第二个拖动时显示数值；第四个是进度条（roundHandle）：静止时是圆点，按下或键盘焦点时拉成竖条。")
     }
     ColumnLayout {
         spacing: 16
@@ -220,6 +220,17 @@ ControlPage {
             value: 0.6
             trackHeight: 40
             Accessible.name: qsTr("均衡器")
+            Layout.preferredWidth: 360
+        }
+        // A seek bar: a dot at rest that stretches into the bar while pressed.
+        Slider {
+            value: 0.4
+            trackHeight: 8
+            handleHeight: 32
+            waveAmplitude: 4
+            wavy: true
+            roundHandle: true
+            Accessible.name: qsTr("播放进度")
             Layout.preferredWidth: 360
         }
         Slider {

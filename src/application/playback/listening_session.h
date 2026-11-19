@@ -22,6 +22,9 @@ class ListeningSession final : public QObject
     bool startFm(domain::AudioQuality quality = domain::AudioQuality::Standard,
                  domain::TransportIntent intent = domain::TransportIntent::Play);
     bool retryFm();
+    // Plays a Personal FM restored at startup (restoredFm()) on: from `entry`, one of its
+    // songs so far, or with a null entry from a new song after them (as next() would).
+    bool resumeFm(QUuid entry, domain::AudioQuality quality = domain::AudioQuality::Standard);
     [[nodiscard]] domain::ListeningMode mode() const
     {
         return current() ? m_mode : domain::ListeningMode::Queue;
@@ -36,9 +39,17 @@ class ListeningSession final : public QObject
     bool replaceQueue(const QList<domain::SongId>& songs, qsizetype startIndex = 0,
                       domain::AudioQuality quality = domain::AudioQuality::Standard,
                       const QList<domain::PlayOrigin>& origins = {});
-    // Storage composition only. Never load/play/query during restoration.
+    // Storage composition only. Never load/play/query during restoration. A Personal FM
+    // (`mode`) comes back as its songs so far, shown as queue() until resumeFm() plays it.
     bool restoreQueue(const domain::QueueSnapshot& saved, domain::SessionSnapshot expected,
-                      std::pair<quint64, quint64> expectedIntent);
+                      std::pair<quint64, quint64> expectedIntent,
+                      domain::ListeningMode mode = domain::ListeningMode::Queue);
+    // The restored queue is a Personal FM's (restoreQueue), not played since.
+    [[nodiscard]] bool restoredFm() const
+    {
+        return m_restoredFm && m_mode == domain::ListeningMode::Queue && !current() &&
+               queueContextMatches();
+    }
     [[nodiscard]] domain::SessionToken queueContext() const { return m_queueContext; }
     bool append(const QList<domain::SongId>& songs, bool playNext = false,
                 const domain::PlayOrigin& origin = {});
@@ -87,6 +98,13 @@ class ListeningSession final : public QObject
                        (!m_queueContext.isValid() || queueContextMatches())
                    ? m_queue.snapshot()
                    : domain::QueueSnapshot{};
+    }
+    // Personal FM's songs so far, oldest first, the one playing (or the last one, while the
+    // next is fetched) active; read on fmChanged. Empty outside Personal FM.
+    [[nodiscard]] domain::QueueSnapshot fmQueue() const
+    {
+        return mode() == domain::ListeningMode::PersonalFm ? m_queue.snapshot()
+                                                           : domain::QueueSnapshot{};
     }
     // queue()'s entry ids in play order; read on queueChanged. Empty when queue() is.
     [[nodiscard]] QList<QUuid> playOrder() const
@@ -144,6 +162,9 @@ class ListeningSession final : public QObject
     void consumeFm();
     void blockFm();
     void clearFmState();
+    // The Personal FM song `step` places from the active one in fmQueue(), or null.
+    [[nodiscard]] QUuid fmNeighbour(int step) const;
+    bool playFm(QUuid entry, bool automatic);
     bool acceptLoadCommand(quint64 id, quint64 revision);
     void receive(domain::PlaybackSnapshot snapshot);
     void advance(bool naturalEnd);
@@ -165,6 +186,7 @@ class ListeningSession final : public QObject
     quint64 m_fmScheduledRevision = 0;
     int m_fmAttempts = 0;
     bool m_fmWaiting = false, m_fmBlocked = false;
+    bool m_restoredFm = false; // the restored queue is a Personal FM's
     PlaybackQueue m_queue;
     ListeningHistory m_history;
     LyricTimeline m_timeline;

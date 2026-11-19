@@ -26,6 +26,7 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_TESTING=OFF \
     -DCIRRUS_BUILD_GALLERY=OFF \
+    -DCIRRUS_PACKAGE=aur \
     -DCIRRUS_EXECUTABLE=cirrus
   cmake --build build
 }

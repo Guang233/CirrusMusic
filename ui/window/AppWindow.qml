@@ -28,6 +28,13 @@ Window {
     property alias frame: windowFrame
     property bool showTitle: true
     property color surfaceColor: Theme.color.surface
+    // The default children start at the window's top, under the title bar row (which
+    // stays above them and keeps moving the window); they keep its height clear
+    // where it matters (`titleHeight`).
+    property bool titleOverContent: false
+    property alias titleContentHeight: titleBarItem.contentHeight
+    property alias titleTopInset: titleBarItem.topInset
+    readonly property real titleHeight: titleBarItem.height
 
     readonly property bool macOS: Qt.platform.os === "osx"
     readonly property bool customFrame: titleBar === TitleBarMode.Custom && !macOS
@@ -96,6 +103,7 @@ Window {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
+            z: window.titleOverContent ? 1 : 0
             frame: windowFrame
             title: window.showTitle ? window.title : ""
             windowControls: window.titleBar !== TitleBarMode.System
@@ -109,12 +117,13 @@ Window {
 
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.top: titleBarItem.bottom
+            anchors.top: window.titleOverContent ? parent.top : titleBarItem.bottom
             anchors.bottom: parent.bottom
         }
 
         Item {
             id: overlayItem
+            z: 2
             anchors.fill: parent
         }
     }

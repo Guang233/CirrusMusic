@@ -130,6 +130,8 @@ QtObject {
     readonly property string clear_all: "\ue0b8"
     readonly property string bar_chart: "\ue26b"
     readonly property string local_fire_department: "\uef55"
+    readonly property string right_panel_open: "\uf704"
+    readonly property string right_panel_close: "\uf705"
 
     // Every property above, in symbols.txt order (for galleries and lookups).
     readonly property list<string> names: [
@@ -258,6 +260,8 @@ QtObject {
         "add_to_queue",
         "clear_all",
         "bar_chart",
-        "local_fire_department"
+        "local_fire_department",
+        "right_panel_open",
+        "right_panel_close"
     ]
 }

@@ -23,6 +23,10 @@ T.Button {
     // Standard icon buttons on a background of their own (the player page): this color
     // for the icon and the state layer, when set.
     property color tint: "transparent"
+    // A container in a tone of the surface's own (the Material player page, the mini
+    // and side players), whatever the variant: this color unselected, the content
+    // `tint` (else OnSurfaceVariant); selected, Primary / OnPrimary.
+    property color containerTint: "transparent"
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
@@ -49,8 +53,11 @@ T.Button {
 
     readonly property color containerColor: {
         if (!enabled)
-            return variant === Md.Standard || variant === Md.Outlined && !toggled
+            return containerTint.a > 0 ? Qt.alpha(containerTint, containerTint.a * 0.5)
+                 : variant === Md.Standard || variant === Md.Outlined && !toggled
                     ? "transparent" : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer);
+        if (containerTint.a > 0)
+            return Theme.mix(containerTint, ColorScope.scheme.primary, selection.value);
         switch (variant) {
         case Md.Filled:
             return checkable ? Theme.mix(ColorScope.scheme.surfaceContainer, ColorScope.scheme.primary,
@@ -67,7 +74,11 @@ T.Button {
     }
     readonly property color contentColor: {
         if (!enabled)
-            return Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent);
+            return Qt.alpha(containerTint.a > 0 && tint.a > 0 ? tint : ColorScope.scheme.onSurface,
+                            Theme.state.disabledContent);
+        if (containerTint.a > 0)
+            return Theme.mix(tint.a > 0 ? tint : ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
+                             selection.value);
         switch (variant) {
         case Md.Filled:
             return checkable ? Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,

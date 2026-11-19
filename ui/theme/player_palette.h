@@ -20,12 +20,17 @@ class Theme;
 //                  range (dark 15-35, light 82-94 at 70% chroma), row-major
 //  solid           the "solid" background: the background's hue (below) at tone 20 / 80
 //  content         text and icons: the background's hue at a low chroma, tone 85 / 15;
-//                  contentVariant is the secondary level (tone 68 / 32)
+//                  contentVariant is the secondary level (tone 68 / 32); with
+//                  `coverSeed`, the scheme's OnPrimaryContainer (and 72% of it over
+//                  PrimaryContainer)
 //  shadow          the cover's shadow: its darkest color, made darker
 //  glare           the light sliding over the tilted cover: near white in the content
 //                  hue, in both modes
 //  scheme          MD3 roles for the player's menus, dialogs and panels
-//                  (ColorScope.scheme), seeded with the background's hue
+//                  (ColorScope.scheme), seeded with the background's hue; with
+//                  `coverSeed`, with the cover's own seed instead (a color that is in
+//                  the cover, scored as MD3 does: the Material style, the mini and side
+//                  players), in `variant` (a Theme.Variant; -1 follows the theme's)
 // The background's hue is the cover grid's chroma-weighted mean hue: one hue for the
 // background, the text and the controls on it (player.md §3.1). A cover with little
 // color (black and white, or a low mean chroma) makes all three neutral.
@@ -46,6 +51,8 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     Q_PROPERTY(QColor shadow READ shadow NOTIFY colorsChanged)
     Q_PROPERTY(QColor glare READ glare NOTIFY colorsChanged)
     Q_PROPERTY(cirrus::ui::ColorScheme* scheme READ scheme CONSTANT)
+    Q_PROPERTY(bool coverSeed READ coverSeed WRITE setCoverSeed NOTIFY coverSeedChanged)
+    Q_PROPERTY(int variant READ variant WRITE setVariant NOTIFY variantChanged)
     // The background's tone range and chroma factor (§3.1), for backgrounds mapped in a
     // shader (the blurred cover).
     Q_PROPERTY(double toneLow READ toneLow NOTIFY darkChanged)
@@ -59,6 +66,10 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     void setPalette(const CoverPalette& palette);
     [[nodiscard]] bool dark() const { return m_dark; }
     void setDark(bool dark);
+    [[nodiscard]] bool coverSeed() const { return m_coverSeed; }
+    void setCoverSeed(bool coverSeed);
+    [[nodiscard]] int variant() const { return m_variant; }
+    void setVariant(int variant);
 
     [[nodiscard]] QList<QColor> grid() const { return m_current.mid(0, kGridCells); }
     [[nodiscard]] QColor solid() const { return m_current.value(Solid); }
@@ -77,6 +88,8 @@ class PlayerPalette : public QObject, public QQmlParserStatus
   signals:
     void paletteChanged();
     void darkChanged();
+    void coverSeedChanged();
+    void variantChanged();
     void colorsChanged();
 
   private:
@@ -94,11 +107,14 @@ class PlayerPalette : public QObject, public QQmlParserStatus
     [[nodiscard]] Tint tint() const;
     [[nodiscard]] QList<QColor> computeColors() const;
     void update(bool animate);
+    [[nodiscard]] ColorScheme::Colors schemeColors() const;
     void updateScheme(bool animate);
     void blend(qreal progress);
 
     CoverPalette m_palette;
     bool m_dark = true;
+    bool m_coverSeed = false;
+    int m_variant = -1;
     bool m_complete = false;
     QPointer<Theme> m_theme;
     ColorScheme* m_scheme;

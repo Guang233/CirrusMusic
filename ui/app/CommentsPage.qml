@@ -218,6 +218,7 @@ Item {
         model: pageModel.rows
         // ListView places its rows at x 0: the margin centers the content.
         leftMargin: page.contentX
+        bottomMargin: PageInsets.bottom
         flickableDirection: Flickable.VerticalFlick
         // The current row is the Tab stop (see CommentRowItem), not the list: the list
         // is a focus scope holding the header too, and would hand focus back to it.

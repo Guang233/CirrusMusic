@@ -6,8 +6,11 @@ import Cirrus.Components
 import Cirrus.Presentation
 
 // The shell (docs/ui/pages/shell.md): navigation rail and a rounded content panel
-// with the page stack, in a frame that the top bar (TopBar, in the window's title
-// bar row) continues; the mini player sits under the panel. Large windows (≥ 1200)
+// with the page stack. The shell starts at the window's top: the title bar row (with
+// the TopBar) lies over its first `topInset`, the rail below it, and the panel
+// reaches up under the row, so back, search and the window buttons sit on the panel
+// (redesign-md3e.md §8); the mini player floats over the bottom of the panel (pages
+// scroll under it, PageInsets). Large windows (≥ 1200)
 // keep the rail expanded beside the panel and push it when toggled; narrower ones
 // keep it collapsed and expand it over the panel with a scrim. Crossing the
 // breakpoint switches without animation (motion-choreography.md §5). Pages get
@@ -16,6 +19,12 @@ Item {
     id: shell
 
     readonly property bool large: width >= 1200
+    // The title bar row's height over the shell (pages start under it), and where the
+    // panel starts.
+    property real topInset: 0
+    readonly property real panelTop: 8
+    // The window's corner radius (rounded frames): what reaches its corners rounds so.
+    property real windowCornerRadius: 0
     readonly property bool canGoBack: stack.depth > 1
     readonly property bool canGoForward: forwardEntries.length > 0
     // Width the rail takes beside the panel (the floating rail does not push).
@@ -44,15 +53,33 @@ Item {
     property bool covered: false
     // For the player page's shared elements (MiniPlayer.bar, coverItem, titleItem,
     // controlsItem, seekItem, flying).
-    readonly property Item miniBar: miniPlayer.bar
-    readonly property Item miniCover: miniPlayer.coverItem
-    readonly property Item miniTitle: miniPlayer.titleItem
-    readonly property Item miniControls: miniPlayer.controlsItem
-    readonly property Item miniSeek: miniPlayer.seekItem
-    property alias miniFlying: miniPlayer.flying
+    // The player docked as a pane on the right (SidePlayer, App.settings.miniDocked)
+    // where the content keeps at least 700 beside it; else the floating mini player.
+    readonly property real sideWidth: Math.round(Math.max(340, Math.min(396, width * 0.27)))
+    readonly property bool canDock: width - navWidth - sideWidth - 24 >= 700
+    readonly property bool docked: App.settings.miniDocked && canDock
+    readonly property bool sideShown: docked && App.player.status !== Playback.Empty
+    // The content panel's right edge and middle, in the shell (the top bar centres the
+    // search on it).
+    readonly property real panelRight: panel.x + panel.width
+    readonly property real panelCenter: panel.x + panel.width / 2
+    // Where the player page grows from and its shared elements fly from: the side
+    // pane's while docked, else the mini player's.
+    readonly property Item miniBar: docked ? sidePlayer.bar : miniPlayer.bar
+    readonly property Item miniCover: docked ? sidePlayer.coverItem : miniPlayer.coverItem
+    readonly property Item miniTitle: docked ? sidePlayer.titleItem : miniPlayer.titleItem
+    readonly property Item miniControls: docked ? sidePlayer.controlsItem : miniPlayer.controlsItem
+    readonly property Item miniSeek: docked ? sidePlayer.seekItem : miniPlayer.seekItem
+    // The side pane's cover is cut to a shape and turns: the page's flying cover
+    // starts from it (-1: none, a plain rounded cover).
+    readonly property int miniCoverShape: docked ? sidePlayer.coverShape : -1
+    readonly property real miniCoverRotation: docked ? sidePlayer.coverRotation : 0
+    readonly property real miniCoverCorner: docked ? sidePlayer.coverRadius : -1
+    property bool miniFlying: false
 
-    // The mini player asks for the player page.
+    // The mini player asks for the player page, or for it with the queue open.
     signal playerRequested
+    signal queueRequested
     // Something on top (the player page) should give way, e.g. for the settings.
     signal uncoverRequested
     // A notice while covered: whatever covers the shell shows it.
@@ -203,8 +230,20 @@ Item {
         else
             snackbar.show(text);
     }
+    // The same with one action (Snackbar.showAction); Main shows it on the player page
+    // while that covers the shell.
+    function notifyAction(text: string, action: string, handler: var) {
+        snackbar.showAction(text, action, handler);
+    }
     function focusMiniPlayer() {
-        miniPlayer.takeFocus();
+        if (docked)
+            sidePlayer.takeFocus();
+        else
+            miniPlayer.takeFocus();
+    }
+    // The player docked on the right, or floating again (remembered).
+    function setDocked(on: bool): void {
+        App.settings.miniDocked = on;
     }
 
     // "收藏到歌单" for `keys`: picks one of the account's playlists (sign-in first).
@@ -441,14 +480,16 @@ Item {
     Rectangle {
         id: panel
         x: shell.navWidth
-        width: shell.width - x - 8
-        height: shell.height - 8 - miniPlayer.reservedHeight
+        y: shell.panelTop
+        width: shell.width - x - 8 - dock.value * shell.sideWidth
+        height: shell.height - y - 8
         radius: Theme.shape.largeIncreased
         color: Theme.color.surface
 
         PageStack {
             id: stack
             anchors.fill: parent
+            anchors.topMargin: Math.max(0, shell.topInset - panel.y)
             clip: true
             // The trail in the log: which page, with which ids (logging-v2 §4.1).
             onCurrentItemChanged: if (currentItem)
@@ -477,24 +518,68 @@ Item {
         Snackbar {
             id: snackbar
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: 16 + miniPlayer.reservedHeight
         }
+    }
+
+    // Slides the side pane in and narrows the panel (the rail's push, §5).
+    Spring {
+        id: dock
+        target: shell.sideShown ? 1 : 0
+        spec: Theme.motion.defaultSpatial
+        Component.onCompleted: snapTo(target)
+    }
+    // The mini and side players wear the cover's colors (player-expressive.md §1).
+    CoverColors {
+        id: coverColors
+        dark: Theme.dark
+    }
+
+    SidePlayer {
+        id: sidePlayer
+        ColorScope.scheme: coverColors.scheme
+        // Flush with the window's top, right and bottom edges.
+        x: shell.width - dock.value * shell.sideWidth
+        width: shell.sideWidth
+        height: shell.height
+        visible: dock.value > 0.001
+        edgeRadius: shell.windowCornerRadius
+        topInset: shell.topInset
+        flying: shell.miniFlying && shell.docked
+        onOpenRequested: shell.playerRequested()
+        onQueueRequested: shell.queueRequested()
+        onLoginRequested: shell.openLogin()
     }
 
     MiniPlayer {
         id: miniPlayer
+        ColorScope.scheme: coverColors.scheme
+        hidden: shell.docked
+        canDock: shell.canDock
+        flying: shell.miniFlying && !shell.docked
         onOpenRequested: shell.playerRequested()
+        onDockRequested: shell.setDocked(true)
+        onQueueRequested: shell.queueRequested()
+        onLoginRequested: shell.openLogin()
         onCommentsRequested: {
             const song = App.player.current;
             shell.openSongComments(song.key, song.title, song.artistText, song.coverKey);
         }
         x: panel.x
         width: panel.width
-        y: shell.height - implicitHeight - bottomMargin
+        y: panel.y + panel.height - implicitHeight - bottomMargin
+    }
+    // Pages keep their last rows clear of the bar.
+    Binding {
+        target: PageInsets
+        property: "bottom"
+        value: miniPlayer.reservedHeight
     }
 
     // Blocks the content while the rail floats over it.
     MouseArea {
         anchors.fill: parent
+        anchors.topMargin: shell.topInset
         visible: !shell.large && rail.progress > 0
         hoverEnabled: true
         onClicked: rail.expanded = false
@@ -515,6 +600,7 @@ Item {
     NavigationRail {
         id: rail
         anchors.top: parent.top
+        anchors.topMargin: shell.topInset
         anchors.bottom: parent.bottom
         modal: !shell.large
         minimumExpandedWidth: 272
@@ -529,6 +615,13 @@ Item {
                 onRecentRequested: shell.openRecent()
                 onStatsRequested: shell.openStats()
                 onSignInRequested: shell.openLogin()
+            }
+        }
+        collapsedContent: Component {
+            RailCovers {
+                library: myLibrary
+                selectedKey: shell.openPlaylistKey
+                onPlaylistRequested: key => shell.openPlaylist(key)
             }
         }
         footer: Component {

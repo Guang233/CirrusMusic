@@ -65,7 +65,7 @@ void PlayerPalette::componentComplete()
         // The scheme follows the theme's variant, spec and contrast.
         for (auto signal :
              {&Theme::variantChanged, &Theme::specVersionChanged, &Theme::contrastChanged})
-            connect(m_theme, signal, this, [this] { updateScheme(true); });
+            connect(m_theme, signal, this, [this] { update(true); });
     }
     update(false);
 }
@@ -83,6 +83,24 @@ void PlayerPalette::setDark(bool dark)
         return;
     m_dark = dark;
     emit darkChanged();
+    update(true);
+}
+
+void PlayerPalette::setCoverSeed(bool coverSeed)
+{
+    if (coverSeed == m_coverSeed)
+        return;
+    m_coverSeed = coverSeed;
+    emit coverSeedChanged();
+    update(true);
+}
+
+void PlayerPalette::setVariant(int variant)
+{
+    if (variant == m_variant)
+        return;
+    m_variant = variant;
+    emit variantChanged();
     update(true);
 }
 
@@ -146,6 +164,15 @@ QList<QColor> PlayerPalette::computeColors() const
     colors[Content] = fromHct(tint.hue, contentChroma, levels.content);
     colors[ContentVariant] = fromHct(tint.hue, contentChroma, levels.contentVariant);
     colors[Glare] = fromHct(tint.hue, std::min(contentChroma, kGlareChroma), kGlareTone);
+    // On the cover-seeded scheme's PrimaryContainer (the Material style), the text is
+    // its OnPrimaryContainer, and the secondary level that at 72% over the container.
+    if (m_coverSeed && m_theme) {
+        const ColorScheme::Colors scheme = schemeColors();
+        const QRgb ink = scheme[ColorScheme::OnPrimaryContainer].rgb();
+        const QRgb ground = scheme[ColorScheme::PrimaryContainer].rgb();
+        colors[Content] = QColor::fromRgb(ink);
+        colors[ContentVariant] = QColor::fromRgb(mcu::BlendCam16Ucs(ground, ink, 0.72));
+    }
     // The background's own hue and colorfulness, not the most common color: that is
     // often white or black, whose hue is noise.
     colors[Solid] =
@@ -175,22 +202,32 @@ void PlayerPalette::update(bool animate)
     updateScheme(animate);
 }
 
-void PlayerPalette::updateScheme(bool animate)
+ColorScheme::Colors PlayerPalette::schemeColors() const
 {
-    if (!m_theme)
-        return;
-    const SpringSpec spec = Motion::spec(Motion::SlowEffects);
     // The background's hue, so the panels match the background and the text. Neutral
     // with them: a gray seed gets the monochrome scheme (Theme::computeColors). The
     // chroma matters to the variants that follow the source's (Content, Fidelity); it
     // stays above the monochrome cut.
     const Tint tint = this->tint();
     constexpr double kMinSeedChroma = 8.0;
-    const QColor seed = tint.neutral ? QColor(0x80, 0x80, 0x80)
-                                     : fromHct(tint.hue, std::max(tint.chroma, kMinSeedChroma), 50);
-    m_scheme->transitionTo(m_theme->computeColors(seed, m_dark),
-                           animate && !Motion::reducedMotion() ? spec.duration() : 0,
-                           spec.easing());
+    // The cover's own seed is a color in it (CoverPalette scores the quantized colors
+    // as MD3 does; gray for a monochrome cover); the background's hue is a mean, which
+    // washes a cover of a few strong colors out to a dull one.
+    const QColor seed = m_coverSeed && m_palette.valid ? m_palette.seed
+                        : tint.neutral
+                            ? QColor(0x80, 0x80, 0x80)
+                            : fromHct(tint.hue, std::max(tint.chroma, kMinSeedChroma), 50);
+    return m_variant >= 0 ? m_theme->computeColors(seed, m_dark, Theme::Variant(m_variant))
+                          : m_theme->computeColors(seed, m_dark);
+}
+
+void PlayerPalette::updateScheme(bool animate)
+{
+    if (!m_theme)
+        return;
+    const SpringSpec spec = Motion::spec(Motion::SlowEffects);
+    m_scheme->transitionTo(
+        schemeColors(), animate && !Motion::reducedMotion() ? spec.duration() : 0, spec.easing());
 }
 
 void PlayerPalette::blend(qreal progress)

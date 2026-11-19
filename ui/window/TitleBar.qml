@@ -19,11 +19,15 @@ Item {
     // The window buttons' color on a background of their own (the player page).
     property alias buttonTint: buttons.tint
     default property alias content: content.data
+    // The row's height with app content.
+    property real contentHeight: 56
+    // Space at the top the content and the buttons keep clear of (e.g. where the
+    // app's panel starts under the row).
+    property real topInset: 0
 
     readonly property bool hasContent: content.visibleChildren.length > 0
 
-    // Taller with app content (a 40 px search field), so it keeps 8 px around it.
-    implicitHeight: hasContent ? 56 : windowButtons ? 48 : 0
+    implicitHeight: hasContent ? contentHeight : windowButtons ? 48 : 0
     // Collapsed by height, never hidden: hiding would make the content's children
     // invisible too, so `hasContent` could never turn true again.
     clip: implicitHeight === 0
@@ -82,6 +86,7 @@ Item {
         anchors.leftMargin: titleText.visible ? 16 : root.leadingInset
         anchors.right: root.windowButtons ? buttons.left : parent.right
         anchors.top: parent.top
+        anchors.topMargin: root.topInset
         anchors.bottom: parent.bottom
     }
 
@@ -90,6 +95,7 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root.topInset / 2
         visible: root.windowButtons
     }
 }

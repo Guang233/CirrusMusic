@@ -42,17 +42,17 @@ SongCollectionPage {
     infoContent: Column {
         spacing: 8
 
-        Text {
+        KindLabel {
             text: qsTr("听歌统计")
-            color: Theme.color.primary
-            font: Theme.type.labelLarge.font
+            color: page.infoAccentColor
+            chip: page.twoPane
         }
         Text {
             width: parent.width
             text: page.title
             elide: Text.ElideRight
-            color: Theme.color.onSurface
-            font: page.wide ? Theme.type.headlineLargeEmphasized.font : Theme.type.headlineSmallEmphasized.font
+            color: page.infoColor
+            font: page.titleFont
             Accessible.role: Accessible.Heading
         }
         Text {
@@ -60,7 +60,7 @@ SongCollectionPage {
             text: pageModel.range === StatsPageModel.AllTime ? qsTr("所有时间")
                                                              : pageModel.periodTitle
             elide: Text.ElideRight
-            color: Theme.color.onSurfaceVariant
+            color: page.infoVariantColor
             font: Theme.type.bodyMedium.font
         }
     }

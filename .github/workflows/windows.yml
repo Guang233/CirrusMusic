@@ -99,6 +99,7 @@ jobs:
           -DBUILD_TESTING=OFF
           -DCIRRUS_BUILD_GALLERY=OFF
           -DCIRRUS_EXECUTABLE=Cirrus
+          -DCIRRUS_PACKAGE=windows
           -DCIRRUS_DEPLOY_QT=ON
           -DCMAKE_INSTALL_BINDIR=.
           -DCIRRUS_RUNTIME_DIRS="$DEPS/bin;$VCPKG_INSTALLED/x64-windows/bin"

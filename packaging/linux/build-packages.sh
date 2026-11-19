@@ -29,6 +29,7 @@ PKG_CONFIG_PATH="$deps/lib/pkgconfig" cmake -S "$root" -B "$build" -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCIRRUS_BUILD_GALLERY=OFF \
     -DCIRRUS_EXECUTABLE=cirrus \
+    -DCIRRUS_PACKAGE=linux \
     -DCIRRUS_DEPLOY_QT=ON
 cmake --build "$build" --parallel "${JOBS:-4}"
 

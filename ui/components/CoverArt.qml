@@ -8,12 +8,16 @@ import Cirrus.Controls
 // A new cover replaces the shown one only once decoded, with a cross-fade
 // (motion-choreography.md §4.1). Two layers at most: when a cover arrives during a
 // fade, the more visible layer becomes the base. The software renderer has no
-// masking, so covers stay square there.
+// masking, so covers stay square there. `shape` cuts the cover to an MD3E shape instead
+// of a rounded rectangle (decorative covers only: it crops the corners).
+//   CoverArt { coverKey: key; shape: MaterialShape.Cookie9Sided }
 Item {
     id: root
 
     property string coverKey
     property real radius: Theme.shape.small
+    // MaterialShape.* (import M3Shapes), or -1 for the rounded rectangle.
+    property int shape: -1
     property string glyph: Symbols.music_note
     // Decode size; by default the item's size in device pixels, rounded up to a step.
     // With the exact size, every pixel of a resize (a window edge being dragged, a
@@ -115,7 +119,7 @@ Item {
         layer.enabled: root.masked
         layer.effect: MultiEffect {
             maskEnabled: true
-            maskSource: mask
+            maskSource: shapeMask.active ? shapeMask : mask
             maskThresholdMin: 0.5
             maskSpreadAtMin: 1
         }
@@ -144,7 +148,19 @@ Item {
         anchors.fill: parent
         radius: root.radius
         visible: false
-        layer.enabled: root.masked
+        layer.enabled: root.masked && !shapeMask.active
+    }
+    Loader {
+        id: shapeMask
+        anchors.fill: parent
+        active: root.masked && root.shape >= 0
+        visible: false
+        layer.enabled: active
+        sourceComponent: MorphShape {
+            shape: root.shape
+            // Any opaque color: the mask reads its alpha.
+            color: ColorScope.scheme.scrim
+        }
     }
 
     NumberAnimation {

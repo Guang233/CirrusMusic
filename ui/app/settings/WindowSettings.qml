@@ -53,4 +53,11 @@ SettingsGroup {
         value: App.settings.preferDiscreteGpu
         onSwitched: value => App.settings.preferDiscreteGpu = value
     }
+    SwitchSetting {
+        visible: App.updates.canCheckAutomatically
+        text: qsTr("自动检查更新")
+        supportingText: qsTr("每天向 GitHub 查询一次新版本")
+        value: App.settings.updatesAuto
+        onSwitched: value => App.settings.updatesAuto = value
+    }
 }

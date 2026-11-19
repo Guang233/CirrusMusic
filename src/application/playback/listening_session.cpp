@@ -172,6 +172,7 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     m_timeline.clear();
     m_lyricsState = LyricsState::None;
     const bool leaveFm = !fm && m_mode == ListeningMode::PersonalFm;
+    m_restoredFm = false;
     if (!fm)
         clearFmState();
     else {
@@ -247,7 +248,7 @@ bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startI
     return begin(std::move(candidate), TransportIntent::Play, quality, false);
 }
 bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot expected,
-                                    std::pair<quint64, quint64> expectedIntent)
+                                    std::pair<quint64, quint64> expectedIntent, ListeningMode mode)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_backend.state() != BackendState::Ready || !expected.token.isValid() ||
@@ -258,9 +259,13 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     auto candidate = m_queue;
     if (!candidate.restore(saved))
         return false;
-    qCInfo(lcPlayback) << log::event("queue.restored") << log::field("count", saved.entries.size());
+    qCInfo(lcPlayback) << log::event("queue.restored") << log::field("count", saved.entries.size())
+                       << log::field("mode", mode);
     const auto revision = ++m_revision;
     m_queue = std::move(candidate);
+    // Personal FM needs the account it was played with (signed in); else a plain queue.
+    m_restoredFm =
+        mode == ListeningMode::PersonalFm && m_fm && expected.phase == SessionPhase::Authenticated;
     m_queueContext = expected.token;
     m_sourceSession = expected;
     m_intent = TransportIntent::Play; // only a future explicit user command may start media
@@ -287,7 +292,9 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const P
 bool ListeningSession::select(QUuid entry)
 {
     qCInfo(lcPlayback) << log::event("queue.select") << log::field("entry", entry);
-    if (m_mode == ListeningMode::PersonalFm || !queueContextMatches())
+    if (m_mode == ListeningMode::PersonalFm) // one of its songs so far
+        return queueContextMatches() && playFm(entry, false);
+    if (!queueContextMatches())
         return false;
     auto candidate = m_queue;
     return candidate.select(entry) &&
@@ -298,8 +305,12 @@ bool ListeningSession::select(QUuid entry)
 bool ListeningSession::next()
 {
     qCInfo(lcPlayback) << log::event("queue.next") << log::field("mode", m_mode);
-    if (m_mode == ListeningMode::PersonalFm)
+    if (m_mode == ListeningMode::PersonalFm) {
+        // On through the songs so far after going back, then a new one.
+        if (const QUuid after = m_fmWaiting ? QUuid{} : fmNeighbour(1); !after.isNull())
+            return playFm(after, false);
         return !m_fmWaiting && enterFmWait(false, true);
+    }
     if (!queueContextMatches())
         return false;
     auto candidate = m_queue;
@@ -320,15 +331,23 @@ bool ListeningSession::canGoPrevious() const
     if (m_backend.state() != BackendState::Ready || !queueContextMatches())
         return false;
     const bool restart = current() && m_playback.positionMs > 3000 && m_playback.seekable;
-    return m_mode == ListeningMode::PersonalFm ? restart && !m_fmWaiting
-                                               : restart || m_queue.canPrevious();
+    if (m_mode == ListeningMode::PersonalFm)
+        return current() && (m_fmWaiting ? !m_queue.snapshot().active.isNull()
+                                         : !fmNeighbour(-1).isNull() || restart);
+    return restart || m_queue.canPrevious();
 }
 bool ListeningSession::previous()
 {
     qCInfo(lcPlayback) << log::event("queue.previous") << log::field("mode", m_mode);
-    if (m_mode == ListeningMode::PersonalFm)
-        return current() && !m_fmWaiting && m_playback.positionMs > 3000 && m_playback.seekable &&
-               seek(0);
+    if (m_mode == ListeningMode::PersonalFm) {
+        if (!current())
+            return false;
+        // The song before, from its start; while the next one is fetched, the last one.
+        if (const QUuid before = m_fmWaiting ? m_queue.snapshot().active : fmNeighbour(-1);
+            !before.isNull())
+            return playFm(before, false);
+        return !m_fmWaiting && m_playback.positionMs > 3000 && m_playback.seekable && seek(0);
+    }
     if (!queueContextMatches())
         return false;
     if (current() && m_playback.positionMs > 3000 && m_playback.seekable)
@@ -633,7 +652,9 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
             if (m_mode == ListeningMode::PersonalFm) {
                 if (end)
                     m_fmAttempts = 0;
-                enterFmWait(true, false);
+                // After going back, on through the songs so far first.
+                if (const QUuid after = fmNeighbour(1); after.isNull() || !playFm(after, true))
+                    enterFmWait(true, false);
             } else
                 advance(end);
         }

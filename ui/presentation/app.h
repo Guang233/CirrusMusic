@@ -21,6 +21,7 @@ class CurrentLyrics;
 class Library;
 class LocalStats;
 class NetworkStatus;
+class UpdateCheck;
 class Player;
 class Session;
 
@@ -42,6 +43,7 @@ class App : public QObject
     Q_MOC_INCLUDE("stats_model.h")
     Q_MOC_INCLUDE("network_status.h")
     Q_MOC_INCLUDE("player.h")
+    Q_MOC_INCLUDE("update_check.h")
     Q_MOC_INCLUDE("session.h")
     QML_ELEMENT
     QML_SINGLETON
@@ -55,6 +57,7 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::Player* player READ player CONSTANT)
     Q_PROPERTY(cirrus::ui::Session* session READ session CONSTANT)
     Q_PROPERTY(cirrus::ui::LocalStats* stats READ stats CONSTANT)
+    Q_PROPERTY(cirrus::ui::UpdateCheck* updates READ updates CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -77,6 +80,7 @@ class App : public QObject
     [[nodiscard]] Library* library() const { return m_library; }
     [[nodiscard]] CurrentLyrics* lyrics() const { return m_lyrics; }
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
+    [[nodiscard]] UpdateCheck* updates() const { return m_updates; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
     [[nodiscard]] LocalStats* stats() const { return m_stats; }
@@ -102,6 +106,7 @@ class App : public QObject
     Diagnostics* m_diagnostics;
     Formatter* m_format;
     NetworkStatus* m_network;
+    UpdateCheck* m_updates;
     Player* m_player;
     Session* m_session;
     Library* m_library;

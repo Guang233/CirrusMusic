@@ -21,6 +21,11 @@ FocusScope {
     // the page slides up instead.
     property Item miniBar
     property Item miniCover
+    // A mini cover cut to a shape (MaterialShape, -1 none) and turned, as the docked
+    // side player's is; `miniCoverCorner` its corner radius when it isn't a CoverArt.
+    property int miniCoverShape: -1
+    property real miniCoverRotation: 0
+    property real miniCoverCorner: -1
     // The mini player's title, buttons and seek bar: they fly to the page's title,
     // transport buttons and progress bar, cross-fading with them.
     property Item miniTitle
@@ -47,6 +52,9 @@ FocusScope {
 
     // 0 cover, 1 lyrics (the queue is a side panel now).
     property int view: Math.min(1, App.settings.playerView)
+    // The Material style (docs/ui/pages/player-expressive.md) instead of the default.
+    readonly property bool expressive: App.settings.playerStyle === 1
+    readonly property ExpressivePlayer expressiveItem: expressiveLoader.item as ExpressivePlayer
     readonly property bool wide: width >= 1000
     // Where the controls and the title go, as set; changes glide (see the Connections).
     // Not bindings: a binding would move them before the glide is switched on.
@@ -63,7 +71,7 @@ FocusScope {
 
     // Controls, top buttons and the pointer are hidden (docs/ui/pages/player.md §2.2).
     property bool chromeHidden: false
-    readonly property bool canHide: opened && App.settings.playerAutoHide > 0
+    readonly property bool canHide: opened && !expressive && App.settings.playerAutoHide > 0
                                     && App.player.status === Playback.Playing
                                     && !controlsFocused
                                     && !overControls && !volume.barOpen && !header.menuOpen
@@ -106,7 +114,13 @@ FocusScope {
         captureRects();
         opened = true;
         wake();
-        controls.playButton.forceActiveFocus(Qt.OtherFocusReason);
+        (expressiveItem ? expressiveItem.playButton : controls.playButton).forceActiveFocus(Qt.OtherFocusReason);
+    }
+    // With the queue panel showing: the mini player's queue button.
+    function openQueue(): void {
+        open();
+        if (opened)
+            sheet = 1;
     }
     function close(): void {
         if (!opened)
@@ -141,6 +155,9 @@ FocusScope {
     function notify(text: string): void {
         snackbar.show(text);
     }
+    function notifyAction(text: string, action: string, handler: var): void {
+        snackbar.showAction(text, action, handler);
+    }
     // Shows the hidden controls and starts counting again.
     function wake(): void {
         chromeHidden = false;
@@ -151,6 +168,20 @@ FocusScope {
 
     property rect miniBarRect: Qt.rect(0, height, width, 0)
     property rect miniCoverRect
+    // The mini player's capsule and cover as they look, where the panel and the flying
+    // cover start: the panel grows out of the capsule (its color and corners), the
+    // cover morphs from its shape (a circle) to the page cover's.
+    readonly property real miniBarRadius: (miniBar as Rectangle)?.radius ?? Theme.shape.large
+    readonly property color miniBarColor: (miniBar as Rectangle)?.color ?? Theme.color.surfaceContainer
+    readonly property real miniCoverRadius: miniCoverCorner >= 0 ? miniCoverCorner
+                                          : (miniCover as CoverArt)?.radius ?? Theme.shape.small
+    // The shape and turn the flight starts from, taken when it starts; and where it
+    // lands on the Material style's shaped cover.
+    property int flyShape: -1
+    property real flyTurn: 0
+    property int endShape: -1
+    property real endTurn: 0
+    readonly property real coverEndRadius: expressiveItem ? expressiveItem.coverRadius : cover.radius
     property rect coverRect
     property rect miniTitleRect
     property rect miniControlsRect
@@ -162,11 +193,18 @@ FocusScope {
             miniBarRect = rectOf(miniBar);
         if (miniCover)
             miniCoverRect = rectOf(miniCover);
+        flyShape = miniCoverShape;
+        // The nearest upright turn of the shape is where it lands (its symmetry).
+        const turn = miniCoverRotation % 360;
+        flyTurn = turn > 180 ? turn - 360 : turn;
         miniTitleRect = rectOf(miniTitle);
         miniControlsRect = rectOf(miniControls);
         miniSeekRect = rectOf(miniSeek);
-        const art = cover.art;
+        const art = expressiveItem ? expressiveItem.coverItem : cover.art;
         coverRect = art.mapToItem(page, 0, 0, art.width, art.height);
+        endShape = expressiveItem ? expressiveItem.coverShape : -1;
+        const end = expressiveItem ? expressiveItem.coverRotation % 360 : 0;
+        endTurn = end > 180 ? end - 360 : end;
     }
 
     // The other shared elements (docs/ui/pages/player.md §2.1). Each pair moves along
@@ -197,7 +235,7 @@ FocusScope {
             ty: place.y - at.y - local.y * sy
         };
     }
-    readonly property bool sharing: miniBar !== null && !reduced
+    readonly property bool sharing: miniBar !== null && !reduced && !expressive
     // The page's elements fade in early on the way, the mini player's copies fade out.
     readonly property real handIn: sharing ? Theme.motion.segment(p, 0.1, 0.5) : late
     readonly property real handOut: 1 - Theme.motion.segment(p, 0.15, 0.55)
@@ -264,6 +302,12 @@ FocusScope {
         id: colors
         palette: Theme.coverPalette
         dark: App.settings.playerTheme === 0 ? Theme.dark : App.settings.playerTheme === 1
+        // The Material style: the cover's own color in the chosen palette style, as the
+        // mini and side players (CoverColors).
+        coverSeed: page.expressive
+        variant: page.expressive ? [Theme.Variant.TonalSpot, Theme.Variant.Vibrant, Theme.Variant.Expressive, Theme.Variant.Fidelity][
+                                       Math.max(0, Math.min(3, App.settings.playerColorStyle))]
+                                 : -1
     }
 
     Timer {
@@ -287,7 +331,9 @@ FocusScope {
     property int lastSheet: 0
     onSheetChanged: {
         const before = lastSheet === 1 ? queueSheet : lastSheet === 2 ? settingsSheet : null;
-        const opener = lastSheet === 1 ? queueButton : settingsButton;
+        const opener = expressiveItem ? (lastSheet === 1 ? expressiveItem.queueButton
+                                                         : expressiveItem.settingsButton)
+                                      : lastSheet === 1 ? queueButton : settingsButton;
         lastSheet = sheet;
         if (sheet === 1) {
             queuePanel.list.forceActiveFocus(Qt.OtherFocusReason);
@@ -411,11 +457,14 @@ FocusScope {
 
     // A side panel's place: the right of the page, between the top row and the bottom
     // row.
+    // In the Material style: solid, in the page's tray tone (player-expressive.md §2.4).
     component Sheet: PlayerSheet {
-        width: Math.min(440, page.width - 2 * page.sideMargin)
-        x: page.width - page.sideMargin / 2 - width
-        y: page.contentTop
-        height: page.contentBottom - y
+        width: Math.min(440, page.width - 2 * (page.expressiveItem ? 24 : page.sideMargin))
+        x: page.width - (page.expressiveItem ? 24 : page.sideMargin / 2) - width
+        y: page.expressiveItem ? page.expressiveItem.contentTop : page.contentTop
+        height: (page.expressiveItem ? page.expressiveItem.sheetBottom : page.contentBottom) - y
+        color: page.expressiveItem ? page.expressiveItem.sheetColor
+                                   : Qt.alpha(ColorScope.scheme.surface, 0.8)
         onCloseRequested: page.sheet = 0
     }
 
@@ -471,9 +520,24 @@ FocusScope {
                                                 Theme.motion.lerp(miniBarRect.width, width, p),
                                                 Theme.motion.lerp(miniBarRect.height, height, p))
                                       : Qt.rect(0, 0, width, height)
-    readonly property real panelRadius: Theme.motion.lerp(Theme.shape.large,
-                                                          appWindow.cornerRadius,
-                                                          Math.min(1, Math.max(0, p)))
+    // From the capsule's corners (round ends) to the window's, never rounder than half
+    // the panel's height.
+    readonly property real panelRadius: Math.min(panelRect.height / 2,
+                                                 Theme.motion.lerp(miniBarRadius,
+                                                                   appWindow.cornerRadius,
+                                                                   Math.min(1, Math.max(0, p))))
+
+    // The capsule floats: the panel keeps its shadow while it is still small.
+    Elevation {
+        x: panel.x
+        y: panel.y
+        width: panel.width
+        height: panel.height
+        radius: page.panelRadius
+        level: Theme.elevation.level1
+        opacity: page.miniBar && !page.reduced
+                 ? panel.opacity * (1 - Theme.motion.segment(page.p, 0.1, 0.4)) : 0
+    }
 
     Item {
         id: panel
@@ -482,21 +546,30 @@ FocusScope {
         width: Math.max(0, page.panelRect.width)
         height: Math.max(0, page.panelRect.height)
         clip: page.p < 0.999
-        // Over the last stretch near the mini player it fades, so the mini player shows
-        // through instead of appearing at once when the page is gone.
-        opacity: page.miniBar && !page.reduced ? Theme.motion.segment(page.p, 0, 0.3) : 1
+        // It starts as the capsule (same place, color and corners) and is opaque almost
+        // at once, so the capsule seems to open up; the capsule's own buttons fade under
+        // it over that first stretch, and come back the same way when it closes.
+        opacity: page.miniBar && !page.reduced ? Theme.motion.segment(page.p, 0, 0.08) : 1
 
         PlayerBackground {
             anchors.fill: parent
+            visible: !page.expressive
             radius: page.panelRadius
             colors: colors
-            flowing: App.player.status === Playback.Playing
+            flowing: App.player.status === Playback.Playing && !page.expressive
         }
-        // The mini player's frame color, fading into the page's background.
+        // The Material style: one color from the cover (player-expressive.md §1).
+        Rectangle {
+            anchors.fill: parent
+            visible: page.expressive
+            radius: page.panelRadius
+            color: colors.scheme.primaryContainer
+        }
+        // The capsule's color, fading into the page's background.
         Rectangle {
             anchors.fill: parent
             radius: page.panelRadius
-            color: Theme.color.surfaceContainer
+            color: page.miniBarColor
             opacity: page.miniBar && !page.reduced ? 1 - Theme.motion.segment(page.p, 0, 0.5) : 0
             visible: opacity > 0
         }
@@ -522,6 +595,7 @@ FocusScope {
 
             Glide {
                 id: coverBox
+                visible: !page.expressive
                 to: page.layout.cover
                 animate: page.animateLayout
                 PlayerCover {
@@ -537,7 +611,7 @@ FocusScope {
                 to: page.layout.panel
                 animate: page.animateLayout
                 opacity: Theme.motion.segment(page.p, 0.65, 1) * panelFade.value
-                visible: opacity > 0
+                visible: opacity > 0 && !page.expressive
 
                 Spring {
                     id: panelFade
@@ -562,6 +636,7 @@ FocusScope {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: page.bottomRowHeight
+                visible: !page.expressive
                 opacity: Theme.motion.segment(page.p, 0.55, 1)
 
                 readonly property bool hinted: bandHover.hovered && !page.overControls
@@ -615,6 +690,7 @@ FocusScope {
             Item {
                 id: chrome
                 anchors.fill: parent
+                visible: !page.expressive
                 transform: Translate {
                     y: page.sharing ? 0 : 16 * (1 - page.late)
                 }
@@ -813,6 +889,37 @@ FocusScope {
                 }
             }
 
+            // The Material style's whole layout; it fades in late (its parts have no
+            // counterparts in the mini player; the cover flies).
+            Loader {
+                id: expressiveLoader
+                anchors.fill: parent
+                active: page.expressive
+                opacity: page.late
+                visible: opacity > 0
+                sourceComponent: ExpressivePlayer {
+                    colors: colors
+                    appWindow: page.appWindow
+                    view: page.view
+                    sheet: page.sheet
+                    positionMs: clock.positionMs
+                    flying: page.flying
+                    hasSettings: page.settingsContent !== null
+                    animate: page.animateLayout
+                    onCloseRequested: page.close()
+                    onFullScreenRequested: page.toggleFullScreen()
+                    onViewRequested: next => page.setView(next)
+                    onSheetRequested: next => page.sheet = next
+                    onArtistRequested: key => page.artistRequested(key)
+                    onAlbumRequested: key => page.albumRequested(key)
+                    onSongRequested: page.songRequested()
+                    onCommentsRequested: page.commentsRequested()
+                    onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key, title)
+                    onCopyRequested: songInfo.open()
+                    onLoginRequested: page.loginRequested()
+                }
+            }
+
             // The side panels (§8, §9.1): from the right, over the lyrics; see-through,
             // so display changes show behind. A click beside them or Esc closes them.
             MouseArea {
@@ -927,8 +1034,8 @@ FocusScope {
         y: at.y
         width: at.width
         height: at.height
-        visible: page.flying && sourceItem !== null
-        hideSource: page.flying
+        visible: page.flying && page.sharing && sourceItem !== null
+        hideSource: page.flying && page.sharing
         opacity: page.handOut
         smooth: true
     }
@@ -951,17 +1058,57 @@ FocusScope {
         mode: 2
     }
 
-    // The flying cover.
+    // The flying cover. From a shaped mini cover, a copy cut to that shape (and turned
+    // as it was) fades into it over the first part of the way.
     CoverArt {
+        visible: page.flying && page.flyShape >= 0
+        x: flyingCover.x
+        y: flyingCover.y
+        width: flyingCover.width
+        height: flyingCover.height
+        rotation: page.flyTurn * (1 - Math.min(1, Math.max(0, flyingCover.t)))
+        opacity: 1 - Theme.motion.segment(flyingCover.t, 0, 0.4)
+        shape: page.flyShape
+        coverKey: App.player.current.coverKey
+        sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
+    }
+    CoverArt {
+        id: flyingCover
         readonly property real t: page.p
         visible: page.flying
+        opacity: (page.flyShape >= 0 ? Theme.motion.segment(t, 0, 0.4) : 1)
+                 * (page.endShape >= 0 ? 1 - Theme.motion.segment(t, 0.6, 1) : 1)
         x: Theme.motion.lerp(page.miniCoverRect.x, page.coverRect.x, t)
         y: Theme.motion.lerp(page.miniCoverRect.y, page.coverRect.y, t)
         width: Theme.motion.lerp(page.miniCoverRect.width, page.coverRect.width, t)
         height: Theme.motion.lerp(page.miniCoverRect.height, page.coverRect.height, t)
-        radius: Theme.motion.lerp(Theme.shape.small, Theme.shape.medium, Math.min(1, Math.max(0, t)))
+        // The roundness relative to the size goes from the mini cover's to the page
+        // cover's, so a circle morphs into a rounded square along the way instead of
+        // turning square at the start (a radius lerp in pixels falls behind the size).
+        radius: {
+            const t = Math.min(1, Math.max(0, flyingCover.t));
+            const from = page.miniCoverRect.width > 0 ? page.miniCoverRadius / page.miniCoverRect.width
+                                                      : 0;
+            const to = page.coverRect.width > 0 ? page.coverEndRadius / page.coverRect.width : 0;
+            return width * Theme.motion.lerp(from, to, t);
+        }
         coverKey: App.player.current.coverKey
         // The page cover's decode (cached), not a new one every frame of the flight.
+        sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
+    }
+
+    // Landing on the Material style's shaped cover: a copy cut to its shape (and turned
+    // as it is) fades in over the last part of the way.
+    CoverArt {
+        visible: page.flying && page.endShape >= 0
+        x: flyingCover.x
+        y: flyingCover.y
+        width: flyingCover.width
+        height: flyingCover.height
+        rotation: page.endTurn * Math.min(1, Math.max(0, flyingCover.t))
+        opacity: Theme.motion.segment(flyingCover.t, 0.6, 1)
+        shape: page.endShape
+        coverKey: App.player.current.coverKey
         sourceSize: Qt.size(cover.decodeSize, cover.decodeSize)
     }
 

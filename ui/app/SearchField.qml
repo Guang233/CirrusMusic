@@ -190,7 +190,7 @@ SearchBar {
             flick.contentY = y + item.height - flick.height;
     }
 
-    height: 40
+    height: 48
     handlesEscape: false
     placeholderText: qsTr("搜索歌曲、歌手、专辑、歌单、播客")
     Accessible.name: qsTr("搜索")
