@@ -173,6 +173,7 @@ Rectangle {
             tones: root.tones
             trackHeight: 4
             handleHeight: 20
+            roundHandle: true
             dotSize: 14
             waveAmplitude: 3
             waveLength: 32

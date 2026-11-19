@@ -4,7 +4,7 @@ import Cirrus.Controls
 import Cirrus.Presentation
 
 // The seek bar of the Material player page and the side player
-// (docs/ui/pages/player-expressive.md §2.1): a thick MD3E wavy slider in the surface's
+// (docs/ui/pages/player-expressive.md §2.1): an MD3E wavy slider in the surface's
 // tones that waves while playing and lies flat while paused. Dragging previews; the
 // seek happens on release (as the mini player's).
 Slider {
@@ -22,19 +22,17 @@ Slider {
         caughtUp.restart();
     }
 
-    // A long, slow wave (MD3's linear wavelength 40, half of it a second) as
-    // PixelPlayer's, on a track a little thicker than its 5 (thinner looked frail on
-    // the page; 8 with a fast short wave looked heavy and restless); a dot of 20 that
-    // stretches into a 28 tall bar.
-    trackHeight: 7
+    // The player page's: a long, slow wave (MD3's linear wavelength 40, half of it a
+    // second) as PixelPlayer's, on a track of 6 with MD3E's bar handle (5 looked frail
+    // on the page, 8 with a short fast wave heavy and restless; a round handle on a
+    // thick track looked clumsy). The side player sets its own sizes and the dot.
+    trackHeight: 6
     handleHeight: 28
-    dotSize: 20
     waveAmplitude: 4
     waveLength: 40
     waveSpeed: 20
     inactiveTint: tones.track
     wavy: true
-    roundHandle: true
     waving: playing && !pressed && !Theme.motion.reduced
     enabled: App.player.seekable && App.player.durationMs > 0
     live: false
