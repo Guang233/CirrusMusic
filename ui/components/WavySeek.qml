@@ -3,13 +3,14 @@ import Cirrus.Theme
 import Cirrus.Controls
 import Cirrus.Presentation
 
-// The Material player page's seek bar (docs/ui/pages/player-expressive.md §2.1): a
-// thick MD3E wavy slider that waves while playing and lies flat while paused.
-// Dragging previews; the seek happens on release (as the mini player's).
+// The seek bar of the Material player page and the side player
+// (docs/ui/pages/player-expressive.md §2.1): a thick MD3E wavy slider in the surface's
+// tones that waves while playing and lies flat while paused. Dragging previews; the
+// seek happens on release (as the mini player's).
 Slider {
     id: seek
 
-    required property ExpressiveTones tones
+    required property PlayerTones tones
     property real positionMs: 0
     property bool playing: false
     property real heldMs: -1

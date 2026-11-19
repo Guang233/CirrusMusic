@@ -86,6 +86,26 @@ void PlayerPalette::setDark(bool dark)
     update(true);
 }
 
+void PlayerPalette::setCoverSeed(bool coverSeed)
+{
+    if (coverSeed == m_coverSeed)
+        return;
+    m_coverSeed = coverSeed;
+    emit coverSeedChanged();
+    if (m_complete)
+        updateScheme(true);
+}
+
+void PlayerPalette::setVariant(int variant)
+{
+    if (variant == m_variant)
+        return;
+    m_variant = variant;
+    emit variantChanged();
+    if (m_complete)
+        updateScheme(true);
+}
+
 double PlayerPalette::toneLow() const { return (m_dark ? kDark : kLight).gridLow; }
 double PlayerPalette::toneHigh() const { return (m_dark ? kDark : kLight).gridHigh; }
 double PlayerPalette::chromaFactor() const { return (m_dark ? kDark : kLight).gridChroma; }
@@ -186,10 +206,17 @@ void PlayerPalette::updateScheme(bool animate)
     // stays above the monochrome cut.
     const Tint tint = this->tint();
     constexpr double kMinSeedChroma = 8.0;
-    const QColor seed = tint.neutral ? QColor(0x80, 0x80, 0x80)
-                                     : fromHct(tint.hue, std::max(tint.chroma, kMinSeedChroma), 50);
-    m_scheme->transitionTo(m_theme->computeColors(seed, m_dark),
-                           animate && !Motion::reducedMotion() ? spec.duration() : 0,
+    // The cover's own seed is a color in it (CoverPalette scores the quantized colors
+    // as MD3 does; gray for a monochrome cover); the background's hue is a mean, which
+    // washes a cover of a few strong colors out to a dull one.
+    const QColor seed = m_coverSeed && m_palette.valid ? m_palette.seed
+                        : tint.neutral
+                            ? QColor(0x80, 0x80, 0x80)
+                            : fromHct(tint.hue, std::max(tint.chroma, kMinSeedChroma), 50);
+    const auto colors = m_variant >= 0
+                            ? m_theme->computeColors(seed, m_dark, Theme::Variant(m_variant))
+                            : m_theme->computeColors(seed, m_dark);
+    m_scheme->transitionTo(colors, animate && !Motion::reducedMotion() ? spec.duration() : 0,
                            spec.easing());
 }
 

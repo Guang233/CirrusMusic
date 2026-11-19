@@ -299,6 +299,12 @@ FocusScope {
         id: colors
         palette: Theme.coverPalette
         dark: App.settings.playerTheme === 0 ? Theme.dark : App.settings.playerTheme === 1
+        // The Material style: the cover's own color in the chosen palette style, as the
+        // mini and side players (CoverColors).
+        coverSeed: page.expressive
+        variant: page.expressive ? [Theme.Variant.TonalSpot, Theme.Variant.Vibrant, Theme.Variant.Expressive, Theme.Variant.Fidelity][
+                                       Math.max(0, Math.min(3, App.settings.playerColorStyle))]
+                                 : -1
     }
 
     Timer {

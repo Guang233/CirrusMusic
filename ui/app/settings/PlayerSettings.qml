@@ -24,6 +24,25 @@ SettingsGroup {
         onChosen: value => App.settings.playerStyle = value
     }
     ChoiceSetting {
+        // The Material style's and the mini and side players' colors from the cover.
+        text: qsTr("取色")
+        options: [{
+                value: 0,
+                text: qsTr("标准")
+            }, {
+                value: 1,
+                text: qsTr("鲜明")
+            }, {
+                value: 2,
+                text: qsTr("表现力")
+            }, {
+                value: 3,
+                text: qsTr("贴近封面")
+            }]
+        value: App.settings.playerColorStyle
+        onChosen: value => App.settings.playerColorStyle = value
+    }
+    ChoiceSetting {
         text: qsTr("明暗")
         options: [{
                 value: 0,

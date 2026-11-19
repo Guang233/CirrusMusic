@@ -161,10 +161,9 @@ Item {
                 anchors.fill: parent
                 radius: card.radius
                 color: root.content
+                // Hover only: a press opens the player page, which grows out of the bar
+                // at once, so a ripple would only be seen under it.
                 hovered: cardArea.free
-                pressed: cardArea.pressed
-                pressX: cardArea.mouseX
-                pressY: cardArea.mouseY
             }
 
             CoverArt {

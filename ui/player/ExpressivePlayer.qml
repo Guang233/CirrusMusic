@@ -26,7 +26,7 @@ Item {
     // Layout changes glide (off while the page opens or the window resizes).
     property bool animate: false
 
-    readonly property ExpressiveTones tones: ExpressiveTones {
+    readonly property PlayerTones tones: PlayerTones {
         scheme: root.colors.scheme
     }
     readonly property bool wide: width >= 900
@@ -211,6 +211,7 @@ Item {
         visible: opacity > 0.01
         enabled: !root.lyricsOnly
         onArtistRequested: key => root.artistRequested(key)
+        onSongRequested: root.songRequested()
         onLoginRequested: root.loginRequested()
 
         Follow {
@@ -263,7 +264,7 @@ Item {
             color: root.tones.inkVariant
             font: Fonts.tabular(Theme.type.labelLarge.font)
         }
-        ExpressiveSeek {
+        WavySeek {
             id: pillSeek
             anchors.left: pillElapsed.right
             anchors.leftMargin: 12

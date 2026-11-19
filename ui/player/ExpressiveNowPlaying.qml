@@ -14,7 +14,7 @@ import Cirrus.Presentation
 Item {
     id: root
 
-    required property ExpressiveTones tones
+    required property PlayerTones tones
     property real coverSize: 400
     property real positionMs: 0
     // While the player page's cover flies, this one is hidden.
@@ -25,13 +25,15 @@ Item {
     readonly property Item playButton: playButton
     readonly property bool playing: App.player.status === Playback.Playing
     readonly property bool loading: App.player.status === Playback.Loading
-    readonly property var song: App.player.current
+    // The song shown: it changes with a shared-axis move (SongSwap).
+    readonly property var song: swap.song
     // The height below the cover.
     readonly property real restHeight: 32 + title.height + 4 + artistLine.implicitHeight + 24
                                        + seek.implicitHeight + elapsed.implicitHeight + 20
                                        + transport.implicitHeight + 20 + tray.height
 
     signal artistRequested(string key)
+    signal songRequested
     signal loginRequested
 
     function openArtists(): void {
@@ -42,6 +44,11 @@ Item {
     }
 
     implicitHeight: coverSize + restHeight
+
+    SongSwap {
+        id: swap
+        animate: root.visible
+    }
 
     // Playing: full size, corners 32; paused: 92% and rounder (as the play button turns
     // round), on a spring.
@@ -54,11 +61,14 @@ Item {
         CoverArt {
             id: cover
             anchors.fill: parent
-            opacity: root.flying ? 0 : 1
+            opacity: (root.flying ? 0 : 1) * swap.fade
             coverKey: root.song.coverKey
             glyph: Symbols.music_note
             radius: rest.value * 24 + 32
             scale: Theme.motion.reduced ? 1 : 1 - rest.value * 0.08
+            transform: Translate {
+                x: swap.offset * 48
+            }
 
             Spring {
                 id: rest
@@ -73,8 +83,13 @@ Item {
         id: title
         anchors.top: coverBox.bottom
         anchors.topMargin: 32
-        width: parent.width
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(implicitWidth, parent.width)
         horizontalAlignment: Text.AlignHCenter
+        opacity: swap.fade
+        transform: Translate {
+            x: swap.offset * 24
+        }
         text: root.song.title
         wrapMode: Text.Wrap
         maximumLineCount: 2
@@ -82,6 +97,16 @@ Item {
         color: root.tones.ink
         font: Fonts.font(600, 28)
         Accessible.role: Accessible.Heading
+
+        // The song's page (as the default style's title).
+        HoverHandler {
+            enabled: !root.song.voice
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            enabled: !root.song.voice
+            onTapped: root.songRequested()
+        }
     }
     Text {
         id: artistLine
@@ -93,6 +118,10 @@ Item {
         elide: Text.ElideRight
         color: root.tones.inkVariant
         font: Theme.type.titleMedium.font
+        opacity: swap.fade
+        transform: Translate {
+            x: swap.offset * 24
+        }
 
         HoverHandler {
             enabled: root.song.artists.length > 0
@@ -103,7 +132,7 @@ Item {
         }
     }
 
-    ExpressiveSeek {
+    WavySeek {
         id: seek
         anchors.top: artistLine.bottom
         anchors.topMargin: 24
@@ -238,8 +267,8 @@ Item {
             }
             TrayButton {
                 id: likeButton
-                readonly property bool liked: App.library.likedRevision >= 0 && App.library.isLiked(root.song.key)
-                enabled: !root.song.voice
+                readonly property bool liked: App.library.likedRevision >= 0 && App.library.isLiked(App.player.current.key)
+                enabled: !App.player.current.voice
                 checkable: true
                 checked: liked
                 glyph: Symbols.favorite
@@ -251,7 +280,7 @@ Item {
                     if (!App.session.signedIn)
                         root.loginRequested();
                     else
-                        App.library.setLiked(root.song.key, !liked);
+                        App.library.setLiked(App.player.current.key, !liked);
                 }
             }
             MiniVolume {

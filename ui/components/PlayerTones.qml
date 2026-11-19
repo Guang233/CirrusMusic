@@ -1,9 +1,10 @@
 import QtQuick
 import Cirrus.Theme
 
-// The Material player page's tones (docs/ui/pages/player-expressive.md §1): the page
-// is the cover scheme's PrimaryContainer and everything on it a step of the same hue,
-// mixed between scheme roles (no fixed colors).
+// The tones of a surface in a cover color (docs/ui/pages/player-expressive.md §1), for
+// the Material player page and the mini and side players: the surface is the cover
+// scheme's PrimaryContainer and everything on it a step of the same hue, mixed between
+// scheme roles (no fixed colors).
 QtObject {
     required property ColorScheme scheme
 

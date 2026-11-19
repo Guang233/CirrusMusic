@@ -74,7 +74,7 @@ Item {
     // starts from it (-1: none, a plain rounded cover).
     readonly property int miniCoverShape: docked ? sidePlayer.coverShape : -1
     readonly property real miniCoverRotation: docked ? sidePlayer.coverRotation : 0
-    readonly property real miniCoverCorner: docked ? Theme.shape.extraLarge : -1
+    readonly property real miniCoverCorner: docked ? sidePlayer.coverRadius : -1
     property bool miniFlying: false
 
     // The mini player asks for the player page, or for it with the queue open.
@@ -524,8 +524,15 @@ Item {
         spec: Theme.motion.defaultSpatial
         Component.onCompleted: snapTo(target)
     }
+    // The mini and side players wear the cover's colors (player-expressive.md §1).
+    CoverColors {
+        id: coverColors
+        dark: Theme.dark
+    }
+
     SidePlayer {
         id: sidePlayer
+        ColorScope.scheme: coverColors.scheme
         // Flush with the window's top, right and bottom edges.
         x: shell.width - dock.value * shell.sideWidth
         width: shell.sideWidth
@@ -541,6 +548,7 @@ Item {
 
     MiniPlayer {
         id: miniPlayer
+        ColorScope.scheme: coverColors.scheme
         hidden: shell.docked
         canDock: shell.canDock
         flying: shell.miniFlying && !shell.docked

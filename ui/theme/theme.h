@@ -126,6 +126,9 @@ class Theme : public QObject
     Q_INVOKABLE QVariantMap hctOf(const QColor& color) const;
     // The same for C++ (PlayerPalette): roles in ColorScheme::Role order.
     [[nodiscard]] ColorScheme::Colors computeColors(const QColor& seed, bool dark) const;
+    // ... with a variant of its own instead of the theme's (the player's palette style).
+    [[nodiscard]] ColorScheme::Colors computeColors(const QColor& seed, bool dark,
+                                                    Variant variant) const;
 
   signals:
     void modeChanged();

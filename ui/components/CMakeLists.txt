@@ -20,6 +20,11 @@ qt_add_qml_module(cirrus_ui_components
         MiniPlayer.qml
         SidePlayer.qml
         ShapedCover.qml
+        PlayerTones.qml
+        CoverColors.qml
+        SideLyrics.qml
+        SongSwap.qml
+        WavySeek.qml
         MiniVolume.qml
         Skeleton.qml
         ListSkeleton.qml
