@@ -27,6 +27,10 @@ qt_add_qml_module(cirrus_presentation
         formatter.cpp
         network_status.h
         network_status.cpp
+        update_check.h
+        update_check.cpp
+        update_release.h
+        update_release.cpp
         cover_provider.h
         cover_provider.cpp
         loadable_model.h

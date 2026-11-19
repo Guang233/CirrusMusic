@@ -21,6 +21,7 @@
 #endif
 #include "single_instance.h"
 #include "title_bar_mode.h"
+#include "update_check.h"
 
 #include <QCommandLineParser>
 #include <QDir>
@@ -187,6 +188,7 @@ int main(int argc, char* argv[])
     // The backend's sources, fakes for what they don't cover yet.
     cirrus::ui::App::install(cirrus::ui::makeBackendSources(backend));
     auto* presentation = cirrus::ui::App::instance();
+    presentation->updates()->setPackage(QStringLiteral(CIRRUS_PACKAGE));
     cirrus::ui::Desktop desktop(&instance);
     desktop.setShutdown(
         [&backend](std::function<void()> done) { backend.shutdown(std::move(done)); });
