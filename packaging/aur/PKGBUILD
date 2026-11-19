@@ -4,7 +4,7 @@
 # Cirrus uses Qt's private Wayland client API, so it needs a rebuild whenever qt6-base
 # or qt6-wayland moves to a new minor version.
 pkgname=cirrus
-pkgver=0.1.1
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Third-party NetEase Cloud Music client'
 arch=('x86_64')
@@ -18,7 +18,7 @@ optdepends=('gnome-keyring: keep the sign-in in a keyring'
 # Qt's two-pass rcc for large resources (the bundled font) finds no data in an LTO object.
 options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('0991fd1005ed712b33088e13e8a19e61977acb1509c88cb1a555abe00b27b17c')
+sha256sums=('7b8f8b68a3302655f3cbc1f303be7c9392d815136593aad7213f7e27a61989fb')
 
 build() {
   cmake -S "CirrusMusic-$pkgver" -B build -G Ninja \
