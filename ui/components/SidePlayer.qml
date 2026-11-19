@@ -171,9 +171,12 @@ Rectangle {
             id: seek
             width: parent.width
             tones: root.tones
-            trackHeight: 6
-            handleHeight: 24
+            trackHeight: 4
+            handleHeight: 20
+            dotSize: 14
             waveAmplitude: 3
+            waveLength: 32
+            waveSpeed: 16
             focusPolicy: Qt.TabFocus
             positionMs: clock.positionMs
             playing: root.playing && App.settings.miniWave

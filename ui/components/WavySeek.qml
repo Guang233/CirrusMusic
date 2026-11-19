@@ -22,9 +22,15 @@ Slider {
         caughtUp.restart();
     }
 
-    trackHeight: 8
-    handleHeight: 32
+    // A thin track and a long, slow wave (MD3's linear wavelength 40, half of it a
+    // second), a dot of 16 that stretches to a 24 tall bar: PixelPlayer's proportions;
+    // thicker and faster, it looked heavy and restless beside the type.
+    trackHeight: 5
+    handleHeight: 24
+    dotSize: 16
     waveAmplitude: 4
+    waveLength: 40
+    waveSpeed: 20
     inactiveTint: tones.track
     wavy: true
     roundHandle: true

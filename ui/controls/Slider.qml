@@ -11,8 +11,9 @@ import Cirrus.Theme
 // chroma); the handle is then OnSurface and there is no stop dot.
 //   Slider { from: 0; to: 100; value: 40; showValueLabel: true }
 //   Slider { from: 0; to: 360; trackColors: ["red", "yellow", "lime", "cyan", "blue", "magenta", "red"] }
-// `roundHandle` makes the handle a dot at rest that stretches into the bar while
-// pressed or focused (the seek bars of the players; other sliders keep the bar).
+// `roundHandle` makes the handle a dot at rest that stretches into a bar 1.2 tracks
+// wide while pressed or focused (the seek bars of the players; other sliders keep the
+// bar). `waveLength` and `waveSpeed` tune the wave.
 //   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing; roundHandle: true }
 T.Slider {
     id: control
@@ -20,8 +21,11 @@ T.Slider {
     property real trackHeight: 16
     property real handleHeight: 44
     property bool roundHandle: false
-    // The dot's diameter while `roundHandle` rests.
+    // The dot's diameter while `roundHandle` rests; pressed, the bar is 1.2 tracks wide.
     property real dotSize: Math.max(12, trackHeight + 10)
+    // The wave's length and how far it travels a second.
+    property real waveLength: 32
+    property real waveSpeed: waveLength
     property bool wavy: false
     property bool waving: true
     property real waveAmplitude: 3
@@ -149,6 +153,8 @@ T.Slider {
             thickness: control.trackHeight
             waving: control.waving
             amplitude: control.waveAmplitude
+            wavelength: control.waveLength
+            speed: control.waveSpeed
         }
 
         // Inactive part, right of the handle.
@@ -182,7 +188,9 @@ T.Slider {
         implicitHeight: control.handleHeight
         x: control.handleX - width / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: Math.max(1, Theme.motion.lerp(control.dotSize, handleWidth.value, barShape.value))
+        width: Math.max(1, Theme.motion.lerp(control.dotSize, control.roundHandle ? control.trackHeight * 1.2
+                                                                                  : handleWidth.value,
+                                             barShape.value))
         height: Theme.motion.lerp(control.dotSize, control.handleHeight, barShape.value)
         radius: width / 2
         color: control.activeColor

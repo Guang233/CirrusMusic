@@ -288,6 +288,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     trackHeight: 4
                     handleHeight: 16
+                    waveSpeed: 16
                     roundHandle: true
                     inactiveTint: Qt.alpha(root.content, 0.3)
                     wavy: App.settings.miniWave
