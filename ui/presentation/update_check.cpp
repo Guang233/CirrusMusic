@@ -36,8 +36,8 @@ const char* outcomeName(UpdateCheck::Status status)
 }
 } // namespace
 
-UpdateCheck::UpdateCheck(AppSettings* settings, bool offline, QObject* parent)
-    : QObject(parent), m_settings(settings), m_offline(offline)
+UpdateCheck::UpdateCheck(AppSettings* settings, QObject* parent)
+    : QObject(parent), m_settings(settings)
 {
     m_sinceStart.start();
     m_timer.setSingleShot(true);
@@ -55,7 +55,7 @@ qint64 UpdateCheck::lastCheck() const
     return std::max<qint64>(0, m_settings->updatesLastCheck());
 }
 
-bool UpdateCheck::canCheckAutomatically() const { return m_install != Development && !m_offline; }
+bool UpdateCheck::canCheckAutomatically() const { return m_install != Development; }
 
 void UpdateCheck::setPackage(const QString& package)
 {
@@ -98,10 +98,6 @@ void UpdateCheck::start(bool manual)
     qCInfo(lcUi) << log::event("update.check")
                  << log::field("trigger",
                                manual ? QStringLiteral("manual") : QStringLiteral("auto"));
-    if (m_offline) { // fake sources: no network
-        setState(Failed, Network);
-        return;
-    }
     if (!m_network)
         m_network = new QNetworkAccessManager(this);
     QNetworkRequest request(

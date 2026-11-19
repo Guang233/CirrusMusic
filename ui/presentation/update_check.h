@@ -37,7 +37,7 @@ class UpdateCheck : public QObject
     // Milliseconds since the epoch, 0 when unknown (for App.format).
     Q_PROPERTY(qint64 publishedAt READ publishedAt NOTIFY changed)
     Q_PROPERTY(qint64 lastCheck READ lastCheck NOTIFY changed)
-    // Whether it checks on its own in this build (packaged, not on fake sources).
+    // Whether it checks on its own in this build (a packaged one).
     Q_PROPERTY(bool canCheckAutomatically READ canCheckAutomatically CONSTANT)
 
   public:
@@ -49,7 +49,7 @@ class UpdateCheck : public QObject
     enum Install { Development, Deb, AppImage, WindowsSetup, WindowsZip, Aur };
     Q_ENUM(Install)
 
-    UpdateCheck(AppSettings* settings, bool offline, QObject* parent = nullptr);
+    explicit UpdateCheck(AppSettings* settings, QObject* parent = nullptr);
 
     [[nodiscard]] int status() const { return m_status; }
     [[nodiscard]] int failure() const { return m_failure; }
@@ -82,7 +82,6 @@ class UpdateCheck : public QObject
     void setState(Status status, Failure failure);
 
     AppSettings* m_settings;
-    bool m_offline;
     Install m_install = Development;
     Status m_status = Idle;
     Failure m_failure = NoFailure;
