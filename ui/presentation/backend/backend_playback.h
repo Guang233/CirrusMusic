@@ -85,6 +85,9 @@ class BackendPlayback : public QObject, public PlaybackSource
     // The queue restored at startup, before anything played; playRestored() plays it on.
     void showRestored(PlaybackSnapshot& next, qint64 now);
     void playRestored();
+    // A Personal FM restored at startup plays on from the song `step` places from its
+    // current one (past the last: a new one); false when the queue is not one.
+    bool resumeRestoredFm(int step);
     // Where the queue is, per account, for the next start (`stopped`: now, not throttled).
     void savePosition(const PlaybackSnapshot& state, qint64 now, bool stopped);
     struct Saved {
@@ -130,7 +133,6 @@ class BackendPlayback : public QObject, public PlaybackSource
     std::function<void()> m_changed;
     PlaybackSnapshot m_state;
     QList<QUuid> m_entries; // the snapshot's queue as entry ids (Queue mode)
-    QStringList m_fmSongs;  // Personal FM: what played so far
     domain::LoadToken m_load;
     quint64 m_positionRevision = 0;
     // Details of songs that played, by key; reset when it grows large.
