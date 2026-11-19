@@ -28,7 +28,9 @@ Item {
     property bool canDock: true
     // What the bar covers at the bottom, with a little air above it.
     readonly property real reservedHeight: (implicitHeight + bottomMargin + 8) * reveal.value
-    property real maximumWidth: 960
+    // 960 on ordinary windows; over wide content it grows by half of what is past 1400,
+    // up to 1240 (the seek bar gets the room).
+    property real maximumWidth: Math.round(Math.min(1240, 960 + Math.max(0, width - 1400) / 2))
     readonly property real barWidth: Math.max(0, Math.min(maximumWidth, width - 32
                                                           - (canDock ? fab.width + 8 : 0)))
     // 2 wide: the seek bar with the times, and the extras; 1 medium: a shorter seek bar,
@@ -286,6 +288,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     trackHeight: 4
                     handleHeight: 16
+                    roundHandle: true
                     inactiveTint: Qt.alpha(root.content, 0.3)
                     wavy: App.settings.miniWave
                     waving: App.player.status === Playback.Playing && !pressed

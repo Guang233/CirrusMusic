@@ -11,12 +11,17 @@ import Cirrus.Theme
 // chroma); the handle is then OnSurface and there is no stop dot.
 //   Slider { from: 0; to: 100; value: 40; showValueLabel: true }
 //   Slider { from: 0; to: 360; trackColors: ["red", "yellow", "lime", "cyan", "blue", "magenta", "red"] }
-//   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing }
+// `roundHandle` makes the handle a dot at rest that stretches into the bar while
+// pressed or focused (the seek bars of the players; other sliders keep the bar).
+//   Slider { trackHeight: 4; handleHeight: 20; wavy: true; waving: playing; roundHandle: true }
 T.Slider {
     id: control
 
     property real trackHeight: 16
     property real handleHeight: 44
+    property bool roundHandle: false
+    // The dot's diameter while `roundHandle` rests.
+    property real dotSize: Math.max(12, trackHeight + 10)
     property bool wavy: false
     property bool waving: true
     property real waveAmplitude: 3
@@ -47,6 +52,13 @@ T.Slider {
     padding: 0
     orientation: Qt.Horizontal
 
+    // 0 the dot, 1 the bar.
+    Spring {
+        id: barShape
+        target: !control.roundHandle || control.pressed || control.visualFocus ? 1 : 0
+        spec: Theme.motion.fastSpatial
+        threshold: 0.01
+    }
     Spring {
         id: handleWidth
         target: control.pressed || control.visualFocus ? 2 : 4
@@ -170,7 +182,8 @@ T.Slider {
         implicitHeight: control.handleHeight
         x: control.handleX - width / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: Math.max(1, handleWidth.value)
+        width: Math.max(1, Theme.motion.lerp(control.dotSize, handleWidth.value, barShape.value))
+        height: Theme.motion.lerp(control.dotSize, control.handleHeight, barShape.value)
         radius: width / 2
         color: control.activeColor
 

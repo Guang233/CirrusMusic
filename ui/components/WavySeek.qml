@@ -27,6 +27,7 @@ Slider {
     waveAmplitude: 4
     inactiveTint: tones.track
     wavy: true
+    roundHandle: true
     waving: playing && !pressed && !Theme.motion.reduced
     enabled: App.player.seekable && App.player.durationMs > 0
     live: false
