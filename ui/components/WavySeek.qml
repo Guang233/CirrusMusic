@@ -23,11 +23,12 @@ Slider {
     }
 
     // The player page's: a long, slow wave (MD3's linear wavelength 40, half of it a
-    // second) as PixelPlayer's, on a track of 6 with MD3E's bar handle (5 looked frail
-    // on the page, 8 with a short fast wave heavy and restless; a round handle on a
-    // thick track looked clumsy). The side player sets its own sizes and the dot.
-    trackHeight: 6
-    handleHeight: 28
+    // second) as PixelPlayer's, on a track of 8 with MD3E's bar handle (thinner looked
+    // frail on the page; with a short, fast wave the same track looked restless; a round
+    // handle on a thick track looked clumsy). The side player sets its own sizes and the
+    // dot.
+    trackHeight: 8
+    handleHeight: 32
     waveAmplitude: 4
     waveLength: 40
     waveSpeed: 20
