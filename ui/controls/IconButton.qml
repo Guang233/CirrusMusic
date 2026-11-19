@@ -23,8 +23,9 @@ T.Button {
     // Standard icon buttons on a background of their own (the player page): this color
     // for the icon and the state layer, when set.
     property color tint: "transparent"
-    // Standard icon buttons with a container of the page's own tone (the player page's
-    // Material style): this color unselected; selected, Primary as a filled toggle.
+    // A container in a tone of the surface's own (the Material player page, the mini
+    // and side players), whatever the variant: this color unselected, the content
+    // `tint` (else OnSurfaceVariant); selected, Primary / OnPrimary.
     property color containerTint: "transparent"
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
@@ -52,9 +53,11 @@ T.Button {
 
     readonly property color containerColor: {
         if (!enabled)
-            return variant === Md.Standard && containerTint.a > 0 ? Qt.alpha(containerTint, containerTint.a * 0.5)
+            return containerTint.a > 0 ? Qt.alpha(containerTint, containerTint.a * 0.5)
                  : variant === Md.Standard || variant === Md.Outlined && !toggled
                     ? "transparent" : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer);
+        if (containerTint.a > 0)
+            return Theme.mix(containerTint, ColorScope.scheme.primary, selection.value);
         switch (variant) {
         case Md.Filled:
             return checkable ? Theme.mix(ColorScope.scheme.surfaceContainer, ColorScope.scheme.primary,
@@ -66,14 +69,16 @@ T.Button {
             return Theme.mix(Qt.alpha(ColorScope.scheme.inverseSurface, 0), ColorScope.scheme.inverseSurface,
                              selection.value);
         default:
-            return containerTint.a > 0 ? Theme.mix(containerTint, ColorScope.scheme.primary, selection.value)
-                                       : "transparent";
+            return "transparent";
         }
     }
     readonly property color contentColor: {
         if (!enabled)
-            return Qt.alpha(variant === Md.Standard && tint.a > 0 ? tint : ColorScope.scheme.onSurface,
+            return Qt.alpha(containerTint.a > 0 && tint.a > 0 ? tint : ColorScope.scheme.onSurface,
                             Theme.state.disabledContent);
+        if (containerTint.a > 0)
+            return Theme.mix(tint.a > 0 ? tint : ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
+                             selection.value);
         switch (variant) {
         case Md.Filled:
             return checkable ? Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
@@ -87,8 +92,6 @@ T.Button {
                              selection.value);
         default:
             return inverse ? ColorScope.scheme.inverseOnSurface
-                 : containerTint.a > 0 ? Theme.mix(tint.a > 0 ? tint : ColorScope.scheme.onSurfaceVariant,
-                                                   ColorScope.scheme.onPrimary, selection.value)
                  : tint.a > 0 ? tint
                            : Theme.mix(ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.primary,
                                        selection.value);

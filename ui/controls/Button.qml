@@ -18,6 +18,11 @@ T.Button {
     // Set by ConnectedButtonGroup / StandardButtonGroup.
     property int groupPosition: Md.Alone
     property real widthDelta: 0
+    // A container in a tone of the surface's own (the side player), whatever the
+    // variant: this color unselected with `tint` (else OnSurfaceVariant) content;
+    // selected, Primary / OnPrimary.
+    property color containerTint: "transparent"
+    property color tint: "transparent"
 
     readonly property int sizeIndex: Math.max(0, Math.min(4, size))
     readonly property real containerHeight: [32, 40, 56, 96, 136][sizeIndex]
@@ -42,8 +47,11 @@ T.Button {
 
     readonly property color containerColor: {
         if (!enabled)
-            return variant === Md.Outlined && !toggled || variant === Md.Text
+            return containerTint.a > 0 ? Qt.alpha(containerTint, containerTint.a * 0.5)
+                 : variant === Md.Outlined && !toggled || variant === Md.Text
                     ? "transparent" : Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContainer);
+        if (containerTint.a > 0)
+            return Theme.mix(containerTint, ColorScope.scheme.primary, selection.value);
         switch (variant) {
         case Md.Tonal:
             return Theme.mix(ColorScope.scheme.secondaryContainer, ColorScope.scheme.secondary, selection.value);
@@ -62,7 +70,11 @@ T.Button {
     }
     readonly property color contentColor: {
         if (!enabled)
-            return Qt.alpha(ColorScope.scheme.onSurface, Theme.state.disabledContent);
+            return Qt.alpha(containerTint.a > 0 && tint.a > 0 ? tint : ColorScope.scheme.onSurface,
+                            Theme.state.disabledContent);
+        if (containerTint.a > 0)
+            return Theme.mix(tint.a > 0 ? tint : ColorScope.scheme.onSurfaceVariant, ColorScope.scheme.onPrimary,
+                             selection.value);
         switch (variant) {
         case Md.Tonal:
             return Theme.mix(ColorScope.scheme.onSecondaryContainer, ColorScope.scheme.onSecondary,
