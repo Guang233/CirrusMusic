@@ -7,7 +7,8 @@ import Cirrus.Presentation
 // The mini player docked as a pane on the right of the window (docs/ui/redesign-md3e.md
 // §11), in the Material player page's language (pages/player-expressive.md): the pane
 // is the cover's color (PrimaryContainer of the scheme the shell hands it) and all on it
-// a tone of that hue. The cover (rounded; smaller and rounder while paused), the title
+// a tone of that hue. The cover (a 12-sided cookie turning slowly while playing, a
+// rounded square while paused), the title
 // and artist, a wavy seek bar, previous / play / next, a tray of connected buttons
 // (shuffle, repeat, like, volume, the queue), then the lyrics or the songs up next
 // (a switch, remembered). A click on the cover or the title opens the player page; the
@@ -32,9 +33,9 @@ Rectangle {
     readonly property Item titleItem: texts
     readonly property Item controlsItem: transport
     readonly property Item seekItem: seek
-    // Where the player page's flying cover starts: a plain rounded cover.
-    readonly property int coverShape: -1
-    readonly property real coverRotation: 0
+    // The cover's shape and turn now, where the player page's flying cover starts.
+    readonly property int coverShape: cover.shape
+    readonly property real coverRotation: cover.rotation
     readonly property real coverRadius: cover.radius
 
     // The scheme the shell hands the pane (an attached property of the pane: inside
@@ -94,7 +95,7 @@ Rectangle {
         font: Theme.type.titleSmall.font
     }
 
-    // Playing: full size, corners 24; paused: smaller and rounder, as the play button.
+    // A 12-sided cookie turning slowly while playing, a rounded square while paused.
     Item {
         id: coverBox
         x: (root.width - width) / 2
@@ -102,23 +103,14 @@ Rectangle {
         width: root.coverSize
         height: width
 
-        CoverArt {
+        ShapedCover {
             id: cover
             anchors.fill: parent
             opacity: (root.flying ? 0 : 1) * swap.fade
             coverKey: swap.song.coverKey
-            glyph: Symbols.music_note
-            radius: rest.value * 16 + 24
-            scale: Theme.motion.reduced ? 1 : 1 - rest.value * 0.06
+            playing: root.playing
             transform: Translate {
                 x: swap.offset * 32
-            }
-
-            Spring {
-                id: rest
-                target: root.playing || root.loading ? 0 : 1
-                spec: Theme.motion.defaultSpatial
-                Component.onCompleted: snapTo(target)
             }
         }
         MouseArea {
