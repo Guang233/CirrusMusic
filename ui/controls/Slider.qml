@@ -37,6 +37,18 @@ T.Slider {
     property color inactiveTint: "transparent"
 
     readonly property real gap: 6
+    // The handle's size now (the dot stretching into the bar with `roundHandle`).
+    readonly property real handleWidthNow: Math.max(1, Theme.motion.lerp(dotSize, roundHandle ? trackHeight * 1.2
+                                                                                         : handleWidth.value,
+                                                                     barShape.value))
+    readonly property real handleHeightNow: Theme.motion.lerp(dotSize, handleHeight, barShape.value)
+    // How far the active part stops short of the handle's center, and where the
+    // inactive part starts past it. With `roundHandle` the active part runs under the
+    // dot and the inactive part starts 4 px past its edge (as PixelPlayer's); the bar
+    // keeps 4 px on both sides.
+    readonly property real gapBefore: roundHandle ? Theme.motion.lerp(0, handleWidthNow / 2 + 4, barShape.value)
+                                                  : gap
+    readonly property real gapAfter: roundHandle ? handleWidthNow / 2 + 4 : gap
     readonly property real innerRadius: 2
     readonly property real handleX: leftPadding + 2 + visualPosition * (availableWidth - 4)
     readonly property bool gradient: trackColors.length > 1
@@ -125,14 +137,14 @@ T.Slider {
                     ctx.closePath();
                     ctx.fill();
                 };
-                bar(0, cut - control.gap, true);
-                bar(cut + control.gap, width, false);
+                bar(0, cut - control.gapBefore, true);
+                bar(cut + control.gapAfter, width, false);
             }
         }
 
         // Active part, left of the handle.
         Rectangle {
-            readonly property real end: control.handleX - control.leftPadding - control.gap
+            readonly property real end: control.handleX - control.leftPadding - control.gapBefore
             visible: end > 0 && !control.wavy && !control.gradient
             y: (parent.height - height) / 2
             width: Math.max(0, end)
@@ -145,7 +157,7 @@ T.Slider {
         }
 
         WaveLine {
-            readonly property real end: control.handleX - control.leftPadding - control.gap
+            readonly property real end: control.handleX - control.leftPadding - control.gapBefore
             visible: control.wavy && end > 0 && !control.gradient
             width: Math.max(control.trackHeight, end)
             height: parent.height
@@ -159,7 +171,7 @@ T.Slider {
 
         // Inactive part, right of the handle.
         Rectangle {
-            readonly property real start: control.handleX - control.leftPadding + control.gap
+            readonly property real start: control.handleX - control.leftPadding + control.gapAfter
             visible: start < parent.width && !control.gradient
             x: start
             y: (parent.height - height) / 2
@@ -188,10 +200,8 @@ T.Slider {
         implicitHeight: control.handleHeight
         x: control.handleX - width / 2
         y: control.topPadding + (control.availableHeight - height) / 2
-        width: Math.max(1, Theme.motion.lerp(control.dotSize, control.roundHandle ? control.trackHeight * 1.2
-                                                                                  : handleWidth.value,
-                                             barShape.value))
-        height: Theme.motion.lerp(control.dotSize, control.handleHeight, barShape.value)
+        width: control.handleWidthNow
+        height: control.handleHeightNow
         radius: width / 2
         color: control.activeColor
 

@@ -22,12 +22,13 @@ Slider {
         caughtUp.restart();
     }
 
-    // A thin track and a long, slow wave (MD3's linear wavelength 40, half of it a
-    // second), a dot of 16 that stretches to a 24 tall bar: PixelPlayer's proportions;
-    // thicker and faster, it looked heavy and restless beside the type.
-    trackHeight: 5
-    handleHeight: 24
-    dotSize: 16
+    // A long, slow wave (MD3's linear wavelength 40, half of it a second) as
+    // PixelPlayer's, on a track a little thicker than its 5 (thinner looked frail on
+    // the page; 8 with a fast short wave looked heavy and restless); a dot of 20 that
+    // stretches into a 28 tall bar.
+    trackHeight: 7
+    handleHeight: 28
+    dotSize: 20
     waveAmplitude: 4
     waveLength: 40
     waveSpeed: 20
