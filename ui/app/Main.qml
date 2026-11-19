@@ -101,7 +101,12 @@ AppWindow {
         id: topBar
         anchors.fill: parent
         shell: shell
-        visible: !player.covering
+        // Faded out, not hidden, under the player page: hidden, the title row would
+        // count as empty and drop to its bare height, and the shell's top inset with
+        // it, so the side player (laid out under it) would move up while the page
+        // measures where its cover lands.
+        opacity: player.covering ? 0 : 1
+        enabled: !player.covering
     }
 
     AppShell {
