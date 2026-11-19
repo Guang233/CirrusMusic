@@ -1,11 +1,18 @@
 #include "application/music/personal_fm_source.h"
 #include "listening_session.h"
+#include "logging/log.h"
 #include <QThread>
 #include <QTimer>
+#include <algorithm>
 
 namespace cirrus::application
 {
 using namespace domain;
+namespace
+{
+// Personal FM keeps this many of its songs so far, to go back to (and to restore).
+constexpr qsizetype kFmSongsKept = 100;
+} // namespace
 ListeningSession::ListeningSession(BackendFacade& backend, PersonalFmSource& fm, QObject* parent)
     : ListeningSession(backend, parent)
 {
@@ -29,6 +36,67 @@ void ListeningSession::clearFmState()
     m_fmPending.reset();
     m_fmAttempts = 0;
     m_fmScheduledRevision = 0;
+    m_restoredFm = false;
+}
+QUuid ListeningSession::fmNeighbour(int step) const
+{
+    const auto snapshot = m_queue.snapshot();
+    const auto it =
+        std::find_if(snapshot.entries.cbegin(), snapshot.entries.cend(),
+                     [&](const QueueEntry& entry) { return entry.id == snapshot.active; });
+    if (it == snapshot.entries.cend())
+        return {};
+    const qsizetype index = (it - snapshot.entries.cbegin()) + step;
+    return index >= 0 && index < snapshot.entries.size() ? snapshot.entries[index].id : QUuid{};
+}
+bool ListeningSession::playFm(QUuid entry, bool automatic)
+{
+    if (m_mode != ListeningMode::PersonalFm || !current())
+        return false;
+    auto candidate = m_queue;
+    if (!candidate.select(entry))
+        return false;
+    qCInfo(lcPlayback) << log::event("fm.replay") << log::field("automatic", automatic);
+    return begin(std::move(candidate),
+                 m_intent == TransportIntent::Pause ? m_intent : TransportIntent::Play, m_quality,
+                 automatic, true);
+}
+bool ListeningSession::resumeFm(QUuid entry, AudioQuality quality)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!restoredFm() || !m_fm || m_backend.snapshot().phase != SessionPhase::Authenticated ||
+        qualityName(quality).isEmpty())
+        return false;
+    qCInfo(lcPlayback) << log::event("fm.resume") << log::field("from_new", entry.isNull());
+    auto songs = m_queue;
+    if (entry.isNull()) {
+        // A new song after them: Personal FM from the start, its songs so far kept.
+        if (!startFm(quality, TransportIntent::Play))
+            return false;
+        if (m_mode == ListeningMode::PersonalFm && m_fmWaiting &&
+            m_queue.snapshot().entries.isEmpty()) {
+            m_queue = std::move(songs);
+            emit fmChanged();
+        }
+        return true;
+    }
+    auto candidate = songs;
+    if (!candidate.select(entry))
+        return false;
+    // Personal FM before the load, so that commit() keeps it.
+    clearFmState();
+    m_mode = ListeningMode::PersonalFm;
+    if (!begin(std::move(candidate), TransportIntent::Play, quality, false, true)) {
+        if (!current())
+            m_mode = ListeningMode::Queue;
+        return false;
+    }
+    // The supply for the songs after this one.
+    if (m_mode == ListeningMode::PersonalFm && current()) {
+        m_fm->stop();
+        static_cast<void>(m_fm->start());
+    }
+    return true;
 }
 bool ListeningSession::startFm(AudioQuality quality, TransportIntent intent)
 {
@@ -175,9 +243,15 @@ void ListeningSession::consumeFm()
         }
         m_fmPending = std::move(song);
     }
+    // After the songs so far, which stay to go back to (at most kFmSongsKept).
     auto candidate = m_queue;
-    candidate.replace({m_fmPending->id});
-    candidate.select(candidate.snapshot().entries.first().id);
+    if (!candidate.append({m_fmPending->id})) {
+        candidate.clear();
+        candidate.append({m_fmPending->id});
+    }
+    candidate.select(candidate.snapshot().entries.last().id);
+    while (candidate.snapshot().entries.size() > kFmSongsKept)
+        candidate.remove(candidate.snapshot().entries.first().id);
     const auto intent = m_intent == TransportIntent::Pause ? m_intent : TransportIntent::Play;
     // Keep the taken item until local Play acceptance. Busy must not silently lose a song.
     if (!begin(std::move(candidate), intent, m_quality, m_auto, true) && m_revision == revision &&

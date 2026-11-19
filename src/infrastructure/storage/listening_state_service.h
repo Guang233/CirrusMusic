@@ -48,6 +48,7 @@ class ListeningStateService final : public QObject
   private:
     void contextChanged();
     void queueChanged(const domain::QueueSnapshot& queue);
+    void fmChanged();
     void flush();
     void recordChanged(domain::StoredListeningRecord record);
     void clearHistory(domain::SessionSnapshot source);

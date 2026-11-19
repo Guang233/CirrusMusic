@@ -30,6 +30,7 @@ struct ListeningStateJob {
     std::optional<domain::ListeningStatsQuery> stats = std::nullopt;
     QList<domain::Song> songs{};         // SaveSongs, <=100
     QList<domain::SongId> unavailable{}; // SaveSongs, <=100
+    domain::ListeningMode mode{};        // SaveQueue: Personal FM's songs
 };
 struct ListeningStateResult {
     quint64 id = 0;
@@ -38,6 +39,7 @@ struct ListeningStateResult {
     std::optional<domain::ListeningHistoryPage> history = std::nullopt;
     std::optional<domain::ListeningStats> stats = std::nullopt;
     QList<domain::SongId> missingSongs{};
+    domain::ListeningMode mode{}; // LoadQueue: what `queue` was
 };
 
 // Backend-thread adapter over the existing single DatabaseWorker/SQL executor.
