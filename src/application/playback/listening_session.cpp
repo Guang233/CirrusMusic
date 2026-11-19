@@ -264,8 +264,8 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     const auto revision = ++m_revision;
     m_queue = std::move(candidate);
     // Personal FM needs the account it was played with (signed in); else a plain queue.
-    m_restoredFm = mode == ListeningMode::PersonalFm && m_fm &&
-                   expected.phase == SessionPhase::Authenticated;
+    m_restoredFm =
+        mode == ListeningMode::PersonalFm && m_fm && expected.phase == SessionPhase::Authenticated;
     m_queueContext = expected.token;
     m_sourceSession = expected;
     m_intent = TransportIntent::Play; // only a future explicit user command may start media
