@@ -235,10 +235,12 @@ BackendPlayback::BackendPlayback(runtime::BackendRuntime& runtime, CatalogSource
             [this](const domain::SessionSnapshot&) {
                 applyVolume(); // set before the backend could take it (startup)
                 applyNormalization();
+                applyTransition();
                 update();
             });
     connect(&runtime.facade(), &application::BackendFacade::stateChanged, this, [this] {
         applyNormalization();
+        applyTransition();
         update();
     });
     // A sign-in goes through several session changes in a row: resume once it has
@@ -1015,6 +1017,23 @@ void BackendPlayback::setNormalization(bool on)
 {
     m_normalize = on;
     applyNormalization();
+}
+
+void BackendPlayback::applyTransition()
+{
+    if (m_transition && m_facade)
+        static_cast<void>(
+            m_facade->setPlaybackTransition(m_transition->mode, m_transition->crossfadeMs));
+}
+
+void BackendPlayback::setTransition(int mode, int crossfadeSeconds)
+{
+    // AppSettings::trackTransition holds the backend's TransitionMode.
+    using domain::TransitionMode;
+    const auto known = mode >= int(TransitionMode::Smart) && mode <= int(TransitionMode::Gapless);
+    m_transition = Transition{known ? TransitionMode(mode) : TransitionMode::Smart,
+                              qint64(std::clamp(crossfadeSeconds, 1, 12)) * 1000};
+    applyTransition();
 }
 
 void BackendPlayback::setVolume(double volume)

@@ -32,6 +32,33 @@ SettingsGroup {
         value: App.settings.audioQuality
         onChosen: value => App.settings.audioQuality = value
     }
+    ChoiceSetting {
+        text: qsTr("歌曲衔接")
+        supportingText: qsTr("一首歌怎样接到下一首")
+        // The backend's TransitionMode.
+        options: [{
+                value: 0,
+                text: qsTr("智能混音")
+            }, {
+                value: 1,
+                text: qsTr("淡入淡出")
+            }, {
+                value: 2,
+                text: qsTr("无缝")
+            }]
+        value: App.settings.trackTransition
+        onChosen: value => App.settings.trackTransition = value
+    }
+    SliderSetting {
+        visible: App.settings.trackTransition === 1
+        text: qsTr("淡入淡出时长")
+        from: 1
+        to: 12
+        stepSize: 1
+        format: value => qsTr("%1 秒").arg(Math.round(value))
+        value: App.settings.crossfadeSeconds
+        onMoved: value => App.settings.crossfadeSeconds = value
+    }
     SwitchSetting {
         text: qsTr("音量均衡")
         supportingText: qsTr("每首歌听起来差不多响")

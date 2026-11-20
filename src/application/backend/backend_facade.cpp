@@ -809,6 +809,14 @@ quint64 BackendFacade::setPlaybackNormalization(bool on)
     c.normalize = on;
     return submitPlayback(c);
 }
+quint64 BackendFacade::setPlaybackTransition(domain::TransitionMode mode, qint64 crossfadeMs)
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Transition;
+    c.transition = mode;
+    c.crossfadeMs = crossfadeMs;
+    return submitPlayback(c);
+}
 quint64 BackendFacade::submitPlayback(PlaybackCommand command)
 {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -831,6 +839,11 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
         return 0;
     if (command.action == PlaybackAction::Volume &&
         (!std::isfinite(command.volume) || command.volume < 0 || command.volume > 1))
+        return 0;
+    if (command.action == PlaybackAction::Transition &&
+        (command.transition < domain::TransitionMode::Smart ||
+         command.transition > domain::TransitionMode::Gapless || command.crossfadeMs < 1000 ||
+         command.crossfadeMs > 12000))
         return 0;
     command.id = ++m_nextId;
     command.generation = m_generation;

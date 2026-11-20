@@ -368,6 +368,11 @@ void PlaybackCoordinator::applyIntent()
 }
 void PlaybackCoordinator::setVolume(float linear) { m_backend.setVolume(linear); }
 void PlaybackCoordinator::setNormalization(bool on) { m_backend.setNormalization(on); }
+
+void PlaybackCoordinator::setTransition(domain::TransitionMode mode, qint64 crossfadeMs)
+{
+    m_backend.setTransition(mode, crossfadeMs);
+}
 void PlaybackCoordinator::receive(PlaybackEvent event)
 {
     using Kind = PlaybackEvent::Kind;

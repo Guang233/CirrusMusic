@@ -95,6 +95,11 @@ class AppSettings : public QObject
     CIRRUS_SETTING(bool, resumeOnStart, setResumeOnStart, "playback/resumeOnStart", false)
     // Volume normalization from the service's loudness (docs/tasks/audio-engine.md §6.5).
     CIRRUS_SETTING(bool, normalizeVolume, setNormalizeVolume, "playback/normalizeVolume", false)
+    // How one track goes into the next (docs/tasks/automix.md §3), the backend's
+    // TransitionMode: Smart (0, default), Crossfade, Gapless; the crossfade's length in
+    // seconds (1–12).
+    CIRRUS_SETTING(int, trackTransition, setTrackTransition, "playback/transition", 0)
+    CIRRUS_SETTING(int, crossfadeSeconds, setCrossfadeSeconds, "playback/crossfadeSeconds", 6)
     // The player's state, applied at startup by App.player: volume (0–1, linear),
     // Playback.Order and Playback.Repeat (the same for every queue and account).
     CIRRUS_SETTING(double, volume, setVolume, "playback/volume", 1.0)
