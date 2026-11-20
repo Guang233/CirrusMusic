@@ -103,6 +103,8 @@ add_library(cirrus_application STATIC
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
     application/playback/lyric_timeline.h
+    application/playback/vocal_spans.cpp
+    application/playback/vocal_spans.h
     application/playback/observed_playback.cpp
     application/playback/observed_playback.h
     application/playback/listening_history.cpp

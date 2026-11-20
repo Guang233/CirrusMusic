@@ -1,4 +1,5 @@
 #include "application/playback/listening_session.h"
+#include "application/playback/vocal_spans.h"
 #include <QSignalSpy>
 #include <QTimer>
 #include <QtTest>
@@ -283,6 +284,35 @@ class ListeningTest : public QObject
         QVERIFY(timeline.at(1000, 1).original.standard.lines.isEmpty());
         timeline.clear();
         QVERIFY(timeline.at(99999).original.standard.lines.isEmpty());
+    }
+    void vocalSpansComeFromTheTimeline()
+    {
+        // Lines: until the next line (a blank break counts), 8 s at most; credits and
+        // blank lines aren't sung; the provider's and the user's offsets move them.
+        auto doc = lyrics();
+        auto& standard = doc.original.standard;
+        standard = lines({});
+        standard.lines = {{0, std::nullopt, "作词 : 某人", {}},
+                          {12000, std::nullopt, "first line", {}},
+                          {15000, std::nullopt, "second line", {}},
+                          {18000, std::nullopt, "", {}},
+                          {40000, std::nullopt, "last line", {}},
+                          {9000, std::nullopt, "early, out of order", {}}};
+        standard.providerOffsetMs = 100;
+        QCOMPARE(vocalSpans(doc, 50),
+                 (QList<VocalSpan>{{9150, 12150}, {12150, 15150}, {15150, 18150}, {40150, 48150}}));
+        // Word timing wins: from the first word's start to the last one's end.
+        auto& enhanced = doc.original.enhanced;
+        enhanced.availability = LyricAvailability::Present;
+        enhanced.timing = LyricTiming::Words;
+        enhanced.lines = {{1000, 4000, "ab", {{1000, 800, "a"}, {2200, 1200, "b"}}}};
+        QCOMPARE(vocalSpans(doc), (QList<VocalSpan>{{1000, 3400}}));
+        // Instrumental, or nothing timed: no singing known.
+        doc.instrumental = true;
+        QVERIFY(vocalSpans(doc).isEmpty());
+        SongLyrics plain;
+        plain.original.standard.availability = LyricAvailability::Present;
+        QVERIFY(vocalSpans(plain).isEmpty());
     }
     void textOnlyMalformedAndBackwardSeek()
     {
