@@ -1,6 +1,7 @@
 #pragma once
 #include "application/playback/observed_playback.h"
 #include "application/ports/playback.h"
+#include "automix/transition.h"
 #include <QElapsedTimer>
 #include <QTimer>
 #include <memory>
@@ -16,8 +17,9 @@ class AudioStream;
 // backend thread); events: Duration, Seekable, Volume
 // and Ready once the file opens, State on play/pause, Position about every 100 ms,
 // SeekConfirmed when a seek has taken effect, Observation, Ended, Failure. A preloaded
-// load is decoded straight after the current one (gapless) and becomes current with
-// Advanced, then its Duration and Seekable; SourceExpired asks for a fresh address.
+// load follows the current one, gapless or through a transition (docs/tasks/automix.md),
+// and becomes current with Advanced (at the joint, or the transition's switch point),
+// then its Duration and Seekable; SourceExpired asks for a fresh address.
 class AudioEngine : public application::IPlaybackBackend
 {
     Q_OBJECT
@@ -31,6 +33,7 @@ class AudioEngine : public application::IPlaybackBackend
     void seek(qint64 positionMs) override;
     void setVolume(float linear) override;
     void setNormalization(bool on) override;
+    void setTransition(domain::TransitionMode mode, qint64 crossfadeMs) override;
     void preload(domain::MediaSource source, domain::LoadToken next) override;
     void refresh(domain::LoadToken token, domain::MediaSource source) override;
 
@@ -41,7 +44,9 @@ class AudioEngine : public application::IPlaybackBackend
         domain::LoadToken token;
         std::shared_ptr<AudioStream> stream; // opened shortly before it is needed
     };
-    void advance(qint64 durationMs, quint64 boundary);
+    void advance(qint64 durationMs, quint64 startFrame, qint64 baseMs);
+    // The producer planned the transition into the next track (for the log).
+    void planned(domain::TransitionMode mode, automix::Style style, qint64 outMs, qint64 overlapMs);
     void openNext();
     void dropNext();
     void urlNeeded(quint64 stream);
@@ -79,6 +84,7 @@ class AudioEngine : public application::IPlaybackBackend
     QElapsedTimer m_underrunWindow;
     float m_volume = 0.5f;
     bool m_normalize = false;
+    automix::Settings m_transition;
     bool m_active = false;
     bool m_ready = false;
     bool m_playing = false;

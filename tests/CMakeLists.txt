@@ -145,7 +145,7 @@ qt_add_executable(tst_audio_engine unit/audio_engine_test.cpp)
 target_link_libraries(tst_audio_engine PRIVATE cirrus_media Qt6::Test)
 target_compile_definitions(tst_audio_engine PRIVATE AUDIO_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/audio")
 add_test(NAME audio_engine COMMAND tst_audio_engine)
-set_tests_properties(audio_engine PROPERTIES TIMEOUT 60)
+set_tests_properties(audio_engine PROPERTIES TIMEOUT 120)
 
 qt_add_executable(tst_listening unit/listening_test.cpp)
 target_link_libraries(tst_listening PRIVATE cirrus_application Qt6::Test)

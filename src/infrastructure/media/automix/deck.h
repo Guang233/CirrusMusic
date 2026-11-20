@@ -44,6 +44,9 @@ class Deck
     [[nodiscard]] qint64 framesOut() const { return m_framesOut; }
     // The media time of the next frame pull() gives (of the track after a follow()).
     [[nodiscard]] qint64 positionMs() const;
+    // Output frames from the next frame pull() gives up to the track's media time `ms`
+    // (≤ 0: there already).
+    [[nodiscard]] qint64 framesUntil(qint64 ms) const;
 
   private:
     [[nodiscard]] qsizetype buffered() const

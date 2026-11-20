@@ -115,6 +115,12 @@ void Deck::resume()
         m_decoder->resume();
 }
 
+qint64 Deck::framesUntil(qint64 ms) const
+{
+    const qint64 target = m_trackStartFrame + (ms - m_trackStartMs) * m_outRate / 1000;
+    return target - m_framesOut;
+}
+
 qint64 Deck::positionMs() const
 {
     const qint64 frames = std::max<qint64>(0, m_framesOut - m_trackStartFrame);

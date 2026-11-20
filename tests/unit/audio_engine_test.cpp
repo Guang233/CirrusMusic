@@ -218,6 +218,63 @@ class AudioEngineTest : public QObject
             QCOMPARE(e.token, first);
     }
 
+    // Smart transitions (docs/tasks/automix.md): long enough tracks overlap, and the next
+    // becomes current at the switch point, already some way in.
+    void aTransitionMixesTheNextIn()
+    {
+        const auto first = token(13), second = token(14);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), first);
+        auto next = source(m_server.body, QStringLiteral("mp3"));
+        next.md5.clear(); // another file to the engine (the fake CDN has one body)
+        m_engine->preload(next, second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        const auto advanced = std::find_if(m_events.begin(), m_events.end(),
+                                           [](const auto& e) { return e.kind == Kind::Advanced; });
+        qint64 lastOfFirst = -1;
+        for (auto it = m_events.begin(); it != advanced; ++it)
+            if (it->kind == Kind::Position)
+                lastOfFirst = it->value;
+        // 4 s tracks: a third of one (about 1.36 s) overlaps; the switch is in its middle.
+        QVERIFY2(lastOfFirst > 2400 && lastOfFirst < 3700,
+                 qPrintable(QString::number(lastOfFirst)));
+        QTRY_VERIFY_WITH_TIMEOUT(
+            std::any_of(advanced, m_events.end(),
+                        [](const auto& e) { return e.kind == Kind::Position; }),
+            2000);
+        const auto firstOfSecond =
+            std::find_if(m_events.begin(), m_events.end(), [&](const auto& e) {
+                return e.token == second && e.kind == Kind::Position;
+            });
+        QVERIFY2(firstOfSecond->value >= 450 && firstOfSecond->value < 1200,
+                 qPrintable(QString::number(firstOfSecond->value)));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, second);
+    }
+
+    void gaplessWaitsForTheEnd()
+    {
+        m_engine->setTransition(TransitionMode::Gapless, 6000);
+        const auto first = token(15), second = token(16);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), first);
+        auto next = source(m_server.body, QStringLiteral("mp3"));
+        next.md5.clear();
+        m_engine->preload(next, second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        qint64 lastOfFirst = -1;
+        for (const auto& e : std::as_const(m_events)) {
+            if (e.kind == Kind::Advanced)
+                break;
+            if (e.kind == Kind::Position)
+                lastOfFirst = e.value;
+        }
+        QVERIFY2(lastOfFirst > 3800, qPrintable(QString::number(lastOfFirst)));
+        m_engine->stop();
+    }
+
     void aNewLoadReplacesTheOld()
     {
         load(QStringLiteral("tone.flac"), QStringLiteral("flac"), token(5));
