@@ -187,9 +187,7 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
     auto plan = automix::plan(settings, {m_curDurationMs, preview}, position,
                               {decoder->durationMs(), nextIsPreview}, sameFile);
     QMetaObject::invokeMethod(
-        engine,
-        [engine, style = plan.style, outMs = plan.outMs, overlapMs = plan.overlapMs,
-         mode = settings.mode] { engine->planned(mode, style, outMs, overlapMs); },
+        engine, [engine, mode = settings.mode, plan] { engine->planned(mode, plan); },
         Qt::QueuedConnection);
     m_upcoming =
         Upcoming{std::move(next), std::move(decoder), gain, nextIsPreview, std::move(plan)};
@@ -987,14 +985,15 @@ void AudioEngine::setTransition(TransitionMode mode, qint64 crossfadeMs)
                     << log::field("crossfade_ms", settings.crossfadeMs);
 }
 
-void AudioEngine::planned(TransitionMode mode, automix::Style style, qint64 outMs, qint64 overlapMs)
+void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan)
 {
     if (!m_active)
         return;
     qCInfo(lcMedia) << log::event("mix.plan") << log::field("token", m_token.generation)
                     << log::field("next", m_next ? m_next->token.generation : 0)
-                    << log::field("mode", mode) << log::field("style", style)
-                    << log::field("out_ms", outMs) << log::field("overlap_ms", overlapMs);
+                    << log::field("mode", mode) << log::field("style", plan.style)
+                    << log::field("reason", plan.reason) << log::field("out_ms", plan.outMs)
+                    << log::field("in_ms", plan.inMs) << log::field("overlap_ms", plan.overlapMs);
 }
 
 void AudioEngine::setVolume(float linear)

@@ -12,10 +12,22 @@ namespace cirrus::media::automix
 enum class Style { Gapless, Crossfade };
 CIRRUS_LOG_ENUM(Style, Gapless, Crossfade)
 
+// Why a plan is what it is (the log, the tuning tool).
+enum class Reason {
+    Setting,    // what the mode asks for: gapless, or the crossfade's length
+    NoAnalysis, // the smart mode without an analysis yet: a plain crossfade
+    Preview,    // a preview clip on either side: gapless
+    SameFile,   // the same file again (repeat one): gapless
+    NoDuration, // a length unknown: gapless
+    NoRoom,     // too short, or too close to the end, for the shortest overlap: gapless
+};
+CIRRUS_LOG_ENUM(Reason, Setting, NoAnalysis, Preview, SameFile, NoDuration, NoRoom)
+
 // One transition from the current track ("out") into the next ("in"). Times are each
 // track's own media time; the automations run over the overlap, in seconds from its start.
 struct Plan {
     Style style = Style::Gapless;
+    Reason reason = Reason::Setting;
     qint64 outMs = 0;     // where in the current track the overlap starts
     qint64 inMs = 0;      // where in the next track it starts from
     qint64 overlapMs = 0; // how long both sound (0: gapless)

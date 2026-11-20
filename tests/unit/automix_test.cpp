@@ -75,6 +75,7 @@ class AutomixTest : public QObject
         const Settings crossfade{TransitionMode::Crossfade, 8000};
         const auto p = plan(crossfade, {200000}, 10000, {180000}, false);
         QCOMPARE(p.style, Style::Crossfade);
+        QCOMPARE(p.reason, Reason::Setting);
         QCOMPARE(p.overlapMs, 8000);
         QCOMPARE(p.outMs, 192000);
         QCOMPARE(p.inMs, 0);
@@ -82,27 +83,32 @@ class AutomixTest : public QObject
         QCOMPARE(p.gainOut.at(0), 1.0f);
         QCOMPARE(p.gainIn.at(8), 1.0f);
         // The smart mode crossfades until the analysis comes.
-        QCOMPARE(plan({TransitionMode::Smart, 1000}, {200000}, 0, {180000}, false).overlapMs, 6000);
+        const auto smart = plan({TransitionMode::Smart, 1000}, {200000}, 0, {180000}, false);
+        QCOMPARE(smart.overlapMs, 6000);
+        QCOMPARE(smart.reason, Reason::NoAnalysis);
     }
 
     void fallsBackToGapless()
     {
         const Settings crossfade{TransitionMode::Crossfade, 8000};
-        QCOMPARE(plan({TransitionMode::Gapless, 8000}, {200000}, 0, {180000}, false).style,
-                 Style::Gapless);
-        QCOMPARE(plan(crossfade, {200000, true}, 0, {180000}, false).style, Style::Gapless);
-        QCOMPARE(plan(crossfade, {200000}, 0, {180000, true}, false).style, Style::Gapless);
-        QCOMPARE(plan(crossfade, {200000}, 0, {200000}, true).style, Style::Gapless); // repeat one
-        QCOMPARE(plan(crossfade, {200000}, 0, {0}, false).style, Style::Gapless);
+        const auto gapless = [](const Plan& p, Reason reason) {
+            return p.style == Style::Gapless && p.overlapMs == 0 && p.reason == reason;
+        };
+        QVERIFY(gapless(plan({TransitionMode::Gapless, 8000}, {200000}, 0, {180000}, false),
+                        Reason::Setting));
+        QVERIFY(gapless(plan(crossfade, {200000, true}, 0, {180000}, false), Reason::Preview));
+        QVERIFY(gapless(plan(crossfade, {200000}, 0, {180000, true}, false), Reason::Preview));
+        QVERIFY(gapless(plan(crossfade, {200000}, 0, {200000}, true), Reason::SameFile));
+        QVERIFY(gapless(plan(crossfade, {200000}, 0, {0}, false), Reason::NoDuration));
         // Short tracks: a third of the shorter one at most.
         QCOMPARE(plan(crossfade, {9000}, 0, {180000}, false).overlapMs, 3000);
-        QCOMPARE(plan(crossfade, {2400}, 0, {180000}, false).style, Style::Gapless);
+        QVERIFY(gapless(plan(crossfade, {2400}, 0, {180000}, false), Reason::NoRoom));
         // Near the end already (a seek there): what is left, or nothing.
         const auto late = plan(crossfade, {200000}, 196000, {180000}, false);
         QCOMPARE(late.style, Style::Crossfade);
         QCOMPARE(late.overlapMs, 200000 - 196000 - kStartMarginMs);
         QCOMPARE(late.outMs + late.overlapMs, 200000);
-        QCOMPARE(plan(crossfade, {200000}, 199000, {180000}, false).style, Style::Gapless);
+        QVERIFY(gapless(plan(crossfade, {200000}, 199000, {180000}, false), Reason::NoRoom));
     }
 
     void mixesWithTheGains()

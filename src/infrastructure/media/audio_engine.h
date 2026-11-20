@@ -47,7 +47,7 @@ class AudioEngine : public application::IPlaybackBackend
     };
     void advance(qint64 durationMs, quint64 startFrame, qint64 baseMs);
     // The producer planned the transition into the next track (for the log).
-    void planned(domain::TransitionMode mode, automix::Style style, qint64 outMs, qint64 overlapMs);
+    void planned(domain::TransitionMode mode, const automix::Plan& plan);
     void openNext();
     void dropNext();
     void urlNeeded(quint64 stream);
