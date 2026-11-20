@@ -972,7 +972,7 @@ void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
     m_curJob = m_next->job;
     m_curReader = std::move(m_next->reader);
     m_curFull = m_analysis && m_analysis->complete;
-    m_curLookedUp = true; // as the next track (analyseNext)
+    m_curLookedUp = false; // (it wasn't, if the next opened while gapless)
     m_vocals = std::move(m_next->vocals);
     m_next.reset();
     handPlanInputs();
