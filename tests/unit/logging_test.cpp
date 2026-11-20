@@ -29,6 +29,8 @@ QString logName(Named n)
 
 using namespace cirrus;
 
+Q_STATIC_LOGGING_CATEGORY(lcLibrary, "qt.demo")
+
 namespace
 {
 QString text(const log::Fields& fields) { return fields.text(); }
@@ -196,6 +198,19 @@ class LoggingTest : public QObject
                  qPrintable(summary));
         QVERIFY(stats.empty());
         QVERIFY(!stats.due());
+
+        // A warning for the third failure of a window, and not again within it.
+        log::Burst burst(3, 60 * 1000);
+        QVERIFY(!burst.add());
+        QVERIFY(!burst.add());
+        QVERIFY(burst.add());
+        QVERIFY(!burst.add());
+        QCOMPARE(burst.count(), 4);
+        // Failures further apart than the window never pile up.
+        log::Burst apart(2, 0);
+        QVERIFY(!apart.add());
+        QVERIFY(!apart.add());
+        QCOMPARE(apart.count(), 1);
     }
 
     // Debug records wait in memory, and come to the file before a warning (the last 30 s)
@@ -216,6 +231,7 @@ class LoggingTest : public QObject
         qWarning("from qt");
         log::setContext("page", QString());
         log::debug(lcMedia, "marked");
+        qCWarning(lcLibrary) << "a library's own"; // speaks of the system: brings nothing
         log::writeContext("mark");
         log::writeContext("mark"); // nothing new: no empty block
         log::debug(lcMedia, "never");
@@ -243,6 +259,7 @@ class LoggingTest : public QObject
             "cirrus.media between",
             "cirrus.log log.context_end reason=warning count=1",
             "default from qt ctx.page=AlbumPage",
+            "qt.demo a library's own",
             "cirrus.log log.context_begin reason=mark count=1",
             "cirrus.media marked",
             "cirrus.log log.context_end reason=mark count=1",

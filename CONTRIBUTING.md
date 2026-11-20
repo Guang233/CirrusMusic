@@ -49,7 +49,7 @@ cmake --build build/linux-dev --target all_qmllint
 
 - **格式**：C++ 用仓库里的 `.clang-format`（`clang-format --dry-run --Werror <文件>`）。
 - **界面**：产品 QML 只用 `Cirrus.Controls` 的控件，不直接用 `QtQuick.Controls`；颜色、字体、圆角、动效一律取自 `Theme`，不写死；所有操作都要能用键盘完成。
-- **日志**：用 `src/logging` 的分类和 `log::debug`／`info`／`warn`／`critical`，一行写完：`log::warn(lcNet, "request.failed", {{"req", id}, {"err", error}})`。**不要记录** URL、请求或响应内容、凭据和用户输入的文字。
+- **日志**：用 `src/logging` 的分类和 `log::debug`／`info`／`warn`／`critical`，一行写完：`log::warn(lcNet, "request.failed", {{"req", id}, {"err", error}})`；事件名（`a.b_c`）和字段名（`lower_snake_case`）在编译时检查。**不要记录** URL、请求或响应内容、凭据和用户输入的文字。
 - **生成的文件**不要手改：`ui/theme/Symbols.qml`、`ui/theme/fonts/*.ttf`、`ui/samples/**`、`ui/app/icons/cirrus*`，它们由 `tools/ui/` 下的脚本生成。
 - **第三方代码**：不要从 GPL／AGPL 项目复制代码。`third_party/` 里的库保持上游原样。
 - **提交**：小而独立的提交，信息用 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/) 格式，例如 `fix(player): ...`、`feat(ui): ...`。用户能感觉到的改动，在 `CHANGELOG.md` 的 Unreleased 下记一行。

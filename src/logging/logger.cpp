@@ -432,7 +432,11 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
             inside = false;
             return;
         }
-        if (warning)
+        // Our warnings bring the debug records before them, and so do QML's and plain
+        // qWarning()'s ("default"). A library's own (qt.*, kf.*: the desktop portal, the audio
+        // server, the desktop's settings) speak of the system, not of what the app was doing:
+        // they come every start and would only spend the records a later warning needs.
+        if (urgent || (warning && (category.startsWith("cirrus.") || category == "default")))
             writeContext(s, "warning", now - kWarningContextMs, kWarningContextLimit);
         enqueue(s, std::move(line));
     }
@@ -518,13 +522,13 @@ void prune(State& s)
 
 } // namespace
 
-void write(QtMsgType level, Category category, const char* event, const Fields& fields,
+void write(QtMsgType level, Category category, Event event, const Fields& fields,
            std::source_location where)
 {
     const QLoggingCategory& c = category();
     if (!c.isEnabled(level))
         return;
-    QString text = QString::fromLatin1(event);
+    QString text = QString::fromLatin1(event.name);
     if (!fields.isEmpty())
         text += u' ' + fields.text();
     // What qCWarning() and the others do, with the caller's place for the context.

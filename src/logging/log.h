@@ -89,6 +89,49 @@ template <typename T> QString value(const T& v)
 }
 } // namespace detail
 
+namespace detail
+{
+// Not constexpr: a name that breaks the rule calls one of these while the code compiles, and
+// the build stops there, the function's name saying why.
+void logKeyMustBeLowerSnakeCase();
+void logEventMustBeLowercaseDotted();
+
+// lower_snake_case: a-z first, then a-z, 0-9 and '_'; with `dots`, parts joined by '.'.
+consteval bool isLogName(const char* name, bool dots)
+{
+    if (!name || *name < 'a' || *name > 'z')
+        return false;
+    char last = 0;
+    for (; *name; last = *name++) {
+        const char c = *name;
+        const bool part = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
+        if (!part && !(dots && c == '.' && last != '.'))
+            return false;
+    }
+    return last != '.';
+}
+} // namespace detail
+
+// A field's key ("retry_after") and a record's event ("request.failed"): written in the code
+// and checked as it compiles, so a typo stops the build and no run-time text (a title, what
+// the user typed) can become one.
+struct Key {
+    consteval Key(const char* name) : name(name)
+    {
+        if (!detail::isLogName(name, false))
+            detail::logKeyMustBeLowerSnakeCase();
+    }
+    const char* name;
+};
+struct Event {
+    consteval Event(const char* name) : name(name)
+    {
+        if (!detail::isLogName(name, true))
+            detail::logEventMustBeLowercaseDotted();
+    }
+    const char* name;
+};
+
 // A record's fields, written as `key=value key=value`, each value formatted when the field is
 // made. Written as braces:
 //   {"ms", 203}                        one field
@@ -100,8 +143,8 @@ class Fields
   public:
     Fields() = default;
     template <typename T>
-    Fields(const char* key, const T& value)
-        : m_text(QString::fromLatin1(key) + u'=' + detail::value(value))
+    Fields(Key key, const T& value)
+        : m_text(QString::fromLatin1(key.name) + u'=' + detail::value(value))
     {
     }
     Fields(std::initializer_list<Fields> fields)
@@ -110,10 +153,7 @@ class Fields
             add(f);
     }
 
-    template <typename T> Fields& add(const char* key, const T& value)
-    {
-        return add(Fields(key, value));
-    }
+    template <typename T> Fields& add(Key key, const T& value) { return add(Fields(key, value)); }
     Fields& add(const Fields& more)
     {
         if (more.m_text.isEmpty()) // fieldIf() without a value: nothing, not even a space
@@ -133,7 +173,7 @@ class Fields
 
 // A field only when there is something to say: fieldIf(!retryAfter.isEmpty(), "retry_after",
 // retryAfter) writes nothing at all otherwise.
-template <typename T> Fields fieldIf(bool present, const char* key, const T& value)
+template <typename T> Fields fieldIf(bool present, Key key, const T& value)
 {
     return present ? Fields(key, value) : Fields();
 }
@@ -146,27 +186,27 @@ using Category = const QLoggingCategory& (*)();
 
 // The record `event fields` at `level`, from the caller's file, line and function (warnings
 // add them as src= and fn=). Nothing is written when the category has the level off.
-void write(QtMsgType level, Category category, const char* event, const Fields& fields = {},
+void write(QtMsgType level, Category category, Event event, const Fields& fields = {},
            std::source_location where = std::source_location::current());
 
 // The same at a fixed level; write() for a level chosen at run time:
 //   log::write(ok ? QtInfoMsg : QtWarningMsg, lcReport, "report.result", fields);
-inline void debug(Category category, const char* event, const Fields& fields = {},
+inline void debug(Category category, Event event, const Fields& fields = {},
                   std::source_location where = std::source_location::current())
 {
     write(QtDebugMsg, category, event, fields, where);
 }
-inline void info(Category category, const char* event, const Fields& fields = {},
+inline void info(Category category, Event event, const Fields& fields = {},
                  std::source_location where = std::source_location::current())
 {
     write(QtInfoMsg, category, event, fields, where);
 }
-inline void warn(Category category, const char* event, const Fields& fields = {},
+inline void warn(Category category, Event event, const Fields& fields = {},
                  std::source_location where = std::source_location::current())
 {
     write(QtWarningMsg, category, event, fields, where);
 }
-inline void critical(Category category, const char* event, const Fields& fields = {},
+inline void critical(Category category, Event event, const Fields& fields = {},
                      std::source_location where = std::source_location::current())
 {
     write(QtCriticalMsg, category, event, fields, where);

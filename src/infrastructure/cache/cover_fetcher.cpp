@@ -264,16 +264,24 @@ void CoverFetcher::complete(const std::shared_ptr<Pending>& pending, CacheError 
                             QByteArray bytes, qint64 ttlMs)
 {
     const auto id = pending->job.id;
-    if (error == CacheError::None)
-        log::debug(lcCache, "cover.fetched",
-                   {{"id", id}, {"bytes", bytes.size()}, {"ms", pending->elapsed.elapsed()}});
-    else if (error != CacheError::Canceled)
-        log::warn(lcCache, "cover.failed",
-                  {{"id", id},
-                   {"err", error},
-                   {"host", log::host(pending->job.coverUrl)},
-                   {"ms", pending->elapsed.elapsed()},
-                   pending->why});
+    const qint64 ms = pending->elapsed.elapsed();
+    const auto host = log::host(pending->job.coverUrl);
+    if (error == CacheError::None) {
+        log::debug(lcCache, "cover.fetched", {{"id", id}, {"bytes", bytes.size()}, {"ms", ms}});
+    } else if (error != CacheError::Canceled) {
+        // A page of covers fails together when a host or the connection to it stalls: the
+        // warning, with the latest one's reasons, brings the others' records with it.
+        const log::Fields failed{
+            {"id", id}, {"err", error}, {"host", host}, {"ms", ms}, pending->why};
+        log::debug(lcCache, "cover.failed", failed);
+        if (m_failures.add())
+            log::warn(lcCache, "cover.failing", {{"failed", m_failures.count()}, failed});
+    }
+    if (error != CacheError::Canceled) {
+        m_stats.add(ms, host.value, error == CacheError::None ? QString() : log::nameOf(error));
+        if (m_stats.due())
+            log::info(lcCache, "cover.stats", m_stats.take());
+    }
     emit completed(id, error, std::move(bytes), ttlMs);
 }
 void CoverFetcher::cancel(quint64 id)
@@ -287,6 +295,8 @@ void CoverFetcher::cancel(quint64 id)
 void CoverFetcher::close()
 {
     m_closed = true;
+    if (!m_stats.empty())
+        log::info(lcCache, "cover.stats", m_stats.take());
     QList<quint64> ids = m_pending.keys();
     ids << m_checking.keys();
     const QPointer<CoverFetcher> guard(this);
