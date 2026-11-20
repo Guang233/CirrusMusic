@@ -26,3 +26,7 @@ option(CIRRUS_BUILD_AUDIO_POC "Build the audio engine PoC (tools/audio-poc, need
 if(CIRRUS_BUILD_AUDIO_POC)
     add_subdirectory(tools/audio-poc)
 endif()
+option(CIRRUS_BUILD_AUTOMIX_TOOL "Build the automix tuning tool (tools/automix)" OFF)
+if(CIRRUS_BUILD_AUTOMIX_TOOL)
+    add_subdirectory(tools/automix)
+endif()
