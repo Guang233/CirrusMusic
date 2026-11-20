@@ -440,6 +440,7 @@ target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_nete
 add_library(cirrus_media STATIC
     infrastructure/media/media_source_policy.h
     infrastructure/media/loudness.h
+    infrastructure/media/byte_source.h
     infrastructure/media/audio_store.h
     infrastructure/media/audio_store.cpp
     infrastructure/media/audio_decoder.h

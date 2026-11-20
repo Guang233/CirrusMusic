@@ -1,5 +1,5 @@
 #include "audio_decoder.h"
-#include "audio_store.h"
+#include "byte_source.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -86,7 +86,7 @@ int64_t AudioDecoder::seekStream(void* opaque, int64_t offset, int whence)
     return offset;
 }
 
-bool AudioDecoder::open(std::shared_ptr<AudioStream> stream, const QString& format)
+bool AudioDecoder::open(std::shared_ptr<ByteSource> stream, const QString& format)
 {
     // FFmpeg logs to stderr; its warnings are routine here (the MP3 gapless trim says
     // "Could not update timestamps for skipped samples" on every file).

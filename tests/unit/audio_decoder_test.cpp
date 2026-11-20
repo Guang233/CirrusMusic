@@ -1,6 +1,7 @@
 #include "../support/fake_range_http.h"
 #include "infrastructure/media/audio_decoder.h"
 #include "infrastructure/media/audio_store.h"
+#include "infrastructure/media/byte_source.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
@@ -95,6 +96,22 @@ class AudioDecoderTest : public QObject
         QVERIFY(std::abs(duration - 500) <= 30);
         // Exact: the MP3 encoder's delay and padding are trimmed (gapless).
         QCOMPARE(frames, ToneFrames);
+    }
+
+    void decodesALocalFile_data() { decodesTheWholeFile_data(); }
+    void decodesALocalFile()
+    {
+        QFETCH(QString, format);
+        // The automix tool reads files straight from disk, past the store.
+        auto file = media::LocalFileSource::open(QStringLiteral(AUDIO_FIXTURES "/tone.") + format);
+        QVERIFY(file);
+        AudioDecoder decoder;
+        QVERIFY(decoder.open(file, format));
+        QCOMPARE(qint64(decodeAll(decoder).size() / 2), ToneFrames);
+        QVERIFY(decoder.seek(250));
+        std::vector<float> rest = decodeAll(decoder);
+        QCOMPARE(qint64(rest.size() / 2), ToneFrames - 11025);
+        QVERIFY(!media::LocalFileSource::open(QStringLiteral(AUDIO_FIXTURES "/missing.flac")));
     }
 
     void seekIsSampleExact_data() { decodesTheWholeFile_data(); }

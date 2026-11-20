@@ -14,12 +14,12 @@ struct SwrContext;
 
 namespace cirrus::media
 {
-class AudioStream;
+class ByteSource;
 
 // One MP3 or FLAC file decoded to interleaved stereo float at its own sample rate, read
-// through an AudioStream (blocking; run it on a decoder thread). Only the demuxer and
-// decoder named by the provider's format are allowed: FFmpeg never probes other formats.
-// Start/end padding (MP3 encoder delay, LAME header) is trimmed by libavcodec.
+// through a ByteSource (the AudioStore's stream; blocking: run it on a decoder thread). Only the
+// demuxer and decoder named by the provider's format are allowed: FFmpeg never probes other
+// formats. Start/end padding (MP3 encoder delay, LAME header) is trimmed by libavcodec.
 class AudioDecoder final
 {
   public:
@@ -29,7 +29,7 @@ class AudioDecoder final
     AudioDecoder& operator=(const AudioDecoder&) = delete;
 
     // `format` is "mp3" or "flac". False on failure; error() says why.
-    bool open(std::shared_ptr<AudioStream> stream, const QString& format);
+    bool open(std::shared_ptr<ByteSource> stream, const QString& format);
     [[nodiscard]] int sampleRate() const { return m_rate; }
     [[nodiscard]] qint64 durationMs() const { return m_durationMs; }
     // Position of the next frame read() gives, in source frames.
@@ -52,7 +52,7 @@ class AudioDecoder final
     void convert(const AVFrame* frame, qint64 skip);
     void failWith(domain::PlaybackError error);
 
-    std::shared_ptr<AudioStream> m_stream;
+    std::shared_ptr<ByteSource> m_stream;
     qint64 m_offset = 0; // byte position in the stream
     AVIOContext* m_io = nullptr;
     AVFormatContext* m_format = nullptr;

@@ -1,4 +1,5 @@
 #pragma once
+#include "byte_source.h"
 #include "domain/playback/playback_types.h"
 #include <QHash>
 #include <QNetworkAccessManager>
@@ -38,18 +39,18 @@ struct AudioStreamState {
 // One audio file being played: reads block until the bytes are downloaded (on the
 // decoder's thread, never the owner's). Releasing the last handle stops its download;
 // what was downloaded stays cached.
-class AudioStream final
+class AudioStream final : public ByteSource
 {
   public:
-    ~AudioStream();
+    ~AudioStream() override;
     AudioStream(const AudioStream&) = delete;
     AudioStream& operator=(const AudioStream&) = delete;
 
-    [[nodiscard]] qint64 size() const;
+    [[nodiscard]] qint64 size() const override;
     // The download's id (AudioStore::urlNeeded, refresh()).
     [[nodiscard]] quint64 id() const { return m_id; }
     // Up to `maximum` bytes at `position`: > 0 read, 0 at the end, -1 failed or canceled.
-    qint64 read(qint64 position, char* out, qint64 maximum);
+    qint64 read(qint64 position, char* out, qint64 maximum) override;
     // Wakes a blocked read (it returns -1); later reads fail too.
     void cancel();
     // The read that is waiting, or the next one that has to wait, returns -1; reads after
@@ -57,7 +58,7 @@ class AudioStream final
     void interrupt();
     void clearInterrupt();
     [[nodiscard]] bool complete() const;
-    [[nodiscard]] std::optional<domain::PlaybackError> failure() const;
+    [[nodiscard]] std::optional<domain::PlaybackError> failure() const override;
 
   private:
     friend class AudioStore;
