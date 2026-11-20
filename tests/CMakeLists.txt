@@ -134,6 +134,13 @@ add_test(NAME audio_decoder COMMAND tst_audio_decoder)
 set_tests_properties(audio_decoder PROPERTIES TIMEOUT 60)
 
 # Plays on the default output at volume 0; skips itself without a device.
+# Transitions between tracks: plans, gains, decks (docs/tasks/automix.md); no device.
+qt_add_executable(tst_automix unit/automix_test.cpp)
+target_link_libraries(tst_automix PRIVATE cirrus_media Qt6::Test)
+target_compile_definitions(tst_automix PRIVATE AUDIO_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/audio")
+add_test(NAME automix COMMAND tst_automix)
+set_tests_properties(automix PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_audio_engine unit/audio_engine_test.cpp)
 target_link_libraries(tst_audio_engine PRIVATE cirrus_media Qt6::Test)
 target_compile_definitions(tst_audio_engine PRIVATE AUDIO_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/audio")

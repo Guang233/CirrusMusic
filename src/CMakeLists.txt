@@ -449,6 +449,15 @@ add_library(cirrus_media STATIC
     infrastructure/media/audio_output.cpp
     infrastructure/media/audio_engine.h
     infrastructure/media/audio_engine.cpp
+    # Transitions between tracks (docs/tasks/automix.md).
+    infrastructure/media/automix/automation.h
+    infrastructure/media/automix/automation.cpp
+    infrastructure/media/automix/transition.h
+    infrastructure/media/automix/transition.cpp
+    infrastructure/media/automix/deck.h
+    infrastructure/media/automix/deck.cpp
+    infrastructure/media/automix/mix.h
+    infrastructure/media/automix/mix.cpp
 )
 # The audio engine decodes with FFmpeg (ADR-0008): LGPL builds, linked dynamically.
 find_package(PkgConfig REQUIRED)
