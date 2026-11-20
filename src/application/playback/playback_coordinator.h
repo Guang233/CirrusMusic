@@ -38,8 +38,9 @@ class PlaybackCoordinator final : public QObject
     struct Next {
         domain::LoadToken token;
         domain::StreamQuery query;
-        quint64 request = 0; // resolving
-        bool loaded = false; // handed to the backend
+        quint64 request = 0;             // resolving
+        bool loaded = false;             // handed to the backend
+        QList<domain::VocalSpan> vocals; // until it is
         QString actualQuality;
         std::optional<domain::PreviewRange> preview;
     };
@@ -69,6 +70,9 @@ class PlaybackCoordinator final : public QObject
     QElapsedTimer m_loadClock; // since start(), for the log
     std::optional<qint64> m_seek;
     domain::StreamQuery m_query; // the current load's, for refreshing its address
+    // The current load's sung lines, until it is handed to the backend (the lyrics often
+    // come before the address).
+    QList<domain::VocalSpan> m_vocals;
     std::optional<Next> m_next;
     QList<Refresh> m_refreshes;
 };

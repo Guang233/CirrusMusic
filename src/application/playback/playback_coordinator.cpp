@@ -116,6 +116,8 @@ void PlaybackCoordinator::resolved(quint64 id, SessionToken context, StreamResul
     if (current(token)) {
         MediaSource physical = std::move(source); // retire the song envelope here
         m_backend.load(std::move(physical), token);
+        if (token == m_snapshot.token && !m_vocals.isEmpty())
+            m_backend.setVocals(token, std::exchange(m_vocals, {}));
     }
 }
 
@@ -169,6 +171,8 @@ void PlaybackCoordinator::preloaded(StreamResult result)
                         << log::field("preview", source.preview.has_value());
     MediaSource physical = std::move(source);
     m_backend.preload(std::move(physical), m_next->token);
+    if (m_next && !m_next->vocals.isEmpty())
+        m_backend.setVocals(m_next->token, std::exchange(m_next->vocals, {}));
 }
 
 void PlaybackCoordinator::dropNext()
@@ -238,6 +242,7 @@ bool PlaybackCoordinator::current(LoadToken token) const
 void PlaybackCoordinator::retire()
 {
     m_ready = false;
+    m_vocals.clear();
     m_deadline.stop();
     m_seek.reset();
     const auto id = std::exchange(m_request, 0);
@@ -376,6 +381,15 @@ void PlaybackCoordinator::setTransition(domain::TransitionMode mode, qint64 cros
 
 void PlaybackCoordinator::setVocals(domain::LoadToken token, const QList<domain::VocalSpan>& spans)
 {
+    // The backend knows a load only once it has it: until then they wait here.
+    if (token == m_snapshot.token && m_request) {
+        m_vocals = spans;
+        return;
+    }
+    if (m_next && token == m_next->token && !m_next->loaded) {
+        m_next->vocals = spans;
+        return;
+    }
     m_backend.setVocals(token, spans);
 }
 void PlaybackCoordinator::receive(PlaybackEvent event)

@@ -33,6 +33,7 @@ class FakePlaybackBackend final : public application::IPlaybackBackend
     QList<domain::LoadToken> loads;
     QList<domain::LoadToken> preloads; // an empty token: canceled
     QList<domain::LoadToken> refreshes;
+    QList<domain::LoadToken> vocals;
     QList<qint64> seeks;
     int plays = 0, pauses = 0, stops = 0;
     float volume = 0.5f;
@@ -44,5 +45,9 @@ class FakePlaybackBackend final : public application::IPlaybackBackend
     void setVolume(float value) override { volume = value; }
     void preload(domain::MediaSource, domain::LoadToken token) override { preloads.append(token); }
     void refresh(domain::LoadToken token, domain::MediaSource) override { refreshes.append(token); }
+    void setVocals(domain::LoadToken token, const QList<domain::VocalSpan>&) override
+    {
+        vocals.append(token);
+    }
 };
 } // namespace cirrus::test

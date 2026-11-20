@@ -148,6 +148,39 @@ class PlaybackTest : public QObject
         emit backend.event({{context, 4}, Kind::Advanced});
         QCOMPARE(player.snapshot().token, (LoadToken{context, 5}));
     }
+    // Sung lines that come before the address wait for their load: the backend knows a
+    // load only once it has it.
+    void vocalsWaitForTheirLoad()
+    {
+        application::SessionCoordinator session;
+        test::FakeStreamResolver resolver;
+        test::FakePlaybackBackend backend;
+        application::PlaybackCoordinator player(session, resolver, backend);
+        const auto context = session.snapshot().token;
+        const LoadToken first{context, 1}, second{context, 2};
+        const QList<VocalSpan> lines{{1000, 2000}};
+        QVERIFY(player.start(first, {{"1"}}));
+        player.setVocals(first, lines);
+        QVERIFY(backend.vocals.isEmpty());
+        resolver.finish(0, source("1"));
+        QCOMPARE(backend.loads, QList<LoadToken>{first});
+        QCOMPARE(backend.vocals, QList<LoadToken>{first});
+        emit backend.event({first, Kind::Ready});
+        QVERIFY(player.preload(first, second, StreamQuery{{"2"}}));
+        player.setVocals(second, lines);
+        QCOMPARE(backend.vocals.size(), 1);
+        resolver.finish(1, source("2"));
+        QCOMPARE(backend.vocals, (QList<LoadToken>{first, second}));
+        player.setVocals(second, lines); // it has that one: at once
+        QCOMPARE(backend.vocals.size(), 3);
+        // A new load drops what waited for the old one.
+        QVERIFY(player.start({context, 3}, {{"3"}}));
+        player.setVocals({context, 3}, lines);
+        QVERIFY(player.start({context, 4}, {{"4"}}));
+        resolver.finish(3, source("4"));
+        QCOMPARE(backend.loads.last(), (LoadToken{context, 4}));
+        QCOMPARE(backend.vocals.size(), 3);
+    }
     void expiredAddressIsResolvedAgain()
     {
         application::SessionCoordinator session;

@@ -52,6 +52,7 @@ struct SharedState {
     QHash<QString, QByteArray> records;
     std::atomic_int created{0}, destroyed{0}, wrongThread{0}, requests{0};
     std::atomic_int reads{0}, writes{0}, removes{0};
+    std::atomic_int vocals{0}; // sung lines that reached the player for its current or next
     std::atomic_bool holdReads{false}, holdWrites{false}, failRemove{false}, failWrite{false};
     bool contains(const QString& key)
     {
@@ -474,7 +475,8 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
       public:
         domain::LoadToken token, next;
         QList<domain::LoadToken> loads;
-        explicit Player(Gate& gate)
+        std::shared_ptr<SharedState> state;
+        Player(Gate& gate, std::shared_ptr<SharedState> shared) : state(std::move(shared))
         {
             connect(
                 &gate, &Gate::advancePlayback, this,
@@ -507,6 +509,11 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
             });
         }
         void preload(domain::MediaSource, domain::LoadToken t) override { next = t; }
+        void setVocals(domain::LoadToken t, const QList<domain::VocalSpan>& spans) override
+        {
+            if (!spans.isEmpty() && t.generation && (t == token || t == next))
+                ++state->vocals;
+        }
         void play() override
         {
             emit event({token, PlaybackEvent::Kind::State, domain::PlaybackState::Playing});
@@ -547,7 +554,7 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
                              {"", 200, -1},
                              {"", 200, -1}});
     auto f = factories(state, gate, plans);
-    f.playback = [&gate] { return std::make_unique<Player>(gate); };
+    f.playback = [&gate, state] { return std::make_unique<Player>(gate, state); };
     BackendRuntime runtime(config, std::move(f));
     auto& facade = runtime.facade();
     QSignalSpy started(&facade, &BackendFacade::started), stopped(&facade, &BackendFacade::stopped);
@@ -570,7 +577,8 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
     const auto first = facade.playback().token;
     // song 2 is being preloaded, with its lyrics
     QTRY_COMPARE(state->requests.load(), before + 4);
-    QTest::qWait(100); // its address arrives at the player
+    QTRY_COMPARE(state->vocals.load(), 2); // song 1's sung lines, and song 2's
+    QTest::qWait(100);                     // its address arrives at the player
     emit gate.observedPlayback(500);
     QTRY_COMPARE(listening.history().size(), 1);
     emit gate.advancePlayback();
