@@ -10,6 +10,7 @@ namespace cirrus::media
 {
 class AudioOutput;
 class AudioStore;
+enum class FlushTail; // audio_output.h
 class AudioStream;
 
 // The playback engine (ADR-0008): AudioStore streams the file, FFmpeg decodes it on a
@@ -59,7 +60,7 @@ class AudioEngine : public application::IPlaybackBackend
     void sendLater(application::PlaybackEvent event);
     void deviceChanged();
     void startProducer(qint64 positionMs, bool seek = false);
-    void stopProducer();
+    void stopProducer(FlushTail tail);
     [[nodiscard]] qint64 position() const;
     [[nodiscard]] qint64 clipLength() const;
 

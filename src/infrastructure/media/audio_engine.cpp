@@ -27,6 +27,7 @@ constexpr int kTickMs = 100;
 constexpr qint64 kUnderrunLogMs = 10000; // underruns are summed over this in the log
 constexpr int kOpenTimeoutMs = 30000;
 constexpr int kSuspendAfterMs = 300; // past the fade-out
+constexpr int kTailCheckMs = 100;    // a skip's tail still fading: suspend after it
 // The next track: its first bytes are fetched as soon as it is known, the rest from
 // this long before the current one ends (or once the current file is all here).
 constexpr qint64 kPrefetchBytes = 1024 * 1024;
@@ -376,7 +377,7 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
         }
         if (seek) {
             if (!flushing)
-                output->beginFlush();
+                output->beginFlush(FlushTail::Cut);
             flushing = true;
             out.clear();
             written = 0;
@@ -488,7 +489,11 @@ AudioEngine::AudioEngine(AudioStore& store, QObject* parent)
     });
     m_idle.setSingleShot(true);
     connect(&m_idle, &QTimer::timeout, this, [this] {
-        if (!m_playing)
+        if (m_playing)
+            return;
+        if (m_output->fading())
+            m_idle.start(kTailCheckMs); // or its rest would play after the next resume()
+        else
             m_output->suspend();
     });
     connect(m_output.get(), &AudioOutput::deviceChanged, this, &AudioEngine::deviceChanged);
@@ -574,7 +579,7 @@ void AudioEngine::startProducer(qint64 positionMs, bool seek)
     m_seekSerial = 0;
 }
 
-void AudioEngine::stopProducer()
+void AudioEngine::stopProducer(FlushTail tail)
 {
     if (!m_producer)
         return;
@@ -590,12 +595,16 @@ void AudioEngine::stopProducer()
     if (m_producer->thread.joinable())
         m_producer->thread.join();
     m_producer.reset();
-    m_output->beginFlush(); // whatever it queued never plays
+    m_output->beginFlush(tail); // what it queued never plays, or fades out quickly
 }
 
 void AudioEngine::stop()
 {
     Q_ASSERT(QThread::currentThread() == thread());
+    // A skip (or the queue stopped) while playing: a quick fade-out; the gapless mode keeps
+    // to a few ms (docs/tasks/automix.md §3).
+    const auto tail =
+        m_transition.mode == TransitionMode::Gapless ? FlushTail::Cut : FlushTail::Skip;
     m_active = false;
     m_ready = false;
     m_playing = false;
@@ -606,7 +615,7 @@ void AudioEngine::stop()
     m_openDeadline.stop();
     m_meter.reset();
     m_published.reset();
-    stopProducer();
+    stopProducer(tail);
     m_next.reset();
     if (m_stream) {
         m_stream->cancel();
@@ -838,7 +847,7 @@ void AudioEngine::dropNext()
     if (crossed) {
         // Already decoding it: decode this track again from where it plays.
         const qint64 at = position();
-        stopProducer();
+        stopProducer(FlushTail::Cut);
         m_next.reset();
         startProducer(at, true);
         return;
@@ -944,7 +953,7 @@ void AudioEngine::seek(qint64 positionMs)
     }
     if (crossed) {
         // The producer is on the next track already: decode this one again from there.
-        stopProducer();
+        stopProducer(FlushTail::Cut);
         startProducer(target, true);
         return;
     }
@@ -1013,7 +1022,7 @@ void AudioEngine::deviceChanged()
         return;
     }
     const qint64 at = position();
-    stopProducer();
+    stopProducer(FlushTail::None); // the device goes
     if (!m_output->open()) {
         qCWarning(lcMedia) << log::event("engine.no_output");
         return; // no device now; the next change (one appears) picks it up from here

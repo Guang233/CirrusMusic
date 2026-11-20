@@ -1,11 +1,13 @@
 // Transitions between tracks (docs/tasks/automix.md): the planner, the gain curves, the
-// mix and the deck that feeds it. No output device.
+// mix and the deck that feeds it, a skip's quick fade. No output device.
 #include "infrastructure/media/audio_decoder.h"
+#include "infrastructure/media/audio_output.h"
 #include "infrastructure/media/automix/deck.h"
 #include "infrastructure/media/automix/mix.h"
 #include "infrastructure/media/automix/transition.h"
 #include "infrastructure/media/byte_source.h"
 #include <QtTest>
+#include <algorithm>
 #include <cmath>
 
 using namespace cirrus;
@@ -181,6 +183,60 @@ class AutomixTest : public QObject
         deck.pull(chunk.data(), 100, false);
         reference.pull(plain.data(), 100, false);
         QVERIFY(std::abs(chunk[2 * 99]) < std::abs(plain[2 * 99]) || plain[2 * 99] == 0);
+    }
+    void aSkipFadesOut()
+    {
+        // What was queued fades from full gain to silence over as much as fits.
+        AudioRing ring(1000);
+        const std::vector<float> half(2 * 1000, 0.5f);
+        ring.write(half.data(), 1000);
+        FadeTail tail(800);
+        tail.take(ring, 1000);
+        QCOMPARE(ring.readable(), 200); // the flush drops the rest
+        std::vector<float> out(2 * 1000, 0.0f);
+        tail.mix(out.data(), 1000, 1.0f, false);
+        QCOMPARE(out[0], 0.5f);
+        for (int i = 1; i < 800; ++i)
+            QVERIFY(out[size_t(i) * 2] < out[size_t(i - 1) * 2]);
+        QVERIFY(out[799 * 2] < 0.01f);
+        QCOMPARE(out[800 * 2], 0.0f);
+        QVERIFY(!tail.active());
+    }
+
+    void skipsInARowStayContinuous()
+    {
+        // The second skip carries the first one's tail on from the gain it had reached.
+        AudioRing ring(1000);
+        const std::vector<float> half(2 * 1000, 0.5f);
+        ring.write(half.data(), 1000);
+        FadeTail tail(1000);
+        tail.take(ring, 1000);
+        std::vector<float> out(2 * 400, 0.0f);
+        tail.mix(out.data(), 400, 1.0f, false);
+        const std::vector<float> silence(2 * 300, 0.0f); // the next track not started yet
+        ring.write(silence.data(), 300);
+        tail.take(ring, 300);
+        std::vector<float> rest(2 * 1000, 0.0f);
+        tail.mix(rest.data(), 1000, 1.0f, false);
+        QVERIFY(std::abs(rest[0] - out[399 * 2]) < 0.01f);
+        QVERIFY(rest[599 * 2] < 0.01f); // the 600 frames left of the first one
+        QCOMPARE(rest[600 * 2], 0.0f);
+    }
+
+    void aSkipUnderNewAudioIsLimited()
+    {
+        AudioRing ring(100);
+        const std::vector<float> loud(2 * 100, 0.9f);
+        for (const bool limit : {false, true}) {
+            ring.write(loud.data(), 100);
+            FadeTail tail(100);
+            tail.take(ring, 100);
+            std::vector<float> out = loud; // the next track, as loud
+            tail.mix(out.data(), 100, 1.0f, limit);
+            const float peak = *std::max_element(out.begin(), out.end());
+            QVERIFY(limit ? peak <= 1.0f : peak > 1.7f);
+            QVERIFY(*std::min_element(out.begin(), out.end()) >= 0.9f);
+        }
     }
 };
 
