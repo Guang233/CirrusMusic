@@ -12,6 +12,10 @@ class AudioOutput;
 class AudioStore;
 enum class FlushTail; // audio_output.h
 class AudioStream;
+namespace automix
+{
+class Analyst;
+}
 
 // The playback engine (ADR-0008): AudioStore streams the file, FFmpeg decodes it on a
 // producer thread into a ring, QAudioSink's callback plays it. Owner-thread object (the
@@ -44,10 +48,22 @@ class AudioEngine : public application::IPlaybackBackend
         domain::MediaSource source;
         domain::LoadToken token;
         std::shared_ptr<AudioStream> stream; // opened shortly before it is needed
+        // Its analysis, of its start at first (docs/tasks/automix.md §4.1), read through
+        // a handle of its own.
+        std::shared_ptr<const automix::Analysis> analysis;
+        quint64 job = 0;
+        std::shared_ptr<AudioStream> reader;
     };
     void advance(qint64 durationMs, quint64 startFrame, qint64 baseMs);
     // The producer planned the transition into the next track (for the log).
-    void planned(domain::TransitionMode mode, const automix::Plan& plan);
+    void planned(domain::TransitionMode mode, const automix::Plan& plan, bool again);
+    // The analyses (docs/tasks/automix.md §4): the current track's once its file is all
+    // here, the next one's start as soon as it downloads. The producer plans with them.
+    void analyseCurrent();
+    void analyseNext();
+    void analysed(quint64 id, std::shared_ptr<const automix::Analysis> analysis, qint64 elapsedMs);
+    void cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job);
+    void handAnalyses();
     void openNext();
     void dropNext();
     void urlNeeded(quint64 stream);
@@ -66,6 +82,12 @@ class AudioEngine : public application::IPlaybackBackend
 
     AudioStore& m_store;
     std::unique_ptr<AudioOutput> m_output;
+    std::unique_ptr<automix::Analyst> m_analyst;
+    quint64 m_jobs = 0;                                  // analysis job ids handed out
+    std::shared_ptr<const automix::Analysis> m_analysis; // the current track's
+    quint64 m_curJob = 0;                                // its running analysis
+    std::shared_ptr<AudioStream> m_curReader;            // and that one's handle on the file
+    bool m_curFull = false;                              // all of it asked for
     std::shared_ptr<Producer> m_producer;
     std::shared_ptr<AudioStream> m_stream;
     domain::MediaSource m_source;

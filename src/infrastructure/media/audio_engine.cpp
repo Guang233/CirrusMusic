@@ -2,6 +2,8 @@
 #include "audio_decoder.h"
 #include "audio_output.h"
 #include "audio_store.h"
+#include "automix/analysis.h"
+#include "automix/analyst.h"
 #include "automix/deck.h"
 #include "automix/mix.h"
 #include "automix/transition.h"
@@ -35,6 +37,13 @@ constexpr qint64 kOpenNextBeforeMs = 30000;
 // A transition's next track is opened (and its transition planned) this long before
 // the longest overlap could start.
 constexpr qint64 kOpenAheadMs = 3000;
+// With transitions the next track downloads this long before the current one ends (its
+// start is analysed meanwhile: docs/tasks/automix.md §4.1), and the transition is planned
+// this long before: its start may be well before the end (silence, a fade-out, an outro).
+constexpr qint64 kOpenNextBeforeMixMs = 90000;
+constexpr qint64 kPlanBeforeMs = 60000;
+// Of the next track the start is analysed first: enough for its intro and first lines.
+constexpr qint64 kNextAnalysisMs = 60000;
 
 // The same file again (repeat one, the same song twice in a row): not mixed with itself.
 bool sameFile(const MediaSource& a, const MediaSource& b)
@@ -68,7 +77,11 @@ struct AudioEngine::Producer {
     quint64 nextStartFrame = 0;
     qint64 nextBaseMs = 0;
     qint64 nextDurationMs = 0;
-    automix::Settings transition;     // the owner's setting
+    automix::Settings transition; // the owner's setting
+    // The analyses as far as they have come (the owner hands them over); `replan`: they
+    // or the setting changed, plan the transition again while it hasn't started.
+    std::shared_ptr<const automix::Analysis> curAnalysis, nextAnalysis;
+    bool replan = false;
     std::atomic<quint64> produced{0}; // frames into the ring since the last flush
     std::atomic<bool> eof{false};
     AudioOutput* output = nullptr; // outlives the thread: the owner joins first
@@ -116,6 +129,7 @@ struct AudioEngine::Producer {
     qsizetype pullFrom(automix::Deck& deck, float* out, qsizetype frames);
     // Opens the next track ahead and plans the transition, when it is time.
     void prepare(AudioEngine* engine);
+    void planAgain(AudioEngine* engine);
     bool startMixing();
     void mixSome(std::vector<float>& out);
     // At the current track's end: the next one goes on in the same deck (gapless). False
@@ -147,9 +161,17 @@ qsizetype AudioEngine::Producer::pullFrom(automix::Deck& deck, float* out, qsize
 void AudioEngine::Producer::prepare(AudioEngine* engine)
 {
     if (m_upcoming) {
-        std::lock_guard guard(lock);
-        if (nextStream != m_upcoming->stream)
-            m_upcoming.reset(); // the queue changed: another next track, or none
+        bool again;
+        {
+            std::lock_guard guard(lock);
+            if (nextStream != m_upcoming->stream) {
+                m_upcoming.reset(); // the queue changed: another next track, or none
+                return;
+            }
+            again = std::exchange(replan, false);
+        }
+        if (again && !m_mixing)
+            planAgain(engine);
         return;
     }
     if (m_mixing || m_cur->decoderEnded())
@@ -159,6 +181,7 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
     float gain;
     bool nextIsPreview, sameFile;
     automix::Settings settings;
+    std::shared_ptr<const automix::Analysis> analysis, nextAnalysisNow;
     {
         std::lock_guard guard(lock);
         if (!nextStream || crossed)
@@ -169,11 +192,14 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
         nextIsPreview = nextPreview;
         sameFile = nextSameFile;
         settings = transition;
+        analysis = curAnalysis;
+        nextAnalysisNow = nextAnalysis;
+        replan = false;
     }
     if (settings.mode == TransitionMode::Gapless)
         return; // opened at the end, as ever
     const qint64 position = m_cur->positionMs();
-    if (m_curDurationMs - position > automix::kMaximumOverlapMs + kOpenAheadMs)
+    if (m_curDurationMs - position > kPlanBeforeMs + kOpenAheadMs)
         return; // not yet
     auto decoder = std::make_unique<AudioDecoder>();
     if (!decoder->open(next, format)) {
@@ -184,13 +210,39 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
         }
         return;
     }
-    auto plan = automix::plan(settings, {m_curDurationMs, preview}, position,
-                              {decoder->durationMs(), nextIsPreview}, sameFile);
+    auto plan =
+        automix::plan(settings, {m_curDurationMs, preview, analysis.get()}, position,
+                      {decoder->durationMs(), nextIsPreview, nextAnalysisNow.get()}, sameFile);
     QMetaObject::invokeMethod(
-        engine, [engine, mode = settings.mode, plan] { engine->planned(mode, plan); },
+        engine, [engine, mode = settings.mode, plan] { engine->planned(mode, plan, false); },
         Qt::QueuedConnection);
     m_upcoming =
         Upcoming{std::move(next), std::move(decoder), gain, nextIsPreview, std::move(plan)};
+}
+
+void AudioEngine::Producer::planAgain(AudioEngine* engine)
+{
+    automix::Settings settings;
+    std::shared_ptr<const automix::Analysis> analysis, nextAnalysisNow;
+    bool sameFile;
+    {
+        std::lock_guard guard(lock);
+        settings = transition;
+        analysis = curAnalysis;
+        nextAnalysisNow = nextAnalysis;
+        sameFile = nextSameFile;
+    }
+    const qint64 position = m_cur->positionMs();
+    auto plan = automix::plan(
+        settings, {m_curDurationMs, preview, analysis.get()}, position,
+        {m_upcoming->decoder->durationMs(), m_upcoming->preview, nextAnalysisNow.get()}, sameFile);
+    // Only while it can still start where it says (a gapless one always can).
+    if (plan.style != automix::Style::Gapless && plan.outMs < position + automix::kStartMarginMs)
+        return;
+    QMetaObject::invokeMethod(
+        engine, [engine, mode = settings.mode, plan] { engine->planned(mode, plan, true); },
+        Qt::QueuedConnection);
+    m_upcoming->plan = std::move(plan);
 }
 
 bool AudioEngine::Producer::startMixing()
@@ -475,8 +527,10 @@ void AudioEngine::Producer::run(AudioEngine* engine, LoadToken token, bool reope
 }
 
 AudioEngine::AudioEngine(AudioStore& store, QObject* parent)
-    : IPlaybackBackend(parent), m_store(store), m_output(std::make_unique<AudioOutput>())
+    : IPlaybackBackend(parent), m_store(store), m_output(std::make_unique<AudioOutput>()),
+      m_analyst(std::make_unique<automix::Analyst>())
 {
+    connect(m_analyst.get(), &automix::Analyst::analysed, this, &AudioEngine::analysed);
     m_ticker.setInterval(kTickMs);
     m_ticker.setTimerType(Qt::PreciseTimer);
     connect(&m_ticker, &QTimer::timeout, this, &AudioEngine::tick);
@@ -551,6 +605,9 @@ void AudioEngine::startProducer(qint64 positionMs, bool seek)
     producer->format = m_source.format.toLower();
     producer->preview = m_source.preview.has_value();
     producer->transition = m_transition;
+    producer->curAnalysis = m_analysis;
+    if (m_next)
+        producer->nextAnalysis = m_next->analysis;
     producer->baseMs = positionMs;
     if (positionMs > 0 || seek)
         producer->seekTo = positionMs;
@@ -614,6 +671,11 @@ void AudioEngine::stop()
     m_meter.reset();
     m_published.reset();
     stopProducer(tail);
+    cancelAnalysis(m_curReader, m_curJob);
+    m_analysis.reset();
+    m_curFull = false;
+    if (m_next)
+        cancelAnalysis(m_next->reader, m_next->job);
     m_next.reset();
     if (m_stream) {
         m_stream->cancel();
@@ -723,6 +785,7 @@ void AudioEngine::tick()
         return;
     }
     openNext();
+    analyseCurrent();
     const qint64 now = position();
     const bool drained = m_producer->eof && m_output->consumed() >= m_producer->produced;
     if ((m_source.preview && now >= clipLength()) || drained) {
@@ -808,7 +871,9 @@ void AudioEngine::openNext()
 {
     if (!m_next || m_next->stream || !m_ready || m_ended || !m_producer || m_source.preview)
         return; // a preview ends at its clip, not its file: the next loads the usual way
-    const bool soon = m_durationMs > 0 && m_durationMs - position() < kOpenNextBeforeMs;
+    const qint64 before =
+        m_transition.mode == TransitionMode::Gapless ? kOpenNextBeforeMs : kOpenNextBeforeMixMs;
+    const bool soon = m_durationMs > 0 && m_durationMs - position() < before;
     if (!soon && !(m_stream && m_stream->complete()))
         return;
     PlaybackError error{};
@@ -823,12 +888,15 @@ void AudioEngine::openNext()
     qCDebug(lcMedia) << log::event("engine.next_opened")
                      << log::field("token", m_next->token.generation)
                      << log::field("left_ms", m_durationMs - position());
-    std::lock_guard guard(m_producer->lock);
-    m_producer->nextStream = m_next->stream;
-    m_producer->nextFormat = m_next->source.format.toLower();
-    m_producer->nextGain = normalizationGain(m_next->source);
-    m_producer->nextPreview = m_next->source.preview.has_value();
-    m_producer->nextSameFile = sameFile(m_source, m_next->source);
+    {
+        std::lock_guard guard(m_producer->lock);
+        m_producer->nextStream = m_next->stream;
+        m_producer->nextFormat = m_next->source.format.toLower();
+        m_producer->nextGain = normalizationGain(m_next->source);
+        m_producer->nextPreview = m_next->source.preview.has_value();
+        m_producer->nextSameFile = sameFile(m_source, m_next->source);
+    }
+    analyseNext();
 }
 
 void AudioEngine::dropNext()
@@ -842,6 +910,7 @@ void AudioEngine::dropNext()
         if (!crossed)
             m_producer->nextStream.reset();
     }
+    cancelAnalysis(m_next->reader, m_next->job);
     if (crossed) {
         // Already decoding it: decode this track again from where it plays.
         const qint64 at = position();
@@ -853,6 +922,7 @@ void AudioEngine::dropNext()
     if (m_next->stream)
         m_next->stream->interrupt(); // the producer may be opening it
     m_next.reset();
+    handAnalyses();
 }
 
 void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
@@ -869,7 +939,14 @@ void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
     m_stream = std::move(m_next->stream); // the old one's download stops; it stays cached
     m_source = std::move(m_next->source);
     m_token = m_next->token;
+    // Its analysis so far (of its start, while that runs: then of all of it).
+    cancelAnalysis(m_curReader, m_curJob);
+    m_analysis = std::move(m_next->analysis);
+    m_curJob = m_next->job;
+    m_curReader = std::move(m_next->reader);
+    m_curFull = m_analysis && m_analysis->complete;
     m_next.reset();
+    handAnalyses();
     m_durationMs = durationMs;
     m_lastPosition = -1;
     m_meter.reset();
@@ -979,13 +1056,14 @@ void AudioEngine::setTransition(TransitionMode mode, qint64 crossfadeMs)
     m_transition = settings;
     if (m_producer) {
         std::lock_guard guard(m_producer->lock);
-        m_producer->transition = settings; // for the transitions planned from now on
+        m_producer->transition = settings; // planned again while it hasn't started
+        m_producer->replan = true;
     }
     qCInfo(lcMedia) << log::event("engine.transition") << log::field("mode", mode)
                     << log::field("crossfade_ms", settings.crossfadeMs);
 }
 
-void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan)
+void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan, bool again)
 {
     if (!m_active)
         return;
@@ -993,7 +1071,88 @@ void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan)
                     << log::field("next", m_next ? m_next->token.generation : 0)
                     << log::field("mode", mode) << log::field("style", plan.style)
                     << log::field("reason", plan.reason) << log::field("out_ms", plan.outMs)
-                    << log::field("in_ms", plan.inMs) << log::field("overlap_ms", plan.overlapMs);
+                    << log::field("in_ms", plan.inMs) << log::field("overlap_ms", plan.overlapMs)
+                    << log::field("again", again);
+}
+
+void AudioEngine::analyseCurrent()
+{
+    // All of it, from the cached file: nothing more to download.
+    if (m_curFull || m_curReader || !m_stream || !m_active || m_source.preview ||
+        m_source.md5.isEmpty() || m_transition.mode == TransitionMode::Gapless ||
+        !m_stream->complete())
+        return;
+    PlaybackError error{};
+    m_curReader = m_store.open(m_source, &error);
+    if (!m_curReader)
+        return;
+    m_curFull = true;
+    m_curJob = ++m_jobs;
+    m_analyst->analyse(m_curJob, m_curReader, m_source.format.toLower());
+}
+
+void AudioEngine::analyseNext()
+{
+    // Its start while it downloads (all of it when it's cached already).
+    if (!m_next || m_next->reader || m_next->analysis || m_next->source.preview ||
+        m_next->source.md5.isEmpty() || m_transition.mode == TransitionMode::Gapless)
+        return;
+    PlaybackError error{};
+    m_next->reader = m_store.open(m_next->source, &error);
+    if (!m_next->reader)
+        return;
+    m_next->job = ++m_jobs;
+    m_analyst->analyse(m_next->job, m_next->reader, m_next->source.format.toLower(),
+                       m_next->reader->complete() ? 0 : kNextAnalysisMs);
+}
+
+void AudioEngine::analysed(quint64 id, std::shared_ptr<const automix::Analysis> analysis,
+                           qint64 elapsedMs)
+{
+    const bool current = m_curReader && id == m_curJob;
+    const bool next = m_next && m_next->reader && id == m_next->job;
+    if (!current && !next)
+        return;
+    const LoadToken token = current ? m_token : m_next->token;
+    if (!analysis) {
+        qCDebug(lcMedia) << log::event("analysis.failed") << log::field("token", token.generation);
+    } else {
+        qCInfo(lcMedia) << log::event("analysis.done") << log::field("token", token.generation)
+                        << log::field("complete", analysis->complete) << log::field("ms", elapsedMs)
+                        << log::field("lufs", QString::number(analysis->loudness, 'f', 1))
+                        << log::field("sound_ms", analysis->soundStartMs)
+                        << log::field("sound_end_ms", analysis->soundEndMs)
+                        << log::field("fade_ms", analysis->fadeStartMs);
+    }
+    if (current) {
+        m_curReader.reset();
+        if (analysis)
+            m_analysis = std::move(analysis);
+    } else {
+        m_next->reader.reset();
+        if (analysis)
+            m_next->analysis = std::move(analysis);
+    }
+    handAnalyses();
+}
+
+void AudioEngine::cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job)
+{
+    if (!reader)
+        return;
+    m_analyst->cancel(job);
+    reader->cancel(); // a read waiting for the download returns
+    reader.reset();
+}
+
+void AudioEngine::handAnalyses()
+{
+    if (!m_producer)
+        return;
+    std::lock_guard guard(m_producer->lock);
+    m_producer->curAnalysis = m_analysis;
+    m_producer->nextAnalysis = m_next ? m_next->analysis : nullptr;
+    m_producer->replan = true;
 }
 
 void AudioEngine::setVolume(float linear)

@@ -22,9 +22,10 @@ QByteArray fixture(const QString& name)
     QFile file(QStringLiteral(AUDIO_FIXTURES "/") + name);
     return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
 }
-MediaSource source(const QByteArray& body, const QString& format)
+MediaSource source(const QByteArray& body, const QString& format,
+                   const QString& path = QStringLiteral("/tone"))
 {
-    MediaSource s{QUrl(QStringLiteral("https://m801.music.126.net/tone")), "standard", format,
+    MediaSource s{QUrl(QStringLiteral("https://m801.music.126.net") + path), "standard", format,
                   body.size(), QDeadlineTimer(60000)};
     s.md5 = QCryptographicHash::hash(body, QCryptographicHash::Md5).toHex();
     return s;
@@ -334,6 +335,36 @@ class AudioEngineTest : public QObject
         QTRY_VERIFY_WITH_TIMEOUT(m_events.last().kind == Kind::Ended, 5000);
         for (auto i = mark; i < m_events.size(); ++i)
             QCOMPARE(m_events[i].token, three);
+    }
+
+    void aFadeOutEndsNaturally()
+    {
+        // Both analysed (their files come at once): the next track comes in from its first
+        // sound once the fade-out is 20 dB down (about 5.7 s), and is current from there.
+        const auto one = token(26), two = token(27);
+        m_server.bodies.insert(QStringLiteral("/a"), fixture(QStringLiteral("fade.mp3")));
+        m_server.bodies.insert(QStringLiteral("/b"), fixture(QStringLiteral("long.mp3")));
+        m_engine->load(source(m_server.bodies[QStringLiteral("/a")], QStringLiteral("mp3"),
+                              QStringLiteral("/a")),
+                       one);
+        m_engine->preload(source(m_server.bodies[QStringLiteral("/b")], QStringLiteral("mp3"),
+                                 QStringLiteral("/b")),
+                          two);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 15000);
+        const qint64 lastOfFirst = lastPosition(one);
+        // (A plain crossfade would switch at about 6.8 s.)
+        QVERIFY2(lastOfFirst > 5000 && lastOfFirst < 6300,
+                 qPrintable(QString::number(lastOfFirst)));
+        QTRY_VERIFY_WITH_TIMEOUT(lastPosition(two) >= 0, 2000);
+        const auto firstOfSecond =
+            std::find_if(m_events.begin(), m_events.end(),
+                         [&](const auto& e) { return e.token == two && e.kind == Kind::Position; });
+        QVERIFY2(firstOfSecond->value < 600, qPrintable(QString::number(firstOfSecond->value)));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+        m_server.bodies.clear();
     }
 
     void gaplessWaitsForTheEnd()
