@@ -319,6 +319,8 @@ class BackendWorker final : public QObject
                 m_playback->setNormalization(command.normalize);
             else if (command.action == PlaybackAction::Transition)
                 m_playback->setTransition(command.transition, command.crossfadeMs);
+            else if (command.action == PlaybackAction::Vocals)
+                m_playback->setVocals(command.next, command.vocals);
             else if (command.action == PlaybackAction::Preload) {
                 std::optional<domain::StreamQuery> query;
                 if (!command.query.song.value.isEmpty())

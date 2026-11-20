@@ -63,6 +63,13 @@ class IPlaybackBackend : public QObject
         Q_UNUSED(mode);
         Q_UNUSED(crossfadeMs);
     }
+    // The sung lines of the current load or the preloaded next (by token), for planning
+    // the transitions around them; a backend without transitions ignores them.
+    virtual void setVocals(domain::LoadToken token, const QList<domain::VocalSpan>& spans)
+    {
+        Q_UNUSED(token);
+        Q_UNUSED(spans);
+    }
     // The load to play right after the current one, without a gap (docs/tasks/audio-engine.md
     // §4.5); an empty token cancels. It becomes current with Advanced{next}; a new load,
     // stop or preload drops it.

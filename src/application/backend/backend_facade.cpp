@@ -817,6 +817,14 @@ quint64 BackendFacade::setPlaybackTransition(domain::TransitionMode mode, qint64
     c.crossfadeMs = crossfadeMs;
     return submitPlayback(c);
 }
+quint64 BackendFacade::setPlaybackVocals(quint64 generation, QList<domain::VocalSpan> spans)
+{
+    PlaybackCommand c;
+    c.action = PlaybackAction::Vocals;
+    c.next = {m_snapshot.token, generation};
+    c.vocals = std::move(spans);
+    return submitPlayback(c);
+}
 quint64 BackendFacade::submitPlayback(PlaybackCommand command)
 {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -839,6 +847,16 @@ quint64 BackendFacade::submitPlayback(PlaybackCommand command)
         return 0;
     if (command.action == PlaybackAction::Volume &&
         (!std::isfinite(command.volume) || command.volume < 0 || command.volume > 1))
+        return 0;
+    if (command.action == PlaybackAction::Vocals &&
+        (!command.next.generation ||
+         (command.next.generation != m_playbackGeneration &&
+          command.next.generation != m_preloadGeneration) ||
+         command.vocals.size() > 2000 ||
+         std::any_of(command.vocals.begin(), command.vocals.end(), [](const domain::VocalSpan& s) {
+             return s.startMs < -60000 || s.endMs <= s.startMs ||
+                    s.endMs > 7LL * 24 * 60 * 60 * 1000;
+         })))
         return 0;
     if (command.action == PlaybackAction::Transition &&
         (command.transition < domain::TransitionMode::Smart ||

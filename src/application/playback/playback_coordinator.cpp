@@ -373,6 +373,11 @@ void PlaybackCoordinator::setTransition(domain::TransitionMode mode, qint64 cros
 {
     m_backend.setTransition(mode, crossfadeMs);
 }
+
+void PlaybackCoordinator::setVocals(domain::LoadToken token, const QList<domain::VocalSpan>& spans)
+{
+    m_backend.setVocals(token, spans);
+}
 void PlaybackCoordinator::receive(PlaybackEvent event)
 {
     using Kind = PlaybackEvent::Kind;

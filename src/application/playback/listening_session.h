@@ -202,6 +202,7 @@ class ListeningSession final : public QObject
     domain::LyricCursors m_cursors;
     qint64 m_userOffset = 0;
     quint64 m_lyricRequest = 0, m_revision = 0, m_controlRevision = 0;
+    quint64 m_preloadLyricRequest = 0; // the preloaded song's: its sung lines, for transitions
     quint64 m_historyClearEpoch = 0;
     QSet<QUuid> m_autoVisited;
     struct Preload {

@@ -81,6 +81,7 @@ struct AudioEngine::Producer {
     // The analyses as far as they have come (the owner hands them over); `replan`: they
     // or the setting changed, plan the transition again while it hasn't started.
     std::shared_ptr<const automix::Analysis> curAnalysis, nextAnalysis;
+    std::vector<automix::Span> curVocals, nextVocals; // the sung lines
     bool replan = false;
     std::atomic<quint64> produced{0}; // frames into the ring since the last flush
     std::atomic<bool> eof{false};
@@ -182,6 +183,7 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
     bool nextIsPreview, sameFile;
     automix::Settings settings;
     std::shared_ptr<const automix::Analysis> analysis, nextAnalysisNow;
+    std::vector<automix::Span> vocals, nextVocalsNow;
     {
         std::lock_guard guard(lock);
         if (!nextStream || crossed)
@@ -194,6 +196,8 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
         settings = transition;
         analysis = curAnalysis;
         nextAnalysisNow = nextAnalysis;
+        vocals = curVocals;
+        nextVocalsNow = nextVocals;
         replan = false;
     }
     if (settings.mode == TransitionMode::Gapless)
@@ -210,9 +214,10 @@ void AudioEngine::Producer::prepare(AudioEngine* engine)
         }
         return;
     }
-    auto plan =
-        automix::plan(settings, {m_curDurationMs, preview, analysis.get()}, position,
-                      {decoder->durationMs(), nextIsPreview, nextAnalysisNow.get()}, sameFile);
+    auto plan = automix::plan(
+        settings, {m_curDurationMs, preview, analysis.get(), std::move(vocals)}, position,
+        {decoder->durationMs(), nextIsPreview, nextAnalysisNow.get(), std::move(nextVocalsNow)},
+        sameFile);
     QMetaObject::invokeMethod(
         engine, [engine, mode = settings.mode, plan] { engine->planned(mode, plan, false); },
         Qt::QueuedConnection);
@@ -224,18 +229,23 @@ void AudioEngine::Producer::planAgain(AudioEngine* engine)
 {
     automix::Settings settings;
     std::shared_ptr<const automix::Analysis> analysis, nextAnalysisNow;
+    std::vector<automix::Span> vocals, nextVocalsNow;
     bool sameFile;
     {
         std::lock_guard guard(lock);
         settings = transition;
         analysis = curAnalysis;
         nextAnalysisNow = nextAnalysis;
+        vocals = curVocals;
+        nextVocalsNow = nextVocals;
         sameFile = nextSameFile;
     }
     const qint64 position = m_cur->positionMs();
     auto plan = automix::plan(
-        settings, {m_curDurationMs, preview, analysis.get()}, position,
-        {m_upcoming->decoder->durationMs(), m_upcoming->preview, nextAnalysisNow.get()}, sameFile);
+        settings, {m_curDurationMs, preview, analysis.get(), std::move(vocals)}, position,
+        {m_upcoming->decoder->durationMs(), m_upcoming->preview, nextAnalysisNow.get(),
+         std::move(nextVocalsNow)},
+        sameFile);
     // Only while it can still start where it says (a gapless one always can).
     if (plan.style != automix::Style::Gapless && plan.outMs < position + automix::kStartMarginMs)
         return;
@@ -606,8 +616,11 @@ void AudioEngine::startProducer(qint64 positionMs, bool seek)
     producer->preview = m_source.preview.has_value();
     producer->transition = m_transition;
     producer->curAnalysis = m_analysis;
-    if (m_next)
+    producer->curVocals = m_vocals;
+    if (m_next) {
         producer->nextAnalysis = m_next->analysis;
+        producer->nextVocals = m_next->vocals;
+    }
     producer->baseMs = positionMs;
     if (positionMs > 0 || seek)
         producer->seekTo = positionMs;
@@ -674,6 +687,7 @@ void AudioEngine::stop()
     cancelAnalysis(m_curReader, m_curJob);
     m_analysis.reset();
     m_curFull = false;
+    m_vocals.clear();
     if (m_next)
         cancelAnalysis(m_next->reader, m_next->job);
     m_next.reset();
@@ -922,7 +936,7 @@ void AudioEngine::dropNext()
     if (m_next->stream)
         m_next->stream->interrupt(); // the producer may be opening it
     m_next.reset();
-    handAnalyses();
+    handPlanInputs();
 }
 
 void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
@@ -945,8 +959,9 @@ void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
     m_curJob = m_next->job;
     m_curReader = std::move(m_next->reader);
     m_curFull = m_analysis && m_analysis->complete;
+    m_vocals = std::move(m_next->vocals);
     m_next.reset();
-    handAnalyses();
+    handPlanInputs();
     m_durationMs = durationMs;
     m_lastPosition = -1;
     m_meter.reset();
@@ -1133,7 +1148,7 @@ void AudioEngine::analysed(quint64 id, std::shared_ptr<const automix::Analysis> 
         if (analysis)
             m_next->analysis = std::move(analysis);
     }
-    handAnalyses();
+    handPlanInputs();
 }
 
 void AudioEngine::cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job)
@@ -1145,14 +1160,33 @@ void AudioEngine::cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 j
     reader.reset();
 }
 
-void AudioEngine::handAnalyses()
+void AudioEngine::handPlanInputs()
 {
     if (!m_producer)
         return;
     std::lock_guard guard(m_producer->lock);
     m_producer->curAnalysis = m_analysis;
     m_producer->nextAnalysis = m_next ? m_next->analysis : nullptr;
+    m_producer->curVocals = m_vocals;
+    m_producer->nextVocals = m_next ? m_next->vocals : std::vector<automix::Span>{};
     m_producer->replan = true;
+}
+
+void AudioEngine::setVocals(LoadToken token, const QList<VocalSpan>& spans)
+{
+    std::vector<automix::Span> lines;
+    lines.reserve(size_t(spans.size()));
+    for (const VocalSpan& span : spans)
+        lines.push_back({span.startMs, span.endMs});
+    if (m_active && token == m_token)
+        m_vocals = std::move(lines);
+    else if (m_next && token == m_next->token)
+        m_next->vocals = std::move(lines);
+    else
+        return;
+    qCDebug(lcMedia) << log::event("engine.vocals") << log::field("token", token.generation)
+                     << log::field("lines", spans.size());
+    handPlanInputs();
 }
 
 void AudioEngine::setVolume(float linear)

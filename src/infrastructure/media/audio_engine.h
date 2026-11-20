@@ -40,6 +40,7 @@ class AudioEngine : public application::IPlaybackBackend
     void setNormalization(bool on) override;
     void setTransition(domain::TransitionMode mode, qint64 crossfadeMs) override;
     void preload(domain::MediaSource source, domain::LoadToken next) override;
+    void setVocals(domain::LoadToken token, const QList<domain::VocalSpan>& spans) override;
     void refresh(domain::LoadToken token, domain::MediaSource source) override;
 
   private:
@@ -53,6 +54,7 @@ class AudioEngine : public application::IPlaybackBackend
         std::shared_ptr<const automix::Analysis> analysis;
         quint64 job = 0;
         std::shared_ptr<AudioStream> reader;
+        std::vector<automix::Span> vocals; // its sung lines, from the lyrics
     };
     void advance(qint64 durationMs, quint64 startFrame, qint64 baseMs);
     // The producer planned the transition into the next track (for the log).
@@ -63,7 +65,7 @@ class AudioEngine : public application::IPlaybackBackend
     void analyseNext();
     void analysed(quint64 id, std::shared_ptr<const automix::Analysis> analysis, qint64 elapsedMs);
     void cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job);
-    void handAnalyses();
+    void handPlanInputs(); // the analyses and sung lines, to the producer
     void openNext();
     void dropNext();
     void urlNeeded(quint64 stream);
@@ -88,6 +90,7 @@ class AudioEngine : public application::IPlaybackBackend
     quint64 m_curJob = 0;                                // its running analysis
     std::shared_ptr<AudioStream> m_curReader;            // and that one's handle on the file
     bool m_curFull = false;                              // all of it asked for
+    std::vector<automix::Span> m_vocals;                 // the current track's sung lines
     std::shared_ptr<Producer> m_producer;
     std::shared_ptr<AudioStream> m_stream;
     domain::MediaSource m_source;

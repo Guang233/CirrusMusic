@@ -440,7 +440,8 @@ void BackendRuntimeTest::playbackThroughThread()
              fm ? domain::ListeningMode::PersonalFm : domain::ListeningMode::Queue);
     QCOMPARE(listening.history().first().accountId, fm ? QString("101") : QString{});
     QVERIFY(listening.next());
-    QTRY_COMPARE(state->requests.load(), fm ? 11 : 7); // queue: + preloading song 3
+    // queue: + preloading song 3, and its lyrics (for the transition into it)
+    QTRY_COMPARE(state->requests.load(), fm ? 11 : 8);
     facade.close();
     QTRY_COMPARE(stopped.size(), 1);
     QCOMPARE(facade.playback().state, domain::PlaybackState::Empty);
@@ -518,9 +519,10 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
             "e82ckenh8dichen8", EVP_aes_128_ecb(), true);
     };
     const Plan lyric{R"({"code":200,"lrc":{"lyric":"[00:00]a\n[00:01]b"}})"};
-    // Song 1 and its lyrics, song 2 preloaded, its lyrics once it plays, song 3 preloaded.
-    const QList<Plan> plans{
-        {stream(1), 200, 10}, lyric, {stream(2), 200, 10}, lyric, {"", 200, -1}};
+    // Song 1 and its lyrics, song 2 preloaded with its lyrics (for the transition), its
+    // lyrics again once it plays (no resource cache here), song 3 preloaded with its lyrics.
+    const QList<Plan> plans{{stream(1), 200, 10}, lyric,        {stream(2), 200, 10}, lyric, lyric,
+                            {"", 200, -1},        {"", 200, -1}};
     auto f = factories(state, gate, plans);
     f.playback = [&gate] { return std::make_unique<Player>(gate); };
     BackendRuntime runtime(config, std::move(f));
@@ -533,7 +535,7 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
     QVERIFY(listening.replaceQueue({{"1"}, {"2"}, {"3"}}));
     QTRY_COMPARE(facade.playback().state, domain::PlaybackState::Playing);
     const auto first = facade.playback().token;
-    QTRY_COMPARE(state->requests.load(), 3); // song 2 is being preloaded
+    QTRY_COMPARE(state->requests.load(), 4); // song 2 is being preloaded, with its lyrics
     QTest::qWait(100);                       // its address arrives at the player
     emit gate.observedPlayback(500);
     QTRY_COMPARE(listening.history().size(), 1);
@@ -549,7 +551,7 @@ void BackendRuntimeTest::gaplessAdvanceThroughThread()
     QCOMPARE(listening.history().first().end, domain::ListeningEnd::Ended);
     QTRY_COMPARE(listening.lyricsState(), domain::LyricsState::Ready);
     QCOMPARE(listening.lyrics()->song.value, "2");
-    QTRY_COMPARE(state->requests.load(), 5); // and song 3 is preloaded in turn
+    QTRY_COMPARE(state->requests.load(), 7); // and song 3 is preloaded in turn
     QVERIFY(listening.pause());              // commands follow the new load
     QVERIFY(listening.next());
     QTRY_COMPARE(facade.playback().song.value, "3");
