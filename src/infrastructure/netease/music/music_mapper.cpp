@@ -66,27 +66,41 @@ bool unknownId(const QJsonValue& value)
 
 std::optional<Song> songFrom(const QJsonObject& object)
 {
+    const char* why = nullptr;
+    return songFromExplained(object, why);
+}
+
+std::optional<Song> songFromExplained(const QJsonObject& object, const char*& why)
+{
+    const auto reject = [&why](const char* reason) {
+        why = reason;
+        return std::nullopt;
+    };
     Song song;
     song.id = {providerId(object.value(QStringLiteral("id")))};
     const auto title = object.value(QStringLiteral("name"));
-    if (song.id.value.isEmpty() || !textField(title))
-        return std::nullopt;
+    if (song.id.value.isEmpty())
+        return reject("song_id");
+    if (!textField(title))
+        return reject("song_name");
     song.title = title.toString();
     const auto artists = object.contains(QStringLiteral("ar"))
                              ? object.value(QStringLiteral("ar"))
                              : object.value(QStringLiteral("artists"));
     if ((!artists.isArray() && !artists.isUndefined() && !artists.isNull()) ||
         artists.toArray().size() > 100)
-        return std::nullopt;
+        return reject("artists");
     for (const auto value : artists.toArray()) {
         if (!value.isObject())
-            return std::nullopt;
+            return reject("artist");
         const auto artist = value.toObject();
         const auto name = artist.value(QStringLiteral("name"));
         const auto rawId = artist.value(QStringLiteral("id"));
         const auto id = providerId(rawId);
-        if (!textField(name) || (id.isEmpty() && !unknownId(rawId)))
-            return std::nullopt;
+        if (!textField(name))
+            return reject("artist_name");
+        if (id.isEmpty() && !unknownId(rawId))
+            return reject("artist_id");
         song.artists.append(
             {id.isEmpty() ? std::nullopt : std::optional<ArtistId>(ArtistId{id}), name.toString()});
     }
@@ -97,8 +111,10 @@ std::optional<Song> songFrom(const QJsonObject& object)
         const auto a = album.toObject();
         const auto id = providerId(a.value(QStringLiteral("id")));
         const auto title = a.value(QStringLiteral("name"));
-        if (!textField(title) || (id.isEmpty() && !unknownId(a.value(QStringLiteral("id")))))
-            return std::nullopt;
+        if (!textField(title))
+            return reject("album_name");
+        if (id.isEmpty() && !unknownId(a.value(QStringLiteral("id"))))
+            return reject("album_id");
         const auto coverText = a.value(QStringLiteral("picUrl")).toString();
         auto cover = QUrl(coverText, QUrl::StrictMode);
         if (coverText.size() > 2048 || !cover.isValid() || cover.host().isEmpty() ||
@@ -109,19 +125,21 @@ std::optional<Song> songFrom(const QJsonObject& object)
             AlbumReference{id.isEmpty() ? std::nullopt : std::optional<AlbumId>(AlbumId{id}),
                            title.toString(), cover};
     } else if (!album.isUndefined() && !album.isNull())
-        return std::nullopt;
+        return reject("album");
     const auto duration = object.contains(QStringLiteral("dt"))
                               ? object.value(QStringLiteral("dt"))
                               : object.value(QStringLiteral("duration"));
     if (!duration.isNull() && !duration.isUndefined()) {
         song.durationMs = nonnegative(duration);
         if (!song.durationMs || *song.durationMs > 7LL * 24 * 60 * 60 * 1000)
-            return std::nullopt;
+            return reject("duration");
     }
-    if (!metadataList(object.value(QStringLiteral("alia")), song.aliases) ||
-        !metadataList(object.value(QStringLiteral("tns")), song.translatedTitles) ||
-        !metadataTimestamp(object.value(QStringLiteral("publishTime")), song.publishedAtMs))
-        return std::nullopt;
+    if (!metadataList(object.value(QStringLiteral("alia")), song.aliases))
+        return reject("aliases");
+    if (!metadataList(object.value(QStringLiteral("tns")), song.translatedTitles))
+        return reject("translations");
+    if (!metadataTimestamp(object.value(QStringLiteral("publishTime")), song.publishedAtMs))
+        return reject("publish_time");
     return song;
 }
 

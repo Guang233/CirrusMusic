@@ -14,6 +14,12 @@ namespace
 {
 using namespace mapping;
 bool absent(const QJsonValue& v) { return v.isUndefined() || v.isNull(); }
+// Which check a response failed; the gateway logs the failure itself (music.invalid).
+MusicFailure invalidBecause(const char* reason, qsizetype row = -1)
+{
+    rejectedBecause(reason, row);
+    return MusicFailure{MusicError::InvalidResponse};
+}
 bool description(const QJsonValue& v)
 {
     return absent(v) || (v.isString() && v.toString().size() <= 65536 &&
@@ -99,10 +105,8 @@ std::optional<Album> album(const QJsonObject& o)
     a.cover = image(o.value(QStringLiteral("picUrl")));
     return a;
 }
-std::optional<QList<Song>> songs(const QJsonValue& v, qsizetype maximum, bool optional = false)
+std::optional<QList<Song>> songs(const QJsonValue& v, qsizetype maximum)
 {
-    if (optional && absent(v))
-        return QList<Song>{};
     if (!v.isArray() || v.toArray().size() > maximum)
         return std::nullopt;
     QList<Song> list;
@@ -251,16 +255,21 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         const auto o = object.value(QStringLiteral("playlist")).toObject();
         PlaylistDetails p;
         p.id = {providerId(o.value(QStringLiteral("id")))};
-        if (p.id.value != q->playlist.value || !textField(o.value(QStringLiteral("name"))) ||
-            !description(o.value(QStringLiteral("description"))) ||
-            !number(o, QStringLiteral("trackCount"), p.trackCount) ||
-            !number(o, QStringLiteral("updateTime"), p.updatedAtMs) ||
-            !metadataList(o.value(QStringLiteral("tags")), p.tags) ||
-            !number(o, QStringLiteral("createTime"), p.createdAtMs) ||
-            !number(o, QStringLiteral("subscribedCount"), p.subscriberCount) ||
-            !number(o, QStringLiteral("commentCount"), p.commentCount) ||
-            !number(o, QStringLiteral("shareCount"), p.shareCount))
-            return invalid;
+        if (p.id.value != q->playlist.value)
+            return invalidBecause("playlist_id");
+        if (const char* field =
+                !textField(o.value(QStringLiteral("name")))               ? "name"
+                : !description(o.value(QStringLiteral("description")))    ? "description"
+                : !number(o, QStringLiteral("trackCount"), p.trackCount)  ? "track_count"
+                : !number(o, QStringLiteral("updateTime"), p.updatedAtMs) ? "update_time"
+                : !metadataList(o.value(QStringLiteral("tags")), p.tags)  ? "tags"
+                : !number(o, QStringLiteral("createTime"), p.createdAtMs) ? "create_time"
+                : !number(o, QStringLiteral("subscribedCount"), p.subscriberCount)
+                    ? "subscribed_count"
+                : !number(o, QStringLiteral("commentCount"), p.commentCount) ? "comment_count"
+                : !number(o, QStringLiteral("shareCount"), p.shareCount)     ? "share_count"
+                                                                             : nullptr)
+            return invalidBecause(field);
         p.title = o.value(QStringLiteral("name")).toString();
         p.description = o.value(QStringLiteral("description")).toString();
         p.cover = image(o.value(QStringLiteral("coverImgUrl")));
@@ -268,19 +277,19 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         if (!absent(count)) {
             if (!count.isDouble() || !std::isfinite(count.toDouble()) || count.toDouble() < 0 ||
                 count.toDouble() > 9007199254740991.0)
-                return invalid;
+                return invalidBecause("play_count");
             p.playCount = count.toDouble();
         }
         const auto creator = o.value(QStringLiteral("creator"));
         if (!absent(creator)) {
             if (!creator.isObject())
-                return invalid;
+                return invalidBecause("creator");
             const auto user = creator.toObject();
             const auto raw = user.value(QStringLiteral("userId"));
             const auto id = providerId(raw);
             if ((!unknownId(raw) && id.isEmpty()) ||
                 !textField(user.value(QStringLiteral("nickname"))))
-                return invalid;
+                return invalidBecause("creator");
             p.creator = PlaylistCreator{id.isEmpty() ? std::nullopt : std::optional<QString>(id),
                                         user.value(QStringLiteral("nickname")).toString()};
         }
@@ -288,28 +297,57 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
         QSet<QString> known;
         if (!absent(ids)) {
             if (!ids.isArray() || ids.toArray().size() > 100000)
-                return invalid;
+                return invalidBecause("track_ids");
             p.trackIds = QList<SongId>{};
-            for (const auto v : ids.toArray()) {
-                if (!v.isObject())
-                    return invalid;
-                const auto id = providerId(v.toObject().value(QStringLiteral("id")));
+            const auto index = ids.toArray();
+            for (qsizetype i = 0; i < index.size(); ++i) {
+                if (!index.at(i).isObject())
+                    return invalidBecause("track_id", i);
+                const auto id = providerId(index.at(i).toObject().value(QStringLiteral("id")));
                 if (id.isEmpty())
-                    return invalid;
+                    return invalidBecause("track_id", i);
                 p.trackIds->append({id});
                 known.insert(id);
             }
             if (p.trackCount && *p.trackCount < p.trackIds->size())
-                return invalid;
+                return invalidBecause("track_count_below_index");
             p.trackIdsComplete = p.trackCount == std::optional<qint64>(p.trackIds->size());
         }
-        const auto rows = songs(o.value(QStringLiteral("tracks")), 10000, true);
-        if (!rows)
-            return invalid;
-        for (const auto& s : *rows)
-            if (p.trackIds && !known.contains(s.id.value))
-                return invalid;
-        p.songs = *rows;
+        // The embedded tracks are some songs' metadata sent along, not the index (trackIds):
+        // a row we cannot read is left out, its song still listed and later asked for by ID.
+        // One odd song (a cloud upload's tags, say) must not hide the whole playlist.
+        const auto rows = o.value(QStringLiteral("tracks"));
+        if (!absent(rows) && (!rows.isArray() || rows.toArray().size() > 10000))
+            return invalidBecause("tracks");
+        const auto embedded = rows.toArray();
+        qsizetype skipped = 0, firstSkipped = -1;
+        const char* skippedBecause = "track";
+        for (qsizetype i = 0; i < embedded.size(); ++i) {
+            const char* why = "track";
+            const auto song = embedded.at(i).isObject()
+                                  ? songFromExplained(embedded.at(i).toObject(), why)
+                                  : std::optional<Song>{};
+            if (!song) {
+                if (skipped++ == 0) {
+                    firstSkipped = i;
+                    skippedBecause = why;
+                }
+                continue;
+            }
+            if (p.trackIds && !known.contains(song->id.value))
+                return invalidBecause("unsolicited_track", i);
+            p.songs.append(*song);
+        }
+        if (skipped) {
+            const auto song =
+                providerId(embedded.at(firstSkipped).toObject().value(QStringLiteral("id")));
+            log::info(lcApi, "playlist.tracks_skipped",
+                      {{"playlist", p.id.value},
+                       {"count", skipped},
+                       {"row", firstSkipped},
+                       {"song", song.isEmpty() ? QStringLiteral("-") : song},
+                       {"reason", skippedBecause}});
+        }
         return p;
     }
     return invalid; // PlaylistSongsQuery is a bounded two-stage gateway operation, not a raw schema

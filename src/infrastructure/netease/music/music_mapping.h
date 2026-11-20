@@ -19,4 +19,6 @@ std::optional<qint64> nonnegative(const QJsonValue& value);
 bool textField(const QJsonValue& value);
 bool unknownId(const QJsonValue& value);
 std::optional<domain::Song> songFrom(const QJsonObject& object);
+// songFrom that, when it gives no song, sets `why` to the check the row failed.
+std::optional<domain::Song> songFromExplained(const QJsonObject& object, const char*& why);
 } // namespace cirrus::netease::mapping
