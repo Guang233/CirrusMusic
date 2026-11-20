@@ -71,6 +71,26 @@ Analysis analyse(const std::vector<float>& audio, int rate, bool complete = true
     return analyser.finish(complete);
 }
 
+// An analysis as the planner sees it: sound over [start, end) at `level`, opening (its
+// first 2 s) at `opening`.
+Analysis made(qint64 durationMs, qint64 start, qint64 end, float level = -10, float opening = -20)
+{
+    Analysis a;
+    a.durationMs = durationMs;
+    a.complete = true;
+    a.loudness = level;
+    a.soundStartMs = start;
+    a.soundEndMs = end;
+    const auto step = [](float lufs) { return quint8((lufs - Analysis::kFloor) * 2); };
+    for (qint64 at = 0; at < durationMs; at += Analysis::kStepMs) {
+        const bool sounding = at >= start && at < end;
+        a.momentary.push_back(step(!sounding           ? Analysis::kFloor
+                                   : at < start + 2000 ? opening
+                                                       : level));
+    }
+    return a;
+}
+
 qint64 drain(Deck& deck)
 {
     std::vector<float> chunk(2 * 1000);
@@ -349,6 +369,94 @@ class AutomixTest : public QObject
         other[3] = char(Analysis::kVersion + 1); // another version: analysed again
         QVERIFY(!Analysis::deserialize(other));
         QVERIFY(!Analysis::deserialize(a.serialize().chopped(1)));
+    }
+    void skipsTheSilenceAtTheEdges()
+    {
+        // 3 s of silence after the current track's sound, 1.5 s before the next one's: the
+        // fixed crossfade ends where the sound does and starts the next at its first sound.
+        const auto a = made(200000, 0, 197000), b = made(180000, 1500, 180000);
+        const auto p = plan({TransitionMode::Crossfade, 6000}, {200000, false, &a}, 0,
+                            {180000, false, &b}, false);
+        QCOMPARE(p.style, Style::Crossfade);
+        QCOMPARE(p.outMs, 197000 - 6000);
+        QCOMPARE(p.inMs, 1500);
+        QCOMPARE(p.overlapMs, 6000);
+        // Without the next track's analysis the smart mode does the same with 6 s.
+        const auto fallback = plan({}, {200000, false, &a}, 0, {180000}, false);
+        QCOMPARE(fallback.reason, Reason::NoAnalysis);
+        QCOMPARE(fallback.outMs, 197000 - 6000);
+        QCOMPARE(fallback.inMs, 0);
+    }
+
+    void aContinuousJointStaysGapless()
+    {
+        // Sound to the very end and from the very start: one piece, in either mode.
+        const auto a = made(200000, 0, 200000), b = made(180000, 0, 180000);
+        for (const auto mode : {TransitionMode::Smart, TransitionMode::Crossfade}) {
+            const auto p = plan({mode, 6000}, {200000, false, &a}, 0, {180000, false, &b}, false);
+            QCOMPARE(p.style, Style::Gapless);
+            QCOMPARE(p.reason, Reason::Continuous);
+        }
+    }
+
+    void aFadeOutEndsNaturally()
+    {
+        const int rate = 44100;
+        const auto a =
+            analyse(sine(rate, 20, 0.2) + fading(rate, 10, 0.2, 6) + silence(rate, 1), rate);
+        const auto b = made(180000, 800, 180000);
+        const auto p = plan({}, {a.durationMs, false, &a}, 0, {180000, false, &b}, false);
+        QCOMPARE(p.style, Style::NaturalEnd);
+        QCOMPARE(p.reason, Reason::FadeOut);
+        QCOMPARE(p.outMs, a.fadedBy(20)); // the next comes in once it is 20 dB down
+        QCOMPARE(p.outMs + p.overlapMs, a.soundEndMs);
+        QCOMPARE(p.inMs, 800);
+        QCOMPARE(p.switchMs, 0);
+        QCOMPARE(p.gainOut.at(0), 1.0f);
+        QCOMPARE(p.gainIn.at(0.03), 1.0f); // at once, without a click
+    }
+
+    void theCrossfadeStaysOutOfTheSinging()
+    {
+        // The current track's last line ends 5 s before its sound; the next one sings
+        // from 4 s in, after a quiet intro from 1 s.
+        auto a = made(200000, 0, 198000);
+        const auto b = made(180000, 1000, 180000);
+        Track out{200000, false, &a, {{180000, 193000}}};
+        Track in{180000, false, &b, {{4000, 8000}}};
+        auto p = plan({}, out, 0, in, false);
+        QCOMPARE(p.style, Style::Crossfade);
+        QCOMPARE(p.reason, Reason::Outro);
+        QCOMPARE(p.overlapMs, 4000 - 500 - 1000); // up to half a second before the singing
+        QCOMPARE(p.outMs, 198000 - p.overlapMs);
+        QVERIFY(p.outMs >= 193000 + 500); // after the last line
+        QCOMPARE(p.inMs, 1000);
+        // An instrumental next track: as long as the outro has room for, 8 s at most.
+        in.vocals.clear();
+        p = plan({}, out, 0, in, false);
+        QCOMPARE(p.overlapMs, 198000 - 193000 - 500);
+        out.vocals.clear();
+        QCOMPARE(plan({}, out, 0, in, false).overlapMs, 8000);
+    }
+
+    void noRoomBetweenTheSingingIsShort()
+    {
+        // Singing to the end of one and from the start of the other: the shortest crossfade.
+        const auto a = made(200000, 0, 198000), b = made(180000, 500, 180000);
+        const Track out{200000, false, &a, {{190000, 197900}}};
+        const Track in{180000, false, &b, {{600, 5000}}};
+        const auto p = plan({}, out, 0, in, false);
+        QCOMPARE(p.reason, Reason::Tight);
+        QCOMPARE(p.overlapMs, kMinimumOverlapMs);
+        QCOMPARE(p.outMs, 198000 - kMinimumOverlapMs);
+    }
+
+    void aLoudOpeningComesInQuicker()
+    {
+        const auto a = made(200000, 0, 198000);
+        const auto loud = made(180000, 0, 180000, -10, -11);
+        const auto p = plan({}, {200000, false, &a}, 0, {180000, false, &loud}, false);
+        QCOMPARE(p.overlapMs, 4000);
     }
 };
 
