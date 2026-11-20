@@ -114,6 +114,12 @@ class AudioStore : public QObject
     [[nodiscard]] qint64 capacity() const { return m_options.capacityBytes; }
     void clear(bool allPartitions = false); // open streams' files go when they close
 
+    // What automix learned of a kept file (an automix::Analysis, serialized), kept beside
+    // it for as long as the file is: evicted and cleared with it. Empty when there is none
+    // or `source` has no kept file.
+    [[nodiscard]] QByteArray analysis(const domain::MediaSource& source) const;
+    void keepAnalysis(const domain::MediaSource& source, const QByteArray& bytes);
+
   signals:
     // The address expired or the CDN refused it: refresh() within refreshTimeoutMs, or
     // the stream fails with Expired.
@@ -142,7 +148,7 @@ class AudioStore : public QObject
     QString baseFor(const domain::MediaSource& source) const;
     [[nodiscard]] bool isOpenPath(const QString& path) const;
     struct Entry {
-        QString data, meta;
+        QString data, meta, analysis;
         qint64 bytes = 0;
         qint64 lastUsed = 0;
     };

@@ -64,6 +64,9 @@ class AudioEngine : public application::IPlaybackBackend
     void analyseCurrent();
     void analyseNext();
     void analysed(quint64 id, std::shared_ptr<const automix::Analysis> analysis, qint64 elapsedMs);
+    // A complete analysis kept beside the file in the cache (null: none, or another version).
+    [[nodiscard]] std::shared_ptr<const automix::Analysis>
+    keptAnalysis(const domain::MediaSource& source) const;
     void cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job);
     void handPlanInputs(); // the analyses and sung lines, to the producer
     void openNext();
@@ -90,6 +93,7 @@ class AudioEngine : public application::IPlaybackBackend
     quint64 m_curJob = 0;                                // its running analysis
     std::shared_ptr<AudioStream> m_curReader;            // and that one's handle on the file
     bool m_curFull = false;                              // all of it asked for
+    bool m_curLookedUp = false;                          // for a kept one
     std::vector<automix::Span> m_vocals;                 // the current track's sung lines
     std::shared_ptr<Producer> m_producer;
     std::shared_ptr<AudioStream> m_stream;

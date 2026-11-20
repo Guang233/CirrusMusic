@@ -1,6 +1,7 @@
 #include "../support/fake_range_http.h"
 #include "infrastructure/media/audio_engine.h"
 #include "infrastructure/media/audio_store.h"
+#include "infrastructure/media/automix/analysis.h"
 #include <QAudioDevice>
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -15,6 +16,7 @@ using application::PlaybackEvent;
 using Kind = PlaybackEvent::Kind;
 using media::AudioEngine;
 using media::AudioStore;
+namespace automix = media::automix;
 namespace
 {
 QByteArray fixture(const QString& name)
@@ -365,6 +367,39 @@ class AudioEngineTest : public QObject
         QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
         QCOMPARE(m_events.last().token, two);
         m_server.bodies.clear();
+    }
+
+    void analysesAreKeptForTheNextTime()
+    {
+        // Played once (the file comes at once): its analysis is kept beside the file...
+        const auto a = source(fixture(QStringLiteral("long.mp3")), QStringLiteral("mp3"));
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), token(28));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(!m_store->analysis(a).isEmpty(), 5000);
+        const auto kept = automix::Analysis::deserialize(m_store->analysis(a));
+        QVERIFY(kept && kept->complete);
+        QVERIFY2(kept->soundEndMs > 3800, qPrintable(QString::number(kept->soundEndMs)));
+        m_engine->stop();
+        // ...and used the next time instead of analysing it again. In this one its sound
+        // ends at 3 s, so the transition does too (the next isn't analysed: a plain 1.3 s
+        // crossfade, current from about 2.3 s; at about 3.3 s by the file's own analysis).
+        auto made = *kept;
+        made.soundEndMs = 3000;
+        m_store->keepAnalysis(a, made.serialize());
+        m_events.clear();
+        const auto one = token(29), two = token(30);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), one);
+        auto other = source(m_server.body, QStringLiteral("mp3"));
+        other.md5.clear();
+        m_engine->preload(other, two);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        const qint64 lastOfFirst = lastPosition(one);
+        QVERIFY2(lastOfFirst > 1800 && lastOfFirst < 2700,
+                 qPrintable(QString::number(lastOfFirst)));
+        m_engine->stop();
     }
 
     void gaplessWaitsForTheEnd()

@@ -50,6 +50,18 @@ bool sameFile(const MediaSource& a, const MediaSource& b)
 {
     return !a.md5.isEmpty() && a.md5 == b.md5;
 }
+
+// What the plans go by. `cached`: kept from when it played before (`ms` 0).
+void logAnalysis(LoadToken token, const automix::Analysis& a, qint64 ms, bool cached)
+{
+    qCInfo(lcMedia) << log::event("analysis.done") << log::field("token", token.generation)
+                    << log::field("complete", a.complete) << log::field("cached", cached)
+                    << log::field("ms", ms)
+                    << log::field("lufs", QString::number(a.loudness, 'f', 1))
+                    << log::field("sound_ms", a.soundStartMs)
+                    << log::field("sound_end_ms", a.soundEndMs)
+                    << log::field("fade_ms", a.fadeStartMs);
+}
 } // namespace
 
 // The decoder thread and what it shares with the owner.
@@ -687,6 +699,7 @@ void AudioEngine::stop()
     cancelAnalysis(m_curReader, m_curJob);
     m_analysis.reset();
     m_curFull = false;
+    m_curLookedUp = false;
     m_vocals.clear();
     if (m_next)
         cancelAnalysis(m_next->reader, m_next->job);
@@ -959,6 +972,7 @@ void AudioEngine::advance(qint64 durationMs, quint64 startFrame, qint64 baseMs)
     m_curJob = m_next->job;
     m_curReader = std::move(m_next->reader);
     m_curFull = m_analysis && m_analysis->complete;
+    m_curLookedUp = true; // as the next track (analyseNext)
     m_vocals = std::move(m_next->vocals);
     m_next.reset();
     handPlanInputs();
@@ -1092,11 +1106,20 @@ void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan, bool a
 
 void AudioEngine::analyseCurrent()
 {
-    // All of it, from the cached file: nothing more to download.
     if (m_curFull || m_curReader || !m_stream || !m_active || m_source.preview ||
-        m_source.md5.isEmpty() || m_transition.mode == TransitionMode::Gapless ||
-        !m_stream->complete())
+        m_source.md5.isEmpty() || m_transition.mode == TransitionMode::Gapless)
         return;
+    if (!std::exchange(m_curLookedUp, true)) {
+        if (auto kept = keptAnalysis(m_source)) { // analysed when it played before
+            logAnalysis(m_token, *kept, 0, true);
+            m_analysis = std::move(kept);
+            m_curFull = true;
+            handPlanInputs();
+            return;
+        }
+    }
+    if (!m_stream->complete())
+        return; // all of it, from the cached file: nothing more to download
     PlaybackError error{};
     m_curReader = m_store.open(m_source, &error);
     if (!m_curReader)
@@ -1112,6 +1135,12 @@ void AudioEngine::analyseNext()
     if (!m_next || m_next->reader || m_next->analysis || m_next->source.preview ||
         m_next->source.md5.isEmpty() || m_transition.mode == TransitionMode::Gapless)
         return;
+    if (auto kept = keptAnalysis(m_next->source)) {
+        logAnalysis(m_next->token, *kept, 0, true);
+        m_next->analysis = std::move(kept);
+        handPlanInputs();
+        return;
+    }
     PlaybackError error{};
     m_next->reader = m_store.open(m_next->source, &error);
     if (!m_next->reader)
@@ -1129,16 +1158,12 @@ void AudioEngine::analysed(quint64 id, std::shared_ptr<const automix::Analysis> 
     if (!current && !next)
         return;
     const LoadToken token = current ? m_token : m_next->token;
-    if (!analysis) {
+    if (!analysis)
         qCDebug(lcMedia) << log::event("analysis.failed") << log::field("token", token.generation);
-    } else {
-        qCInfo(lcMedia) << log::event("analysis.done") << log::field("token", token.generation)
-                        << log::field("complete", analysis->complete) << log::field("ms", elapsedMs)
-                        << log::field("lufs", QString::number(analysis->loudness, 'f', 1))
-                        << log::field("sound_ms", analysis->soundStartMs)
-                        << log::field("sound_end_ms", analysis->soundEndMs)
-                        << log::field("fade_ms", analysis->fadeStartMs);
-    }
+    else
+        logAnalysis(token, *analysis, elapsedMs, false);
+    if (analysis && analysis->complete) // for the next time it plays
+        m_store.keepAnalysis(current ? m_source : m_next->source, analysis->serialize());
     if (current) {
         m_curReader.reset();
         if (analysis)
@@ -1149,6 +1174,17 @@ void AudioEngine::analysed(quint64 id, std::shared_ptr<const automix::Analysis> 
             m_next->analysis = std::move(analysis);
     }
     handPlanInputs();
+}
+
+std::shared_ptr<const automix::Analysis> AudioEngine::keptAnalysis(const MediaSource& source) const
+{
+    const QByteArray bytes = m_store.analysis(source);
+    if (bytes.isEmpty())
+        return nullptr;
+    auto analysis = automix::Analysis::deserialize(bytes);
+    if (!analysis || !analysis->complete)
+        return nullptr; // made by another version: analysed again
+    return std::make_shared<const automix::Analysis>(std::move(*analysis));
 }
 
 void AudioEngine::cancelAnalysis(std::shared_ptr<AudioStream>& reader, quint64 job)
