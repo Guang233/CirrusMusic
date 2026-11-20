@@ -59,6 +59,33 @@ class AudioEngineTest : public QObject
         return std::any_of(m_events.begin(), m_events.end(),
                            [kind](const PlaybackEvent& e) { return e.kind == kind; });
     }
+    const PlaybackEvent& first(Kind kind) const
+    {
+        return *std::find_if(m_events.begin(), m_events.end(),
+                             [kind](const PlaybackEvent& e) { return e.kind == kind; });
+    }
+    qint64 lastPosition(LoadToken t) const
+    {
+        qint64 last = -1;
+        for (const auto& e : m_events)
+            if (e.token == t && e.kind == Kind::Position)
+                last = e.value;
+        return last;
+    }
+    // long.mp3 with another file preloaded, playing until it is inside their transition
+    // (about 2.7 s to the end; the next becomes current at about 3.4 s).
+    bool playIntoTheTransition(LoadToken current, LoadToken next)
+    {
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), current);
+        auto other = source(m_server.body, QStringLiteral("mp3"));
+        other.md5.clear(); // another file to the engine (the fake CDN has one body)
+        m_engine->preload(other, next);
+        if (!QTest::qWaitFor([this] { return has(Kind::Ready); }, 5000))
+            return false;
+        m_engine->play();
+        return QTest::qWaitFor([&] { return lastPosition(current) >= 2850; }, 10000) &&
+               !has(Kind::Advanced);
+    }
 
   private slots:
     void init()
@@ -251,6 +278,62 @@ class AudioEngineTest : public QObject
                  qPrintable(QString::number(firstOfSecond->value)));
         QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
         QCOMPARE(m_events.last().token, second);
+    }
+
+    void aSeekInTheTransitionStaysOnTheTrack()
+    {
+        // Before the switch the current track is still the one shown: the seek is in it,
+        // and the transition comes again.
+        const auto one = token(17), two = token(18);
+        QVERIFY(playIntoTheTransition(one, two));
+        m_engine->seek(1000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::SeekConfirmed), 5000);
+        QCOMPARE(first(Kind::SeekConfirmed).token, one);
+        QCOMPARE(first(Kind::SeekConfirmed).value, 1000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aSeekAfterTheSwitchIsInTheNext()
+    {
+        // The next track is current while the last of the old one still fades out.
+        const auto one = token(19), two = token(20);
+        QVERIFY(playIntoTheTransition(one, two));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 5000);
+        m_engine->seek(500);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::SeekConfirmed), 5000);
+        QCOMPARE(first(Kind::SeekConfirmed).token, two);
+        QCOMPARE(first(Kind::SeekConfirmed).value, 500);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aPauseHoldsTheTransition()
+    {
+        const auto one = token(21), two = token(22);
+        QVERIFY(playIntoTheTransition(one, two));
+        m_engine->pause();
+        QTest::qWait(1000); // past the switch, had it played on
+        QVERIFY(!has(Kind::Advanced));
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aSkipInTheTransitionRetiresBoth()
+    {
+        const auto one = token(23), two = token(24), three = token(25);
+        QVERIFY(playIntoTheTransition(one, two));
+        const auto mark = m_events.size();
+        load(QStringLiteral("tone.flac"), QStringLiteral("flac"), three);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            m_events.last().token == three && m_events.last().kind == Kind::Ready, 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(m_events.last().kind == Kind::Ended, 5000);
+        for (auto i = mark; i < m_events.size(); ++i)
+            QCOMPARE(m_events[i].token, three);
     }
 
     void gaplessWaitsForTheEnd()
