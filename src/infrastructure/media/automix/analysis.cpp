@@ -1,6 +1,7 @@
 #include "analysis.h"
 #include <QDataStream>
 #include <QIODevice>
+#include <QList>
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -99,7 +100,7 @@ double Analyser::Biquad::run(double x, int channel)
     return y;
 }
 
-Analyser::Analyser(int rate) : m_rate(std::max(1, rate))
+Analyser::Analyser(int rate) : m_rate(std::max(1, rate)), m_rhythm(m_rate)
 {
     // BS.1770's two stages from their analog prototypes, for any rate (the standard's
     // 48 kHz coefficients come out of these): a high shelf for the head, a high-pass.
@@ -125,6 +126,7 @@ Analyser::Analyser(int rate) : m_rate(std::max(1, rate))
 
 void Analyser::add(const float* frames, qsizetype count)
 {
+    m_rhythm.add(frames, count);
     for (qsizetype i = 0; i < count; ++i) {
         const float l = frames[i * 2], r = frames[i * 2 + 1];
         const double kl = m_highPass.run(m_shelf.run(l, 0), 0);
@@ -201,6 +203,7 @@ Analysis Analyser::finish(bool complete) const
                        : std::min(a.durationMs, qint64(peaks.rend() - last) * kPeakMs);
     if (complete && a.soundEndMs > a.soundStartMs)
         a.fadeStartMs = findFade(energy, a);
+    a.rhythm = findRhythm(m_rhythm.features());
     return a;
 }
 
@@ -242,7 +245,12 @@ QByteArray Analysis::serialize() const
     out.setVersion(QDataStream::Qt_6_5);
     out << qint32(kVersion) << durationMs << complete << loudness << soundStartMs << soundEndMs
         << fadeStartMs
-        << QByteArray(reinterpret_cast<const char*>(momentary.data()), qsizetype(momentary.size()));
+        << QByteArray(reinterpret_cast<const char*>(momentary.data()), qsizetype(momentary.size()))
+        << rhythm.bpm << rhythm.strength << qint32(rhythm.downbeat) << rhythm.barConfidence
+        << rhythm.steady << QList<float>(rhythm.beats.begin(), rhythm.beats.end())
+        << QList<float>(rhythm.bass.begin(), rhythm.bass.end())
+        << QList<float>(rhythm.change.begin(), rhythm.change.end())
+        << QList<float>(rhythm.accent.begin(), rhythm.accent.end());
     return bytes;
 }
 
@@ -256,11 +264,21 @@ std::optional<Analysis> Analysis::deserialize(const QByteArray& bytes)
         return std::nullopt;
     Analysis a;
     QByteArray curve;
+    qint32 downbeat = 0;
+    QList<float> beats, bass, change, accent;
     in >> a.durationMs >> a.complete >> a.loudness >> a.soundStartMs >> a.soundEndMs >>
-        a.fadeStartMs >> curve;
-    if (in.status() != QDataStream::Ok || !in.atEnd())
+        a.fadeStartMs >> curve >> a.rhythm.bpm >> a.rhythm.strength >> downbeat >>
+        a.rhythm.barConfidence >> a.rhythm.steady >> beats >> bass >> change >> accent;
+    if (in.status() != QDataStream::Ok || !in.atEnd() || downbeat < 0 || downbeat > 3 ||
+        !std::is_sorted(beats.begin(), beats.end()) || bass.size() != beats.size() ||
+        change.size() != beats.size() || accent.size() != beats.size())
         return std::nullopt;
     a.momentary.assign(curve.begin(), curve.end());
+    a.rhythm.downbeat = downbeat;
+    a.rhythm.beats.assign(beats.begin(), beats.end());
+    a.rhythm.bass.assign(bass.begin(), bass.end());
+    a.rhythm.change.assign(change.begin(), change.end());
+    a.rhythm.accent.assign(accent.begin(), accent.end());
     return a;
 }
 

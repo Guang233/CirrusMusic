@@ -462,6 +462,10 @@ add_library(cirrus_media STATIC
     infrastructure/media/automix/mix.cpp
     infrastructure/media/automix/analysis.h
     infrastructure/media/automix/analysis.cpp
+    infrastructure/media/automix/rhythm.h
+    infrastructure/media/automix/rhythm.cpp
+    infrastructure/media/automix/spectrum.h
+    infrastructure/media/automix/spectrum.cpp
     infrastructure/media/automix/analyst.h
     infrastructure/media/automix/analyst.cpp
 )

@@ -1,4 +1,5 @@
 #pragma once
+#include "rhythm.h"
 #include <QByteArray>
 #include <QtGlobal>
 #include <optional>
@@ -8,10 +9,10 @@ namespace cirrus::media::automix
 {
 
 // What transitions know of one file from its audio (docs/tasks/automix.md §4.2): its
-// loudness (ITU-R BS.1770-4) over time, the silence at its start and end, a fade-out.
-// Times are the file's media time in ms. Cached by md5, a few KB each.
+// loudness (ITU-R BS.1770-4) over time, the silence at its start and end, a fade-out, its
+// beats and bars. Times are the file's media time in ms. Cached by md5, a few KB each.
 struct Analysis {
-    static constexpr int kVersion = 1;      // bumped when the results change: analysed again
+    static constexpr int kVersion = 2;      // bumped when the results change: analysed again
     static constexpr int kStepMs = 100;     // between momentary loudness values
     static constexpr float kFloor = -70.0f; // LUFS, BS.1770's absolute gate: silence
 
@@ -23,6 +24,7 @@ struct Analysis {
     qint64 fadeStartMs = -1; // the end fades out from here to soundEndMs (-1: it doesn't)
     // Momentary loudness of the 400 ms from every kStepMs, from kFloor in half-dB steps.
     std::vector<quint8> momentary;
+    Rhythm rhythm; // beats and bars (none: not rhythmic, or too short)
 
     // The momentary loudness at `ms` (LUFS; kFloor past what was analysed).
     [[nodiscard]] float momentaryAt(qint64 ms) const;
@@ -58,6 +60,7 @@ class Analyser
 
     int m_rate;
     Biquad m_shelf, m_highPass; // the K-weighting
+    RhythmFrontEnd m_rhythm;
     qint64 m_frames = 0;
     // Per kStepMs: the K-weighted mean square, both channels summed.
     std::vector<double> m_energy;

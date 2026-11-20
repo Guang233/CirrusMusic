@@ -10,6 +10,7 @@
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 using namespace cirrus;
 using namespace cirrus::media;
@@ -54,6 +55,90 @@ std::vector<float> fading(int rate, double seconds, double amplitude, double dbP
         out[i * 2 + 1] *= gain;
     }
     return out;
+}
+
+// A drum groove with chords: `bars` bars of 4/4 at `bpm` after `leadIn` seconds of silence,
+// a kick on 1 and 3 (on every beat `fourOnTheFloor`), a snare on 2 and 4, a hi-hat on every
+// eighth and a triad held through each bar (C, G, Am, F). Beat i at leadIn + i · 60 / bpm,
+// times `drift` per beat (a band slowing down: above 1).
+std::vector<float> groove(int rate, double bpm, int bars, double leadIn = 0,
+                          bool fourOnTheFloor = false, double drift = 1)
+{
+    std::vector<double> beats;
+    double at = leadIn, beat = 60 / bpm;
+    for (int i = 0; i <= bars * 4; ++i, at += beat, beat *= drift)
+        beats.push_back(at);
+    std::vector<float> out(size_t((beats.back() + 1) * rate) * 2, 0.0f);
+    std::mt19937 random(7);
+    std::uniform_real_distribution<float> noise(-1, 1);
+    const auto add = [&](double start, double seconds, const auto& sample) {
+        const auto first = qsizetype(start * rate);
+        const auto count = qsizetype(seconds * rate);
+        for (qsizetype i = 0; i < count && (first + i) * 2 + 1 < qsizetype(out.size()); ++i) {
+            const float v = sample(double(i) / rate);
+            out[size_t(first + i) * 2] += v;
+            out[size_t(first + i) * 2 + 1] += v;
+        }
+    };
+    const auto kick = [&](double t) {
+        const double phase = 2 * M_PI * (50 * t + 100 * 0.03 * (1 - std::exp(-t / 0.03)));
+        return float(0.6 * std::exp(-t / 0.08) * std::sin(phase));
+    };
+    const auto snare = [&](double t) {
+        return float(0.3 * noise(random) * std::exp(-t / 0.05) +
+                     0.2 * std::sin(2 * M_PI * 190 * t) * std::exp(-t / 0.04));
+    };
+    float previous = 0;
+    const auto hat = [&](double t) {
+        const float n = noise(random), high = n - previous;
+        previous = n;
+        return float(0.08 * high * std::exp(-t / 0.01));
+    };
+    const int chords[4][3] = {{60, 64, 67}, {55, 59, 62}, {57, 60, 64}, {53, 57, 60}};
+    for (int bar = 0; bar < bars; ++bar) {
+        const double start = beats[size_t(bar) * 4], end = beats[size_t(bar) * 4 + 4];
+        for (const int note : chords[bar % 4]) {
+            const double hz = 440 * std::pow(2.0, (note - 69) / 12.0);
+            add(start, end - start, [&](double t) {
+                const double envelope = std::min({1.0, t / 0.02, (end - start - t) / 0.02});
+                return float(0.06 * envelope * std::sin(2 * M_PI * hz * t));
+            });
+        }
+        for (int b = 0; b < 4; ++b) {
+            const double t = beats[size_t(bar) * 4 + size_t(b)];
+            const double next = beats[size_t(bar) * 4 + size_t(b) + 1];
+            if (fourOnTheFloor || b % 2 == 0)
+                add(t, 0.15, kick);
+            if (b % 2 == 1)
+                add(t, 0.15, snare);
+            add(t, 0.03, hat);
+            add((t + next) / 2, 0.03, hat);
+        }
+    }
+    return out;
+}
+// Where groove() puts its beats.
+std::vector<double> grooveBeats(double bpm, int bars, double leadIn = 0, double drift = 1)
+{
+    std::vector<double> beats;
+    double at = leadIn, beat = 60 / bpm;
+    for (int i = 0; i < bars * 4; ++i, at += beat, beat *= drift)
+        beats.push_back(at * 1000);
+    return beats;
+}
+// How far each found beat is from the nearest true one, ms: the mean, and the worst.
+std::pair<double, double> beatErrors(const std::vector<float>& found,
+                                     const std::vector<double>& truth)
+{
+    double sum = 0, worst = 0;
+    for (const float b : found) {
+        double nearest = 1e9;
+        for (const double t : truth)
+            nearest = std::min(nearest, std::fabs(double(b) - t));
+        sum += nearest;
+        worst = std::max(worst, nearest);
+    }
+    return {found.empty() ? 1e9 : sum / double(found.size()), worst};
 }
 
 std::vector<float> operator+(std::vector<float> a, const std::vector<float>& b)
@@ -354,6 +439,66 @@ class AutomixTest : public QObject
         QCOMPARE(analyse(sine(rate, 30, 0.2), rate).fadeStartMs, -1);
     }
 
+    void findsBeatsAndBars_data()
+    {
+        QTest::addColumn<int>("rate");
+        QTest::addColumn<double>("bpm");
+        QTest::addColumn<bool>("floor");
+        QTest::newRow("44.1 kHz, 125 BPM") << 44100 << 125.0 << false;
+        QTest::newRow("48 kHz, 128 BPM, four on the floor") << 48000 << 128.0 << true;
+        QTest::newRow("44.1 kHz, 92 BPM") << 44100 << 92.0 << false;
+    }
+    void findsBeatsAndBars()
+    {
+        QFETCH(int, rate);
+        QFETCH(double, bpm);
+        QFETCH(bool, floor);
+        const double leadIn = 0.5;
+        const int bars = 24;
+        const Rhythm r = analyse(groove(rate, bpm, bars, leadIn, floor), rate).rhythm;
+        QVERIFY2(std::fabs(r.bpm - bpm) < 1, qPrintable(QString::number(r.bpm)));
+        QVERIFY(r.steady);
+        QVERIFY(r.strength > 0.3);
+        const auto truth = grooveBeats(bpm, bars, leadIn);
+        const auto [mean, worst] = beatErrors(r.beats, truth);
+        QVERIFY2(worst < 5, qPrintable(QStringLiteral("mean %1 worst %2").arg(mean).arg(worst)));
+        QVERIFY2(r.beats.size() >= truth.size() - 2 && r.beats.size() <= truth.size(),
+                 qPrintable(QString::number(r.beats.size())));
+        // The bars: the downbeat is on a bar's first beat.
+        const double first = r.beats[size_t(r.downbeat)];
+        const double beatMs = 60000 / bpm;
+        const double intoBar =
+            std::fmod(first - leadIn * 1000 + beatMs / 2, 4 * beatMs) - beatMs / 2;
+        QVERIFY2(std::fabs(intoBar) < 15,
+                 qPrintable(QStringLiteral("%1 ms into the bar, confidence %2")
+                                .arg(intoBar)
+                                .arg(r.barConfidence)));
+        QVERIFY(r.barConfidence > 0.2);
+        const Grid grid = fitGrid(r.beats, 0, 1e9);
+        QVERIFY2(std::fabs(60000 / grid.periodMs - bpm) < 0.05,
+                 qPrintable(QString::number(60000 / grid.periodMs)));
+        QVERIFY(grid.inliers > 0.95);
+    }
+
+    void aDriftingBandIsNotSteady()
+    {
+        // From 120 BPM down by 0.1 % a beat (8 % in 80 beats): locally still a grid, not
+        // one for all of it.
+        const Rhythm r = analyse(groove(44100, 120, 20, 0.5, false, 1.001), 44100).rhythm;
+        QVERIFY(!r.steady);
+        const auto [mean, worst] = beatErrors(r.beats, grooveBeats(120, 20, 0.5, 1.001));
+        QVERIFY2(worst < 25, qPrintable(QStringLiteral("mean %1 worst %2").arg(mean).arg(worst)));
+        QVERIFY(fitGrid(r.beats, 0, 1e9).inliers < 0.8);
+        const Grid start = fitGrid(r.beats, 0, 8000);
+        QVERIFY(start.inliers > 0.9);
+    }
+
+    void aToneHasNoBeats()
+    {
+        const Rhythm r = analyse(sine(44100, 20, 0.2, 440), 44100).rhythm;
+        QVERIFY(r.beats.empty() || r.strength < 0.2);
+    }
+
     void anAnalysisRoundTrips()
     {
         const auto a = analyse(silence(44100, 0.5) + sine(44100, 3, 0.1), 44100);
@@ -365,6 +510,14 @@ class AutomixTest : public QObject
         QCOMPARE(back->soundEndMs, a.soundEndMs);
         QCOMPARE(back->fadeStartMs, a.fadeStartMs);
         QCOMPARE(back->momentary, a.momentary);
+        const auto g = analyse(groove(44100, 125, 8), 44100);
+        const auto again = Analysis::deserialize(g.serialize());
+        QVERIFY(again && !g.rhythm.beats.empty());
+        QCOMPARE(again->rhythm.beats, g.rhythm.beats);
+        QCOMPARE(again->rhythm.bpm, g.rhythm.bpm);
+        QCOMPARE(again->rhythm.steady, g.rhythm.steady);
+        QCOMPARE(again->rhythm.downbeat, g.rhythm.downbeat);
+        QCOMPARE(again->rhythm.accent, g.rhythm.accent);
         QByteArray other = a.serialize();
         other[3] = char(Analysis::kVersion + 1); // another version: analysed again
         QVERIFY(!Analysis::deserialize(other));

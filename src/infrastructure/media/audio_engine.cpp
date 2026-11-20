@@ -60,7 +60,12 @@ void logAnalysis(LoadToken token, const automix::Analysis& a, qint64 ms, bool ca
                     << log::field("lufs", QString::number(a.loudness, 'f', 1))
                     << log::field("sound_ms", a.soundStartMs)
                     << log::field("sound_end_ms", a.soundEndMs)
-                    << log::field("fade_ms", a.fadeStartMs);
+                    << log::field("fade_ms", a.fadeStartMs)
+                    << log::field("bpm", QString::number(a.rhythm.bpm, 'f', 2))
+                    << log::field("steady", a.rhythm.steady)
+                    << log::field("beats", qint64(a.rhythm.beats.size()))
+                    << log::field("bar_confidence",
+                                  QString::number(a.rhythm.barConfidence, 'f', 2));
 }
 } // namespace
 

@@ -2,6 +2,7 @@
 // local files the way the engine plays it, to listen to and compare. Development only.
 //
 //   cirrus_automix analyse a.flac [b.mp3 ...]
+//   cirrus_automix beats a.flac [-o clicks.wav]
 //   cirrus_automix mix a.flac b.mp3 -o out.wav [--mode smart|crossfade|gapless]
 //                  [--crossfade 6] [--context 60] [--rate 48000] [--no-analysis]
 //
@@ -21,6 +22,7 @@
 #include <QFileInfo>
 #include <QtEndian>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 using namespace cirrus;
@@ -222,18 +224,41 @@ std::optional<automix::Analysis> analyseFile(const QString& path)
     if (!decoder)
         return std::nullopt;
     automix::Analyser analyser(decoder->sampleRate());
+    const bool timing = qEnvironmentVariableIsSet("CIRRUS_AUTOMIX_TIMES");
+    automix::RhythmFrontEnd frontEnd(decoder->sampleRate()); // timed alone too
     std::vector<float> chunk;
+    QElapsedTimer timer;
+    qint64 decoding = 0, adding = 0, rhythm = 0;
     while (true) {
         chunk.clear();
-        if (!decoder->read(chunk, kChunkFrames))
+        timer.start();
+        const bool more = decoder->read(chunk, kChunkFrames);
+        decoding += timer.nsecsElapsed();
+        if (!more)
             break;
+        timer.start();
         analyser.add(chunk.data(), qsizetype(chunk.size() / 2));
+        adding += timer.nsecsElapsed();
+        if (timing) {
+            timer.start();
+            frontEnd.add(chunk.data(), qsizetype(chunk.size() / 2));
+            rhythm += timer.nsecsElapsed();
+        }
     }
     if (decoder->error()) {
         complain(QStringLiteral("%1: decoding failed").arg(path));
         return std::nullopt;
     }
-    return analyser.finish(true);
+    timer.start();
+    auto analysis = analyser.finish(true);
+    if (timing)
+        std::fprintf(
+            stderr,
+            "  decoding %lld ms, analysing %lld ms (the rhythm's part %lld ms), "
+            "finishing %lld ms\n",
+            static_cast<long long>(decoding / 1000000), static_cast<long long>(adding / 1000000),
+            static_cast<long long>(rhythm / 1000000), static_cast<long long>(timer.elapsed()));
+    return analysis;
 }
 
 int analyse(const QStringList& files)
@@ -261,8 +286,91 @@ int analyse(const QStringList& files)
                     a->loudnessOver(a->soundStartMs, a->soundStartMs + 2000),
                     a->loudnessOver(a->soundEndMs - 2000, a->soundEndMs),
                     static_cast<long long>(timer.elapsed()));
+        const automix::Rhythm& r = a->rhythm;
+        if (r.beats.empty()) {
+            std::printf("  no beats\n");
+            continue;
+        }
+        std::printf("  %.2f BPM, strength %.2f, %zu beats %.2f-%.2f s%s, bars from beat %d "
+                    "(confidence %.2f)\n",
+                    double(r.bpm), double(r.strength), r.beats.size(),
+                    double(r.beats.front()) / 1000, double(r.beats.back()) / 1000,
+                    r.steady ? " (steady)" : "", r.downbeat, double(r.barConfidence));
+        const auto grid = [](const char* name, const automix::Grid& g) {
+            if (!g.valid()) {
+                std::printf("  %s: no grid\n", name);
+                return;
+            }
+            std::printf("  %s: %.3f BPM over %d beats, %.1f ms rms, %.0f%% within 20 ms\n", name,
+                        60000 / g.periodMs, g.count, g.rmsMs, g.inliers * 100);
+        };
+        grid("first 40 s", automix::fitGrid(r.beats, r.beats.front(), r.beats.front() + 40000));
+        grid("last 40 s ", automix::fitGrid(r.beats, r.beats.back() - 40000, r.beats.back() + 1));
     }
     return status;
+}
+
+// The beats found in a file, one per line (ms, then 1 where a bar starts); with -o the
+// file itself with a click on each beat (a higher one on bar starts), to listen to.
+int beats(const QCommandLineParser& parser, const QStringList& args)
+{
+    if (args.size() != 2) {
+        complain(QStringLiteral("beats needs a track"));
+        return 2;
+    }
+    const auto a = analyseFile(args[1]);
+    if (!a)
+        return 1;
+    const automix::Rhythm& r = a->rhythm;
+    for (size_t i = 0; i < r.beats.size(); ++i)
+        std::printf("%.1f %d\n", double(r.beats[i]), int((int(i) - r.downbeat) % 4 == 0));
+    if (!parser.isSet(QStringLiteral("output")))
+        return 0;
+    auto decoder = openTrack(args[1]);
+    if (!decoder)
+        return 1;
+    const int rate = decoder->sampleRate();
+    WaveFile out;
+    const QString path = parser.value(QStringLiteral("output"));
+    if (!out.open(path, rate)) {
+        complain(QStringLiteral("%1: can't write it").arg(path));
+        return 1;
+    }
+    std::vector<float> chunk;
+    qint64 frame = 0;
+    size_t next = 0;
+    std::vector<std::pair<qint64, bool>> clicks; // start frame, bar start
+    for (size_t i = 0; i < r.beats.size(); ++i)
+        clicks.push_back(
+            {qint64(double(r.beats[i]) * rate / 1000), (int(i) - r.downbeat) % 4 == 0});
+    const qint64 clickFrames = rate / 50; // 20 ms
+    while (true) {
+        chunk.clear();
+        if (!decoder->read(chunk, kChunkFrames))
+            break;
+        const auto frames = qsizetype(chunk.size() / 2);
+        for (qsizetype i = 0; i < frames; ++i, ++frame) {
+            while (next < clicks.size() && clicks[next].first + clickFrames < frame)
+                ++next;
+            float click = 0;
+            for (size_t c = next; c < clicks.size() && clicks[c].first <= frame; ++c) {
+                const qint64 t = frame - clicks[c].first;
+                if (t >= clickFrames)
+                    continue;
+                const double hz = clicks[c].second ? 2000 : 1000;
+                click += float(0.3 * std::sin(2 * M_PI * hz * double(t) / rate) *
+                               (1 - double(t) / double(clickFrames)));
+            }
+            chunk[size_t(i) * 2] = chunk[size_t(i) * 2] * 0.7f + click;
+            chunk[size_t(i) * 2 + 1] = chunk[size_t(i) * 2 + 1] * 0.7f + click;
+        }
+        out.write(chunk.data(), frames);
+    }
+    if (!out.finish()) {
+        complain(QStringLiteral("%1: can't write it").arg(path));
+        return 1;
+    }
+    return 0;
 }
 
 int mix(const QCommandLineParser& parser, const QStringList& args)
@@ -363,5 +471,7 @@ int main(int argc, char* argv[])
         return analyse(args.mid(1));
     if (args.value(0) == QLatin1String("mix"))
         return mix(parser, args);
+    if (args.value(0) == QLatin1String("beats"))
+        return beats(parser, args);
     parser.showHelp(2);
 }
