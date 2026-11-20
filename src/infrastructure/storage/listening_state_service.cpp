@@ -200,8 +200,7 @@ void ListeningStateService::deliver(ListeningStateResult result)
             !result.missingSongs.isEmpty() && result.missingSongs != m_songsAsked) {
             m_songsAsked = result.missingSongs;
             m_songTicket = ++m_nextTicket;
-            qCDebug(lcStorage) << log::event("listening.songs_wanted")
-                               << log::field("count", result.missingSongs.size());
+            log::debug(lcStorage, "listening.songs_wanted", {"count", result.missingSongs.size()});
             emit songsWanted(m_songTicket, result.missingSongs);
         }
         if (guard && !m_closed && !m_historyTimer.isActive())
@@ -211,8 +210,7 @@ void ListeningStateService::deliver(ListeningStateResult result)
     if (result.id == m_songSave) {
         m_songSave = 0;
         if (result.error != StorageError::None) {
-            qCWarning(lcStorage) << log::event("listening.songs_save_failed")
-                                 << log::field("err", result.error);
+            log::warn(lcStorage, "listening.songs_save_failed", {"err", result.error});
             emit storageFailed(result.error);
         } else if (songsCurrent) {
             emit storedHistoryChanged();
@@ -427,8 +425,7 @@ void ListeningStateService::resolveSongs(quint64 ticket, const QList<domain::Son
         return;
     m_songTicket = 0;
     if (!ok) {
-        qCInfo(lcStorage) << log::event("listening.songs_lookup_failed")
-                          << log::field("count", m_songsAsked.size());
+        log::info(lcStorage, "listening.songs_lookup_failed", {"count", m_songsAsked.size()});
         m_songsAsked.clear();
         scheduleSongs(10 * 60 * 1000); // not again right away; new records also try
         return;
@@ -453,9 +450,8 @@ void ListeningStateService::resolveSongs(quint64 ticket, const QList<domain::Son
         scheduleSongs(5000);
         return;
     }
-    qCDebug(lcStorage) << log::event("listening.songs_resolved")
-                       << log::field("found", job.songs.size())
-                       << log::field("unavailable", job.unavailable.size());
+    log::debug(lcStorage, "listening.songs_resolved",
+               {{"found", job.songs.size()}, {"unavailable", job.unavailable.size()}});
     m_songSave = job.id = ++m_nextId;
     m_pending.insert(job.id);
     emit requested(std::move(job));

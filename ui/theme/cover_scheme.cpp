@@ -76,8 +76,7 @@ void CoverScheme::request()
             : nullptr;
     if (!provider) {
         if (!m_cover.isEmpty())
-            qCWarning(lcUiTheme) << log::event("cover_scheme.no_provider")
-                                 << log::field("provider", m_cover.host());
+            log::warn(lcUiTheme, "cover_scheme.no_provider", {"provider", m_cover.host()});
         setSeed(generation, {});
         return;
     }

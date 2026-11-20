@@ -303,7 +303,7 @@ void MusicGateway::finish(quint64 id, MusicResult result, domain::CacheRetention
     // the contract is too strict. The mapper may say why at debug (docs/tasks/logging.md §8).
     if (const auto* error = std::get_if<MusicFailure>(&result);
         error && error->error == MusicError::InvalidResponse && pending.mapped) {
-        qCWarning(lcApi) << log::event("music.invalid") << log::field("path", pending.path);
+        log::warn(lcApi, "music.invalid", {"path", pending.path});
     }
     if (std::holds_alternative<MusicFailure>(result) ||
         (!std::holds_alternative<DetailQuery>(pending.query) &&

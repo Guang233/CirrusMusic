@@ -10,8 +10,7 @@ namespace cirrus::netease::mapping
 // music.invalid). `row` is the list row, -1 for the response.
 inline void rejectedBecause(const char* reason, qsizetype row = -1)
 {
-    qCDebug(lcApi) << log::event("music.invalid_why") << log::field("reason", reason)
-                   << log::field("row", row);
+    log::debug(lcApi, "music.invalid_why", {{"reason", reason}, {"row", row}});
 }
 QString providerId(const QJsonValue& value);
 std::optional<domain::Album> albumFrom(const QJsonObject& object);

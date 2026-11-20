@@ -65,28 +65,26 @@ BackendHost::BackendHost(const Paths& paths, QObject* parent)
     connect(&facade, &application::BackendFacade::started, this,
             [](application::StartupError error) {
                 if (error == application::StartupError::None)
-                    qCInfo(lcUiBackend) << log::event("backend.ready");
+                    log::info(lcUiBackend, "backend.ready");
                 else if (error == application::StartupError::GuestBootstrap)
-                    qCWarning(lcUiBackend) << log::event("backend.ready_without_guest");
+                    log::warn(lcUiBackend, "backend.ready_without_guest");
                 else
-                    qCCritical(lcUiBackend)
-                        << log::event("backend.start_failed") << log::field("err", error);
+                    log::critical(lcUiBackend, "backend.start_failed", {"err", error});
             });
     connect(&facade, &application::BackendFacade::persistenceWarning, this,
             [](application::PersistenceArea area) {
-                qCWarning(lcUiBackend)
-                    << log::event("backend.persistence_warning") << log::field("area", area);
+                log::warn(lcUiBackend, "backend.persistence_warning", {"area", area});
             });
     connect(&facade, &application::BackendFacade::stopped, this, [this](bool persistenceFailed) {
         if (persistenceFailed)
-            qCWarning(lcUiBackend) << log::event("backend.stopped_unsaved");
+            log::warn(lcUiBackend, "backend.stopped_unsaved");
         finish();
     });
     connect(&facade, &application::BackendFacade::closeDelayed, this, [this] {
-        qCWarning(lcUiBackend) << log::event("backend.close_delayed");
+        log::warn(lcUiBackend, "backend.close_delayed");
         QTimer::singleShot(kGraceMs, this, [this] {
             if (m_done) {
-                qCWarning(lcUiBackend) << log::event("backend.quit_before_stopped");
+                log::warn(lcUiBackend, "backend.quit_before_stopped");
                 finish();
             }
         });

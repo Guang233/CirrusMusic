@@ -132,13 +132,11 @@ Request BackendImages::image(const QString& key, int size, Reply<QByteArray> rep
                     m_bytes.insert(id, new QByteArray(*bytes),
                                    int(std::max<qsizetype>(1, bytes->size() / 1024)));
                     if (const auto it = m_fetches.constFind(id); it != m_fetches.cend())
-                        qCDebug(lcUiBackend)
-                            << log::event("cover.served")
-                            << log::field("from", result.status == domain::CacheStatus::Hit
-                                                      ? "disk"
-                                                      : "network")
-                            << log::field("bytes", bytes->size())
-                            << log::field("ms", (*it)->elapsed.elapsed());
+                        log::debug(lcUiBackend, "cover.served",
+                                   {{"from", result.status == domain::CacheStatus::Hit ? "disk"
+                                                                                       : "network"},
+                                    {"bytes", bytes->size()},
+                                    {"ms", (*it)->elapsed.elapsed()}});
                 } else {
                     outcome.failure = Failure{failureOf(result.error), std::nullopt};
                     warnFailed(result.error);
@@ -179,10 +177,9 @@ void BackendImages::warnFailed(domain::CacheError error)
     const bool first = !(m_warned & bit);
     m_warned |= bit;
     if (first)
-        qCWarning(lcUiBackend) << log::event("cover.failed") << log::field("err", error)
-                               << log::field("first", true);
+        log::warn(lcUiBackend, "cover.failed", {{"err", error}, {"first", true}});
     else
-        qCDebug(lcUiBackend) << log::event("cover.failed") << log::field("err", error);
+        log::debug(lcUiBackend, "cover.failed", {"err", error});
 }
 
 void BackendImages::finish(const QString& id, Outcome<QByteArray> outcome)

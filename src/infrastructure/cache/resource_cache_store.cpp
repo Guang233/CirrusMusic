@@ -403,21 +403,21 @@ class StoreConnection : public QObject
                             QString::fromLatin1(u.why.reason ? u.why.reason : "") + u'/' + u.file;
         if (!u.step) {
             if (!m_unusable.isEmpty())
-                qCInfo(lcCache) << log::event("resource_cache.usable")
-                                << log::field("dir", log::path(m_root));
+                log::info(lcCache, "resource_cache.usable", {"dir", log::path(m_root)});
             m_unusable.clear();
             return;
         }
         if (key == m_unusable)
             return;
         m_unusable = key;
-        qCWarning(lcCache) << log::event("resource_cache.unusable")
-                           << log::field("dir", log::path(m_root)) << log::field("step", u.step)
-                           << log::fieldIf(u.why.reason != nullptr, "reason",
-                                           QString::fromLatin1(u.why.reason ? u.why.reason : ""))
-                           << log::fieldIf(u.why.error != 0, "os_error", qint64(u.why.error))
-                           << log::fieldIf(!u.file.isEmpty(), "file", u.file)
-                           << log::fieldIf(!u.detail.isEmpty(), "detail", log::message(u.detail));
+        log::warn(lcCache, "resource_cache.unusable",
+                  {{"dir", log::path(m_root)},
+                   {"step", u.step},
+                   log::fieldIf(u.why.reason != nullptr, "reason",
+                                QString::fromLatin1(u.why.reason ? u.why.reason : "")),
+                   log::fieldIf(u.why.error != 0, "os_error", qint64(u.why.error)),
+                   log::fieldIf(!u.file.isEmpty(), "file", u.file),
+                   log::fieldIf(!u.detail.isEmpty(), "detail", log::message(u.detail))});
     }
 
     bool open()

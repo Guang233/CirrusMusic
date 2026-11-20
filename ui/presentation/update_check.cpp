@@ -95,9 +95,8 @@ void UpdateCheck::start(bool manual)
 {
     if (m_reply)
         return;
-    qCInfo(lcUi) << log::event("update.check")
-                 << log::field("trigger",
-                               manual ? QStringLiteral("manual") : QStringLiteral("auto"));
+    log::info(lcUi, "update.check",
+              {"trigger", manual ? QStringLiteral("manual") : QStringLiteral("auto")});
     if (!m_network)
         m_network = new QNetworkAccessManager(this);
     QNetworkRequest request(
@@ -140,13 +139,13 @@ void UpdateCheck::finish(QNetworkReply* reply, bool manual)
         failure = Network;
     }
 
-    qCInfo(lcUi) << log::event("update.result")
-                 << log::field("outcome", QString::fromLatin1(outcomeName(status)))
-                 << log::field("status", httpStatus)
-                 << log::fieldIf(status != Failed && !m_release.version.isEmpty(), "latest",
-                                 m_release.version)
-                 << log::fieldIf(reply->error() != QNetworkReply::NoError, "err",
-                                 log::message(reply->errorString()));
+    log::info(lcUi, "update.result",
+              {{"outcome", QString::fromLatin1(outcomeName(status))},
+               {"status", httpStatus},
+               log::fieldIf(status != Failed && !m_release.version.isEmpty(), "latest",
+                            m_release.version),
+               log::fieldIf(reply->error() != QNetworkReply::NoError, "err",
+                            log::message(reply->errorString()))});
 
     m_settings->setUpdatesLastCheck(QDateTime::currentMSecsSinceEpoch());
     // A failure is told only for a check by hand; one on its own leaves what was known.
@@ -176,7 +175,7 @@ bool UpdateCheck::openRelease() const
 {
     if (!updates::isReleasePage(m_release.page))
         return false;
-    qCInfo(lcUiNav) << log::event("update.open_release");
+    log::info(lcUiNav, "update.open_release");
     return QDesktopServices::openUrl(m_release.page);
 }
 

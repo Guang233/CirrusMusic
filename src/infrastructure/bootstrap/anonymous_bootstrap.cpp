@@ -216,8 +216,7 @@ void AnonymousBootstrap::registered(quint64 id, domain::SessionToken context,
                           return;
                       }
                       if (error != secrets::SecretError::None) {
-                          qCWarning(lcSecrets)
-                              << log::event("guest.persist_failed") << log::field("err", error);
+                          log::warn(lcSecrets, "guest.persist_failed", {"err", error});
                           emit persistFailed(error); // still usable for this process
                       } else {
                           m_ignoreStoredToken = false;
@@ -264,13 +263,14 @@ void AnonymousBootstrap::eraseToken()
 void AnonymousBootstrap::complete(BootstrapResult result)
 {
     if (result.error == BootstrapError::None || result.error == BootstrapError::Canceled)
-        qCInfo(lcAuth) << log::event("guest.bootstrap") << log::field("err", result.error)
-                       << log::field("restored", result.restored);
+        log::info(lcAuth, "guest.bootstrap",
+                  {{"err", result.error}, {"restored", result.restored}});
     else
-        qCWarning(lcAuth) << log::event("guest.bootstrap") << log::field("err", result.error)
-                          << log::field("key_err", result.keyError)
-                          << log::field("api_err", result.apiError)
-                          << log::field("code", result.businessCode.value_or(0));
+        log::warn(lcAuth, "guest.bootstrap",
+                  {{"err", result.error},
+                   {"key_err", result.keyError},
+                   {"api_err", result.apiError},
+                   {"code", result.businessCode.value_or(0)}});
     m_stage = Stage::Idle;
     m_attempt = {};
     emit finished(result);

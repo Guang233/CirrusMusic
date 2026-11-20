@@ -114,9 +114,8 @@ CoverPalette extractCoverPalette(const QString& path)
         reader.setScaledSize(size.scaled(kDecodeEdge, kDecodeEdge, Qt::KeepAspectRatio));
     QImage image = reader.read();
     if (image.isNull()) {
-        qCWarning(lcUiTheme) << log::event("palette.decode_failed")
-                             << log::field("file", log::path(path))
-                             << log::field("err", reader.error());
+        log::warn(lcUiTheme, "palette.decode_failed",
+                  {{"file", log::path(path)}, {"err", reader.error()}});
         return {};
     }
     return extractCoverPalette(std::move(image));

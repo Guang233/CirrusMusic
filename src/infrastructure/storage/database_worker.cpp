@@ -299,9 +299,9 @@ void DatabaseWorker::open()
         [this, executor = m_executor] {
             const auto error = executor->open();
             if (error == StorageError::None)
-                qCInfo(lcStorage) << log::event("db.opened");
+                log::info(lcStorage, "db.opened");
             else
-                qCCritical(lcStorage) << log::event("db.open_failed") << log::field("err", error);
+                log::critical(lcStorage, "db.open_failed", {"err", error});
             deliver([this, error] { emit opened(error); });
         },
         Qt::QueuedConnection);

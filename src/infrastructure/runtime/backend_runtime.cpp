@@ -52,9 +52,9 @@ class BackendWorker final : public QObject
             return;
         m_started = true;
         m_clock.start();
-        qCInfo(lcApp) << log::event("backend.start")
-                      << log::field("db", log::path(m_config.databasePath))
-                      << log::field("audio_cache", !m_config.audioCacheRoot.isEmpty());
+        log::info(lcApp, "backend.start",
+                  {{"db", log::path(m_config.databasePath)},
+                   {"audio_cache", !m_config.audioCacheRoot.isEmpty()}});
         if (!QDir::isAbsolutePath(m_config.databasePath) ||
             m_config.keychainService.trimmed().isEmpty()) {
             startup(StartupError::Configuration);
@@ -365,7 +365,7 @@ class BackendWorker final : public QObject
         m_closing = true;
         m_ready = false;
         m_clock.start();
-        qCInfo(lcApp) << log::event("backend.close");
+        log::info(lcApp, "backend.close");
         if (m_cache)
             m_cache->close();
         // Stop producers, not stored identity. In particular, do NOT call signOut
@@ -437,8 +437,7 @@ class BackendWorker final : public QObject
         if (m_closing)
             return;
         m_ready = error == StartupError::None || error == StartupError::GuestBootstrap;
-        qCInfo(lcApp) << log::event("backend.started") << log::field("err", error)
-                      << log::field("ms", m_clock.elapsed());
+        log::info(lcApp, "backend.started", {{"err", error}, {"ms", m_clock.elapsed()}});
         auto event = makeEvent(Kind::Started);
         event.startupError = error;
         emit delivered(event);
@@ -674,9 +673,8 @@ class BackendWorker final : public QObject
             // DatabaseWorker joins its own SQL executor here, NOT on the UI thread.
             // Queued DB jobs settle and the process lock is released before stopped.
             m_database.reset();
-            qCInfo(lcApp) << log::event("backend.drained")
-                          << log::field("persistence_failed", failed)
-                          << log::field("ms", m_clock.elapsed());
+            log::info(lcApp, "backend.drained",
+                      {{"persistence_failed", failed}, {"ms", m_clock.elapsed()}});
             emit drained(failed);
         });
     }

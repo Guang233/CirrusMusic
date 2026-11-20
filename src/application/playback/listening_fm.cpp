@@ -56,7 +56,7 @@ bool ListeningSession::playFm(QUuid entry, bool automatic)
     auto candidate = m_queue;
     if (!candidate.select(entry))
         return false;
-    qCInfo(lcPlayback) << log::event("fm.replay") << log::field("automatic", automatic);
+    log::info(lcPlayback, "fm.replay", {"automatic", automatic});
     return begin(std::move(candidate),
                  m_intent == TransportIntent::Pause ? m_intent : TransportIntent::Play, m_quality,
                  automatic, true);
@@ -67,7 +67,7 @@ bool ListeningSession::resumeFm(QUuid entry, AudioQuality quality)
     if (!restoredFm() || !m_fm || m_backend.snapshot().phase != SessionPhase::Authenticated ||
         qualityName(quality).isEmpty())
         return false;
-    qCInfo(lcPlayback) << log::event("fm.resume") << log::field("from_new", entry.isNull());
+    log::info(lcPlayback, "fm.resume", {"from_new", entry.isNull()});
     auto songs = m_queue;
     if (entry.isNull()) {
         // A new song after them: Personal FM from the start, its songs so far kept.
