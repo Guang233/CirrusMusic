@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 下载最新版本
+    url: https://github.com/Guang233/CirrusMusic/releases/latest
+    about: 提交问题前，请先确认在最新版本上还能复现。
+  - name: 使用说明
+    url: https://github.com/Guang233/CirrusMusic#readme
+    about: 安装方法、数据存放位置等常见问题见 README。

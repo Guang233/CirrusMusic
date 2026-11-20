@@ -1,0 +1,48 @@
+name: 功能建议
+description: 提出新功能或改进现有功能的想法
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的建议！提交之前请先 [搜索已有的 Issues](https://github.com/Guang233/CirrusMusic/issues?q=is%3Aissue)，看看是不是已经有人提过；有的话在原 Issue 里点个 👍 就好。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已经搜索过已有的 Issues，没有找到相同的建议
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 遇到的问题或需求
+      description: 现在用起来哪里不方便？想在什么场景下做到什么？
+      placeholder: 比如：我想在不打开播放页的情况下 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 希望的做法
+      description: 你希望它怎样工作？可以附上草图、截图或其他应用的例子。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的其他做法
+      description: 有没有别的办法也能解决？现在是怎么绕过去的？
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他信息
+    validations:
+      required: false
