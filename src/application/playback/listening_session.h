@@ -156,6 +156,11 @@ class ListeningSession final : public QObject
     // The next song is handed to the backend ahead of time so it follows without a gap
     // (docs/tasks/audio-engine.md §4.5); redone when the queue changes.
     void refreshPreload();
+    // Personal FM's: the next of its songs so far after going back, else the supply's
+    // first, looked at and taken only once it plays (docs/tasks/automix.md §7).
+    void refreshFmPreload();
+    [[nodiscard]] PlaybackQueue fmQueueWith(const domain::SongId& song) const;
+    void requestPreload(domain::SongId song, QUuid entry, PlaybackQueue queue, bool fromFm);
     void adoptAdvance();
     bool enterFmWait(bool automatic, bool stopMedia);
     void scheduleFm();
@@ -210,6 +215,7 @@ class ListeningSession final : public QObject
         QUuid entry;
         domain::SongId song;
         PlaybackQueue queue; // the queue once it plays
+        bool fromFm = false; // Personal FM's supply's next: taken from it when it plays
     };
     std::optional<Preload> m_preload;
     bool m_preloadChecked = false; // refreshPreload() ran for this load
