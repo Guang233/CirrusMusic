@@ -60,8 +60,8 @@ ListeningReportGateway::ListeningReportGateway(application::SessionCoordinator& 
                 // The answer's shape (field names only, never values): what to look at
                 // when the provider accepts a report but doesn't count it.
                 if (api.error == ApiError::None)
-                    qCDebug(lcReport) << log::event("report.response") << log::field("id", id)
-                                      << log::field("keys", api.decoded.object.keys().join(u','));
+                    log::debug(lcReport, "report.response",
+                               {{"id", id}, {"keys", api.decoded.object.keys().join(u',')}});
                 const auto& p = m_pending[id];
                 if (p.context != token || !m_session.accepts(p.context) ||
                     m_session.snapshot().phase != SessionPhase::Authenticated ||
@@ -140,17 +140,19 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
         parameters.insert(QStringLiteral("time"), report.playedSeconds);
         parameters.insert(QStringLiteral("end"), endName(report.end));
     }
-    qCDebug(lcReport) << log::event("report.send") << log::field("id", id)
-                      << log::field("event", report.eventId) << log::field("action", report.action)
-                      << log::field("song", report.song.value)
-                      << log::field("source", report.source)
-                      << log::field("source_id",
-                                    report.source == ListeningReportSource::Search
-                                        ? QStringLiteral("len:%1").arg(report.sourceId.size())
-                                        : report.sourceId)
-                      << log::field("seconds", report.playedSeconds)
-                      << log::field("duration", report.durationSeconds)
-                      << log::field("quality", report.quality) << log::field("end", report.end);
+    log::debug(lcReport, "report.send",
+               {{"id", id},
+                {"event", report.eventId},
+                {"action", report.action},
+                {"song", report.song.value},
+                {"source", report.source},
+                {"source_id", report.source == ListeningReportSource::Search
+                                  ? QStringLiteral("len:%1").arg(report.sourceId.size())
+                                  : report.sourceId},
+                {"seconds", report.playedSeconds},
+                {"duration", report.durationSeconds},
+                {"quality", report.quality},
+                {"end", report.end}});
     const auto apiId = m_client->submit(context,
                                         active ? ApiOperation::ListeningActive
                                         : play ? ApiOperation::ListeningPlay
@@ -183,16 +185,15 @@ void ListeningReportGateway::finish(quint64 id, ListeningReportResult result)
     m_ids.remove(p.apiId);
     result.eventId = p.report.eventId;
     result.action = p.report.action;
-    const auto fields =
-        log::join({log::field("id", id), log::field("event", p.report.eventId),
-                   log::field("song", p.report.song.value), log::field("outcome", result.outcome),
-                   log::field("err", result.error),
-                   log::field("code", result.providerCode ? QString::number(*result.providerCode)
-                                                          : QStringLiteral("-"))});
-    if (result.outcome == ReportOutcome::Acknowledged)
-        qCInfo(lcReport) << log::event("report.result") << fields;
-    else
-        qCWarning(lcReport) << log::event("report.result") << fields;
+    log::write(result.outcome == ReportOutcome::Acknowledged ? QtInfoMsg : QtWarningMsg, lcReport,
+               "report.result",
+               {{"id", id},
+                {"event", p.report.eventId},
+                {"song", p.report.song.value},
+                {"outcome", result.outcome},
+                {"err", result.error},
+                {"code", result.providerCode ? QString::number(*result.providerCode)
+                                             : QStringLiteral("-")}});
     emit completed(id, p.context, result);
 }
 } // namespace cirrus::netease

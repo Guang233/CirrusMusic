@@ -31,7 +31,7 @@ using namespace cirrus;
 
 namespace
 {
-QString text(const log::Text& t) { return t.text; }
+QString text(const log::Fields& fields) { return fields.text(); }
 
 QString readAll(const QString& directory)
 {
@@ -77,20 +77,19 @@ class LoggingTest : public QObject
 
     void fieldsAreSafeAndReadable()
     {
-        QCOMPARE(text(log::event("load.failed")), "load.failed");
-        QCOMPARE(text(log::field("ms", 203)), "ms=203");
-        QCOMPARE(text(log::field("ok", true)), "ok=true");
-        QCOMPARE(text(log::field("ratio", 0.5)), "ratio=0.5");
-        QCOMPARE(text(log::field("op", QStringLiteral("song/url/v1"))), "op=song/url/v1");
-        QCOMPARE(text(log::field("os", "Arch Linux")), "os=\"Arch Linux\"");
-        QCOMPARE(text(log::field("v", QStringLiteral("a\"b\\c"))), "v=\"a\\\"b\\\\c\"");
-        QCOMPARE(text(log::field("v", QString())), "v=\"\"");
-        QCOMPARE(text(log::field("v", QStringLiteral("a=b"))), "v=\"a=b\"");
-        QCOMPARE(text(log::field("key", Qt::Key_A)), "key=Key_A"); // Q_ENUM names
-        QCOMPARE(text(log::field("e", demo::Plain::C)), "e=2");
-        QCOMPARE(text(log::field("e", demo::Named::Broken)), "e=broken"); // logName()
+        QCOMPARE(text({"ms", 203}), "ms=203");
+        QCOMPARE(text({"ok", true}), "ok=true");
+        QCOMPARE(text({"ratio", 0.5}), "ratio=0.5");
+        QCOMPARE(text({"op", QStringLiteral("song/url/v1")}), "op=song/url/v1");
+        QCOMPARE(text({"os", "Arch Linux"}), "os=\"Arch Linux\"");
+        QCOMPARE(text({"v", QStringLiteral("a\"b\\c")}), "v=\"a\\\"b\\\\c\"");
+        QCOMPARE(text({"v", QString()}), "v=\"\"");
+        QCOMPARE(text({"v", QStringLiteral("a=b")}), "v=\"a=b\"");
+        QCOMPARE(text({"key", Qt::Key_A}), "key=Key_A"); // Q_ENUM names
+        QCOMPARE(text({"e", demo::Plain::C}), "e=2");
+        QCOMPARE(text({"e", demo::Named::Broken}), "e=broken"); // logName()
         const QString longValue(500, u'a');
-        QCOMPARE(text(log::field("v", longValue)).size(), 2 + 200 + 1);
+        QCOMPARE(text({"v", longValue}).size(), 2 + 200 + 1);
     }
 
     void safeForms()
@@ -124,17 +123,17 @@ class LoggingTest : public QObject
     {
         QTemporaryDir dir;
         log::install(false);
-        qCInfo(lcPlayback) << log::event("held") << log::field("n", 1); // before the file
+        log::info(lcPlayback, "held", {"n", 1}); // before the file
         QVERIFY(log::currentFile().isEmpty());
         QVERIFY(log::start(options(dir)));
         QVERIFY(QFileInfo(log::currentFile()).fileName().startsWith("cirrus-"));
-        qCWarning(lcNet) << log::event("request.failed") << log::field("req", 7);
+        log::warn(lcNet, "request.failed", {"req", 7});
         qWarning("two\nlines");
         qWarning("see https://interface.music.163.com/eapi/x?token=secret#frag now");
         qWarning("%s", qPrintable(QDir::homePath() + "/private/file"));
         qCDebug(lcMedia) << "hidden by default";
         log::setVerbose(true);
-        qCDebug(lcMedia) << log::event("shown");
+        log::debug(lcMedia, "shown");
         log::setVerbose(false);
         log::flush();
         const QString file = log::currentFile();
@@ -177,13 +176,13 @@ class LoggingTest : public QObject
     {
         QVERIFY(text(log::fieldIf(false, "retry_after", QStringLiteral("5"))).isEmpty());
         QCOMPARE(text(log::fieldIf(true, "status", 503)), "status=503");
-        QCOMPARE(
-            text(log::join({log::field("a", 1), log::fieldIf(false, "b", 2), log::field("c", 3)})),
-            "a=1 c=3");
-        QString out;
-        QDebug(&out).noquote() << log::event("x") << log::fieldIf(false, "b", 2)
-                               << log::field("c", 3);
-        QCOMPARE(out, "x c=3 "); // one space each (the log's handler drops the last one)
+        QCOMPARE(text({{"a", 1}, log::fieldIf(false, "b", 2), {"c", 3}}), "a=1 c=3");
+        // Fields within fields, and built up a field at a time.
+        const log::Fields more{{"b", 2}, {"c", 3}};
+        QCOMPARE(text({{"a", 1}, more, log::Fields()}), "a=1 b=2 c=3");
+        log::Fields built;
+        built.add("a", 1).add(log::fieldIf(false, "x", 0)).add(more);
+        QCOMPARE(text(built), "a=1 b=2 c=3");
 
         log::Durations stats(0);
         QVERIFY(!stats.due());
@@ -206,20 +205,20 @@ class LoggingTest : public QObject
         QTemporaryDir dir;
         log::install(false);
         QVERIFY(log::start(options(dir)));
-        qCDebug(lcMedia) << log::event("before") << log::field("n", 1);
-        qCInfo(lcPlayback) << log::event("info");
-        qCWarning(lcNet) << log::event("failed");
-        qCWarning(lcNet) << log::event("failed_again"); // nothing new to bring
-        qCDebug(lcMedia) << log::event("between");
+        log::debug(lcMedia, "before", {"n", 1});
+        log::info(lcPlayback, "info");
+        log::warn(lcNet, "failed");
+        log::warn(lcNet, "failed_again"); // nothing new to bring
+        log::debug(lcMedia, "between");
         log::setContext("page", QStringLiteral("AlbumPage"));
         log::setContext("dialog", QStringLiteral("LoginDialog"));
         log::setContext("dialog", QString());
         qWarning("from qt");
         log::setContext("page", QString());
-        qCDebug(lcMedia) << log::event("marked");
+        log::debug(lcMedia, "marked");
         log::writeContext("mark");
         log::writeContext("mark"); // nothing new: no empty block
-        qCDebug(lcMedia) << log::event("never");
+        log::debug(lcMedia, "never");
         log::flush();
         const QString file = log::currentFile();
         log::shutdown();
@@ -341,7 +340,7 @@ class LoggingTest : public QObject
         log::install(false);
         QVERIFY(log::start(o));
         for (int i = 0; i < 200; ++i)
-            qCInfo(lcApp) << log::event("filler") << log::field("i", i) << QString(40, u'y');
+            log::info(lcApp, "filler", {{"i", i}, {"pad", QString(40, u'y')}});
         log::flush();
         QVERIFY(QFileInfo(log::currentFile())
                     .fileName()
@@ -375,8 +374,8 @@ class LoggingTest : public QObject
         log::install(false);
         QVERIFY(log::start(options(dir)));
         for (int i = 0; i < 100; ++i)
-            qCWarning(lcMedia) << log::event("same");
-        qCWarning(lcMedia) << log::event("different");
+            log::warn(lcMedia, "same");
+        log::warn(lcMedia, "different");
         log::shutdown();
         const QString all = readAll(dir.filePath("logs"));
         QCOMPARE(all.count("cirrus.media same"), 20);
@@ -391,7 +390,7 @@ class LoggingTest : public QObject
         oldFile(o.directory, "cirrus-20261108-100000-12.log", 1000, 1);
         log::install(false);
         QVERIFY(log::start(o));
-        qCInfo(lcApp) << log::event("hello");
+        log::info(lcApp, "hello");
         log::flush();
         auto list = log::files();
         QCOMPARE(list.size(), 2);
@@ -428,8 +427,7 @@ class LoggingTest : public QObject
         for (int t = 0; t < 4; ++t) {
             threads.append(QThread::create([t] {
                 for (int i = 0; i < 500; ++i)
-                    qCInfo(lcPlayback)
-                        << log::event("tick") << log::field("t", t) << log::field("i", i);
+                    log::info(lcPlayback, "tick", {{"t", t}, {"i", i}});
             }));
             threads.last()->setObjectName(QStringLiteral("worker%1").arg(t));
             threads.last()->start();

@@ -183,8 +183,7 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
                         m_state.formError = tr("登录失败");
                     break;
                 case Attempt::Restore:
-                    qCWarning(lcUiBackend)
-                        << log::event("account.restore_failed") << log::field("err", failure.error);
+                    log::warn(lcUiBackend, "account.restore_failed", {"err", failure.error});
                     // No usable record (the backend forgets a damaged one): stop trying.
                     if (failure.error == AuthError::CredentialRejected)
                         QSettings().setValue(kRememberedKey, false);
@@ -199,7 +198,7 @@ BackendSession::BackendSession(runtime::BackendRuntime& runtime, QObject* parent
                 if (const auto* saved = std::get_if<bool>(&result))
                     QSettings().setValue(kRememberedKey, *saved);
                 else
-                    qCWarning(lcUiBackend) << log::event("account.save_failed");
+                    log::warn(lcUiBackend, "account.save_failed");
             });
     connect(facade, &BackendFacade::smsCodeSent, this,
             [this](domain::SessionToken, const application::SmsCodeResult& result) {

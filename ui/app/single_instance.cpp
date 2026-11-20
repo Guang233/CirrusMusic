@@ -84,8 +84,7 @@ bool SingleInstance::claim()
         socket.disconnectFromServer();
         return false;
     }
-    qCWarning(lcApp) << log::event("app.single_instance_stale")
-                     << log::field("lock", log::path(m_lock->fileName()));
+    log::warn(lcApp, "app.single_instance_stale", {"lock", log::path(m_lock->fileName())});
     m_lock.reset();
     return true;
 }
@@ -105,8 +104,7 @@ void SingleInstance::listen(const QString& name)
         }
     });
     if (!m_server->listen(name))
-        qCWarning(lcApp) << log::event("app.single_instance_listen_failed")
-                         << log::field("err", m_server->serverError());
+        log::warn(lcApp, "app.single_instance_listen_failed", {"err", m_server->serverError()});
 }
 
 void SingleInstance::read(QLocalSocket* socket)

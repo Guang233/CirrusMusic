@@ -79,7 +79,7 @@ Diagnostics::Diagnostics(AppSettings* settings, QObject* parent)
 {
     m_expiry.setSingleShot(true);
     connect(&m_expiry, &QTimer::timeout, this, [this] {
-        qCInfo(lcLog) << log::event("log.verbose_expired");
+        log::info(lcLog, "log.verbose_expired");
         applyVerbose();
     });
     if (m_settings)
@@ -115,7 +115,7 @@ void Diagnostics::applyVerbose()
         m_expiry.start(std::chrono::milliseconds(qMin(left, VerboseMs)));
     if (on != log::verbose()) {
         log::setVerbose(on);
-        qCInfo(lcLog) << log::event("log.verbose") << log::field("on", on);
+        log::info(lcLog, "log.verbose", {"on", on});
     }
     emit verboseChanged();
 }
@@ -250,14 +250,14 @@ void Diagnostics::exportTo(const QUrl& target, const QStringList& names, const Q
                 const QString file = target.isLocalFile() ? target.toLocalFile() : QString();
                 const bool ok = !file.isEmpty() && log::writeArchive(file, paths, entries);
                 if (ok)
-                    qCInfo(lcLog) << log::event("log.exported") << log::field("files", paths.size())
-                                  << log::field("reports", entries.size())
-                                  << log::field("description", !text.isEmpty())
-                                  << log::field("to", log::path(file));
+                    log::info(lcLog, "log.exported",
+                              {{"files", paths.size()},
+                               {"reports", entries.size()},
+                               {"description", !text.isEmpty()},
+                               {"to", log::path(file)}});
                 else
-                    qCWarning(lcLog)
-                        << log::event("log.export_failed") << log::field("files", paths.size())
-                        << log::field("to", log::path(file));
+                    log::warn(lcLog, "log.export_failed",
+                              {{"files", paths.size()}, {"to", log::path(file)}});
                 m_exporting = false;
                 emit exportingChanged();
                 emit exportFinished(ok);
@@ -274,13 +274,13 @@ QString Diagnostics::packageName()
 void Diagnostics::clear()
 {
     const qint64 freed = log::clearOld();
-    qCInfo(lcLog) << log::event("log.cleared") << log::field("bytes", freed);
+    log::info(lcLog, "log.cleared", {"bytes", freed});
     refresh();
 }
 
 QString noticed(const char* id, const QString& text)
 {
-    qCInfo(lcUiNav) << log::event("ui.notice") << log::field("id", id);
+    log::info(lcUiNav, "ui.notice", {"id", id});
     return text;
 }
 
@@ -332,8 +332,7 @@ void Diagnostics::pageShown(QObject* page, int depth, const QVariantMap& propert
         m_pages.append(QStringLiteral("?"));
     m_pages.append(entry);
     log::setContext("page", name);
-    qCInfo(lcUiNav) << log::event("nav.page") << log::field("page", name) << log::field("ids", id)
-                    << log::field("depth", depth) << log::field("via", via);
+    log::info(lcUiNav, "nav.page", {{"page", name}, {"ids", id}, {"depth", depth}, {"via", via}});
 }
 
 void Diagnostics::playerShown(bool shown)
@@ -342,14 +341,13 @@ void Diagnostics::playerShown(bool shown)
         return;
     m_player = shown;
     log::setContext("player", shown ? QStringLiteral("open") : QString());
-    qCInfo(lcUiNav) << log::event("player.shown") << log::field("shown", shown);
+    log::info(lcUiNav, "player.shown", {"shown", shown});
 }
 
 void Diagnostics::notice(const QString& id)
 {
     static const QRegularExpression safe(QStringLiteral("^[a-z0-9_.]{1,64}$"));
-    qCInfo(lcUiNav) << log::event("ui.notice")
-                    << log::field("id", safe.match(id).hasMatch() ? id : QStringLiteral("?"));
+    log::info(lcUiNav, "ui.notice", {"id", safe.match(id).hasMatch() ? id : QStringLiteral("?")});
 }
 
 void Diagnostics::watch(QQuickWindow* window)
@@ -371,8 +369,7 @@ void Diagnostics::watch(QQuickWindow* window)
 #endif
             QMetaObject::invokeMethod(this, [this, text, device, backend] {
                 m_graphics = text;
-                qCInfo(lcApp) << log::event("app.gpu") << log::field("backend", backend)
-                              << log::field("device", device);
+                log::info(lcApp, "app.gpu", {{"backend", backend}, {"device", device}});
             });
         },
         Qt::DirectConnection);
@@ -393,11 +390,9 @@ void Diagnostics::focusMoved()
     if (popup == m_popup)
         return;
     if (!m_popup.isEmpty())
-        qCInfo(lcUiNav) << log::event("ui.popup") << log::field("name", m_popup)
-                        << log::field("open", false);
+        log::info(lcUiNav, "ui.popup", {{"name", m_popup}, {"open", false}});
     if (!popup.isEmpty())
-        qCInfo(lcUiNav) << log::event("ui.popup") << log::field("name", popup)
-                        << log::field("open", true);
+        log::info(lcUiNav, "ui.popup", {{"name", popup}, {"open", true}});
     m_popup = popup;
     log::setContext("popup", popup);
 }
@@ -405,7 +400,7 @@ void Diagnostics::focusMoved()
 void Diagnostics::mark()
 {
     ++m_marks;
-    qCInfo(lcUiNav) << log::event("user.mark") << log::field("n", m_marks);
+    log::info(lcUiNav, "user.mark", {"n", m_marks});
     logState("mark");
     log::writeContext("mark");
     emit marked();
@@ -414,44 +409,35 @@ void Diagnostics::mark()
 // ui.state (§4.4): what the user was looking at, without a picture of it.
 void Diagnostics::logState(const char* reason) const
 {
-    const auto fields = [this] {
-        QList<log::Text> list;
-        list.append(
-            log::field("pages", m_pages.isEmpty() ? QStringLiteral("-") : m_pages.join(u'>')));
-        list.append(log::field("popup", m_popup.isEmpty() ? QStringLiteral("-") : m_popup));
-        list.append(log::field("player", m_player));
-        if (m_window) {
-            list.append(log::field(
-                "window", QStringLiteral("%1x%2").arg(m_window->width()).arg(m_window->height())));
-            list.append(log::field("visibility", m_window->visibility()));
-            list.append(log::field("active", m_window->isActive()));
-            list.append(log::field("focus", typeName(m_window->activeFocusItem())));
-            if (const QScreen* screen = m_window->screen()) {
-                list.append(log::field("screen", QStringLiteral("%1x%2")
-                                                     .arg(screen->size().width())
-                                                     .arg(screen->size().height())));
-                list.append(log::field("dpr", m_window->devicePixelRatio()));
-                list.append(log::field("hz", screen->refreshRate()));
-            }
-            list.append(log::field("screens", QGuiApplication::screens().size()));
-        }
-        if (m_settings) {
-            list.append(log::field("theme", m_settings->themeMode()));
-            list.append(log::field("seed", m_settings->seedSource()));
-            list.append(log::field("variant", m_settings->variant()));
-            list.append(log::field("font", m_settings->fontSource()));
-            list.append(log::field("titlebar", m_settings->titleBar()));
-            list.append(log::field("rail", m_settings->railExpanded()));
-            list.append(log::field("reduced_motion", m_settings->reducedMotion()));
-            list.append(log::field("player_view", m_settings->playerView()));
-            list.append(log::field("player_theme", m_settings->playerTheme()));
-        }
-        QString text;
-        for (const auto& t : std::as_const(list))
-            text += (text.isEmpty() ? QString() : QStringLiteral(" ")) + t.text;
-        return log::Text{text};
-    }();
-    qCInfo(lcUiNav) << log::event("ui.state") << log::field("reason", reason) << fields;
+    log::Fields fields{{"reason", reason},
+                       {"pages", m_pages.isEmpty() ? QStringLiteral("-") : m_pages.join(u'>')},
+                       {"popup", m_popup.isEmpty() ? QStringLiteral("-") : m_popup},
+                       {"player", m_player}};
+    if (m_window) {
+        fields.add("window", QStringLiteral("%1x%2").arg(m_window->width()).arg(m_window->height()))
+            .add("visibility", m_window->visibility())
+            .add("active", m_window->isActive())
+            .add("focus", typeName(m_window->activeFocusItem()));
+        if (const QScreen* screen = m_window->screen())
+            fields
+                .add("screen", QStringLiteral("%1x%2")
+                                   .arg(screen->size().width())
+                                   .arg(screen->size().height()))
+                .add("dpr", m_window->devicePixelRatio())
+                .add("hz", screen->refreshRate());
+        fields.add("screens", QGuiApplication::screens().size());
+    }
+    if (m_settings)
+        fields.add("theme", m_settings->themeMode())
+            .add("seed", m_settings->seedSource())
+            .add("variant", m_settings->variant())
+            .add("font", m_settings->fontSource())
+            .add("titlebar", m_settings->titleBar())
+            .add("rail", m_settings->railExpanded())
+            .add("reduced_motion", m_settings->reducedMotion())
+            .add("player_view", m_settings->playerView())
+            .add("player_theme", m_settings->playerTheme());
+    log::info(lcUiNav, "ui.state", fields);
 }
 
 void Diagnostics::watch(QQmlEngine* engine)
@@ -466,18 +452,18 @@ void Diagnostics::watch(QQmlEngine* engine)
             else
                 file =
                     log::path(error.url().isLocalFile() ? error.url().toLocalFile() : file).value;
-            const auto fields = log::join(
-                {log::field("file", file.isEmpty() ? QStringLiteral("-") : file),
-                 log::field("line", error.line()), log::field("msg", error.description())});
+            const log::Fields fields{{"file", file.isEmpty() ? QStringLiteral("-") : file},
+                                     {"line", error.line()},
+                                     {"msg", error.description()}};
             // CoverProvider's text for a cover the backend could not get (cover.failed).
             if (error.description().endsWith(u": cover is unavailable"))
-                qCDebug(lcUiQml) << log::event("qml.warning") << fields;
+                log::debug(lcUiQml, "qml.warning", fields);
             else if (error.messageType() == QtCriticalMsg || error.messageType() == QtFatalMsg)
-                qCCritical(lcUiQml) << log::event("qml.error") << fields;
+                log::critical(lcUiQml, "qml.error", fields);
             else if (error.messageType() == QtWarningMsg)
-                qCWarning(lcUiQml) << log::event("qml.warning") << fields;
+                log::warn(lcUiQml, "qml.warning", fields);
             else
-                qCInfo(lcUiQml) << log::event("qml.message") << fields;
+                log::info(lcUiQml, "qml.message", fields);
         }
     });
 }

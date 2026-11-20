@@ -104,13 +104,13 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
     const auto session = m_facade.snapshot();
     if (row.source == ListeningMode::PersonalFm || row.accountId.isEmpty() ||
         session.phase != SessionPhase::Authenticated || session.accountId != row.accountId) {
-        qCInfo(lcReport) << log::event("report.skip") << log::field("action", action)
-                         << log::field("reason", row.source == ListeningMode::PersonalFm ? "fm"
-                                                 : row.accountId.isEmpty()               ? "guest"
-                                                 : session.phase != SessionPhase::Authenticated
-                                                     ? "signed_out"
-                                                     : "other_account")
-                         << log::field("song", row.song.value);
+        log::info(lcReport, "report.skip",
+                  {{"action", action},
+                   {"reason", row.source == ListeningMode::PersonalFm        ? "fm"
+                              : row.accountId.isEmpty()                      ? "guest"
+                              : session.phase != SessionPhase::Authenticated ? "signed_out"
+                                                                             : "other_account"},
+                   {"song", row.song.value}});
         return std::nullopt; // FM: no evidence for its source; guests can't; never another
                              // account's
     }
@@ -150,8 +150,7 @@ void ListeningReporter::markActive()
     report.eventId = QUuid::createUuid();
     report.action = ListeningReportAction::ActiveClient;
     const auto id = m_facade.reportListening(report);
-    qCDebug(lcReport) << log::event("report.active") << log::field("event", report.eventId)
-                      << log::field("queued", id != 0);
+    log::debug(lcReport, "report.active", {{"event", report.eventId}, {"queued", id != 0}});
     if (!id)
         return; // not ready yet: the next session change or report tries again
     m_activeId = id;
@@ -164,17 +163,19 @@ void ListeningReporter::send(const Prepared& prepared, const StoredListeningReco
 {
     markActive(); // a new day (6:00) or a failed one: the web player's activeclient first
     const auto& report = prepared.report;
-    qCDebug(lcReport) << log::event("report.settled") << log::field("event", report.eventId)
-                      << log::field("action", report.action) << log::field("song", row.song.value)
-                      << log::field("record_end", row.end) << log::field("end", report.end)
-                      << log::field("played_ms", row.playedMs)
-                      << log::field("origin", prepared.origin)
-                      << log::field("source", report.source);
+    log::debug(lcReport, "report.settled",
+               {{"event", report.eventId},
+                {"action", report.action},
+                {"song", row.song.value},
+                {"record_end", row.end},
+                {"end", report.end},
+                {"played_ms", row.playedMs},
+                {"origin", prepared.origin},
+                {"source", report.source}});
     if (const auto id = m_facade.reportListening(report))
         m_inFlight.insert(id);
     else
-        qCWarning(lcReport) << log::event("report.not_queued")
-                            << log::field("event", report.eventId);
+        log::warn(lcReport, "report.not_queued", {"event", report.eventId});
 }
 
 void ListeningReporter::report(const StoredListeningRecord& row, ListeningReportEnd end)
@@ -182,9 +183,8 @@ void ListeningReporter::report(const StoredListeningRecord& row, ListeningReport
     if (row.id.isNull() || m_reported.contains(row.id))
         return;
     if (row.playedMs < MinimumMs) {
-        qCDebug(lcReport) << log::event("report.skip") << log::field("reason", "short")
-                          << log::field("song", row.song.value)
-                          << log::field("played_ms", row.playedMs);
+        log::debug(lcReport, "report.skip",
+                   {{"reason", "short"}, {"song", row.song.value}, {"played_ms", row.playedMs}});
         return; // a short load may still grow while it plays
     }
     remember(m_reported, m_reportedOrder, row.id);
@@ -199,7 +199,7 @@ void ListeningReporter::flush(std::function<void()> done, int timeoutMs)
     Q_ASSERT(QThread::currentThread() == thread());
     m_flushDone = std::move(done);
     m_session.finishHistoryForStorage(); // settles the playing load (recordChanged)
-    qCInfo(lcReport) << log::event("report.flush") << log::field("in_flight", m_inFlight.size());
+    log::info(lcReport, "report.flush", {"in_flight", m_inFlight.size()});
     if (m_inFlight.isEmpty()) {
         QTimer::singleShot(0, this, &ListeningReporter::finishFlush);
         return;
@@ -210,8 +210,7 @@ void ListeningReporter::flush(std::function<void()> done, int timeoutMs)
 void ListeningReporter::finishFlush()
 {
     if (m_flushDone && !m_inFlight.isEmpty())
-        qCWarning(lcReport) << log::event("report.flush_timeout")
-                            << log::field("in_flight", m_inFlight.size());
+        log::warn(lcReport, "report.flush_timeout", {"in_flight", m_inFlight.size()});
     m_flushTimer.stop();
     if (auto done = std::exchange(m_flushDone, {}))
         done();

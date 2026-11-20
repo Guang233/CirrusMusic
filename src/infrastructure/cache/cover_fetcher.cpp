@@ -29,7 +29,7 @@ struct CoverFetcher::Pending {
     QTimer* timer = nullptr;
     QElapsedTimer elapsed;
     qint64 ttlMs = 0;
-    log::Text why; // what the reply said when it failed, for cover.failed
+    log::Fields why; // what the reply said when it failed, for cover.failed
 };
 CoverFetcher::CoverFetcher(QObject* parent) : QObject(parent)
 {
@@ -183,8 +183,7 @@ void CoverFetcher::finish(quint64 id, CacheError error)
     pending->timer->deleteLater();
     if (error == CacheError::None && pending->elapsed.elapsed() >= 15000) {
         error = CacheError::Timeout;
-        pending->why = log::join(
-            {log::field("timeout_ms", 15000), log::field("received", pending->bytes.size())});
+        pending->why = {{"timeout_ms", 15000}, {"received", pending->bytes.size()}};
     }
     if (pending->reply) {
         auto* reply = pending->reply.data();
@@ -203,14 +202,14 @@ void CoverFetcher::finish(quint64 id, CacheError error)
                                type == "image/webp";
             if (reply->error() != QNetworkReply::NoError || status != 200 || !image) {
                 error = CacheError::Network;
-                pending->why = log::join(
-                    {log::field("qt", reply->error()),
-                     log::fieldIf(reply->error() != QNetworkReply::NoError, "detail",
-                                  log::message(reply->errorString())),
-                     log::fieldIf(status != 0, "status", status),
-                     log::fieldIf(status == 200 && !image, "type",
-                                  type.isEmpty() ? QStringLiteral("-") : QString::fromLatin1(type)),
-                     log::field("received", pending->bytes.size())});
+                pending->why = {
+                    {"qt", reply->error()},
+                    log::fieldIf(reply->error() != QNetworkReply::NoError, "detail",
+                                 log::message(reply->errorString())),
+                    log::fieldIf(status != 0, "status", status),
+                    log::fieldIf(status == 200 && !image, "type",
+                                 type.isEmpty() ? QStringLiteral("-") : QString::fromLatin1(type)),
+                    {"received", pending->bytes.size()}};
             } else
                 pending->ttlMs = retention(*reply, pending->elapsed.elapsed());
         }
@@ -251,9 +250,10 @@ void CoverFetcher::checked(quint64 id, const char* rejected)
         QBuffer sniff(&pending->bytes);
         sniff.open(QIODevice::ReadOnly);
         const auto format = QString::fromLatin1(QImageReader::imageFormat(&sniff).left(16));
-        qCDebug(lcCache) << log::event("cover.rejected") << log::field("id", id)
-                         << log::field("reason", rejected)
-                         << log::field("format", format.isEmpty() ? QStringLiteral("-") : format);
+        log::debug(lcCache, "cover.rejected",
+                   {{"id", id},
+                    {"reason", rejected},
+                    {"format", format.isEmpty() ? QStringLiteral("-") : format}});
         complete(pending, CacheError::Unsupported, {}, 0);
         return;
     }
@@ -265,14 +265,15 @@ void CoverFetcher::complete(const std::shared_ptr<Pending>& pending, CacheError 
 {
     const auto id = pending->job.id;
     if (error == CacheError::None)
-        qCDebug(lcCache) << log::event("cover.fetched") << log::field("id", id)
-                         << log::field("bytes", bytes.size())
-                         << log::field("ms", pending->elapsed.elapsed());
+        log::debug(lcCache, "cover.fetched",
+                   {{"id", id}, {"bytes", bytes.size()}, {"ms", pending->elapsed.elapsed()}});
     else if (error != CacheError::Canceled)
-        qCWarning(lcCache) << log::event("cover.failed") << log::field("id", id)
-                           << log::field("err", error)
-                           << log::field("host", log::host(pending->job.coverUrl))
-                           << log::field("ms", pending->elapsed.elapsed()) << pending->why;
+        log::warn(lcCache, "cover.failed",
+                  {{"id", id},
+                   {"err", error},
+                   {"host", log::host(pending->job.coverUrl)},
+                   {"ms", pending->elapsed.elapsed()},
+                   pending->why});
     emit completed(id, error, std::move(bytes), ttlMs);
 }
 void CoverFetcher::cancel(quint64 id)

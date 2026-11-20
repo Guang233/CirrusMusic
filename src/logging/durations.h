@@ -9,7 +9,7 @@
 // One summary record for many operations, in place of a record each (docs/tasks/logging-v2.md
 // §3): how many, how many failed and how, how long they took.
 //   m_stats.add(ms, path, failed ? logName(error) : QString());
-//   if (m_stats.due()) qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
+//   if (m_stats.due()) log::info(lcApi, "api.stats", m_stats.take());
 namespace cirrus::log
 {
 class Durations
@@ -25,7 +25,7 @@ class Durations
     [[nodiscard]] bool empty() const { return m_ms.isEmpty(); }
     // n, failed, errors ("Network:3,Timeout:1"), p50_ms, p95_ms, max_ms, slowest, window_s;
     // then starts a new window.
-    Text take();
+    Fields take();
 
   private:
     qint64 m_windowMs;

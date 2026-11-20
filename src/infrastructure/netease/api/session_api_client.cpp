@@ -64,7 +64,7 @@ QByteArray anonymousTokenFrom(const QUrl& origin, const QList<QByteArray>& setCo
 SessionApiClient::~SessionApiClient()
 {
     if (!m_stats.empty())
-        qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
+        log::info(lcApi, "api.stats", m_stats.take());
 }
 
 SessionApiClient::SessionApiClient(QString deviceId, QObject* parent)
@@ -489,10 +489,11 @@ void SessionApiClient::startClientLog(quint64 id, Pending& pending)
         finish(id, {ApiError::Crypto});
         return;
     }
-    qCInfo(lcReport) << log::event("report.upload") << log::field("req", id)
-                     << log::field("actions", actions.join(u','))
-                     << log::field("files", QString::fromLatin1(upload.fileNames.join(',')))
-                     << log::field("bytes", upload.body.size());
+    log::info(lcReport, "report.upload",
+              {{"req", id},
+               {"actions", actions.join(u',')},
+               {"files", QString::fromLatin1(upload.fileNames.join(','))},
+               {"bytes", upload.body.size()}});
     TransportRequest request;
     request.protocol = pending.contract.protocol;
     request.destination = pending.contract.destination;
@@ -616,12 +617,14 @@ void SessionApiClient::receive(quint64 transportId, const TransportResult& trans
         bool taken = true;
         for (const auto& name : pending.uploadFiles)
             taken = taken && files.contains(QString::fromLatin1(name));
-        qCInfo(lcReport) << log::event("report.upload_result") << log::field("req", id)
-                         << log::field("taken", taken) << log::field("files", files.size())
-                         << log::field("rate", result.decoded.object.value(QStringLiteral("data"))
-                                                   .toObject()
-                                                   .value(QStringLiteral("rate"))
-                                                   .toInt(-1));
+        log::info(lcReport, "report.upload_result",
+                  {{"req", id},
+                   {"taken", taken},
+                   {"files", files.size()},
+                   {"rate", result.decoded.object.value(QStringLiteral("data"))
+                                .toObject()
+                                .value(QStringLiteral("rate"))
+                                .toInt(-1)}});
         if (!taken)
             result.decoded.businessCode = -2;
     }
@@ -709,33 +712,36 @@ void SessionApiClient::finish(quint64 id, ApiResult result)
         break;
     }
     if (m_stats.due())
-        qCInfo(lcApi) << log::event("api.stats") << m_stats.take();
+        log::info(lcApi, "api.stats", m_stats.take());
     switch (result.error) {
     case ApiError::None:
-        qCDebug(lcApi) << log::event("api.done") << log::field("req", pending.transportId)
-                       << log::field("path", path)
-                       << log::field("code", code ? QString::number(*code) : QStringLiteral("-"))
-                       << log::fieldIf(!providerMessage.isEmpty(), "msg",
-                                       log::message(providerMessage))
-                       << log::field("ms", ms);
+        log::debug(lcApi, "api.done",
+                   {{"req", pending.transportId},
+                    {"path", path},
+                    {"code", code ? QString::number(*code) : QStringLiteral("-")},
+                    log::fieldIf(!providerMessage.isEmpty(), "msg", log::message(providerMessage)),
+                    {"ms", ms}});
         break;
     case ApiError::Canceled:
     case ApiError::StaleContext:
     case ApiError::Transport:
-        qCDebug(lcApi) << log::event("api.ended") << log::field("req", pending.transportId)
-                       << log::field("path", path) << log::field("err", result.error)
-                       << log::field("transport", result.transportError) << log::field("ms", ms);
+        log::debug(lcApi, "api.ended",
+                   {{"req", pending.transportId},
+                    {"path", path},
+                    {"err", result.error},
+                    {"transport", result.transportError},
+                    {"ms", ms}});
         break;
     default:
-        qCWarning(lcApi) << log::event("api.failed") << log::field("req", pending.transportId)
-                         << log::field("path", path) << log::field("err", result.error)
-                         << log::fieldIf(result.error == ApiError::Decode, "decode",
-                                         result.decoded.error)
-                         << log::fieldIf(code.has_value(), "code", code.value_or(0))
-                         << log::fieldIf(!providerMessage.isEmpty(), "msg",
-                                         log::message(providerMessage))
-                         << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
-                         << log::field("ms", ms);
+        log::warn(lcApi, "api.failed",
+                  {{"req", pending.transportId},
+                   {"path", path},
+                   {"err", result.error},
+                   log::fieldIf(result.error == ApiError::Decode, "decode", result.decoded.error),
+                   log::fieldIf(code.has_value(), "code", code.value_or(0)),
+                   log::fieldIf(!providerMessage.isEmpty(), "msg", log::message(providerMessage)),
+                   log::fieldIf(result.httpStatus != 0, "status", result.httpStatus),
+                   {"ms", ms}});
         break;
     }
     emit completed(id, pending.context, std::move(result));

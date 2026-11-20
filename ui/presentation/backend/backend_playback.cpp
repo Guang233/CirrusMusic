@@ -657,12 +657,14 @@ void BackendPlayback::startQueue(const QStringList& keys, int index,
     }
     // What the user asked to play (docs/tasks/logging.md §8); the session logs the rest.
     const PlayOrigin origin = origins.value(index);
-    qCInfo(lcUi) << log::event("player.play") << log::field("count", keys.size())
-                 << log::field("valid", ids.size()) << log::field("index", index)
-                 << log::field("origin", playback::Origin(origin.kind))
-                 << log::field("origin_id", origin.kind == playback::FromSearch
-                                                ? QStringLiteral("len:%1").arg(origin.id.size())
-                                                : origin.id);
+    log::info(lcUi, "player.play",
+              {{"count", keys.size()},
+               {"valid", ids.size()},
+               {"index", index},
+               {"origin", playback::Origin(origin.kind)},
+               {"origin_id", origin.kind == playback::FromSearch
+                                 ? QStringLiteral("len:%1").arg(origin.id.size())
+                                 : origin.id}});
     if (start < 0)
         return;
     // The backend's queue holds so many; keep those around the one chosen.
@@ -678,7 +680,7 @@ void BackendPlayback::startQueue(const QStringList& keys, int index,
     for (const auto& origin : std::as_const(idOrigins))
         stored.append(storedOrigin(origin));
     if (!m_session->replaceQueue(ids, start, quality(), stored) || !m_session) {
-        qCWarning(lcUi) << log::event("player.play_refused");
+        log::warn(lcUi, "player.play_refused");
         return;
     }
     // The new entries, in the order given.
@@ -750,9 +752,9 @@ void BackendPlayback::playPause()
         return;
     ListeningSession& session = *m_session;
     const auto play = session.playback();
-    qCInfo(lcUi) << log::event("player.play_pause") << log::field("state", play.state)
-                 << log::field("intent", play.intent) << log::field("kept", bool(m_kept))
-                 << log::field("live", m_live);
+    log::info(
+        lcUi, "player.play_pause",
+        {{"state", play.state}, {"intent", play.intent}, {"kept", bool(m_kept)}, {"live", m_live}});
     switch (play.state) {
     case PlaybackState::Empty:
     case PlaybackState::Ended:
@@ -924,8 +926,8 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
         }
     if (ids.isEmpty())
         return false;
-    qCInfo(lcUi) << log::event("player.add") << log::field("count", ids.size())
-                 << log::field("next", next) << log::field("origin", playback::Origin(origin.kind));
+    log::info(lcUi, "player.add",
+              {{"count", ids.size()}, {"next", next}, {"origin", playback::Origin(origin.kind)}});
     if (m_state.queue.isEmpty()) {
         startQueue(valid, 0, QList<PlayOrigin>(valid.size(), origin));
         return true;
@@ -946,7 +948,7 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
     for (const auto& entry : m_session->queue().entries)
         before.insert(entry.id);
     if (!m_session->append(ids, next, storedOrigin(origin))) {
-        qCWarning(lcUi) << log::event("player.add_refused");
+        log::warn(lcUi, "player.add_refused");
         return false;
     }
     if (origin.kind != playback::NoOrigin) {
@@ -962,7 +964,7 @@ void BackendPlayback::clearQueue()
 {
     if (!m_session || m_state.mode != playback::Queue)
         return;
-    qCInfo(lcUi) << log::event("player.clear") << log::field("count", m_state.queue.size());
+    log::info(lcUi, "player.clear", {"count", m_state.queue.size()});
     m_kept.reset();
     m_clearing = true; // the stop it makes is the user's
     m_session->clear();

@@ -44,7 +44,7 @@ constexpr int kFrames = 64;
             type = QStringLiteral("unknown");
         }
     }
-    qCCritical(lcApp) << event("app.terminate") << field("exception", type); // written at once
+    log::critical(lcApp, "app.terminate", {"exception", type}); // written at once
     std::abort(); // the signal handler writes the stack
 }
 
@@ -195,9 +195,11 @@ void report(const QString& directory)
             static const QRegularExpression id(QStringLiteral(R"(build_id=([0-9a-f]+))"));
             build = id.match(QString::fromUtf8(log.readLine())).captured(1);
         }
-        qCWarning(lcApp) << event("app.crash") << field("session", name.captured(1))
-                         << field("signal", signal) << field("frames", frames.size())
-                         << fieldIf(!build.isEmpty(), "build_id", build);
+        log::warn(lcApp, "app.crash",
+                  {{"session", name.captured(1)},
+                   {"signal", signal},
+                   {"frames", frames.size()},
+                   log::fieldIf(!build.isEmpty(), "build_id", build)});
         // crashes/<session>.txt for the diagnostic package: the same, as a table.
         QString report = QStringLiteral("session: %1\nsignal: %2\nbuild_id: %3\n\n")
                              .arg(name.captured(1))
@@ -214,9 +216,11 @@ void report(const QString& directory)
             const QString offset =
                 QStringLiteral("0x") +
                 QString::number(known ? address - region->start + region->offset : address, 16);
-            qCInfo(lcApp) << event("app.crash_frame") << field("i", i) << field("module", module)
-                          << field("offset", offset)
-                          << fieldIf(!symbols.value(i).isEmpty(), "symbol", symbols.value(i));
+            log::info(lcApp, "app.crash_frame",
+                      {{"i", i},
+                       {"module", module},
+                       {"offset", offset},
+                       log::fieldIf(!symbols.value(i).isEmpty(), "symbol", symbols.value(i))});
             report += QStringLiteral("#%1 %2+%3 %4\n")
                           .arg(i, 2)
                           .arg(module, offset, symbols.value(i))

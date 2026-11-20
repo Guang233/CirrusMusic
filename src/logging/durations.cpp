@@ -28,7 +28,7 @@ void Durations::add(qint64 ms, const QString& name, const QString& error)
 
 bool Durations::due() const { return !m_ms.isEmpty() && m_window.elapsed() >= m_windowMs; }
 
-Text Durations::take()
+Fields Durations::take()
 {
     std::sort(m_ms.begin(), m_ms.end());
     const auto at = [this](double q) {
@@ -41,18 +41,20 @@ Text Durations::take()
         errors.append(it.key() + u':' + QString::number(it.value()));
     }
     errors.sort();
-    const Text text =
-        join({field("n", m_count), field("failed", failed),
-              fieldIf(!errors.isEmpty(), "errors", errors.join(u',')), field("p50_ms", at(0.5)),
-              field("p95_ms", at(0.95)), field("max_ms", std::max<qint64>(m_max, 0)),
-              fieldIf(!m_slowest.isEmpty(), "slowest", m_slowest),
-              field("window_s", m_window.elapsed() / 1000)});
+    const Fields fields{{"n", m_count},
+                        {"failed", failed},
+                        fieldIf(!errors.isEmpty(), "errors", errors.join(u',')),
+                        {"p50_ms", at(0.5)},
+                        {"p95_ms", at(0.95)},
+                        {"max_ms", std::max<qint64>(m_max, 0)},
+                        fieldIf(!m_slowest.isEmpty(), "slowest", m_slowest),
+                        {"window_s", m_window.elapsed() / 1000}};
     m_ms.clear();
     m_count = 0;
     m_max = -1;
     m_slowest.clear();
     m_errors.clear();
     m_window.restart();
-    return text;
+    return fields;
 }
 } // namespace cirrus::log

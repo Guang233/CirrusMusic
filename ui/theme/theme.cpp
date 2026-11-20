@@ -226,8 +226,7 @@ void Theme::requestProviderImage(quint64 generation, const QUrl& url)
         engine ? dynamic_cast<QQuickAsyncImageProvider*>(engine->imageProvider(url.host()))
                : nullptr;
     if (!provider) {
-        qCWarning(lcUiTheme) << log::event("cover.no_provider")
-                             << log::field("provider", url.host());
+        log::warn(lcUiTheme, "cover.no_provider", {"provider", url.host()});
         applyPalette(generation, {});
         return;
     }

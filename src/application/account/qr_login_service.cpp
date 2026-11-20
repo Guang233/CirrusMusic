@@ -304,9 +304,10 @@ void QrLoginService::cancel()
 
 void QrLoginService::fail(domain::SessionToken context, AuthFailure failure)
 {
-    qCWarning(lcAuth) << log::event("login.failed") << log::field("err", failure.error)
-                      << log::field("code", failure.providerCode.value_or(0))
-                      << log::field("retry_after_ms", failure.retryAfterMs.value_or(0));
+    log::warn(lcAuth, "login.failed",
+              {{"err", failure.error},
+               {"code", failure.providerCode.value_or(0)},
+               {"retry_after_ms", failure.retryAfterMs.value_or(0)}});
     if (!m_session.accepts(context)) {
         return;
     }
@@ -336,8 +337,8 @@ void QrLoginService::keyCompleted(quint64 id, domain::SessionToken context, QrKe
     }
     const auto challenge = std::get<domain::QrLoginChallenge>(result);
     m_key = challenge.key;
-    qCInfo(lcAuth) << log::event("login.qr_ready"); // never the key
-    schedulePoll();                                 // first automatic check waits one full interval
+    log::info(lcAuth, "login.qr_ready"); // never the key
+    schedulePoll();                      // first automatic check waits one full interval
     emit challengeReady(context, challenge);
 }
 
@@ -356,7 +357,7 @@ void QrLoginService::statusCompleted(quint64 id, domain::SessionToken context,
         return;
     }
     const auto state = std::get<domain::QrLoginStatus>(result);
-    qCInfo(lcAuth) << log::event("login.qr_status") << log::field("state", state);
+    log::info(lcAuth, "login.qr_status", {"state", state});
     if (state == domain::QrLoginStatus::Expired) {
         const bool canceled = m_session.cancelAuthentication(context);
         const auto after = m_session.snapshot();
@@ -438,9 +439,8 @@ void QrLoginService::promotionCompleted(quint64 id, domain::SessionToken context
         if (m_gateway && m_session.accepts(context)) {
             m_gateway->storeSession(context, identity, remember);
         }
-        qCInfo(lcAuth) << log::event("login.signed_in")
-                       << log::field("account", log::account(identity.accountId))
-                       << log::field("remember", remember);
+        log::info(lcAuth, "login.signed_in",
+                  {{"account", log::account(identity.accountId)}, {"remember", remember}});
         if (m_session.accepts(context)) {
             emit signedIn(context, identity);
         }

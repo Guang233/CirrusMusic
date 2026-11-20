@@ -42,8 +42,7 @@ Mpris::Mpris(Player* player, Desktop* desktop, QObject* parent)
         return;
     if (!bus.registerObject(kPath, this, QDBusConnection::ExportAdaptors) ||
         !bus.registerService(kService)) {
-        qCWarning(lcPlatform) << log::event("mpris.register_failed")
-                              << log::field("err", bus.lastError().name());
+        log::warn(lcPlatform, "mpris.register_failed", {"err", bus.lastError().name()});
         bus.unregisterObject(kPath);
         return;
     }
@@ -140,13 +139,13 @@ QString MprisRoot::desktopEntry() const { return QGuiApplication::desktopFileNam
 
 void MprisRoot::Raise()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "raise");
+    log::info(lcPlatform, "mpris.command", {"cmd", "raise"});
     emit m_owner->desktop()->showRequested();
 }
 
 void MprisRoot::Quit()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "quit");
+    log::info(lcPlatform, "mpris.command", {"cmd", "quit"});
     m_owner->desktop()->quit();
 }
 
@@ -235,25 +234,25 @@ bool MprisPlayer::canSeek() const
 
 void MprisPlayer::Next()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "next");
+    log::info(lcPlatform, "mpris.command", {"cmd", "next"});
     m_owner->player()->next();
 }
 
 void MprisPlayer::Previous()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "previous");
+    log::info(lcPlatform, "mpris.command", {"cmd", "previous"});
     m_owner->player()->previous();
 }
 
 void MprisPlayer::Pause()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "pause");
+    log::info(lcPlatform, "mpris.command", {"cmd", "pause"});
     media::pause(*m_owner->player());
 }
 
 void MprisPlayer::PlayPause()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "play_pause");
+    log::info(lcPlatform, "mpris.command", {"cmd", "play_pause"});
     m_owner->player()->playPause();
 }
 
@@ -261,7 +260,7 @@ void MprisPlayer::Stop() { Pause(); }
 
 void MprisPlayer::Play()
 {
-    qCInfo(lcPlatform) << log::event("mpris.command") << log::field("cmd", "play");
+    log::info(lcPlatform, "mpris.command", {"cmd", "play"});
     media::play(*m_owner->player());
 }
 

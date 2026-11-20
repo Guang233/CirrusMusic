@@ -188,7 +188,7 @@ void CollectionWrites::pump()
     const auto session = m_facade->snapshot();
     if (m_running->accountId.isEmpty() || session.phase != domain::SessionPhase::Authenticated ||
         session.accountId != m_running->accountId) {
-        qCInfo(lcUiBackend) << log::event("write.dropped") << log::field("reason", "account");
+        log::info(lcUiBackend, "write.dropped", {"reason", "account"});
         finish(failure::SignedOut, {});
         return;
     }
@@ -198,7 +198,7 @@ void CollectionWrites::pump()
     }
     auto change = m_running->steps.constFirst()(*m_facade);
     if (!change) {
-        qCWarning(lcUiBackend) << log::event("write.invalid");
+        log::warn(lcUiBackend, "write.invalid");
         finish(failure::Invalid, {});
         return;
     }
@@ -209,7 +209,7 @@ void CollectionWrites::pump()
             m_retry.start();
             return;
         }
-        qCWarning(lcUiBackend) << log::event("write.refused") << log::field("change", name);
+        log::warn(lcUiBackend, "write.refused", {"change", name});
         finish(failure::Busy, {});
         return;
     }
@@ -224,14 +224,15 @@ void CollectionWrites::completed(quint64 id, const domain::CollectionResult& res
     m_runningId = 0;
     const auto kind = kindOf(result);
     if (kind) {
-        qCWarning(lcUiBackend) << log::event("write.failed") << log::field("change", m_runningName)
-                               << log::field("outcome", result.outcome)
-                               << log::field("err", result.error)
-                               << log::field("code", result.providerCode.value_or(0));
+        log::warn(lcUiBackend, "write.failed",
+                  {{"change", m_runningName},
+                   {"outcome", result.outcome},
+                   {"err", result.error},
+                   {"code", result.providerCode.value_or(0)}});
         finish(kind, result);
         return;
     }
-    qCInfo(lcUiBackend) << log::event("write.done") << log::field("change", m_runningName);
+    log::info(lcUiBackend, "write.done", {"change", m_runningName});
     m_running->steps.removeFirst();
     if (m_running->steps.isEmpty())
         finish(std::nullopt, result);

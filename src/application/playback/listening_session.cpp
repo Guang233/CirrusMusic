@@ -140,8 +140,8 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     Q_ASSERT(QThread::currentThread() == thread());
     const auto entry = candidate.current();
     if (!entry || m_backend.state() != BackendState::Ready) {
-        qCWarning(lcPlayback) << log::event("queue.begin_refused")
-                              << log::field("reason", entry ? "backend_not_ready" : "no_entry");
+        log::warn(lcPlayback, "queue.begin_refused",
+                  {"reason", entry ? "backend_not_ready" : "no_entry"});
         return false;
     }
     const auto sourceSession = m_backend.snapshot();
@@ -149,12 +149,14 @@ bool ListeningSession::begin(PlaybackQueue candidate, TransportIntent intent, Au
     m_starting = true;
     const auto id = m_backend.playSong(entry->song, quality, intent);
     m_starting = false;
-    qCDebug(lcPlayback) << log::event("queue.begin") << log::field("song", entry->song.value)
-                        << log::field("intent", intent) << log::field("automatic", automatic)
-                        << log::field("fm", fm) << log::field("command", id);
+    log::debug(lcPlayback, "queue.begin",
+               {{"song", entry->song.value},
+                {"intent", intent},
+                {"automatic", automatic},
+                {"fm", fm},
+                {"command", id}});
     if (!acceptLoadCommand(id, revision)) {
-        qCWarning(lcPlayback) << log::event("queue.begin_refused")
-                              << log::field("reason", "command") << log::field("command", id);
+        log::warn(lcPlayback, "queue.begin_refused", {{"reason", "command"}, {"command", id}});
         return false;
     }
     commit(std::move(candidate), intent, quality, automatic, fm, sourceSession, revision);
@@ -237,8 +239,8 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
                                     AudioQuality quality, const QList<PlayOrigin>& origins)
 {
-    qCInfo(lcPlayback) << log::event("queue.replace") << log::field("count", songs.size())
-                       << log::field("index", startIndex) << log::field("quality", quality);
+    log::info(lcPlayback, "queue.replace",
+              {{"count", songs.size()}, {"index", startIndex}, {"quality", quality}});
     if (startIndex < 0 || startIndex >= songs.size())
         return false;
     auto candidate = m_queue;
@@ -259,8 +261,7 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     auto candidate = m_queue;
     if (!candidate.restore(saved))
         return false;
-    qCInfo(lcPlayback) << log::event("queue.restored") << log::field("count", saved.entries.size())
-                       << log::field("mode", mode);
+    log::info(lcPlayback, "queue.restored", {{"count", saved.entries.size()}, {"mode", mode}});
     const auto revision = ++m_revision;
     m_queue = std::move(candidate);
     // Personal FM needs the account it was played with (signed in); else a plain queue.
@@ -291,7 +292,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const P
 }
 bool ListeningSession::select(QUuid entry)
 {
-    qCInfo(lcPlayback) << log::event("queue.select") << log::field("entry", entry);
+    log::info(lcPlayback, "queue.select", {"entry", entry});
     if (m_mode == ListeningMode::PersonalFm) // one of its songs so far
         return queueContextMatches() && playFm(entry, false);
     if (!queueContextMatches())
@@ -304,7 +305,7 @@ bool ListeningSession::select(QUuid entry)
 }
 bool ListeningSession::next()
 {
-    qCInfo(lcPlayback) << log::event("queue.next") << log::field("mode", m_mode);
+    log::info(lcPlayback, "queue.next", {"mode", m_mode});
     if (m_mode == ListeningMode::PersonalFm) {
         // On through the songs so far after going back, then a new one.
         if (const QUuid after = m_fmWaiting ? QUuid{} : fmNeighbour(1); !after.isNull())
@@ -338,7 +339,7 @@ bool ListeningSession::canGoPrevious() const
 }
 bool ListeningSession::previous()
 {
-    qCInfo(lcPlayback) << log::event("queue.previous") << log::field("mode", m_mode);
+    log::info(lcPlayback, "queue.previous", {"mode", m_mode});
     if (m_mode == ListeningMode::PersonalFm) {
         if (!current())
             return false;
@@ -404,7 +405,7 @@ bool ListeningSession::stop()
 {
     if (!current())
         return false;
-    qCInfo(lcPlayback) << log::event("queue.stop");
+    log::info(lcPlayback, "queue.stop");
     const auto revision = ++m_revision;
     m_starting = true;
     const auto id = m_backend.stopPlayback();
@@ -703,8 +704,8 @@ void ListeningSession::adoptAdvance()
 void ListeningSession::advance(bool naturalEnd)
 {
     // After an end (natural) or a failure (skips at most 5 entries in a row).
-    qCDebug(lcPlayback) << log::event("queue.advance") << log::field("natural", naturalEnd)
-                        << log::field("skipped", m_autoVisited.size());
+    log::debug(lcPlayback, "queue.advance",
+               {{"natural", naturalEnd}, {"skipped", m_autoVisited.size()}});
     if (naturalEnd)
         m_autoVisited.clear();
     const auto count = m_queue.snapshot().entries.size();
