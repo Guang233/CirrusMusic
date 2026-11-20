@@ -458,6 +458,8 @@ add_library(cirrus_media STATIC
     infrastructure/media/automix/deck.cpp
     infrastructure/media/automix/mix.h
     infrastructure/media/automix/mix.cpp
+    infrastructure/media/automix/analysis.h
+    infrastructure/media/automix/analysis.cpp
 )
 # The audio engine decodes with FFmpeg (ADR-0008): LGPL builds, linked dynamically.
 find_package(PkgConfig REQUIRED)

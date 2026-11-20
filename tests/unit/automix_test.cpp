@@ -2,6 +2,7 @@
 // mix and the deck that feeds it, a skip's quick fade. No output device.
 #include "infrastructure/media/audio_decoder.h"
 #include "infrastructure/media/audio_output.h"
+#include "infrastructure/media/automix/analysis.h"
 #include "infrastructure/media/automix/deck.h"
 #include "infrastructure/media/automix/mix.h"
 #include "infrastructure/media/automix/transition.h"
@@ -27,6 +28,47 @@ std::unique_ptr<AudioDecoder> tone(const char* format)
     if (!file || !decoder->open(file, QLatin1String(format)))
         return nullptr;
     return decoder;
+}
+
+// Synthetic signals, interleaved stereo.
+std::vector<float> sine(int rate, double seconds, double amplitude, double hz = 1000)
+{
+    std::vector<float> out(size_t(rate * seconds) * 2);
+    for (size_t i = 0; i < out.size() / 2; ++i)
+        out[i * 2] = out[i * 2 + 1] = float(amplitude * std::sin(2 * M_PI * hz * double(i) / rate));
+    return out;
+}
+
+std::vector<float> silence(int rate, double seconds)
+{
+    return std::vector<float>(size_t(rate * seconds) * 2, 0.0f);
+}
+
+// `seconds` of a sine fading out by `dbPerSecond` from `amplitude`.
+std::vector<float> fading(int rate, double seconds, double amplitude, double dbPerSecond)
+{
+    auto out = sine(rate, seconds, amplitude);
+    for (size_t i = 0; i < out.size() / 2; ++i) {
+        const auto gain = float(std::pow(10.0, -dbPerSecond * double(i) / rate / 20));
+        out[i * 2] *= gain;
+        out[i * 2 + 1] *= gain;
+    }
+    return out;
+}
+
+std::vector<float> operator+(std::vector<float> a, const std::vector<float>& b)
+{
+    a.insert(a.end(), b.begin(), b.end());
+    return a;
+}
+
+Analysis analyse(const std::vector<float>& audio, int rate, bool complete = true)
+{
+    Analyser analyser(rate);
+    const auto frames = qsizetype(audio.size() / 2);
+    for (qsizetype at = 0; at < frames; at += 2048) // in a decoder's chunks
+        analyser.add(audio.data() + at * 2, std::min<qsizetype>(2048, frames - at));
+    return analyser.finish(complete);
 }
 
 qint64 drain(Deck& deck)
@@ -243,6 +285,70 @@ class AutomixTest : public QObject
             QVERIFY(limit ? peak <= 1.0f : peak > 1.7f);
             QVERIFY(*std::min_element(out.begin(), out.end()) >= 0.9f);
         }
+    }
+    void measuresLoudness()
+    {
+        // BS.1770: a 1 kHz sine 20 dB under full scale in both channels is −20 LUFS, at
+        // any rate; silence is gated out.
+        for (const int rate : {22050, 44100, 48000, 96000}) {
+            const auto a = analyse(sine(rate, 5, 0.1), rate);
+            QVERIFY2(std::abs(a.loudness + 20) < 0.1f, qPrintable(QString::number(a.loudness)));
+            // (The 400 ms blocks over the edge count: a little under; ungated, −24.8.)
+            QVERIFY(std::abs(analyse(sine(rate, 5, 0.1) + silence(rate, 10), rate).loudness + 20) <
+                    0.3f);
+        }
+        QCOMPARE(analyse(silence(44100, 2), 44100).loudness, Analysis::kFloor);
+        const auto a = analyse(sine(44100, 2, 0.1) + sine(44100, 2, 0.01), 44100);
+        QVERIFY(std::abs(a.momentaryAt(500) + 20) < 0.5f);
+        QVERIFY(std::abs(a.momentaryAt(3000) + 40) < 0.5f);
+        QVERIFY(std::abs(a.loudnessOver(2500, 3500) + 40) < 0.5f);
+    }
+
+    void findsTheSilentEdges()
+    {
+        const int rate = 44100;
+        const auto a = analyse(silence(rate, 1) + sine(rate, 2, 0.1) + silence(rate, 1.5), rate);
+        QCOMPARE(a.durationMs, 4500);
+        QVERIFY(std::abs(a.soundStartMs - 1000) <= 10);
+        QVERIFY(std::abs(a.soundEndMs - 3000) <= 10);
+        QCOMPARE(a.fadeStartMs, -1); // an abrupt end
+        // All silence: no sound anywhere.
+        const auto quiet = analyse(silence(rate, 2), rate);
+        QCOMPARE(quiet.soundStartMs, quiet.soundEndMs);
+    }
+
+    void findsAFadeOut()
+    {
+        // 20 s at −14 dBFS, then 6 dB a second down to silence.
+        const int rate = 44100;
+        const auto audio = sine(rate, 20, 0.2) + fading(rate, 10, 0.2, 6) + silence(rate, 1);
+        const auto a = analyse(audio, rate);
+        QVERIFY2(a.fadeStartMs >= 19000 && a.fadeStartMs <= 21500,
+                 qPrintable(QString::number(a.fadeStartMs)));
+        QVERIFY2(std::abs(a.soundEndMs - 27700) < 300, qPrintable(QString::number(a.soundEndMs)));
+        const qint64 quieter = a.fadedBy(20); // about 20 / 6 s in
+        QVERIFY2(quieter > 22500 && quieter < 24500, qPrintable(QString::number(quieter)));
+        // Only the start analysed: nothing about the end.
+        QCOMPARE(analyse(audio, rate, false).fadeStartMs, -1);
+        // A track that ends at full level doesn't fade.
+        QCOMPARE(analyse(sine(rate, 30, 0.2), rate).fadeStartMs, -1);
+    }
+
+    void anAnalysisRoundTrips()
+    {
+        const auto a = analyse(silence(44100, 0.5) + sine(44100, 3, 0.1), 44100);
+        const auto back = Analysis::deserialize(a.serialize());
+        QVERIFY(back);
+        QCOMPARE(back->durationMs, a.durationMs);
+        QCOMPARE(back->loudness, a.loudness);
+        QCOMPARE(back->soundStartMs, a.soundStartMs);
+        QCOMPARE(back->soundEndMs, a.soundEndMs);
+        QCOMPARE(back->fadeStartMs, a.fadeStartMs);
+        QCOMPARE(back->momentary, a.momentary);
+        QByteArray other = a.serialize();
+        other[3] = char(Analysis::kVersion + 1); // another version: analysed again
+        QVERIFY(!Analysis::deserialize(other));
+        QVERIFY(!Analysis::deserialize(a.serialize().chopped(1)));
     }
 };
 
