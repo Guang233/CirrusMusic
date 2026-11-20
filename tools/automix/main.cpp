@@ -3,7 +3,7 @@
 //
 //   cirrus_automix analyse a.flac [b.mp3 ...]
 //   cirrus_automix mix a.flac b.mp3 -o out.wav [--mode smart|crossfade|gapless]
-//                  [--crossfade 6] [--context 60] [--rate 48000]
+//                  [--crossfade 6] [--context 60] [--rate 48000] [--no-analysis]
 //
 // `analyse` prints what the analysis finds in each file (and how long it took).
 // Writes A's last `context` seconds into B's first, through the transition, as 32-bit
@@ -293,9 +293,16 @@ int mix(const QCommandLineParser& parser, const QStringList& args)
         return 1;
     std::printf("A     %.1f s, %d Hz\nB     %.1f s, %d Hz\n", seconds(a->durationMs()),
                 a->sampleRate(), seconds(b->durationMs()), b->sampleRate());
+    // Analysed like the engine does (all of each here; it has only B's start at first).
+    std::optional<automix::Analysis> analysisA, analysisB;
+    if (!parser.isSet(QStringLiteral("no-analysis"))) {
+        analysisA = analyseFile(args[1]);
+        analysisB = analyseFile(args[2]);
+    }
     const qint64 startMs = std::max<qint64>(0, a->durationMs() - contextMs);
     const automix::Plan plan =
-        automix::plan(settings, {a->durationMs()}, startMs, {b->durationMs()}, false);
+        automix::plan(settings, {a->durationMs(), false, analysisA ? &*analysisA : nullptr},
+                      startMs, {b->durationMs(), false, analysisB ? &*analysisB : nullptr}, false);
     std::printf("plan  %s (%s): out %.1f s, in %.1f s, overlap %.1f s, B current after %.1f s\n",
                 qPrintable(automix::logName(plan.style)), qPrintable(automix::logName(plan.reason)),
                 seconds(plan.outMs), seconds(plan.inMs), seconds(plan.overlapMs),
@@ -348,6 +355,7 @@ int main(int argc, char* argv[])
          QStringLiteral("seconds"), QStringLiteral("60")},
         {QStringLiteral("rate"), QStringLiteral("The output's sample rate."), QStringLiteral("hz"),
          QStringLiteral("48000")},
+        {QStringLiteral("no-analysis"), QStringLiteral("Plan as without an analysis.")},
     });
     parser.process(app);
     const QStringList args = parser.positionalArguments();
