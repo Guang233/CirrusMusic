@@ -1,18 +1,22 @@
 // The automix tuning tool (docs/tasks/automix.md §9): renders the transition between two
 // local files the way the engine plays it, to listen to and compare. Development only.
 //
+//   cirrus_automix analyse a.flac [b.mp3 ...]
 //   cirrus_automix mix a.flac b.mp3 -o out.wav [--mode smart|crossfade|gapless]
 //                  [--crossfade 6] [--context 60] [--rate 48000]
 //
+// `analyse` prints what the analysis finds in each file (and how long it took).
 // Writes A's last `context` seconds into B's first, through the transition, as 32-bit
 // float WAVE. Without the service's loudness gains: no normalization.
 #include "infrastructure/media/audio_decoder.h"
+#include "infrastructure/media/automix/analysis.h"
 #include "infrastructure/media/automix/deck.h"
 #include "infrastructure/media/automix/mix.h"
 #include "infrastructure/media/automix/transition.h"
 #include "infrastructure/media/byte_source.h"
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QtEndian>
@@ -43,11 +47,21 @@ QString formatOf(const QString& path)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return {};
-    const QByteArray head = file.read(4);
+    QByteArray head = file.read(10);
+    if (head.startsWith("ID3") && head.size() == 10) {
+        // A tag first (FLAC files may have one too): what follows it says.
+        qint64 size = 10 + ((qint64(head[6] & 0x7f) << 21) | (qint64(head[7] & 0x7f) << 14) |
+                            (qint64(head[8] & 0x7f) << 7) | qint64(head[9] & 0x7f));
+        if (head[5] & 0x10)
+            size += 10; // a footer
+        if (!file.seek(size))
+            return {};
+        head = file.read(4);
+        return head.startsWith("fLaC") ? QStringLiteral("flac") : QStringLiteral("mp3");
+    }
     if (head.startsWith("fLaC"))
         return QStringLiteral("flac");
-    if (head.startsWith("ID3") ||
-        (head.size() >= 2 && quint8(head[0]) == 0xff && (quint8(head[1]) & 0xe0) == 0xe0))
+    if (head.size() >= 2 && quint8(head[0]) == 0xff && (quint8(head[1]) & 0xe0) == 0xe0)
         return QStringLiteral("mp3");
     return {};
 }
@@ -201,6 +215,56 @@ void renderOverlap(const automix::Plan& plan, automix::Deck& a, std::unique_ptr<
     playUntil(b, untilMs, out);
 }
 
+// The whole file through the analyser, at its own rate.
+std::optional<automix::Analysis> analyseFile(const QString& path)
+{
+    auto decoder = openTrack(path);
+    if (!decoder)
+        return std::nullopt;
+    automix::Analyser analyser(decoder->sampleRate());
+    std::vector<float> chunk;
+    while (true) {
+        chunk.clear();
+        if (!decoder->read(chunk, kChunkFrames))
+            break;
+        analyser.add(chunk.data(), qsizetype(chunk.size() / 2));
+    }
+    if (decoder->error()) {
+        complain(QStringLiteral("%1: decoding failed").arg(path));
+        return std::nullopt;
+    }
+    return analyser.finish(true);
+}
+
+int analyse(const QStringList& files)
+{
+    if (files.isEmpty()) {
+        complain(QStringLiteral("analyse needs a file"));
+        return 2;
+    }
+    int status = 0;
+    for (const QString& path : files) {
+        QElapsedTimer timer;
+        timer.start();
+        const auto a = analyseFile(path);
+        if (!a) {
+            status = 1;
+            continue;
+        }
+        std::printf("%s\n  %.1f s, %.1f LUFS, sound %.2f-%.2f s", qPrintable(path),
+                    seconds(a->durationMs), a->loudness, seconds(a->soundStartMs),
+                    seconds(a->soundEndMs));
+        if (a->fadeStartMs >= 0)
+            std::printf(", fades out from %.1f s (-20 dB at %.1f s)", seconds(a->fadeStartMs),
+                        seconds(a->fadedBy(20)));
+        std::printf("\n  start %.1f LUFS over 2 s, end %.1f LUFS over 2 s; %lld ms\n",
+                    a->loudnessOver(a->soundStartMs, a->soundStartMs + 2000),
+                    a->loudnessOver(a->soundEndMs - 2000, a->soundEndMs),
+                    static_cast<long long>(timer.elapsed()));
+    }
+    return status;
+}
+
 int mix(const QCommandLineParser& parser, const QStringList& args)
 {
     if (args.size() != 3 || !parser.isSet(QStringLiteral("output"))) {
@@ -269,7 +333,7 @@ int main(int argc, char* argv[])
     parser.setApplicationDescription(
         QStringLiteral("Renders track transitions the way Cirrus plays them."));
     parser.addHelpOption();
-    parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("mix"));
+    parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("analyse or mix"));
     parser.addPositionalArgument(QStringLiteral("a"), QStringLiteral("The current track."));
     parser.addPositionalArgument(QStringLiteral("b"), QStringLiteral("The next track."));
     parser.addOptions({
@@ -287,6 +351,8 @@ int main(int argc, char* argv[])
     });
     parser.process(app);
     const QStringList args = parser.positionalArguments();
+    if (args.value(0) == QLatin1String("analyse"))
+        return analyse(args.mid(1));
     if (args.value(0) == QLatin1String("mix"))
         return mix(parser, args);
     parser.showHelp(2);
