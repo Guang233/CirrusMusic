@@ -93,7 +93,9 @@ set_tests_properties(backend_facade PROPERTIES TIMEOUT 15)
 qt_add_executable(tst_backend_runtime unit/backend_runtime_test.cpp)
 target_link_libraries(tst_backend_runtime PRIVATE cirrus_backend cirrus_bootstrap Qt6::Test Qt6::Gui OpenSSL::Crypto)
 add_test(NAME backend_runtime COMMAND tst_backend_runtime)
-set_tests_properties(backend_runtime PROPERTIES TIMEOUT 30)
+# Some 40 cases, one waiting out the facade's 5 s close delay: 22 s in a Linux debug build,
+# past 30 s on the macOS runner (three cores, four tests at a time).
+set_tests_properties(backend_runtime PROPERTIES TIMEOUT 90)
 
 qt_add_executable(tst_music unit/music_test.cpp)
 target_link_libraries(tst_music PRIVATE cirrus_netease_music Qt6::Test)
