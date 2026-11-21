@@ -1170,7 +1170,8 @@ void AudioEngine::analysed(quint64 id, std::shared_ptr<const automix::Analysis> 
         return;
     const LoadToken token = current ? m_token : m_next->token;
     if (!analysis)
-        qCDebug(lcMedia) << log::event("analysis.failed") << log::field("token", token.generation);
+        qCWarning(lcMedia) << log::event("analysis.failed")
+                           << log::field("token", token.generation);
     else
         logAnalysis(token, *analysis, elapsedMs, false);
     if (analysis && analysis->complete) // for the next time it plays

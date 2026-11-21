@@ -5,6 +5,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <thread>
 
 namespace cirrus::media
@@ -51,6 +52,9 @@ class Analyst : public QObject
     std::condition_variable m_wake;
     std::deque<Job> m_jobs;
     quint64 m_running = 0; // the job being analysed (0: none)
+    // Done, their results on the way to the owner's thread (the next job may run already):
+    // a cancel takes them out.
+    std::set<quint64> m_done;
     bool m_quit = false;
     std::thread m_thread;
 };

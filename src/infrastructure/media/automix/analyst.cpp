@@ -46,16 +46,16 @@ void Analyst::cancel(quint64 id)
     std::lock_guard guard(m_lock);
     std::erase_if(m_jobs, [id](const Job& job) { return job.id == id; });
     if (m_running == id)
-        m_running = 0; // its result is dropped
+        m_running = 0; // it stops, its result is dropped
+    m_done.erase(id);
 }
 
 void Analyst::finished(quint64 id, std::shared_ptr<const Analysis> analysis, qint64 elapsedMs)
 {
     {
         std::lock_guard guard(m_lock);
-        if (m_running != id)
+        if (m_done.erase(id) == 0)
             return; // canceled meanwhile
-        m_running = 0;
     }
     emit analysed(id, std::move(analysis), elapsedMs);
 }
@@ -104,6 +104,13 @@ void Analyst::work()
                 result = std::make_shared<const Analysis>(analyser.finish(ended));
         }
         job.stream.reset(); // the handle goes here, not with the owner's later
+        {
+            std::lock_guard guard(m_lock);
+            if (m_running != job.id)
+                continue; // canceled while it ran
+            m_running = 0;
+            m_done.insert(job.id);
+        }
         QMetaObject::invokeMethod(
             this,
             [this, id = job.id, result, elapsed = timer.elapsed()] {

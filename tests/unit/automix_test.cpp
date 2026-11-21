@@ -3,6 +3,7 @@
 #include "infrastructure/media/audio_decoder.h"
 #include "infrastructure/media/audio_output.h"
 #include "infrastructure/media/automix/analysis.h"
+#include "infrastructure/media/automix/analyst.h"
 #include "infrastructure/media/automix/deck.h"
 #include "infrastructure/media/automix/mix.h"
 #include "infrastructure/media/automix/transition.h"
@@ -514,6 +515,32 @@ class AutomixTest : public QObject
             const double intoBeat = std::fmod(double(b) - 500 + 1000 * beat, beat);
             QVERIFY2(std::min(intoBeat, beat - intoBeat) < 8, qPrintable(QString::number(b)));
         }
+    }
+
+    void everyQueuedAnalysisComesBack()
+    {
+        // Jobs queued back to back (the current track's and the next one's): the second
+        // starts before the first's result reaches this thread, which still gets it. A
+        // canceled one doesn't come back.
+        Analyst analyst;
+        QList<quint64> back;
+        connect(&analyst, &Analyst::analysed, this,
+                [&back](quint64 id, std::shared_ptr<const Analysis> analysis, qint64) {
+                    if (analysis && analysis->complete)
+                        back.append(id);
+                });
+        const auto file = [](const char* format) {
+            return LocalFileSource::open(QStringLiteral(AUDIO_FIXTURES "/tone.") +
+                                         QLatin1String(format));
+        };
+        analyst.analyse(1, file("flac"), QStringLiteral("flac"));
+        analyst.analyse(2, file("mp3"), QStringLiteral("mp3"));
+        analyst.analyse(3, file("flac"), QStringLiteral("flac"));
+        analyst.analyse(4, file("mp3"), QStringLiteral("mp3"));
+        analyst.cancel(3);
+        QTRY_COMPARE(back.size(), 3);
+        std::sort(back.begin(), back.end());
+        QCOMPARE(back, (QList<quint64>{1, 2, 4}));
     }
 
     void limitsOnlyThePeaks()
