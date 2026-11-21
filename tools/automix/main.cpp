@@ -3,6 +3,7 @@
 //
 //   cirrus_automix analyse a.flac [b.mp3 ...]
 //   cirrus_automix beats a.flac [-o clicks.wav]
+//   cirrus_automix report a.flac b.mp3 [c.flac ...]
 //   cirrus_automix mix a.flac b.mp3 -o out.wav [--mode smart|crossfade|gapless]
 //                  [--crossfade 6] [--context 60] [--rate 48000] [--no-analysis]
 //
@@ -20,10 +21,12 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QMap>
 #include <QtEndian>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 
 using namespace cirrus;
 using namespace cirrus::media;
@@ -146,6 +149,9 @@ class WaveFile
     qint64 m_frames = 0;
 };
 
+// Where rendered audio goes: a file, or memory.
+using Sink = std::function<void(const float* frames, qsizetype count)>;
+
 // Up to `frames` frames from `deck`; fewer only at its end, or when decoding failed.
 qsizetype pullAll(automix::Deck& deck, float* out, qsizetype frames)
 {
@@ -160,13 +166,13 @@ qsizetype pullAll(automix::Deck& deck, float* out, qsizetype frames)
 }
 
 // `deck` alone up to its track's media time `untilMs` (or its end).
-void playUntil(automix::Deck& deck, qint64 untilMs, WaveFile& out)
+void playUntil(automix::Deck& deck, qint64 untilMs, const Sink& out)
 {
     std::vector<float> chunk(2 * kChunkFrames);
     for (qint64 left = deck.framesUntil(untilMs); left > 0;) {
         const auto want = qsizetype(std::min<qint64>(kChunkFrames, left));
         const qsizetype got = pullAll(deck, chunk.data(), want);
-        out.write(chunk.data(), got);
+        out(chunk.data(), got);
         if (got < want)
             return;
         left -= got;
@@ -175,12 +181,12 @@ void playUntil(automix::Deck& deck, qint64 untilMs, WaveFile& out)
 
 // A to its end and B straight on through the same resampler: the engine's gapless joint.
 void renderGapless(automix::Deck& deck, std::unique_ptr<AudioDecoder> next, qint64 untilMs,
-                   WaveFile& out)
+                   const Sink& out)
 {
     std::vector<float> chunk(2 * kChunkFrames);
     while (true) {
         const qsizetype got = deck.pull(chunk.data(), kChunkFrames, false);
-        out.write(chunk.data(), got);
+        out(chunk.data(), got);
         if (got == kChunkFrames)
             continue;
         if (!deck.decoderEnded()) {
@@ -194,7 +200,7 @@ void renderGapless(automix::Deck& deck, std::unique_ptr<AudioDecoder> next, qint
 }
 
 void renderOverlap(const automix::Plan& plan, automix::Deck& a, std::unique_ptr<AudioDecoder> next,
-                   int rate, qint64 untilMs, WaveFile& out)
+                   int rate, qint64 untilMs, const Sink& out)
 {
     playUntil(a, plan.outMs, out);
     automix::Deck b(std::move(next), rate, 1.0f, false);
@@ -204,21 +210,23 @@ void renderOverlap(const automix::Plan& plan, automix::Deck& a, std::unique_ptr<
     }
     std::vector<float> chunk(2 * kChunkFrames), other(2 * kChunkFrames);
     const qint64 overlap = plan.overlapMs * rate / 1000;
+    automix::Mixer mixer(plan, rate);
     for (qint64 offset = 0; offset < overlap;) {
         const auto want = qsizetype(std::min<qint64>(kChunkFrames, overlap - offset));
         const qsizetype gotA = pullAll(a, chunk.data(), want);
         std::fill(chunk.begin() + gotA * 2, chunk.begin() + want * 2, 0.0f);
-        const qsizetype gotB = pullAll(b, other.data(), want);
-        std::fill(other.begin() + gotB * 2, other.begin() + want * 2, 0.0f);
-        automix::mixOverlap(plan, chunk.data(), other.data(), chunk.data(), want, offset, rate);
-        out.write(chunk.data(), want);
+        std::fill(other.begin(), other.begin() + want * 2, 0.0f);
+        const qsizetype silent = mixer.silentIn(want);
+        pullAll(b, other.data() + silent * 2, want - silent);
+        mixer.mix(chunk.data(), other.data(), chunk.data(), want);
+        out(chunk.data(), want);
         offset += want;
     }
     playUntil(b, untilMs, out);
 }
 
 // The whole file through the analyser, at its own rate.
-std::optional<automix::Analysis> analyseFile(const QString& path)
+std::optional<automix::Analysis> analyseFile(const QString& path, qint64 untilMs = 0)
 {
     auto decoder = openTrack(path);
     if (!decoder)
@@ -234,7 +242,7 @@ std::optional<automix::Analysis> analyseFile(const QString& path)
         timer.start();
         const bool more = decoder->read(chunk, kChunkFrames);
         decoding += timer.nsecsElapsed();
-        if (!more)
+        if (!more || (untilMs > 0 && analyser.durationMs() >= untilMs))
             break;
         timer.start();
         analyser.add(chunk.data(), qsizetype(chunk.size() / 2));
@@ -250,7 +258,7 @@ std::optional<automix::Analysis> analyseFile(const QString& path)
         return std::nullopt;
     }
     timer.start();
-    auto analysis = analyser.finish(true);
+    auto analysis = analyser.finish(untilMs <= 0 || analyser.durationMs() < untilMs);
     if (timing)
         std::fprintf(
             stderr,
@@ -296,13 +304,16 @@ int analyse(const QStringList& files)
                     double(r.bpm), double(r.strength), r.beats.size(),
                     double(r.beats.front()) / 1000, double(r.beats.back()) / 1000,
                     r.steady ? " (steady)" : "", r.downbeat, double(r.barConfidence));
-        const auto grid = [](const char* name, const automix::Grid& g) {
+        const auto grid = [&r](const char* name, const automix::Grid& g) {
             if (!g.valid()) {
                 std::printf("  %s: no grid\n", name);
                 return;
             }
-            std::printf("  %s: %.3f BPM over %d beats, %.1f ms rms, %.0f%% within 20 ms\n", name,
-                        60000 / g.periodMs, g.count, g.rmsMs, g.inliers * 100);
+            const auto bars = automix::barPhase(r, g.first, g.first + g.count);
+            std::printf("  %s: %.3f BPM over %d beats, %.1f ms rms, %.0f%% within 20 ms, bars "
+                        "%.2f\n",
+                        name, 60000 / g.periodMs, g.count, g.rmsMs, g.inliers * 100,
+                        double(bars.confidence));
         };
         grid("first 40 s", automix::fitGrid(r.beats, r.beats.front(), r.beats.front() + 40000));
         grid("last 40 s ", automix::fitGrid(r.beats, r.beats.back() - 40000, r.beats.back() + 1));
@@ -373,6 +384,109 @@ int beats(const QCommandLineParser& parser, const QStringList& args)
     return 0;
 }
 
+// Each track into the next as the engine plans it (the next one's first minute analysed,
+// planned a minute before the end, the smart mode). The plans on the beat are rendered
+// (10 s either side of the overlap) and analysed again: how closely the overlap keeps to
+// one beat grid says whether the two tracks' beats met.
+int report(const QStringList& files)
+{
+    if (files.size() < 2) {
+        complain(QStringLiteral("report needs two tracks or more"));
+        return 2;
+    }
+    constexpr int rate = 44100;
+    constexpr qint64 aroundMs = 10000;
+    std::vector<std::optional<automix::Analysis>> whole(size_t(files.size())),
+        start(size_t(files.size()));
+    std::vector<qint64> durations(size_t(files.size()), 0);
+    for (qsizetype i = 0; i < files.size(); ++i) {
+        if (auto decoder = openTrack(files[i]))
+            durations[size_t(i)] = decoder->durationMs();
+        if (i + 1 < files.size())
+            whole[size_t(i)] = analyseFile(files[i]);
+        if (i > 0)
+            start[size_t(i)] = analyseFile(files[i], 60000);
+    }
+    QMap<QString, int> styles;
+    int onBeat = 0, kept = 0, skipped = 0;
+    double worst = 0;
+    for (qsizetype i = 0; i + 1 < files.size(); ++i) {
+        const auto& a = whole[size_t(i)];
+        const auto& b = start[size_t(i) + 1];
+        if (!a || !b)
+            continue;
+        const qint64 durationA = durations[size_t(i)], durationB = durations[size_t(i) + 1];
+        // A file only partly cached (never-fetched ranges): the engine wouldn't plan it.
+        const bool brokenA = durationA - a->durationMs > 1000;
+        if (brokenA || std::min<qint64>(durationB, 60000) - b->durationMs > 1000) {
+            ++skipped;
+            std::printf("%-12s -> %-12s skipped: %s stops decoding at %.1f of %.1f s\n",
+                        qPrintable(QFileInfo(files[i]).baseName().left(12)),
+                        qPrintable(QFileInfo(files[i + 1]).baseName().left(12)),
+                        brokenA ? "A" : "B", seconds(brokenA ? a->durationMs : b->durationMs),
+                        seconds(brokenA ? durationA : durationB));
+            continue;
+        }
+        const automix::Plan plan =
+            automix::plan({}, {durationA, false, &*a}, std::max<qint64>(0, durationA - 60000),
+                          {durationB, false, &*b}, false);
+        styles[automix::logName(plan.style)] += 1;
+        std::printf("%-12s -> %-12s %s (%s), overlap %.1f s",
+                    qPrintable(QFileInfo(files[i]).baseName().left(12)),
+                    qPrintable(QFileInfo(files[i + 1]).baseName().left(12)),
+                    qPrintable(automix::logName(plan.style)),
+                    qPrintable(automix::logName(plan.reason)), seconds(plan.overlapMs));
+        if (plan.bars)
+            std::printf(", %d bars", plan.bars);
+        const auto& beatsA = a->rhythm.beats;
+        const double beatA = beatsA.size() > 1 ? 60000 / double(a->rhythm.bpm) : 0;
+        if (plan.onBeat && !beatsA.empty() && double(beatsA.back()) < double(plan.outMs) - beatA) {
+            ++onBeat; // its beat had stopped: nothing to meet (the grid still holds)
+            std::printf(", on the beat (A's beat stopped %.1f s before)",
+                        seconds(plan.outMs - qint64(beatsA.back())));
+        } else if (plan.onBeat && plan.style != automix::Style::Gapless) {
+            ++onBeat;
+            auto deckDecoder = openTrack(files[i]);
+            auto next = openTrack(files[i + 1]);
+            if (!deckDecoder || !next)
+                return 1;
+            automix::Deck deck(std::move(deckDecoder), rate, 1.0f, false);
+            const qint64 from = std::max<qint64>(0, plan.outMs - aroundMs);
+            std::vector<float> audio;
+            if (deck.seek(from))
+                renderOverlap(plan, deck, std::move(next), rate,
+                              plan.inMs + (plan.overlapMs - plan.inDelayMs) + aroundMs,
+                              [&audio](const float* frames, qsizetype count) {
+                                  audio.insert(audio.end(), frames, frames + count * 2);
+                              });
+            // The beats as found (not snapped to a grid): over the overlap, or for a short
+            // one (a natural end) from 8 s before it to 8 s after, both tracks' beats.
+            automix::RhythmFrontEnd frontEnd(rate);
+            frontEnd.add(audio.data(), qsizetype(audio.size() / 2));
+            const auto found = automix::findRhythm(frontEnd.features(), false);
+            const double overlapAt = double(plan.outMs - from);
+            const double around = plan.overlapMs < 8000 ? 8000 : 0;
+            const auto g = automix::fitGrid(found.beats, overlapAt - around,
+                                            overlapAt + double(plan.overlapMs) + around);
+            if (g.valid()) {
+                ++kept;
+                worst = std::max(worst, g.rmsMs);
+                std::printf(", on the beat: %.1f ms rms, %.0f%% on one grid", g.rmsMs,
+                            g.inliers * 100);
+            } else {
+                std::printf(", on the beat: no grid in the overlap");
+            }
+        }
+        std::printf("\n");
+    }
+    std::printf("\n%lld transitions (%d skipped):",
+                static_cast<long long>(files.size() - 1 - skipped), skipped);
+    for (auto it = styles.cbegin(); it != styles.cend(); ++it)
+        std::printf(" %s %d", qPrintable(it.key()), it.value());
+    std::printf("; %d on the beat, %d measured, worst %.1f ms rms\n", onBeat, kept, worst);
+    return 0;
+}
+
 int mix(const QCommandLineParser& parser, const QStringList& args)
 {
     if (args.size() != 3 || !parser.isSet(QStringLiteral("output"))) {
@@ -411,10 +525,17 @@ int mix(const QCommandLineParser& parser, const QStringList& args)
     const automix::Plan plan =
         automix::plan(settings, {a->durationMs(), false, analysisA ? &*analysisA : nullptr},
                       startMs, {b->durationMs(), false, analysisB ? &*analysisB : nullptr}, false);
-    std::printf("plan  %s (%s): out %.1f s, in %.1f s, overlap %.1f s, B current after %.1f s\n",
+    std::printf("plan  %s (%s): out %.1f s, in %.1f s, overlap %.1f s, B current after %.1f s",
                 qPrintable(automix::logName(plan.style)), qPrintable(automix::logName(plan.reason)),
                 seconds(plan.outMs), seconds(plan.inMs), seconds(plan.overlapMs),
                 seconds(plan.switchMs));
+    if (plan.bars)
+        std::printf(", %d bars", plan.bars);
+    if (plan.onBeat)
+        std::printf(", on the beat");
+    if (plan.inDelayMs)
+        std::printf(", B from %.1f s into it", seconds(plan.inDelayMs));
+    std::printf("\n");
 
     const QString path = parser.value(QStringLiteral("output"));
     WaveFile out;
@@ -427,10 +548,11 @@ int mix(const QCommandLineParser& parser, const QStringList& args)
         complain(QStringLiteral("can't seek A"));
         return 1;
     }
+    const Sink sink = [&out](const float* frames, qsizetype count) { out.write(frames, count); };
     if (plan.style == automix::Style::Gapless)
-        renderGapless(deck, std::move(b), contextMs, out);
+        renderGapless(deck, std::move(b), contextMs, sink);
     else
-        renderOverlap(plan, deck, std::move(b), rate, plan.inMs + contextMs, out);
+        renderOverlap(plan, deck, std::move(b), rate, plan.inMs + contextMs, sink);
     if (!out.finish()) {
         complain(QStringLiteral("%1: can't write it").arg(path));
         return 1;
@@ -473,5 +595,7 @@ int main(int argc, char* argv[])
         return mix(parser, args);
     if (args.value(0) == QLatin1String("beats"))
         return beats(parser, args);
+    if (args.value(0) == QLatin1String("report"))
+        return report(args.mid(1));
     parser.showHelp(2);
 }

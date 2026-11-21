@@ -138,6 +138,7 @@ struct AudioEngine::Producer {
     struct Mixing {
         std::unique_ptr<automix::Deck> deck;
         automix::Plan plan;
+        automix::Mixer mixer;
         qint64 durationMs = 0;
         quint64 startFrame = 0; // output frame its first frame went out at
         qint64 offset = 0;      // frames of the overlap done
@@ -290,13 +291,16 @@ bool AudioEngine::Producer::startMixing()
             return false;
         }
         crossed = true;
-        nextStartFrame = start;
+        nextStartFrame = start + quint64(std::max<qint64>(0, plan.inDelayMs) * outRate / 1000);
         nextBaseMs = plan.inMs;
         boundary = start + quint64(plan.switchMs * outRate / 1000);
         nextDurationMs = durationMs;
     }
     const qint64 length = plan.overlapMs * outRate / 1000;
-    m_mixing = Mixing{std::move(deck), std::move(m_upcoming->plan), durationMs, start, 0, length};
+    automix::Mixer mixer(m_upcoming->plan, outRate);
+    m_mixing =
+        Mixing{std::move(deck), std::move(m_upcoming->plan), std::move(mixer), durationMs, start, 0,
+               length};
     m_upcoming.reset();
     return true;
 }
@@ -312,14 +316,14 @@ void AudioEngine::Producer::mixSome(std::vector<float>& out)
         m_cur->finish(); // the current track ends inside the overlap: silent for the rest
         a += pullFrom(*m_cur, out.data() + a * 2, frames - a);
     }
-    const qsizetype b = pullFrom(*mix.deck, m_other.data(), frames);
+    const qsizetype silent = mix.mixer.silentIn(frames); // the next track begins after these
+    const qsizetype b = silent + pullFrom(*mix.deck, m_other.data() + silent * 2, frames - silent);
     if ((a < frames && m_cur->decoder().interrupted()) ||
         (b < frames && mix.deck->decoder().interrupted())) {
         out.clear(); // a seek or stop is waiting: this piece never plays
         return;
     }
-    automix::mixOverlap(mix.plan, out.data(), m_other.data(), out.data(), frames, mix.offset,
-                        outRate);
+    mix.mixer.mix(out.data(), m_other.data(), out.data(), frames);
     mix.offset += frames;
     if (mix.offset < mix.length)
         return;
@@ -1106,7 +1110,9 @@ void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan, bool a
                     << log::field("mode", mode) << log::field("style", plan.style)
                     << log::field("reason", plan.reason) << log::field("out_ms", plan.outMs)
                     << log::field("in_ms", plan.inMs) << log::field("overlap_ms", plan.overlapMs)
-                    << log::field("again", again);
+                    << log::fieldIf(plan.bars > 0, "bars", plan.bars)
+                    << log::fieldIf(plan.inDelayMs > 0, "delay_ms", plan.inDelayMs)
+                    << log::field("on_beat", plan.onBeat) << log::field("again", again);
 }
 
 void AudioEngine::analyseCurrent()

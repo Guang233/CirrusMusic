@@ -263,15 +263,195 @@ class AutomixTest : public QObject
         const auto p = plan({TransitionMode::Crossfade, 2000}, {60000}, 0, {60000}, false);
         constexpr int rate = 1000; // a frame a millisecond
         std::vector<float> a(2 * 2000, 0.5f), b(2 * 2000, -0.25f), mixed(2 * 2000);
-        mixOverlap(p, a.data(), b.data(), mixed.data(), 2000, 0, rate);
+        Mixer whole(p, rate);
+        whole.mix(a.data(), b.data(), mixed.data(), 2000);
         QCOMPARE(mixed[0], 0.5f);
         const float middle = (0.5f - 0.25f) * float(std::sqrt(0.5));
         QVERIFY(std::abs(mixed[2 * 1000] - middle) < 1e-3);
         QVERIFY(std::abs(mixed[2 * 1999 + 1] + 0.25f) < 2e-3);
-        // A later piece of the same overlap continues the curve.
-        std::vector<float> tail(2 * 10);
-        mixOverlap(p, a.data(), b.data(), tail.data(), 10, 1000, rate);
-        QCOMPARE(tail[0], mixed[2 * 1000]);
+        // In pieces, the same.
+        Mixer pieces(p, rate);
+        std::vector<float> first(2 * 1000), second(2 * 10);
+        pieces.mix(a.data(), b.data(), first.data(), 1000);
+        pieces.mix(a.data(), b.data(), second.data(), 10);
+        QCOMPARE(pieces.offset(), 1010);
+        QCOMPARE(second[0], mixed[2 * 1000]);
+    }
+
+    void aBassCutTakesTheBass()
+    {
+        constexpr int rate = 44100;
+        Plan p;
+        p.overlapMs = 2000;
+        p.gainOut = Automation(1);
+        p.gainIn = Automation(0);
+        p.bassCutOut = Automation(1);
+        const auto rms = [&](double hz) {
+            const auto in = sine(rate, 2, 0.5, hz);
+            std::vector<float> out(in.size()), none(in.size(), 0.0f);
+            Mixer(p, rate).mix(in.data(), none.data(), out.data(), qsizetype(in.size() / 2));
+            double sum = 0;
+            for (size_t i = in.size() / 2; i < in.size(); ++i) // after it settled
+                sum += double(out[i]) * out[i];
+            return std::sqrt(sum / double(in.size() / 2)) / (0.5 / std::sqrt(2));
+        };
+        QVERIFY2(rms(60) < 0.05, qPrintable(QString::number(rms(60))));
+        QVERIFY2(rms(2000) > 0.97, qPrintable(QString::number(rms(2000))));
+    }
+
+    void anEchoRepeats()
+    {
+        constexpr int rate = 1000; // a frame a millisecond
+        Plan p;
+        p.overlapMs = 500;
+        p.gainOut = Automation(0); // only the echo is heard
+        p.gainIn = Automation(0);
+        p.echoMs = 100;
+        p.echoFeedback = 0.5f;
+        p.echoSend.add(0, 1).add(0.001, 1).add(0.002, 0);
+        std::vector<float> in(2 * 500, 0.0f), none(2 * 500, 0.0f), out(2 * 500);
+        in[0] = in[1] = 0.5f;
+        Mixer(p, rate).mix(in.data(), none.data(), out.data(), 500);
+        QCOMPARE(out[0], 0.0f);
+        QCOMPARE(out[2 * 100], 0.5f);
+        QCOMPARE(out[2 * 200], 0.25f);
+        QCOMPARE(out[2 * 300 + 1], 0.125f);
+        QCOMPARE(out[2 * 150], 0.0f);
+    }
+
+    void theNextWaitsForItsDelay()
+    {
+        Plan p;
+        p.overlapMs = 1000;
+        p.inDelayMs = 300;
+        Mixer m(p, 1000);
+        QCOMPARE(m.silentIn(200), 200);
+        std::vector<float> a(2 * 200, 0.0f), b(2 * 200, 0.0f), out(2 * 200);
+        m.mix(a.data(), b.data(), out.data(), 200);
+        QCOMPARE(m.silentIn(200), 100);
+        m.mix(a.data(), b.data(), out.data(), 200);
+        QCOMPARE(m.silentIn(200), 0);
+    }
+
+    void beatsAreMixedOnTheBeat()
+    {
+        // Both 125 BPM and steady, A ending at full: 16 bars of B's start over A's last 16,
+        // their beats and bar lines together, the bass swapped in the middle.
+        const int rate = 22050;
+        const auto a = analyse(groove(rate, 125, 40, 0.5), rate);
+        const auto b = analyse(groove(rate, 125, 24, 0.5), rate, false);
+        const Track out{a.durationMs, false, &a}, in{b.durationMs, false, &b};
+        const Plan p = plan({}, out, 0, in, false);
+        QCOMPARE(p.style, Style::BeatMix);
+        QCOMPARE(p.bars, 16);
+        const double beat = 60000 / 125.0;
+        QVERIFY(std::fabs(double(p.overlapMs) - 64 * beat) < 30);
+        // B's first beat (at 0.5 s) lands on one of A's bar lines, 16 bars before its end.
+        const double barLine = double(p.outMs) + (500 - double(p.inMs));
+        const double intoBar = std::fmod(barLine - 500, 4 * beat);
+        QVERIFY2(std::min(intoBar, 4 * beat - intoBar) < 5, qPrintable(QString::number(intoBar)));
+        QVERIFY(std::fabs(double(p.switchMs) - 32 * beat) < 5);
+        QCOMPARE(p.bassCutIn.at(0), 1.0f);
+        QCOMPARE(p.bassCutIn.at(double(p.switchMs) / 1000 + 0.01), 0.0f);
+        QCOMPARE(p.bassCutOut.at(double(p.switchMs) / 1000 + 0.01), 1.0f);
+    }
+
+    void aJointKeepsItsTempo_data()
+    {
+        QTest::addColumn<double>("next");
+        QTest::addColumn<bool>("continuous");
+        QTest::newRow("the same tempo: a mix going on") << 125.0 << true;
+        QTest::newRow("another tempo: two songs") << 140.0 << false;
+    }
+    void aJointKeepsItsTempo()
+    {
+        // A runs to its very end at full level, B starts at once: one recording going on
+        // only if the beat does.
+        QFETCH(double, next);
+        QFETCH(bool, continuous);
+        const int rate = 22050;
+        auto audio = groove(rate, 125, 24);
+        audio.resize(audio.size() - size_t(rate) * 2); // the second of silence after it
+        const auto a = analyse(audio, rate);
+        const auto b = analyse(groove(rate, next, 16), rate, false);
+        QVERIFY(a.durationMs - a.soundEndMs < 50 && b.soundStartMs < 50);
+        const Plan p = plan({}, {a.durationMs, false, &a}, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.reason == Reason::Continuous, continuous);
+        if (!continuous)
+            QVERIFY(p.style != Style::Gapless);
+    }
+
+    void aFadeOutEndsOnTheBeat()
+    {
+        // A fades out over its last 10 s (3 dB a second): still a natural end, but B's first
+        // bar line comes on one of A's.
+        const int rate = 22050;
+        auto audio = groove(rate, 125, 40, 0.5);
+        const auto frames = qsizetype(audio.size() / 2);
+        const auto fadeFrom = frames - qsizetype(11 * rate); // the groove has 1 s of silence after
+        for (qsizetype i = fadeFrom; i < frames; ++i) {
+            const auto gain = float(std::pow(10.0, -3.0 * double(i - fadeFrom) / rate / 20));
+            audio[size_t(i) * 2] *= gain;
+            audio[size_t(i) * 2 + 1] *= gain;
+        }
+        const auto a = analyse(audio, rate);
+        const auto b = analyse(groove(rate, 125, 24, 0.5), rate, false);
+        QVERIFY(a.fadeStartMs >= 0);
+        const Plan p = plan({}, {a.durationMs, false, &a}, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.style, Style::NaturalEnd);
+        QVERIFY(p.onBeat);
+        const double beat = 60000 / 125.0;
+        const double barLine = double(p.outMs) + (500 - double(p.inMs)); // B's first beat
+        const double intoBar = std::fmod(barLine - 500, 4 * beat);
+        QVERIFY2(std::min(intoBar, 4 * beat - intoBar) < 5, qPrintable(QString::number(intoBar)));
+        QVERIFY(std::fabs(double(p.outMs) - double(a.fadedBy(20))) < 2 * beat);
+    }
+
+    void closeTemposMixForLess_data()
+    {
+        QTest::addColumn<double>("bpm");
+        QTest::addColumn<int>("bars");
+        QTest::newRow("0.16 % apart: 8 bars") << 125.2 << 8;
+        QTest::newRow("0.5 % apart: none, a filter out") << 125.6 << 0;
+    }
+    void closeTemposMixForLess()
+    {
+        QFETCH(double, bpm);
+        QFETCH(int, bars);
+        const int rate = 22050;
+        const auto a = analyse(groove(rate, 125, 40, 0.5), rate);
+        const auto b = analyse(groove(rate, bpm, 24, 0.5), rate, false);
+        const Plan p = plan({}, {a.durationMs, false, &a}, 0, {b.durationMs, false, &b}, false);
+        if (bars) {
+            QCOMPARE(p.style, Style::BeatMix);
+            QCOMPARE(p.bars, bars);
+            return;
+        }
+        // Its beats would drift apart: A's last 4 beats swept away into an echo, B coming in
+        // as A stops.
+        QCOMPARE(p.style, Style::FilterOut);
+        QVERIFY(std::fabs(double(p.switchMs) - 4 * 60000 / 125.0) < 30);
+        QVERIFY(p.echoMs > 470 && p.echoMs < 490);
+        QVERIFY(p.sweepOut.at(0) < 30);
+        QVERIFY(p.sweepOut.at(double(p.switchMs) / 1000) > 1000);
+        QCOMPARE(p.gainOut.at(double(p.switchMs) / 1000 + 0.01), 0.0f);
+        QVERIFY(p.inDelayMs > 0 && p.inDelayMs <= p.switchMs);
+        QVERIFY(p.overlapMs > p.switchMs + 2000);
+    }
+
+    void singingStaysApartOnTheBeat()
+    {
+        // A sings until 6 bars before its end: done by the middle of 8 bars, not of 16.
+        const int rate = 22050;
+        const auto a = analyse(groove(rate, 125, 40, 0.5), rate);
+        const auto b = analyse(groove(rate, 125, 24, 0.5), rate, false);
+        const double beat = 60000 / 125.0;
+        const auto lastLine = qint64(500 + (40 - 6) * 4 * beat);
+        const Track out{a.durationMs, false, &a, {{lastLine - 3000, lastLine}}};
+        const Plan p = plan({}, out, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.style, Style::BeatMix);
+        QCOMPARE(p.bars, 8);
+        QVERIFY(double(p.outMs) + double(p.switchMs) > double(lastLine));
     }
 
     void limitsOnlyThePeaks()

@@ -92,8 +92,9 @@ struct BarPhase {
 [[nodiscard]] BarPhase barPhase(const Rhythm& rhythm, qsizetype from, qsizetype to);
 
 // Tempo by autocorrelation under a prior around 120 BPM, beats by dynamic programming
-// (Ellis 2007), bars from harmonic changes and the kick and snare pattern.
-[[nodiscard]] Rhythm findRhythm(const RhythmFeatures& features);
+// (Ellis 2007), bars from harmonic changes and the kick and snare pattern. `toGrid`: a
+// song made to a click gets that grid as its beats (off: the beats as found, to measure).
+[[nodiscard]] Rhythm findRhythm(const RhythmFeatures& features, bool toGrid = true);
 
 // A constant beat grid fitted to the beats in [fromMs, toMs): beat i of it at
 // phaseMs + i · periodMs (i from 0 for the first beat inside, at index `first`).

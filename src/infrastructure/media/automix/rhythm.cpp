@@ -229,7 +229,7 @@ void RhythmFrontEnd::chromaFrame(const float* samples)
     m_features.chroma.push_back(classes);
 }
 
-Rhythm findRhythm(const RhythmFeatures& f)
+Rhythm findRhythm(const RhythmFeatures& f, bool toGrid)
 {
     Rhythm rhythm;
     const auto n = qsizetype(f.onset.size());
@@ -399,7 +399,7 @@ Rhythm findRhythm(const RhythmFeatures& f)
     // a breakdown where the onsets misled the tracker. Only between the first and last beat
     // on it: a free intro or ending keeps its own.
     if (const Fit whole = fitBeats(rhythm.beats, 0, qsizetype(rhythm.beats.size()));
-        whole.count > 0 && whole.inliers >= kSteadyShare && whole.rms <= kSteadyRmsMs) {
+        toGrid && whole.count > 0 && whole.inliers >= kSteadyShare && whole.rms <= kSteadyRmsMs) {
         qsizetype firstOn = -1, lastOn = -1;
         for (qsizetype i = 0; i < qsizetype(whole.residuals.size()); ++i) {
             if (std::fabs(whole.residuals[size_t(i)]) <= kOnGridMs) {

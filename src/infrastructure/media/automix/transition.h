@@ -9,14 +9,15 @@ namespace cirrus::media::automix
 {
 struct Analysis;
 
-// How a transition sounds (docs/tasks/automix.md §5.1). Beat mix and filter out come with
-// the beat analysis.
+// How a transition sounds (docs/tasks/automix.md §5.1).
 enum class Style {
     Gapless,    // the next track straight after, to the sample
     Crossfade,  // equal-power, over the current track's outro
     NaturalEnd, // the current track's own fade-out plays, the next comes in under its end
+    BeatMix,    // the next track's bars on the current one's, the bass swapped on a downbeat
+    FilterOut,  // the current track's last beats filtered away into an echo
 };
-CIRRUS_LOG_ENUM(Style, Gapless, Crossfade, NaturalEnd)
+CIRRUS_LOG_ENUM(Style, Gapless, Crossfade, NaturalEnd, BeatMix, FilterOut)
 
 // Why a plan is what it is (the log, the tuning tool).
 enum class Reason {
@@ -30,9 +31,11 @@ enum class Reason {
     FadeOut,    // the current track fades out by itself: a natural end
     Outro,      // a crossfade after the current track's singing, before the next one's
     Tight,      // no room between the singing: the shortest crossfade at the very end
+    Beats,      // both steady at about the same tempo: on the beat
+    FullEnd,    // the current track ends at full level on a beat the next can't take up
 };
 CIRRUS_LOG_ENUM(Reason, Setting, NoAnalysis, Preview, SameFile, NoDuration, NoRoom, Continuous,
-                FadeOut, Outro, Tight)
+                FadeOut, Outro, Tight, Beats, FullEnd)
 
 // One transition from the current track ("out") into the next ("in"). Times are each
 // track's own media time; the automations run over the overlap, in seconds from its start.
@@ -43,8 +46,19 @@ struct Plan {
     qint64 inMs = 0;      // where in the next track it starts from
     qint64 overlapMs = 0; // how long both sound (0: gapless)
     qint64 switchMs = 0;  // from the overlap's start: the next becomes the current track
+    qint64 inDelayMs = 0; // from the overlap's start: the next track begins (silence before)
     Automation gainOut;   // the current track's gain over the overlap
     Automation gainIn;    // the next track's
+    // Each track's bass (under 200 Hz) cut: 0 all of it, 1 none. Empty: left alone.
+    Automation bassCutOut, bassCutIn;
+    // A high-pass on the current track, its cutoff in Hz. Empty: none.
+    Automation sweepOut;
+    // An echo of the current track: its delay (0: none), feedback, and how much goes in.
+    double echoMs = 0;
+    float echoFeedback = 0;
+    Automation echoSend;
+    int bars = 0;        // a beat mix's overlap in bars
+    bool onBeat = false; // the next track's bars come on the current one's
 };
 
 // A sung line, from the lyrics' timeline (ms of the track's media time).
