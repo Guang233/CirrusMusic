@@ -64,6 +64,11 @@ done
 # Gatekeeper asks the user once (README).
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
+# For the log: what the bundle says about itself, its architecture and oldest macOS, its size.
+plutil -p "$app/Contents/Info.plist"
+lipo -archs "$app/Contents/MacOS/Cirrus"
+otool -l "$app/Contents/MacOS/Cirrus" | grep -A3 LC_BUILD_VERSION | grep -E 'minos|sdk'
+du -sh "$app"
 
 dmgroot=$build/dmg
 rm -rf "$dmgroot"
@@ -73,4 +78,5 @@ ln -s /Applications "$dmgroot/Applications"
 dmg="$out/Cirrus-$version-macos-arm64.dmg"
 rm -f "$dmg"
 hdiutil create -volname "Cirrus $version" -srcfolder "$dmgroot" -fs HFS+ -format UDZO "$dmg"
+ls -l "$dmg"
 echo "Built $dmg"
