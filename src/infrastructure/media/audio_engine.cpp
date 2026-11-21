@@ -303,12 +303,12 @@ void AudioEngine::load(MediaSource source, LoadToken token)
     m_active = true;
     m_source = std::move(source);
     m_clock.start();
-    qCDebug(lcMedia) << log::event("engine.load") << log::field("token", token.generation)
-                     << log::field("format", m_source.format)
-                     << log::field("preview", m_source.preview.has_value())
-                     << log::field("gain_db", m_source.gainDb
-                                                  ? QString::number(*m_source.gainDb, 'f', 1)
-                                                  : QStringLiteral("-"));
+    log::debug(lcMedia, "engine.load",
+               {{"token", token.generation},
+                {"format", m_source.format},
+                {"preview", m_source.preview.has_value()},
+                {"gain_db", m_source.gainDb ? QString::number(*m_source.gainDb, 'f', 1)
+                                            : QStringLiteral("-")}});
     PlaybackError error{};
     m_stream = m_store.open(m_source, &error);
     if (!m_stream) {
@@ -442,9 +442,9 @@ void AudioEngine::opened(LoadToken token, qint64 durationMs)
     }
     m_durationMs = durationMs;
     m_ready = true;
-    qCDebug(lcMedia) << log::event("engine.ready") << log::field("token", token.generation)
-                     << log::field("duration_ms", durationMs)
-                     << log::field("open_ms", m_clock.elapsed());
+    log::debug(
+        lcMedia, "engine.ready",
+        {{"token", token.generation}, {"duration_ms", durationMs}, {"open_ms", m_clock.elapsed()}});
     m_ticker.start();
     send({token, Kind::Duration, {}, durationMs});
     if (!m_active || token != m_token)
@@ -517,10 +517,10 @@ void AudioEngine::tick()
         m_underrunWindow.start();
     if (m_underrunWindow.elapsed() >= kUnderrunLogMs) {
         if (underruns > m_underrunsLogged)
-            qCWarning(lcMedia) << log::event("engine.underruns")
-                               << log::field("token", token.generation)
-                               << log::field("count", underruns - m_underrunsLogged)
-                               << log::field("window_ms", m_underrunWindow.elapsed());
+            log::warn(lcMedia, "engine.underruns",
+                      {{"token", token.generation},
+                       {"count", underruns - m_underrunsLogged},
+                       {"window_ms", m_underrunWindow.elapsed()}});
         m_underrunsLogged = underruns;
         m_underrunWindow.restart();
     }
@@ -539,7 +539,7 @@ void AudioEngine::ended()
     if (!m_active || m_ended)
         return;
     m_ended = true;
-    qCDebug(lcMedia) << log::event("engine.ended") << log::field("token", m_token.generation);
+    log::debug(lcMedia, "engine.ended", {"token", m_token.generation});
     m_ticker.stop();
     m_meter.breakInterval();
     m_playing = false;
@@ -552,9 +552,11 @@ void AudioEngine::fail(LoadToken token, PlaybackError error)
 {
     if (!m_active || token != m_token)
         return;
-    qCWarning(lcMedia) << log::event("engine.failed") << log::field("token", token.generation)
-                       << log::field("err", error) << log::field("ready", m_ready)
-                       << log::field("ms", m_clock.elapsed());
+    log::warn(lcMedia, "engine.failed",
+              {{"token", token.generation},
+               {"err", error},
+               {"ready", m_ready},
+               {"ms", m_clock.elapsed()}});
     m_meter.breakInterval();
     m_ticker.stop();
     QTimer::singleShot(0, this, [this, token, error] {
@@ -588,15 +590,13 @@ void AudioEngine::openNext()
     PlaybackError error{};
     m_next->stream = m_store.open(m_next->source, &error);
     if (!m_next->stream) {
-        qCWarning(lcMedia) << log::event("engine.next_open_failed")
-                           << log::field("token", m_next->token.generation)
-                           << log::field("err", error);
+        log::warn(lcMedia, "engine.next_open_failed",
+                  {{"token", m_next->token.generation}, {"err", error}});
         m_next.reset();
         return;
     }
-    qCDebug(lcMedia) << log::event("engine.next_opened")
-                     << log::field("token", m_next->token.generation)
-                     << log::field("left_ms", m_durationMs - position());
+    log::debug(lcMedia, "engine.next_opened",
+               {{"token", m_next->token.generation}, {"left_ms", m_durationMs - position()}});
     std::lock_guard guard(m_producer->lock);
     m_producer->nextStream = m_next->stream;
     m_producer->nextFormat = m_next->source.format.toLower();
@@ -646,8 +646,8 @@ void AudioEngine::advance(qint64 durationMs, quint64 boundary)
     m_meter.reset();
     m_published.reset();
     const auto token = m_token;
-    qCDebug(lcMedia) << log::event("engine.advanced") << log::field("token", token.generation)
-                     << log::field("duration_ms", durationMs);
+    log::debug(lcMedia, "engine.advanced",
+               {{"token", token.generation}, {"duration_ms", durationMs}});
     send({token, Kind::Advanced});
     if (!m_active || token != m_token)
         return;
@@ -675,8 +675,8 @@ void AudioEngine::urlNeeded(quint64 stream)
 {
     if (!m_active)
         return;
-    qCInfo(lcMedia) << log::event("engine.source_expired") << log::field("dl", stream)
-                    << log::field("next", !(m_stream && m_stream->id() == stream));
+    log::info(lcMedia, "engine.source_expired",
+              {{"dl", stream}, {"next", !(m_stream && m_stream->id() == stream)}});
     if (m_stream && m_stream->id() == stream)
         send({m_token, Kind::SourceExpired});
     else if (m_next && m_next->stream && m_next->stream->id() == stream)
@@ -738,7 +738,7 @@ void AudioEngine::setNormalization(bool on)
     m_normalize = on;
     if (m_producer)
         m_producer->normalize = on; // from the next decoded chunk, sliding
-    qCInfo(lcMedia) << log::event("engine.normalize") << log::field("on", on);
+    log::info(lcMedia, "engine.normalize", {"on", on});
 }
 
 void AudioEngine::setVolume(float linear)
@@ -758,8 +758,8 @@ void AudioEngine::setVolume(float linear)
 
 void AudioEngine::deviceChanged()
 {
-    qCInfo(lcMedia) << log::event("engine.device_changed") << log::field("playing", m_playing)
-                    << log::field("active", m_active && m_ready && !m_ended);
+    log::info(lcMedia, "engine.device_changed",
+              {{"playing", m_playing}, {"active", m_active && m_ready && !m_ended}});
     if (!m_active || !m_ready || m_ended) {
         if (m_output->isOpen())
             m_output->open(); // follow the default for the next load
@@ -768,7 +768,7 @@ void AudioEngine::deviceChanged()
     const qint64 at = position();
     stopProducer();
     if (!m_output->open()) {
-        qCWarning(lcMedia) << log::event("engine.no_output");
+        log::warn(lcMedia, "engine.no_output");
         return; // no device now; the next change (one appears) picks it up from here
     }
     m_output->setGain(m_volume);

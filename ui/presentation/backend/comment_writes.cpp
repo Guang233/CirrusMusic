@@ -172,15 +172,13 @@ void CommentWrites::pump()
     const auto session = m_facade->snapshot();
     if (m_running->accountId.isEmpty() || session.phase != domain::SessionPhase::Authenticated ||
         session.accountId != m_running->accountId) {
-        qCInfo(lcUiBackend) << log::event("comment_write.dropped")
-                            << log::field("reason", "account");
+        log::info(lcUiBackend, "comment_write.dropped", {"reason", "account"});
         finish(failure::SignedOut);
         return;
     }
     const domain::CommentMutation mutation{QUuid::createUuid(), m_running->change};
     if (!mutation.isValid()) {
-        qCWarning(lcUiBackend) << log::event("comment_write.invalid")
-                               << log::field("change", changeName(m_running->change));
+        log::warn(lcUiBackend, "comment_write.invalid", {"change", changeName(m_running->change)});
         finish(failure::Invalid);
         return;
     }
@@ -190,8 +188,7 @@ void CommentWrites::pump()
             m_retry.start();
             return;
         }
-        qCWarning(lcUiBackend) << log::event("comment_write.refused")
-                               << log::field("change", changeName(m_running->change));
+        log::warn(lcUiBackend, "comment_write.refused", {"change", changeName(m_running->change)});
         finish(failure::Busy);
         return;
     }
@@ -206,12 +203,13 @@ void CommentWrites::completed(quint64 id, const domain::CommentWriteResult& resu
     const char* name = changeName(m_running->change);
     const auto kind = kindOf(result);
     if (kind)
-        qCWarning(lcUiBackend) << log::event("comment_write.failed") << log::field("change", name)
-                               << log::field("outcome", result.outcome)
-                               << log::field("err", result.error)
-                               << log::field("code", result.providerCode.value_or(0));
+        log::warn(lcUiBackend, "comment_write.failed",
+                  {{"change", name},
+                   {"outcome", result.outcome},
+                   {"err", result.error},
+                   {"code", result.providerCode.value_or(0)}});
     else
-        qCInfo(lcUiBackend) << log::event("comment_write.done") << log::field("change", name);
+        log::info(lcUiBackend, "comment_write.done", {"change", name});
     finish(kind, result.retryAfterMs);
 }
 

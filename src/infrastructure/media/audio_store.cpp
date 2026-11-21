@@ -218,11 +218,10 @@ AudioStore::AudioStore(Options options, std::unique_ptr<QNetworkAccessManager> m
     m_rootUsable = !m_options.root.isEmpty() && makePrivateDirectory(m_options.root);
     if (!m_options.root.isEmpty() && !m_rootUsable) {
         const storage::Refusal why = storage::lastRefusal();
-        qCWarning(lcMedia) << log::event("audio_cache.root_unusable")
-                           << log::field("dir", log::path(m_options.root))
-                           << log::field("reason",
-                                         QString::fromLatin1(why.reason ? why.reason : "-"))
-                           << log::fieldIf(why.error != 0, "os_error", qint64(why.error));
+        log::warn(lcMedia, "audio_cache.root_unusable",
+                  {{"dir", log::path(m_options.root)},
+                   {"reason", QString::fromLatin1(why.reason ? why.reason : "-")},
+                   log::fieldIf(why.error != 0, "os_error", qint64(why.error))});
     }
 }
 AudioStore::~AudioStore()
@@ -281,9 +280,9 @@ std::shared_ptr<AudioStream> AudioStore::open(const MediaSource& source, Playbac
     Q_ASSERT(QThread::currentThread() == thread());
     Download* d = findByBase(baseFor(source));
     if (d) {
-        qCDebug(lcMedia) << log::event("audio.open_shared") << log::field("dl", d->id)
-                         << log::field("prefetched", d->prefetchLimit >= 0)
-                         << log::field("handles", d->handles + 1);
+        log::debug(
+            lcMedia, "audio.open_shared",
+            {{"dl", d->id}, {"prefetched", d->prefetchLimit >= 0}, {"handles", d->handles + 1}});
         d->prefetchLimit = -1; // a prefetch becomes the real thing
         if (!d->waitingUrl) {
             d->url = source.url; // the fresher address
@@ -303,9 +302,8 @@ std::shared_ptr<AudioStream> AudioStore::open(const MediaSource& source, Playbac
 AudioStore::Download* AudioStore::create(const MediaSource& source, PlaybackError* failure)
 {
     const auto refuse = [failure, &source](PlaybackError error) -> Download* {
-        qCWarning(lcMedia) << log::event("audio.open_refused") << log::field("err", error)
-                           << log::field("host", log::host(source.url))
-                           << log::field("bytes", source.size);
+        log::warn(lcMedia, "audio.open_refused",
+                  {{"err", error}, {"host", log::host(source.url)}, {"bytes", source.size}});
         if (failure)
             *failure = error;
         return nullptr;
@@ -366,15 +364,15 @@ AudioStore::Download* AudioStore::create(const MediaSource& source, PlaybackErro
     }
     // What playback starts from (docs/tasks/logging.md §8): how much is on disk already.
     const auto have = std::count(state->have.cbegin(), state->have.cend(), true);
-    qCDebug(lcMedia) << log::event("audio.open") << log::field("dl", d->id)
-                     << log::field("bytes", source.size) << log::field("format", source.format)
-                     << log::field("cached_pct",
-                                   state->have.empty()
-                                       ? 0
-                                       : int(have * 100 / qsizetype(state->have.size())))
-                     << log::field("verified", d->verifiedComplete)
-                     << log::field("temporary", d->base.isEmpty())
-                     << log::field("host", log::host(source.url));
+    log::debug(
+        lcMedia, "audio.open",
+        {{"dl", d->id},
+         {"bytes", source.size},
+         {"format", source.format},
+         {"cached_pct", state->have.empty() ? 0 : int(have * 100 / qsizetype(state->have.size()))},
+         {"verified", d->verifiedComplete},
+         {"temporary", d->base.isEmpty()},
+         {"host", log::host(source.url)}});
     d->state = std::move(state);
     m_downloads.insert(d->id, d);
     saveMeta(*d); // records the use (eviction order)
@@ -390,8 +388,7 @@ void AudioStore::prefetch(const MediaSource& source, qint64 bytes)
     if (!d)
         return;
     d->prefetchLimit = std::min(source.size, bytes);
-    qCDebug(lcMedia) << log::event("audio.prefetch") << log::field("dl", d->id)
-                     << log::field("bytes", d->prefetchLimit);
+    log::debug(lcMedia, "audio.prefetch", {{"dl", d->id}, {"bytes", d->prefetchLimit}});
     QTimer::singleShot(0, this, [this, id = d->id] {
         if (auto d = m_downloads.value(id))
             schedule(*d);
@@ -407,7 +404,7 @@ void AudioStore::refresh(quint64 stream, QUrl url, QDeadlineTimer validUntil)
         fail(*d, PlaybackError::UnsafeSource);
         return;
     }
-    qCInfo(lcMedia) << log::event("audio.url_refreshed") << log::field("dl", d->id);
+    log::info(lcMedia, "audio.url_refreshed", {"dl", d->id});
     d->url = *approvedMediaUrl(url, true);
     d->source.validUntil = validUntil;
     d->waitingUrl = false;
@@ -538,9 +535,8 @@ void AudioStore::request(Download& d, qint64 start, qint64 end)
         std::lock_guard lock(d.state->lock);
         d.state->activeStart = d.state->activeEnd = start;
     }
-    qCDebug(lcMedia) << log::event("audio.range") << log::field("dl", d.id)
-                     << log::field("from", start) << log::field("to", end)
-                     << log::field("host", log::host(d.url));
+    log::debug(lcMedia, "audio.range",
+               {{"dl", d.id}, {"from", start}, {"to", end}, {"host", log::host(d.url)}});
     d.reply = m_manager->get(request);
     d.reply->setReadBufferSize(256 * 1024);
     const auto id = d.id;
@@ -660,26 +656,27 @@ void AudioStore::finished(quint64 id)
             fail(*d, PlaybackError::UnsafeSource);
             return;
         }
-        qCDebug(lcMedia) << log::event("audio.redirect") << log::field("dl", d->id)
-                         << log::field("status", status) << log::field("host", log::host(url));
+        log::debug(lcMedia, "audio.redirect",
+                   {{"dl", d->id}, {"status", status}, {"host", log::host(url)}});
         d->url = url;
         schedule(*d);
         return;
     }
     if (status == 403 || status == 404 || status == 410) {
-        qCInfo(lcMedia) << log::event("audio.url_refused") << log::field("dl", d->id)
-                        << log::field("status", status);
+        log::info(lcMedia, "audio.url_refused", {{"dl", d->id}, {"status", status}});
         needUrl(*d);
         return;
     }
     if (error != QNetworkReply::NoError || (status != 200 && status != 206) ||
         d->position < d->requestEnd) {
-        qCWarning(lcMedia)
-            << log::event("audio.range_failed") << log::field("dl", d->id)
-            << log::field("status", status) << log::field("qt", error)
-            << log::field("at", d->position) << log::field("to", d->requestEnd)
-            << log::field("retry", d->retries + 1)
-            << log::field("h2", reply->attribute(QNetworkRequest::Http2WasUsedAttribute).toBool());
+        log::warn(lcMedia, "audio.range_failed",
+                  {{"dl", d->id},
+                   {"status", status},
+                   {"qt", error},
+                   {"at", d->position},
+                   {"to", d->requestEnd},
+                   {"retry", d->retries + 1},
+                   {"h2", reply->attribute(QNetworkRequest::Http2WasUsedAttribute).toBool()}});
         retry(*d);
         return;
     }
@@ -712,7 +709,7 @@ void AudioStore::needUrl(Download& d)
     }
     if (d.waitingUrl)
         return;
-    qCDebug(lcMedia) << log::event("audio.url_needed") << log::field("dl", d.id);
+    log::debug(lcMedia, "audio.url_needed", {"dl", d.id});
     d.waitingUrl = true;
     d.refreshTimer.setSingleShot(true);
     d.refreshTimer.setInterval(m_options.refreshTimeoutMs);
@@ -727,8 +724,7 @@ void AudioStore::needUrl(Download& d)
 
 void AudioStore::fail(Download& d, PlaybackError error)
 {
-    qCWarning(lcMedia) << log::event("audio.failed") << log::field("dl", d.id)
-                       << log::field("err", error) << log::field("handles", d.handles);
+    log::warn(lcMedia, "audio.failed", {{"dl", d.id}, {"err", error}, {"handles", d.handles}});
     abortReply(d);
     d.retryTimer.stop();
     d.refreshTimer.stop();
@@ -779,7 +775,7 @@ void AudioStore::verified(QString base, qint64 size, QByteArray md5, bool good)
     if (d)
         d->verifying = false;
     if (!good) {
-        qCWarning(lcMedia) << log::event("audio_cache.md5_mismatch") << log::field("bytes", size);
+        log::warn(lcMedia, "audio_cache.md5_mismatch", {"bytes", size});
         // Gone from the cache now; open handles keep reading the unlinked file, and the
         // next open() downloads afresh instead of reusing this one.
         QFile::remove(base + QStringLiteral(".meta"));
@@ -788,8 +784,7 @@ void AudioStore::verified(QString base, qint64 size, QByteArray md5, bool good)
             d->base.clear();
         return;
     }
-    qCDebug(lcMedia) << log::event("audio.cached") << log::field("dl", d ? d->id : 0)
-                     << log::field("bytes", size);
+    log::debug(lcMedia, "audio.cached", {{"dl", d ? d->id : 0}, {"bytes", size}});
     if (d) {
         d->verifiedComplete = true;
         saveMeta(*d);
@@ -914,9 +909,11 @@ void AudioStore::enforceCapacity()
         ++files;
     }
     if (files)
-        qCInfo(lcMedia) << log::event("audio_cache.evicted") << log::field("files", files)
-                        << log::field("bytes", freed) << log::field("left", total)
-                        << log::field("capacity", m_options.capacityBytes);
+        log::info(lcMedia, "audio_cache.evicted",
+                  {{"files", files},
+                   {"bytes", freed},
+                   {"left", total},
+                   {"capacity", m_options.capacityBytes}});
 }
 
 void AudioStore::setCapacity(qint64 bytes)
@@ -938,7 +935,7 @@ void AudioStore::clear(bool allPartitions)
 {
     if (!allPartitions && m_partitionDir.isEmpty())
         return;
-    qCInfo(lcMedia) << log::event("audio_cache.clear") << log::field("all", allPartitions);
+    log::info(lcMedia, "audio_cache.clear", {"all", allPartitions});
     for (const auto& e : entries(allPartitions ? QString() : m_partitionDir)) {
         QFile::remove(e.meta);
         if (!isOpenPath(e.data)) {

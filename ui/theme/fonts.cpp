@@ -40,7 +40,7 @@ QString registerFont(const QString& path)
     const QStringList families =
         id < 0 ? QStringList{} : QFontDatabase::applicationFontFamilies(id);
     if (families.isEmpty()) {
-        qCWarning(lcUiTheme) << log::event("font.register_failed") << log::field("font", path);
+        log::warn(lcUiTheme, "font.register_failed", {"font", path});
         return {};
     }
     return families.constFirst();
@@ -99,7 +99,7 @@ Fonts::Fonts(QObject* parent)
     if (QFile::exists(kMiSansPath))
         m_bundled = registerFont(kMiSansPath);
     else
-        qCInfo(lcUiTheme) << log::event("font.system_fallback");
+        log::info(lcUiTheme, "font.system_fallback");
     update();
 }
 

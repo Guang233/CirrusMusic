@@ -1,4 +1,5 @@
 #pragma once
+#include "logging/durations.h"
 #include "resource_cache_store.h"
 #include <QHash>
 #include <QNetworkAccessManager>
@@ -45,5 +46,9 @@ class CoverFetcher final : public QObject
     // Downloaded, being checked on the pool.
     QHash<quint64, std::shared_ptr<Pending>> m_checking;
     bool m_closed = false;
+    // cover.stats (docs/tasks/logging-v2.md §3); cover.failing when failures pile up, each
+    // failure being a debug record.
+    log::Durations m_stats;
+    log::Burst m_failures{5, 30 * 1000};
 };
 } // namespace cirrus::cache

@@ -35,13 +35,11 @@ SecretError mapError(QKeychain::Error error)
 void logResult(const char* op, const QString& key, SecretError error, qint64 ms)
 {
     if (error == SecretError::None || (error == SecretError::NotFound && op[0] == 'r'))
-        qCInfo(lcSecrets) << log::event("keyring.done") << log::field("op", op)
-                          << log::field("key", key) << log::field("err", error)
-                          << log::field("ms", ms);
+        log::info(lcSecrets, "keyring.done",
+                  {{"op", op}, {"key", key}, {"err", error}, {"ms", ms}});
     else
-        qCWarning(lcSecrets) << log::event("keyring.failed") << log::field("op", op)
-                             << log::field("key", key) << log::field("err", error)
-                             << log::field("ms", ms);
+        log::warn(lcSecrets, "keyring.failed",
+                  {{"op", op}, {"key", key}, {"err", error}, {"ms", ms}});
 }
 
 template <typename Callback> void defer(QObject* context, Callback callback)

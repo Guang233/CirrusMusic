@@ -121,8 +121,7 @@ void startLog()
     options.directory = logs;
     options.header = QStringLiteral("commit=") + QStringLiteral(CIRRUS_COMMIT);
     if (!log::start(options))
-        qCWarning(lcLog) << log::event("log.file_unavailable")
-                         << log::field("dir", log::path(logs));
+        log::warn(lcLog, "log.file_unavailable", {"dir", log::path(logs)});
 }
 
 } // namespace
@@ -170,17 +169,17 @@ int main(int argc, char* argv[])
     if (!instance.claim())
         return 0;
     startLog();
-    qCInfo(lcApp) << cirrus::log::event("app.platform")
-                  << cirrus::log::field("qpa", QGuiApplication::platformName())
-                  << cirrus::log::field("graphics", graphicsName(QQuickWindow::graphicsApi()))
-                  << cirrus::log::field("verbose", cirrus::log::verbose());
+    cirrus::log::info(lcApp, "app.platform",
+                      {{"qpa", QGuiApplication::platformName()},
+                       {"graphics", graphicsName(QQuickWindow::graphicsApi())},
+                       {"verbose", cirrus::log::verbose()}});
 
     // The backend (UI phase 5, docs/ui/integration.md): closed before the app quits.
     QString unwritable;
     const auto paths = cirrus::ui::BackendHost::preparePaths(&unwritable);
     if (!paths) {
-        qCCritical(lcApp) << cirrus::log::event("app.paths_unavailable")
-                          << cirrus::log::field("dir", cirrus::log::path(unwritable));
+        cirrus::log::critical(lcApp, "app.paths_unavailable",
+                              {"dir", cirrus::log::path(unwritable)});
         return 1;
     }
     cirrus::ui::BackendHost backend(*paths);
@@ -236,9 +235,9 @@ int main(int argc, char* argv[])
                     return;
                 const int before = cirrus::ui::memory::residentMb();
                 cirrus::ui::memory::trim();
-                qCInfo(lcApp) << cirrus::log::event("app.memory_trimmed")
-                              << cirrus::log::field("before_mb", before)
-                              << cirrus::log::field("after_mb", cirrus::ui::memory::residentMb());
+                cirrus::log::info(
+                    lcApp, "app.memory_trimmed",
+                    {{"before_mb", before}, {"after_mb", cirrus::ui::memory::residentMb()}});
             });
         });
 #ifdef CIRRUS_UI_SMTC
@@ -247,6 +246,6 @@ int main(int argc, char* argv[])
     }
 
     const int code = QGuiApplication::exec();
-    qCInfo(lcApp) << cirrus::log::event("app.quit") << cirrus::log::field("code", code);
+    cirrus::log::info(lcApp, "app.quit", {"code", code});
     return code;
 }

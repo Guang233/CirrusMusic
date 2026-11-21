@@ -332,14 +332,16 @@ void HttpTransport::finish(quint64 id)
         (pending->reply->error() == QNetworkReply::ProtocolFailure ||
          pending->reply->error() == QNetworkReply::RemoteHostClosedError)) {
         const int delayMs = pending->resends == 0 ? 0 : kSecondResendDelayMs;
-        qCWarning(lcNet) << log::event("request.retry") << log::field("req", id)
-                         << log::field("path", pending->path) << log::field("host", pending->host)
-                         << log::field("qt", pending->reply->error())
-                         << log::field("detail", log::message(pending->reply->errorString()))
-                         << log::field("proxy", proxyFor(pending->host, pending->port))
-                         << log::field("attempt", pending->resends + 1)
-                         << log::field("delay_ms", delayMs)
-                         << log::field("ms", pending->elapsed.elapsed());
+        log::warn(lcNet, "request.retry",
+                  {{"req", id},
+                   {"path", pending->path},
+                   {"host", pending->host},
+                   {"qt", pending->reply->error()},
+                   {"detail", log::message(pending->reply->errorString())},
+                   {"proxy", proxyFor(pending->host, pending->port)},
+                   {"attempt", pending->resends + 1},
+                   {"delay_ms", delayMs},
+                   {"ms", pending->elapsed.elapsed()}});
         auto request = *std::exchange(pending->again, std::nullopt);
         ++pending->resends;
         pending->waiting = true;
@@ -405,42 +407,48 @@ void HttpTransport::finish(quint64 id)
     const bool h2 = pending->reply &&
                     pending->reply->attribute(QNetworkRequest::Http2WasUsedAttribute).toBool();
     if (result.error == TransportError::None)
-        qCDebug(lcNet) << log::event("request.done") << log::field("req", id)
-                       << log::field("path", pending->path)
-                       << log::field("proto", pending->protocol)
-                       << log::field("status", result.httpStatus)
-                       << log::field("bytes", result.body.size())
-                       << log::field("ms", pending->elapsed.elapsed()) << log::field("h2", h2);
+        log::debug(lcNet, "request.done",
+                   {{"req", id},
+                    {"path", pending->path},
+                    {"proto", pending->protocol},
+                    {"status", result.httpStatus},
+                    {"bytes", result.body.size()},
+                    {"ms", pending->elapsed.elapsed()},
+                    {"h2", h2}});
     else if (result.error == TransportError::Canceled)
-        qCDebug(lcNet) << log::event("request.canceled") << log::field("req", id)
-                       << log::field("path", pending->path)
-                       << log::field("ms", pending->elapsed.elapsed());
+        log::debug(lcNet, "request.canceled",
+                   {{"req", id}, {"path", pending->path}, {"ms", pending->elapsed.elapsed()}});
     else {
         // Everything that says why (logging-v2 §11): Qt's own words, where it went and
         // through which proxy, how far it got, and the network's state.
         const auto* information = QNetworkInformation::instance();
-        qCWarning(lcNet)
-            << log::event("request.failed") << log::field("req", id)
-            << log::field("path", pending->path) << log::field("proto", pending->protocol)
-            << log::field("err", result.error)
-            << log::field("qt", QNetworkReply::NetworkError(result.networkError))
-            << log::fieldIf(result.networkError != 0 || result.error == TransportError::Network,
-                            "detail", log::message(detail))
-            << log::fieldIf(result.httpStatus != 0, "status", result.httpStatus)
-            << log::fieldIf(!reason.isEmpty(), "reason", log::message(reason))
-            << log::field("method", "POST") << log::field("host", pending->host)
-            << log::field("proxy", proxyFor(pending->host, pending->port))
-            << log::field("phase", phaseOf(result, received)) << log::field("received", received)
-            << log::field("ms", pending->elapsed.elapsed())
-            << log::fieldIf(result.error == TransportError::Timeout, "timeout_ms",
-                            pending->timeoutMs)
-            << log::field("attempt", pending->resends + 1) << log::field("h2", h2)
-            << log::fieldIf(!pending->tls.isEmpty(), "tls", log::message(pending->tls.join(u"; ")))
-            << log::fieldIf(information != nullptr, "reach",
-                            information ? information->reachability()
-                                        : QNetworkInformation::Reachability::Unknown)
-            << log::fieldIf(!result.retryAfter.isEmpty(), "retry_after",
-                            QString::fromLatin1(result.retryAfter));
+        log::warn(
+            lcNet, "request.failed",
+            {{"req", id},
+             {"path", pending->path},
+             {"proto", pending->protocol},
+             {"err", result.error},
+             {"qt", QNetworkReply::NetworkError(result.networkError)},
+             log::fieldIf(result.networkError != 0 || result.error == TransportError::Network,
+                          "detail", log::message(detail)),
+             log::fieldIf(result.httpStatus != 0, "status", result.httpStatus),
+             log::fieldIf(!reason.isEmpty(), "reason", log::message(reason)),
+             {"method", "POST"},
+             {"host", pending->host},
+             {"proxy", proxyFor(pending->host, pending->port)},
+             {"phase", phaseOf(result, received)},
+             {"received", received},
+             {"ms", pending->elapsed.elapsed()},
+             log::fieldIf(result.error == TransportError::Timeout, "timeout_ms",
+                          pending->timeoutMs),
+             {"attempt", pending->resends + 1},
+             {"h2", h2},
+             log::fieldIf(!pending->tls.isEmpty(), "tls", log::message(pending->tls.join(u"; "))),
+             log::fieldIf(information != nullptr, "reach",
+                          information ? information->reachability()
+                                      : QNetworkInformation::Reachability::Unknown),
+             log::fieldIf(!result.retryAfter.isEmpty(), "retry_after",
+                          QString::fromLatin1(result.retryAfter))});
     }
     emit completed(id, result);
 }

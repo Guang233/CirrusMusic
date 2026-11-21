@@ -160,6 +160,28 @@ class CatalogTest : public QObject
             json(R"({"code":200,"playlist":{"id":1,"trackCount":2,"trackIds":[{"id":3}]}})")));
         QVERIFY(!partial.trackIdsComplete);
     }
+    void unreadableEmbeddedTrackLeavesPlaylist() // GitHub #4
+    {
+        // A liked-songs playlist whose embedded rows include one the song mapper will not
+        // take (here: a NUL in tag text, a negative duration, a non-object row). The index
+        // is fine, so the playlist loads; those songs are left to be asked for by ID.
+        const auto p = std::get<PlaylistDetails>(mapMusicResponse(
+            PlaylistQuery{{"1"}},
+            json(
+                R"({"code":200,"playlist":{"id":1,"trackCount":5,"trackIds":[{"id":2},{"id":3},{"id":4},{"id":5},{"id":6}],"tracks":[{"id":2,"name":"ok"},{"id":3,"name":"a\u0000b"},null,{"id":5,"dt":-1},{"id":6,"ar":[{"id":0,"name":"x"}]}]}})")));
+        QVERIFY(p.trackIdsComplete);
+        QCOMPARE(p.trackIds->size(), 5);
+        QCOMPARE(p.songs.size(), 2);
+        QCOMPARE(p.songs.first().id.value, QStringLiteral("2"));
+        QCOMPARE(p.songs.last().id.value, QStringLiteral("6"));
+        // Still a contradiction, not an unreadable row: an embedded song outside the index.
+        QVERIFY(std::holds_alternative<MusicFailure>(mapMusicResponse(
+            PlaylistQuery{{"1"}},
+            json(
+                R"({"code":200,"playlist":{"id":1,"trackIds":[{"id":2}],"tracks":[{"id":3,"name":"a\u0000b"},{"id":4}]}})"))));
+        QVERIFY(std::holds_alternative<MusicFailure>(mapMusicResponse(
+            PlaylistQuery{{"1"}}, json(R"({"code":200,"playlist":{"id":1,"tracks":{}}})"))));
+    }
     void malformedCatalog_data()
     {
         QTest::addColumn<int>("kind");

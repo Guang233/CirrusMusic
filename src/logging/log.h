@@ -1,43 +1,30 @@
 #pragma once
 #include "logging/categories.h"
 
-#include <QDebug>
 #include <QMetaEnum>
 #include <QString>
 #include <QStringList>
 #include <QUuid>
+#include <QtLogging>
 
 #include <concepts>
 #include <initializer_list>
 #include <iterator>
+#include <source_location>
 #include <type_traits>
 
 class QUrl;
 
-// Writing a log record (docs/tasks/logging.md §4.4): a stable English event name, then
-// key=value fields, each value made safe by its type (§5).
-//   qCWarning(lcNet) << log::event("request.failed") << log::field("req", id)
-//                    << log::field("err", error) << log::field("host", log::host(url));
+// Writing a log record (docs/tasks/logging.md §4.4): one call, the level, the category, a
+// stable English event name, then key=value fields, each value made safe by its type (§5).
+//   log::info(lcApp, "app.quit", {"code", code});
+//   log::warn(lcNet, "request.failed",
+//             {{"req", id}, {"err", error}, {"host", log::host(url)}});
 // Field names are lower_snake_case and mean the same thing everywhere: req (request
 // number), token (playback load), song/album/playlist/artist (public ids), ms
 // (duration), bytes, err (error name), code (provider code), status (HTTP status).
 namespace cirrus::log
 {
-// Text written as it is (no quotes); what event() and field() return.
-struct Text {
-    QString text;
-};
-inline QDebug operator<<(QDebug d, const Text& t)
-{
-    if (t.text.isEmpty()) // fieldIf() without a value: nothing, not even a space
-        return d;
-    QDebugStateSaver saver(d);
-    d.noquote() << t.text;
-    return d;
-}
-
-inline Text event(const char* name) { return {QString::fromLatin1(name)}; }
-
 // A value quoted when it has spaces, quotes, '=' or control characters; long values are
 // cut at 200 characters.
 QString quoted(QStringView value);
@@ -102,35 +89,127 @@ template <typename T> QString value(const T& v)
 }
 } // namespace detail
 
-template <typename T> Text field(const char* key, const T& value)
+namespace detail
 {
-    return {QString::fromLatin1(key) + u'=' + detail::value(value)};
-}
+// Not constexpr: a name that breaks the rule calls one of these while the code compiles, and
+// the build stops there, the function's name saying why.
+void logKeyMustBeLowerSnakeCase();
+void logEventMustBeLowercaseDotted();
 
-// A value as field() writes it, e.g. an enum's name for log::Durations.
-template <typename T> QString nameOf(const T& value) { return detail::value(value); }
+// lower_snake_case: a-z first, then a-z, 0-9 and '_'; with `dots`, parts joined by '.'.
+consteval bool isLogName(const char* name, bool dots)
+{
+    if (!name || *name < 'a' || *name > 'z')
+        return false;
+    char last = 0;
+    for (; *name; last = *name++) {
+        const char c = *name;
+        const bool part = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
+        if (!part && !(dots && c == '.' && last != '.'))
+            return false;
+    }
+    return last != '.';
+}
+} // namespace detail
+
+// A field's key ("retry_after") and a record's event ("request.failed"): written in the code
+// and checked as it compiles, so a typo stops the build and no run-time text (a title, what
+// the user typed) can become one.
+struct Key {
+    consteval Key(const char* name) : name(name)
+    {
+        if (!detail::isLogName(name, false))
+            detail::logKeyMustBeLowerSnakeCase();
+    }
+    const char* name;
+};
+struct Event {
+    consteval Event(const char* name) : name(name)
+    {
+        if (!detail::isLogName(name, true))
+            detail::logEventMustBeLowercaseDotted();
+    }
+    const char* name;
+};
+
+// A record's fields, written as `key=value key=value`, each value formatted when the field is
+// made. Written as braces:
+//   {"ms", 203}                        one field
+//   {{"req", id}, {"ms", 203}}         several, in this order
+//   {{"req", id}, more}                other Fields in among them (a Durations::take())
+// Fields are plain values: keep them for a later record, or build them up with add().
+class Fields
+{
+  public:
+    Fields() = default;
+    template <typename T>
+    Fields(Key key, const T& value)
+        : m_text(QString::fromLatin1(key.name) + u'=' + detail::value(value))
+    {
+    }
+    Fields(std::initializer_list<Fields> fields)
+    {
+        for (const Fields& f : fields)
+            add(f);
+    }
+
+    template <typename T> Fields& add(Key key, const T& value) { return add(Fields(key, value)); }
+    Fields& add(const Fields& more)
+    {
+        if (more.m_text.isEmpty()) // fieldIf() without a value: nothing, not even a space
+            return *this;
+        if (!m_text.isEmpty())
+            m_text += u' ';
+        m_text += more.m_text;
+        return *this;
+    }
+
+    [[nodiscard]] bool isEmpty() const { return m_text.isEmpty(); }
+    [[nodiscard]] const QString& text() const { return m_text; }
+
+  private:
+    QString m_text;
+};
 
 // A field only when there is something to say: fieldIf(!retryAfter.isEmpty(), "retry_after",
 // retryAfter) writes nothing at all otherwise.
-template <typename T> Text fieldIf(bool present, const char* key, const T& value)
+template <typename T> Fields fieldIf(bool present, Key key, const T& value)
 {
-    return present ? field(key, value) : Text{};
+    return present ? Fields(key, value) : Fields();
 }
 
-// Fields put together, for a record whose level is chosen at run time:
-//   const auto fields = log::join({log::field("id", id), log::field("err", error)});
-//   if (ok) qCInfo(lc) << log::event("x.done") << fields; else qCWarning(lc) << ...;
-inline Text join(std::initializer_list<Text> parts)
+// A value as a field writes it, e.g. an enum's name for log::Durations.
+template <typename T> QString nameOf(const T& value) { return detail::value(value); }
+
+// The categories of categories.h: lcNet, lcApi, ...
+using Category = const QLoggingCategory& (*)();
+
+// The record `event fields` at `level`, from the caller's file, line and function (warnings
+// add them as src= and fn=). Nothing is written when the category has the level off.
+void write(QtMsgType level, Category category, Event event, const Fields& fields = {},
+           std::source_location where = std::source_location::current());
+
+// The same at a fixed level; write() for a level chosen at run time:
+//   log::write(ok ? QtInfoMsg : QtWarningMsg, lcReport, "report.result", fields);
+inline void debug(Category category, Event event, const Fields& fields = {},
+                  std::source_location where = std::source_location::current())
 {
-    QString text;
-    for (const Text& part : parts) {
-        if (part.text.isEmpty())
-            continue;
-        if (!text.isEmpty())
-            text += u' ';
-        text += part.text;
-    }
-    return {text};
+    write(QtDebugMsg, category, event, fields, where);
+}
+inline void info(Category category, Event event, const Fields& fields = {},
+                 std::source_location where = std::source_location::current())
+{
+    write(QtInfoMsg, category, event, fields, where);
+}
+inline void warn(Category category, Event event, const Fields& fields = {},
+                 std::source_location where = std::source_location::current())
+{
+    write(QtWarningMsg, category, event, fields, where);
+}
+inline void critical(Category category, Event event, const Fields& fields = {},
+                     std::source_location where = std::source_location::current())
+{
+    write(QtCriticalMsg, category, event, fields, where);
 }
 
 namespace detail

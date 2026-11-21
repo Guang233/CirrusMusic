@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QDirIterator>
 #include <QRandomGenerator>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -77,6 +78,18 @@ class AudioStoreTest : public QObject
     static void settle(AudioStore& store, qint64 usage)
     {
         QTRY_COMPARE_WITH_TIMEOUT(store.usage(), usage, 5000);
+    }
+    // The data files the store keeps, in any partition.
+    int dataFiles() const
+    {
+        int count = 0;
+        QDirIterator it(m_root, {QStringLiteral("*.audio")}, QDir::Files,
+                        QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            it.next();
+            ++count;
+        }
+        return count;
     }
 
   private slots:
@@ -246,7 +259,11 @@ class AudioStoreTest : public QObject
         QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
         QCOMPARE(read.get(), server.body); // still plays
         stream.reset();
-        QTRY_COMPARE_WITH_TIMEOUT(s->usage(), 0, 5000);
+        // The md5 check runs on a pool thread after the last byte; until it has removed the
+        // file, the next open() shares this download. usage() is no sign of it: a file this
+        // small has saved no progress yet, so it counts nothing from the start.
+        QTRY_COMPARE_WITH_TIMEOUT(dataFiles(), 0, 5000);
+        QCOMPARE(s->usage(), 0);
         const auto requests = server.ranges.size();
         auto again = s->open(bad);
         auto second = readAsync(again);

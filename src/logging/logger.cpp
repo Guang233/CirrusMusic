@@ -432,7 +432,11 @@ void handler(QtMsgType type, const QMessageLogContext& context, const QString& m
             inside = false;
             return;
         }
-        if (warning)
+        // Our warnings bring the debug records before them, and so do QML's and plain
+        // qWarning()'s ("default"). A library's own (qt.*, kf.*: the desktop portal, the audio
+        // server, the desktop's settings) speak of the system, not of what the app was doing:
+        // they come every start and would only spend the records a later warning needs.
+        if (urgent || (warning && (category.startsWith("cirrus.") || category == "default")))
             writeContext(s, "warning", now - kWarningContextMs, kWarningContextLimit);
         enqueue(s, std::move(line));
     }
@@ -517,6 +521,36 @@ void prune(State& s)
 }
 
 } // namespace
+
+void write(QtMsgType level, Category category, Event event, const Fields& fields,
+           std::source_location where)
+{
+    const QLoggingCategory& c = category();
+    if (!c.isEnabled(level))
+        return;
+    QString text = QString::fromLatin1(event.name);
+    if (!fields.isEmpty())
+        text += u' ' + fields.text();
+    // What qCWarning() and the others do, with the caller's place for the context.
+    const QMessageLogger logger(where.file_name(), int(where.line()), where.function_name(),
+                                c.categoryName());
+    switch (level) {
+    case QtDebugMsg:
+        logger.debug().noquote() << text;
+        break;
+    case QtInfoMsg:
+        logger.info().noquote() << text;
+        break;
+    case QtWarningMsg:
+        logger.warning().noquote() << text;
+        break;
+    case QtCriticalMsg:
+        logger.critical().noquote() << text;
+        break;
+    case QtFatalMsg:
+        logger.fatal("%s", qUtf8Printable(text));
+    }
+}
 
 QStringList detail::splitNames(const char* names)
 {
@@ -639,7 +673,8 @@ void install(bool console)
 bool start(const FileOptions& options)
 {
     auto& s = state();
-    QString unclean;
+    QString unclean;       // the previous session's file, when it did not end with app.exit
+    QString uncleanSignal; // and the signal that ended it, when its crash handler said
     {
         QMutexLocker fileLock(&s.fileMutex);
         if (s.started)
@@ -667,11 +702,10 @@ bool start(const FileOptions& options)
                 const QByteArray tail = last.readAll();
                 if (!tail.contains(" app.exit")) {
                     unclean = it->info.fileName();
-                    const qsizetype at = tail.lastIndexOf("fatal signal ");
-                    if (at >= 0)
-                        unclean += u' ' + QString::fromLatin1(tail.mid(at).split('\n').first())
-                                              .replace(QStringLiteral("fatal signal "),
-                                                       QStringLiteral("signal="));
+                    constexpr QByteArrayView marker = "fatal signal ";
+                    if (const qsizetype at = tail.lastIndexOf(marker); at >= 0)
+                        uncleanSignal = QString::fromLatin1(
+                            tail.mid(at + marker.size()).split('\n').first().split(' ').first());
                 }
             }
             break;
@@ -693,14 +727,10 @@ bool start(const FileOptions& options)
         crash::install(QDir(options.directory)
                            .filePath(QStringLiteral("crash-") + s.prefix + QStringLiteral(".txt")));
     }
-    if (!unclean.isEmpty()) {
-        const auto parts = unclean.split(u' ');
-        if (parts.size() > 1)
-            qCWarning(lcApp) << event("app.previous_session_unclean") << field("file", parts[0])
-                             << Text{parts[1]};
-        else
-            qCWarning(lcApp) << event("app.previous_session_unclean") << field("file", parts[0]);
-    }
+    if (!unclean.isEmpty())
+        log::warn(
+            lcApp, "app.previous_session_unclean",
+            {{"file", unclean}, log::fieldIf(!uncleanSignal.isEmpty(), "signal", uncleanSignal)});
     crash::report(options.directory); // a stack the crash before left
     return true;
 }
@@ -738,7 +768,7 @@ void shutdown()
     auto& s = state();
     if (!s.installed)
         return;
-    qCInfo(lcApp) << event("app.exit");
+    log::info(lcApp, "app.exit");
     {
         QMutexLocker lock(&s.mutex);
         endRepeats(s);

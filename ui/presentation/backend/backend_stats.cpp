@@ -108,7 +108,7 @@ BackendStats::BackendStats(runtime::BackendRuntime& runtime, QObject* parent)
                 reply(Outcome<ListeningStats>{statsOf(stats)});
                 return;
             }
-            qCWarning(lcUiBackend) << log::event("stats.failed") << log::field("err", error);
+            log::warn(lcUiBackend, "stats.failed", {"err", error});
             reply(Outcome<ListeningStats>{
                 std::nullopt, false,
                 Failure{error == storage::StorageError::NotOpen ? failure::Busy : failure::Unknown,
@@ -153,7 +153,7 @@ Request BackendStats::clear(Reply<bool> reply)
     // The session forgets its records and the store erases the account's, in order
     // before anything heard afterwards; storedHistoryChanged follows once it is done.
     m_runtime.listening().clearHistory();
-    qCInfo(lcUiBackend) << log::event("stats.cleared");
+    log::info(lcUiBackend, "stats.cleared");
     auto alive = std::make_shared<bool>(true);
     QTimer::singleShot(0, this, [alive, reply = std::move(reply)] {
         if (*alive)
