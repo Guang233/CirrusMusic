@@ -45,11 +45,12 @@ Cirrus 是一个非官方的网易云音乐桌面客户端，用 C++ 和 Qt Quic
 | Ubuntu 22.04 / Debian 12 及更新 | `cirrus_<版本>_amd64.deb` | `sudo apt install ./cirrus_<版本>_amd64.deb` |
 | 其他 Linux（x86_64，glibc ≥ 2.35） | `Cirrus-<版本>-x86_64.AppImage` | `chmod +x Cirrus-*.AppImage`，然后直接运行 |
 | Windows 10 / 11 | `Cirrus-<版本>-windows-x64-setup.exe` | 运行安装程序；或用免安装的 `Cirrus-<版本>-windows-x64.zip`，解压即用 |
+| macOS 15 及更新（Apple Silicon，预览） | `Cirrus-<版本>-macos-arm64.dmg` | 打开 dmg，把 Cirrus 拖进“应用程序” |
 
 - deb 和 AppImage 自带 Qt 和 FFmpeg，不依赖系统里的版本。
 - 登录状态保存在系统钥匙串里（GNOME Keyring、KWallet 等）。没有钥匙串服务时也能用，但每次启动都要重新登录。
 - Windows 安装包没有签名，第一次运行时 SmartScreen 可能会拦下：点“更多信息 → 仍要运行”。
-- 暂不提供 macOS 版。
+- macOS 版是预览版，还没有在真机上充分测试，只支持 Apple Silicon。它没有经过 Apple 公证，第一次打开会被系统拦下：到 系统设置 › 隐私与安全性 里点“仍要打开”，或在终端执行 `xattr -dr com.apple.quarantine /Applications/Cirrus.app`。
 - Arch Linux：还没有上传到 AUR，可以用仓库里的 [PKGBUILD](packaging/aur/PKGBUILD) 打包安装（用系统的 Qt 从源码编译）：
 
   ```bash
@@ -83,6 +84,8 @@ cmake --build --preset linux-release --target appCirrusMusic
 用 Qt 官方安装器装的 Qt：复制 `CMakeUserPresets.json.example` 为 `CMakeUserPresets.json`，填上 Qt 的路径，改用 `linux-release-local` 预设。开发、测试和代码结构见 [CONTRIBUTING.md](CONTRIBUTING.md)，打包见 [packaging/README.md](packaging/README.md)。
 
 ## 数据存放位置
+
+以下是 Linux 上的位置；Windows 和 macOS 上在系统的用户数据目录里。
 
 | 内容 | 位置 |
 | --- | --- |

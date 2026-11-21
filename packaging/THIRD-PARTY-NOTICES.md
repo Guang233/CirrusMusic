@@ -7,7 +7,7 @@ next to this file).
 Cirrus uses the following software. The license texts are in `licenses/` next to this
 file. Libraries under the LGPL are linked dynamically and are not modified; you may
 replace them with compatible builds of your own (in a package, the files in `lib/` on
-Linux or next to `Cirrus.exe` on Windows).
+Linux, next to `Cirrus.exe` on Windows or in `Cirrus.app/Contents/Frameworks` on macOS).
 
 | Component | Version | License | Use |
 | --- | --- | --- | --- |
@@ -27,10 +27,11 @@ Linux or next to `Cirrus.exe` on Windows).
 
 Which libraries a package carries:
 
-- **deb, AppImage, Windows installer and zip** carry Qt, both FFmpeg builds and
-  QtKeychain (on Windows linked into `Cirrus.exe`). The Windows packages also carry OpenSSL, zlib, zstd and the Microsoft Visual C++
-  runtime. On Linux, OpenSSL, zlib, zstd and libsecret come from the system (the AppImage may
-  carry them).
+- **deb, AppImage, Windows installer and zip, macOS dmg** carry Qt, both FFmpeg builds and
+  QtKeychain (on Windows linked into `Cirrus.exe`). The Windows packages also carry OpenSSL,
+  zlib, zstd and the Microsoft Visual C++ runtime; the macOS dmg also carries OpenSSL and
+  zstd, and uses the system's zlib. On Linux, OpenSSL, zlib, zstd and libsecret come from the
+  system (the AppImage may carry them).
 - **AUR and other source builds** use the system's libraries.
 
 ## Sources
@@ -39,12 +40,13 @@ The bundled libraries are unmodified releases:
 
 - Qt 6.11: <https://download.qt.io/archive/qt/6.11/> (the official binaries; Qt
   Multimedia's FFmpeg 7.1 is part of them).
-- FFmpeg 9.0.2: <https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz>. Linux packages use
-  the configuration in `packaging/deps/build-ffmpeg.sh` of the Cirrus source (shared,
+- FFmpeg 9.0.2: <https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz>. Linux and macOS packages
+  use the configuration in `packaging/deps/build-ffmpeg.sh` of the Cirrus source (shared,
   LGPL, MP3 and FLAC only); Windows packages use vcpkg's `ffmpeg` port with the features
   `avcodec`, `avformat` and `swresample` (no `gpl`).
 - QtKeychain 0.17.0: <https://github.com/frankosterfeld/qtkeychain/releases/tag/0.17.0>
-- OpenSSL 3, zlib and zstd on Windows: vcpkg's `openssl`, `zlib` and `zstd` ports.
+- OpenSSL 3, zlib and zstd on Windows: vcpkg's `openssl`, `zlib` and `zstd` ports. OpenSSL 3
+  and zstd on macOS: Homebrew's `openssl@3` and `zstd`.
 
 On request, the maintainer provides the exact source of every LGPL library in a
 release for at least three years after it.

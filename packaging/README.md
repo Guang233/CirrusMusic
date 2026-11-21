@@ -1,6 +1,6 @@
 # 打包与发布
 
-Cirrus 在 Linux 上出 deb 和 AppImage，Windows 上出安装包和免安装的 zip，Arch Linux 另有 AUR 的 PKGBUILD。安装包里只有应用本身，没有测试和 gallery。
+Cirrus 在 Linux 上出 deb 和 AppImage，Windows 上出安装包和免安装的 zip，macOS 上出 dmg（预览），Arch Linux 另有 AUR 的 PKGBUILD。安装包里只有应用本身，没有测试和 gallery。
 
 ## 产物
 
@@ -11,6 +11,7 @@ Cirrus 在 Linux 上出 deb 和 AppImage，Windows 上出安装包和免安装�
 | AUR | `packaging/aur/PKGBUILD`（`cirrus`） | 用 Arch 的 Qt 和库从源码编译 |
 | Windows 安装包 | `Cirrus-<版本>-windows-x64-setup.exe` | Inno Setup；默认只装给当前用户（不需要管理员），也可以选所有用户 |
 | Windows 免安装版 | `Cirrus-<版本>-windows-x64.zip` | 解压即用；设置和数据仍在用户目录 |
+| macOS（预览） | `Cirrus-<版本>-macos-arm64.dmg` | `Cirrus.app`，自带 Qt 和库，ad-hoc 签名；Apple Silicon，macOS 15 起 |
 | 库的源码 | `Cirrus-<版本>-library-sources.tar` | 包里带的 FFmpeg、QtKeychain 的原始源码（LGPL 的源码提供） |
 | 校验 | `SHA256SUMS.txt` | |
 
@@ -22,11 +23,13 @@ Cirrus 在 Linux 上出 deb 和 AppImage，Windows 上出安装包和免安装�
 
 | 选项 | 默认 | 作用 |
 | --- | --- | --- |
-| `CIRRUS_EXECUTABLE` | `appCirrusMusic` | 可执行文件名；包里 Linux 是 `cirrus`，Windows 是 `Cirrus` |
-| `CIRRUS_DEPLOY_QT` | OFF | 把 Qt 运行库和不在系统目录的库一起装进去（deb、AppImage、Windows 用，AUR 不用） |
+| `CIRRUS_EXECUTABLE` | `appCirrusMusic` | 可执行文件名；包里 Linux 是 `cirrus`，Windows 是 `Cirrus`，macOS 是 `Cirrus`（`Cirrus.app`） |
+| `CIRRUS_DEPLOY_QT` | OFF | 把 Qt 运行库和不在系统目录的库一起装进去（deb、AppImage、Windows、macOS 用，AUR 不用） |
 | `CIRRUS_RUNTIME_DIRS` | 空 | 仅 Windows：去哪里找 FFmpeg、QtKeychain、OpenSSL、zlib、zstd 的 DLL |
 
 Linux 上装的东西：`bin/cirrus`；`share/applications/com.guang233.Cirrus.desktop`；`share/metainfo/com.guang233.Cirrus.metainfo.xml`；`share/icons/hicolor/…/apps/com.guang233.Cirrus.{png,svg}`；`share/doc/cirrus/` 下的第三方声明和许可证。桌面文件和 AppStream 的模板在 `packaging/linux/`。
+
+macOS 上装的是 `Cirrus.app`：包标识 `com.guang233.Cirrus`，图标是构建时用 `iconutil` 从提交的 PNG 生成的 `cirrus.icns`（没有 1024 px 的 PNG，所以缺 `icon_512x512@2x`），第三方声明在 `Contents/Resources/doc/`。
 
 Wayland 下 Dock 图标由合成器按 app ID 从桌面文件里取。开发构建没有桌面文件，用 `tools/ui/install-dev-desktop-entry.sh` 装一个指向开发构建的（装正式包前用 `--remove` 去掉）。
 
@@ -37,10 +40,10 @@ Wayland 下 Dock 图标由合成器按 app ID 从桌面文件里取。开发构�
 | 库 | 来源 | 说明 |
 | --- | --- | --- |
 | Qt 6.11.2 | Qt 官方二进制，模块 qtmultimedia、qtshadertools、qtimageformats | Linux 版要 glibc 2.34 |
-| FFmpeg 9.0.2（Linux） | `packaging/deps/build-ffmpeg.sh` 从源码编译 | 共享库、LGPL，只开 MP3 和 FLAC |
+| FFmpeg 9.0.2（Linux、macOS） | `packaging/deps/build-ffmpeg.sh` 从源码编译 | 共享库、LGPL，只开 MP3 和 FLAC |
 | FFmpeg 9.0.2（Windows） | vcpkg 的 `ffmpeg`（avcodec、avformat、swresample） | 不开 gpl、nonfree |
 | QtKeychain 0.17.0 | `packaging/deps/build-qtkeychain.sh`，针对随包的 Qt 编译 | 发行版的 QtKeychain 是针对它们自己的 Qt 编的，不能混用。Windows 上静态链接 |
-| OpenSSL 3、zlib、zstd | Linux 用系统的；Windows 用 vcpkg | |
+| OpenSSL 3、zlib、zstd | Linux 用系统的；Windows 用 vcpkg；macOS 的 OpenSSL、zstd 用 Homebrew 的，zlib 用系统的 | Homebrew 的库是为构建机的系统版本编的，所以 macOS 包要 15 起 |
 
 包里有两份 FFmpeg：Qt Multimedia 自带的 FFmpeg 7.1（`libavcodec.so.61`）用于音频输出，Cirrus 的解码器用自己编的 9.0（`libavcodec.so.63`）。大版本不同，库名不同，同时加载不冲突。依赖库的 RUNPATH 是 `$ORIGIN`，在包的 `lib/` 里互相能找到。
 
@@ -69,6 +72,24 @@ MSVC（VS 2022）、Qt `win64_msvc2022_64`、vcpkg（`packaging/windows/vcpkg.js
 
 安装包没有签名：第一次运行时 SmartScreen 会拦，点“更多信息 → 仍要运行”。
 
+## macOS（预览）
+
+dmg 随 Release 发布，标为预览：只有 Apple Silicon 版，最低 macOS 15（直接用 Homebrew 的 OpenSSL、zstd），ad-hoc 签名、没有公证。
+
+构建机是 GitHub 的 `macos-15`（Apple Silicon），Qt 用官方的 `clang_64`，FFmpeg 和 QtKeychain 用 `packaging/deps/` 的脚本编译（`MACOSX_DEPLOYMENT_TARGET=15.0`），OpenSSL、zstd 来自 Homebrew。
+
+```bash
+brew install ninja pkgconf coreutils openssl@3 zstd
+packaging/deps/build-ffmpeg.sh <deps>
+packaging/deps/build-qtkeychain.sh <deps> <Qt 前缀>
+JOBS=$(sysctl -n hw.ncpu) packaging/macos/build-package.sh <Qt 前缀> <deps> <输出目录>
+```
+
+- 安装时 macdeployqt（`qt_generate_deploy_qml_app_script`）把 Qt 的框架、插件和 QML 模块，以及程序和库用绝对路径引用的非系统库（FFmpeg、QtKeychain、OpenSSL、zstd）复制进 `Contents/Frameworks`，并改写引用。所以两个依赖脚本在 macOS 上保留绝对的 install name（QtKeychain 不用 `@rpath`）。macdeployqt 不认部署脚本的插件列表，打包脚本之后删掉 SQLite 以外的 SQL 驱动。
+- 打包脚本检查每个 Mach-O 文件引用的库都在包里或系统里，不能指向构建机的路径；再做 ad-hoc 签名（Apple Silicon 只运行签过名的代码，macdeployqt 改写引用后原来的签名失效），最后用 `hdiutil` 把 `Cirrus.app` 和指向 `/Applications` 的链接打成 dmg。
+- 没有公证：第一次打开时系统会拦，用户到 系统设置 › 隐私与安全性 点“仍要打开”，或去掉隔离属性（`xattr -dr com.apple.quarantine /Applications/Cirrus.app`），README 里写了。
+- 包只在 CI 上编译和检查过，还没有在真机上充分测试，所以是预览。
+
 ## 许可与合规
 
 - Cirrus 本身是 MIT 许可证（根目录 `LICENSE`）。第三方声明在 `packaging/THIRD-PARTY-NOTICES.md`，许可原文在 `packaging/licenses/`，都随包安装（Linux `share/doc/cirrus/`，Windows `licenses\`）。
@@ -79,17 +100,17 @@ MSVC（VS 2022）、Qt `win64_msvc2022_64`、vcpkg（`packaging/windows/vcpkg.js
 
 | 文件 | 何时 | 做什么 |
 | --- | --- | --- |
-| `.github/workflows/ci.yml` | 推到 master、PR、手动 | Linux：编译应用、gallery 和测试，qmllint，ctest。手动运行时可加 Windows（只编译）、macOS（编译和测试）或打包（Linux 和 Windows 都打包，不建 Release） |
+| `.github/workflows/ci.yml` | 推到 master、PR、手动 | Linux：编译应用、gallery 和测试，qmllint，ctest。手动运行时可加 Windows（只编译）、macOS（编译和测试）或打包（Linux、Windows、macOS 都打包，不建 Release；这时 macOS 只打包、不跑测试） |
 | `.github/workflows/windows.yml` | 被 CI 和发布调用 | Windows 编译；打包时出 zip 和安装包 |
-| `.github/workflows/macos.yml` | 被 CI 调用 | macOS 编译和测试，不打包 |
+| `.github/workflows/macos.yml` | 被 CI 和发布调用 | macOS 编译和测试；打包时出 dmg |
 | `.github/workflows/linux-packages.yml` | 被 CI 和发布调用 | 打 deb 和 AppImage，校验桌面文件和 deb，附库的源码 |
-| `.github/workflows/release.yml` | 推 `v*` 标签 | 检查标签和版本号、CHANGELOG 一致 → 跑一遍 CI → 打 Linux 和 Windows 的包 → 建一个**草稿** Release，附上全部产物、库的源码和 SHA256SUMS |
+| `.github/workflows/release.yml` | 推 `v*` 标签 | 检查标签和版本号、CHANGELOG 一致 → 跑一遍 CI → 打 Linux、Windows 和 macOS 的包 → 建一个**草稿** Release，附上全部产物、库的源码和 SHA256SUMS |
 
-FFmpeg、QtKeychain、vcpkg 的编译结果按脚本和清单的哈希缓存，Qt 由 install-qt-action 缓存。
+FFmpeg、QtKeychain、vcpkg 的编译结果按脚本和清单的哈希缓存（macOS 的键里还有系统版本下限），Qt 由 install-qt-action 缓存。
 
 ## 发一个版本
 
 1. 改 `CMakeLists.txt` 的版本号；把 `CHANGELOG.md` 的 Unreleased 改成 `## [x.y.z]`。
 2. 提交，打标签 `vx.y.z`，推送提交和标签。
-3. 等发布工作流跑完，在 GitHub 上检查草稿（试装 deb、AppImage、安装包），再发布。
+3. 等发布工作流跑完，在 GitHub 上检查草稿（试装 deb、AppImage、安装包；dmg 能下载、大小正常），再发布。
 4. 标签推送后更新 `packaging/aur/PKGBUILD`：改 `pkgver`、`pkgrel` 归 1，`updpkgsums` 填入标签源码包的校验值，`makepkg -Cf` 试编一遍。
