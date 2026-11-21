@@ -1,7 +1,8 @@
 find_package(Qt6 REQUIRED COMPONENTS Network)
 
 # The executable's file name. Development builds keep appCirrusMusic (docs, launch
-# configs); packages name it cirrus (Linux) or Cirrus (Windows), packaging/README.md.
+# configs); packages name it cirrus (Linux) or Cirrus (Windows; macOS: Cirrus.app),
+# packaging/README.md.
 set(CIRRUS_EXECUTABLE "appCirrusMusic" CACHE STRING "File name of the app executable")
 
 qt_add_executable(appCirrusMusic
@@ -97,13 +98,14 @@ qt_add_qml_module(appCirrusMusic
         icons/cirrus-256.png
 )
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
+# macOS: the app bundle's Info.plist (Qt's template). The bundle identifier is the app ID
+# (CIRRUS_APP_ID in cmake/CirrusInstall.cmake): the keychain entry and the preferences
+# carry it.
 set_target_properties(appCirrusMusic PROPERTIES
-#    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.appCirrusMusic
+    MACOSX_BUNDLE_GUI_IDENTIFIER com.guang233.Cirrus
+    MACOSX_BUNDLE_BUNDLE_NAME Cirrus
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
     # Keep the historical location build/<preset>/appCirrusMusic used by docs and launch configs.
@@ -114,9 +116,9 @@ set_target_properties(appCirrusMusic PROPERTIES
 # Shown in Settings › About.
 target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_VERSION="${PROJECT_VERSION}")
 # The package this build goes into (docs/tasks/update-check.md §6): linux (the deb and
-# the AppImage), windows (the installer and the zip), aur; empty for development builds,
-# which never check for updates on their own.
-set(CIRRUS_PACKAGE "" CACHE STRING "Package of this build: linux, windows, aur or empty")
+# the AppImage), windows (the installer and the zip), macos (the dmg), aur; empty for
+# development builds, which never check for updates on their own.
+set(CIRRUS_PACKAGE "" CACHE STRING "Package of this build: linux, windows, macos, aur or empty")
 target_compile_definitions(appCirrusMusic PRIVATE CIRRUS_PACKAGE="${CIRRUS_PACKAGE}")
 # The commit, for the log's session header (docs/tasks/logging.md §6): checked at every
 # build; the header only changes (and main.cpp only rebuilds) when the commit does.
@@ -182,6 +184,33 @@ elseif(WIN32)
         target_link_libraries(appCirrusMusic PRIVATE windowsapp runtimeobject)
     endif()
 elseif(APPLE)
+    # The bundle's icon (Finder, Dock), made from the committed PNGs (tools/ui/make_icon.py)
+    # with the system's iconutil. There is no 1024 px PNG, so no icon_512x512@2x.
+    set(cirrus_iconset "${CMAKE_CURRENT_BINARY_DIR}/cirrus.iconset")
+    set(cirrus_icns "${CMAKE_CURRENT_BINARY_DIR}/cirrus.icns")
+    set(cirrus_iconset_commands "")
+    set(cirrus_iconset_pngs "")
+    foreach(pair IN ITEMS 16:16x16 32:16x16@2x 32:32x32 64:32x32@2x 128:128x128
+                          256:128x128@2x 256:256x256 512:256x256@2x 512:512x512)
+        string(REPLACE ":" ";" pair "${pair}")
+        list(GET pair 0 size)
+        list(GET pair 1 name)
+        list(APPEND cirrus_iconset_commands COMMAND ${CMAKE_COMMAND} -E copy
+            "${CMAKE_CURRENT_SOURCE_DIR}/icons/cirrus-${size}.png" "${cirrus_iconset}/icon_${name}.png")
+        list(APPEND cirrus_iconset_pngs "${CMAKE_CURRENT_SOURCE_DIR}/icons/cirrus-${size}.png")
+    endforeach()
+    list(REMOVE_DUPLICATES cirrus_iconset_pngs)
+    add_custom_command(OUTPUT "${cirrus_icns}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${cirrus_iconset}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${cirrus_iconset}"
+        ${cirrus_iconset_commands}
+        COMMAND iconutil -c icns -o "${cirrus_icns}" "${cirrus_iconset}"
+        DEPENDS ${cirrus_iconset_pngs}
+        COMMENT "Making the bundle icon" VERBATIM)
+    target_sources(appCirrusMusic PRIVATE "${cirrus_icns}")
+    set_source_files_properties("${cirrus_icns}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(appCirrusMusic PROPERTIES MACOSX_BUNDLE_ICON_FILE cirrus.icns)
+
     option(CIRRUS_UI_NOW_PLAYING "macOS Now Playing (MediaPlayer framework)" ON)
     if(CIRRUS_UI_NOW_PLAYING)
         enable_language(OBJCXX)

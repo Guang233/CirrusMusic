@@ -40,6 +40,8 @@ Dialog {
             return qsTr("下载 Cirrus-%1-windows-x64-setup.exe 运行，设置和数据会保留").arg(version);
         case UpdateCheck.WindowsZip:
             return qsTr("下载 Cirrus-%1-windows-x64.zip，解压后替换现在的文件夹").arg(version);
+        case UpdateCheck.MacDmg:
+            return qsTr("下载 Cirrus-%1-macos-arm64.dmg，把 Cirrus 拖进“应用程序”替换旧版").arg(version);
         case UpdateCheck.Aur:
             return qsTr("通过 AUR 更新，例如 paru -Syu");
         default:

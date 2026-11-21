@@ -1,9 +1,8 @@
 # Builds and tests every push to master and every pull request (packaging/README.md).
-# Linux always; Windows only when asked (Run workflow, or the release workflow), since its
-# runner minutes count double on a private repository. macOS (a trial, build and tests,
-# no package) only when asked: its minutes count ten times. "Build packages" (Run workflow)
-# also makes the deb, AppImage, Windows installer and zip as run artifacts, without a
-# release: for trying the packages.
+# Linux always; Windows (build) and macOS (build and tests) only when asked (Run workflow),
+# as they take longest. "Build packages" (Run workflow) also makes the deb, AppImage,
+# Windows installer and zip and the macOS dmg as run artifacts, without a release: for
+# trying the packages.
 name: CI
 
 on:
@@ -17,11 +16,11 @@ on:
         type: boolean
         default: false
       macos:
-        description: Also build and test on macOS (trial, no package)
+        description: Also build and test on macOS
         type: boolean
         default: false
       package:
-        description: Build packages (Linux and Windows) as artifacts, no release
+        description: Build packages (Linux, Windows, macOS) as artifacts, no release
         type: boolean
         default: false
   workflow_call:
@@ -140,10 +139,13 @@ jobs:
     with:
       package: ${{ inputs.package == true }}
 
+  # With "Build packages" the macOS job makes the dmg instead of running the tests.
   macos:
-    name: macOS build
-    if: inputs.macos
+    name: macOS
+    if: inputs.macos || inputs.package
     uses: ./.github/workflows/macos.yml
+    with:
+      package: ${{ inputs.package == true }}
 
   linux-packages:
     name: Linux packages

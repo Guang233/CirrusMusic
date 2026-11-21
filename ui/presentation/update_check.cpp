@@ -67,6 +67,8 @@ void UpdateCheck::setPackage(const QString& package)
         const QDir dir(QCoreApplication::applicationDirPath());
         m_install = QFileInfo::exists(dir.filePath(QStringLiteral("unins000.exe"))) ? WindowsSetup
                                                                                     : WindowsZip;
+    } else if (package == QLatin1String("macos")) {
+        m_install = MacDmg;
     } else if (package == QLatin1String("aur")) {
         m_install = Aur;
     } else {

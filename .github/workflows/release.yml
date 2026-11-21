@@ -46,9 +46,15 @@ jobs:
     with:
       package: true
 
+  macos:
+    needs: ci
+    uses: ./.github/workflows/macos.yml
+    with:
+      package: true
+
   release:
     name: Draft release
-    needs: [check, linux, windows]
+    needs: [check, linux, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write

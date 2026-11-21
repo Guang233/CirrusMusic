@@ -46,7 +46,7 @@ class UpdateCheck : public QObject
     enum Failure { NoFailure, Network, Limited, Invalid };
     Q_ENUM(Failure)
     // How this copy was installed: what to download for an update.
-    enum Install { Development, Deb, AppImage, WindowsSetup, WindowsZip, Aur };
+    enum Install { Development, Deb, AppImage, WindowsSetup, WindowsZip, Aur, MacDmg };
     Q_ENUM(Install)
 
     explicit UpdateCheck(AppSettings* settings, QObject* parent = nullptr);
@@ -61,7 +61,7 @@ class UpdateCheck : public QObject
     [[nodiscard]] qint64 lastCheck() const;
     [[nodiscard]] bool canCheckAutomatically() const;
 
-    // The build's package ("linux", "windows", "aur"; empty for a development build),
+    // The build's package ("linux", "windows", "macos", "aur"; empty for a development build),
     // from CMake's CIRRUS_PACKAGE; the install kind is refined at run time (an AppImage,
     // the Windows installer). Call once, before the event loop.
     void setPackage(const QString& package);

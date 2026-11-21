@@ -9,8 +9,10 @@
 #   share/doc/cirrus/      Cirrus's license (MIT), third-party notices and license texts
 # Windows: the executable and its DLLs in the prefix itself (CMAKE_INSTALL_BINDIR=.),
 #   notices in licenses/.
+# macOS: <CIRRUS_EXECUTABLE>.app in the prefix, notices in its Contents/Resources/doc/.
 # CIRRUS_DEPLOY_QT also copies the Qt runtime and the non-system libraries (FFmpeg,
-# QtKeychain, OpenSSL on Windows) next to it: deb, AppImage and the Windows installer.
+# QtKeychain, OpenSSL on Windows and macOS) next to it: deb, AppImage, the Windows
+# installer and the macOS dmg (macdeployqt puts them into the bundle).
 # Without it (AUR, distro builds) the system's libraries are used.
 
 set(CIRRUS_APP_ID "com.guang233.Cirrus")
@@ -23,6 +25,8 @@ install(TARGETS appCirrusMusic
 
 if(WIN32)
     set(cirrus_doc_dir "licenses")
+elseif(APPLE)
+    set(cirrus_doc_dir "${CIRRUS_EXECUTABLE}.app/Contents/Resources/doc")
 else()
     set(cirrus_doc_dir "${CMAKE_INSTALL_DATAROOTDIR}/doc/cirrus")
 endif()
@@ -85,6 +89,12 @@ if(CIRRUS_DEPLOY_QT)
             NO_COMPILER_RUNTIME
             EXCLUDE_PLUGIN_TYPES designer qmltooling
             DEPLOY_TOOL_OPTIONS --verbose 2)
+    elseif(APPLE)
+        # macdeployqt ignores the plugin lists above (build-package.sh removes the SQL drivers
+        # Cirrus does not use). It copies every non-system library the app and its libraries
+        # name by absolute path (FFmpeg, QtKeychain, Homebrew's OpenSSL and zstd) into
+        # Contents/Frameworks. Verbose: a failure then says where it stopped.
+        list(APPEND cirrus_deploy_options DEPLOY_TOOL_OPTIONS -verbose=2)
     endif()
     qt_generate_deploy_qml_app_script(
         TARGET appCirrusMusic
