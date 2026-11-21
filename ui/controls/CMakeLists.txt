@@ -13,10 +13,12 @@ qt_add_qml_module(cirrus_ui_controls
         md.h
         input_mode.h input_mode.cpp
         wheel_filter.h wheel_filter.cpp
+        shadow_owns_material.h shadow_owns_material.cpp
     QML_FILES
         Icon.qml
         StateLayer.qml
         FocusRing.qml
+        Shadow.qml
         Elevation.qml
         MorphShape.qml
         Pop.qml

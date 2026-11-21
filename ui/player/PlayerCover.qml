@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Shapes
 import Cirrus.Theme
 import Cirrus.Controls
@@ -73,7 +72,7 @@ Item {
             }
         ]
 
-        RectangularShadow {
+        Shadow {
             anchors.fill: parent
             radius: root.radius
             offset.y: 8 + 16 * lift.value

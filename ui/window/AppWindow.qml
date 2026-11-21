@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 import Cirrus.Theme
+import Cirrus.Controls
 
 // Top-level window with the Cirrus frame (docs/ui/README.md §6.1). `titleBar` picks
 // the window decorations:
@@ -78,7 +78,7 @@ Window {
         clientSide: window.customFrame
     }
 
-    RectangularShadow {
+    Shadow {
         anchors.fill: surface
         visible: windowFrame.margin > 0
         radius: window.cornerRadius

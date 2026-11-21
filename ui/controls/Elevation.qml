@@ -1,11 +1,10 @@
 import QtQuick
-import QtQuick.Effects
 import Cirrus.Theme
 
 // MD3 elevation shadow behind a container (fill the container's area and match
 // its radii). `level` is in dp (Theme.elevation.level0-5). Hidden under the
 // software renderer, where tonal surfaces carry the hierarchy alone.
-RectangularShadow {
+Shadow {
     id: root
 
     property real level
