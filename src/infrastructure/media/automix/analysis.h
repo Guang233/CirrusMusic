@@ -12,7 +12,7 @@ namespace cirrus::media::automix
 // loudness (ITU-R BS.1770-4) over time, the silence at its start and end, a fade-out, its
 // beats and bars. Times are the file's media time in ms. Cached by md5, a few KB each.
 struct Analysis {
-    static constexpr int kVersion = 2;      // bumped when the results change: analysed again
+    static constexpr int kVersion = 3;      // bumped when the results change: analysed again
     static constexpr int kStepMs = 100;     // between momentary loudness values
     static constexpr float kFloor = -70.0f; // LUFS, BS.1770's absolute gate: silence
 

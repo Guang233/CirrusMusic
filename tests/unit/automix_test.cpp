@@ -454,6 +454,68 @@ class AutomixTest : public QObject
         QVERIFY(double(p.outMs) + double(p.switchMs) > double(lastLine));
     }
 
+    void anOutroCrossfadeIsOnTheBeat()
+    {
+        // Both 125 BPM and steady, but A sings until a bar and a half before its end (no
+        // beat mix) and ends quieter (no filter out): the crossfade after its singing, with
+        // B's first beat on one of A's.
+        const int rate = 22050;
+        auto audio = groove(rate, 125, 40, 0.5);
+        const double beat = 60000 / 125.0;
+        const auto from = qsizetype((0.5 + 39 * 4 * beat / 1000) * rate); // its last bar
+        for (qsizetype i = from; i < qsizetype(audio.size() / 2); ++i) {
+            audio[size_t(i) * 2] *= 0.4f; // −8 dB: no fade, not full either
+            audio[size_t(i) * 2 + 1] *= 0.4f;
+        }
+        const auto a = analyse(audio, rate);
+        const auto b = analyse(groove(rate, 125, 24, 0.5), rate, false);
+        QVERIFY(a.fadeStartMs < 0);
+        const auto lastLine = qint64(500 + (40 - 1.5) * 4 * beat);
+        const Track out{a.durationMs, false, &a, {{lastLine - 3000, lastLine}}};
+        const Plan p = plan({}, out, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.style, Style::Crossfade);
+        QCOMPARE(p.reason, Reason::Outro);
+        QVERIFY(p.onBeat);
+        QVERIFY(p.outMs >= lastLine + 500);
+        const double landing = double(p.outMs) + (500 - double(p.inMs)); // B's first beat
+        const double intoBeat = std::fmod(landing - 500, beat);
+        QVERIFY2(std::min(intoBeat, beat - intoBeat) < 5, qPrintable(QString::number(intoBeat)));
+    }
+
+    void aTrackerOnTheOffbeatsStillFindsTheClick()
+    {
+        // A fast punk beat (200 BPM: kicks on the beats, snares on the offbeats) with its
+        // offbeats accented for a while: the tracker follows them there, half a beat off. It
+        // was still made to a click: its beats are that grid, on the kicks.
+        RhythmFeatures f;
+        f.frameMs = 1000.0 * 128 / 11025;
+        const double beat = 300, length = 90000;
+        const auto n = size_t(length / f.frameMs);
+        f.onset.assign(n, 0.0f);
+        f.kick.assign(n, 0.0f);
+        f.snare.assign(n, 0.0f);
+        f.bass.assign(n, -60.0f);
+        const auto frame = [&](double ms) { return size_t(std::lround(ms / f.frameMs)); };
+        for (int i = 0; 500 + i * beat / 2 < length - 500; ++i) {
+            const double t = 500 + i * beat / 2;
+            // Most onsets off the beat in all: only the kicks say where it is.
+            const bool accented = (t > 20000 && t < 45000) || (t > 55000 && t < 80000);
+            f.onset[frame(t)] = i % 2 == 0 ? (accented ? 3.0f : 6.0f) : (accented ? 9.0f : 3.0f);
+            (i % 2 == 0 ? f.kick : f.snare)[frame(t)] = 10.0f;
+        }
+        const Rhythm found = findRhythm(f, false);
+        QVERIFY(!found.beats.empty());
+        const Grid g = fitGrid(found.beats, 0, length);
+        QVERIFY2(g.inliers < 0.8, qPrintable(QString::number(g.inliers))); // it did slip
+        const Rhythm r = findRhythm(f);
+        QVERIFY(r.steady);
+        QVERIFY(double(r.beats.size()) > 0.9 * (length - 1000) / (2 * beat));
+        for (const float b : r.beats) {
+            const double intoBeat = std::fmod(double(b) - 500 + 1000 * beat, beat);
+            QVERIFY2(std::min(intoBeat, beat - intoBeat) < 8, qPrintable(QString::number(b)));
+        }
+    }
+
     void limitsOnlyThePeaks()
     {
         QCOMPARE(softLimit(0.5f), 0.5f);

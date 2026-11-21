@@ -129,23 +129,45 @@ bool continuous(const Analysis& a, const Analysis& b)
     return std::fabs(1 - ratio) <= kJointTempo;
 }
 
-// Where two tracks' bars can meet: the current track's end and the next one's start both
-// steady with clear bars. From the grids, not the beats found: they may stop short of the
-// edges.
+// Where two tracks' beats can meet: the current track's end and the next one's start both
+// steady. Their lines are bar lines when both tracks' bars are clear, else beats. From the
+// grids, not the beats found: they may stop short of the edges.
 struct Meeting {
     Grid out, in;
-    double downOut = 0; // a grid index of the current track's downbeats
-    double firstIn = 0; // the next track's first bar line from its first sound on
-    double drift = 0;   // the tempos' relative difference
-    // The current track's bar line nearest `ms`.
-    [[nodiscard]] double barLineNear(double ms) const
+    bool bars = false;  // the lines are bar lines
+    double downOut = 0; // a grid index of the current track's lines
+    double firstIn = 0; // the next track's first line from its first sound on
+    double firstBeatIn = 0;
+    double drift = 0;                                       // the tempos' relative difference
+    [[nodiscard]] int unit() const { return bars ? 4 : 1; } // beats a line
+    // The same with beats for lines (where a bar line doesn't fit).
+    [[nodiscard]] Meeting byBeats() const
     {
-        return out.at(downOut + 4 * std::round(((ms - out.phaseMs) / out.periodMs - downOut) / 4));
+        Meeting m = *this;
+        m.bars = false;
+        m.downOut = 0;
+        m.firstIn = firstBeatIn;
+        return m;
     }
-    // The last of them at or before `ms`.
-    [[nodiscard]] double lastBarLineBy(double ms) const
+    // The current track's line nearest `ms`, the last at or before it, the first at or after.
+    [[nodiscard]] double lineNear(double ms) const
     {
-        return barLineNear(ms - 2 * out.periodMs);
+        return line(ms, [](double x) { return std::round(x); });
+    }
+    [[nodiscard]] double lastLineBy(double ms) const
+    {
+        return line(ms, [](double x) { return std::floor(x); });
+    }
+    [[nodiscard]] double firstLineFrom(double ms) const
+    {
+        return line(ms, [](double x) { return std::ceil(x); });
+    }
+
+  private:
+    template <typename Round> [[nodiscard]] double line(double ms, Round round) const
+    {
+        const double lines = ((ms - out.phaseMs) / out.periodMs - downOut) / unit();
+        return out.at(downOut + unit() * round(lines));
     }
 };
 std::optional<Meeting> meeting(const Analysis& a, const Analysis& b, qint64 outEnd, qint64 inStart)
@@ -153,17 +175,38 @@ std::optional<Meeting> meeting(const Analysis& a, const Analysis& b, qint64 outE
     const auto sa = steadyBeats(a.rhythm, double(outEnd - kGridMs), double(outEnd) + 1);
     const auto sb =
         steadyBeats(b.rhythm, double(inStart), double(std::min(inStart + kGridMs, b.durationMs)));
-    if (!sa || !sb || sa->downbeat < 0 || sb->downbeat < 0)
+    if (!sa || !sb)
         return std::nullopt;
     Meeting m;
     m.out = sa->grid;
     m.in = sb->grid;
+    m.bars = sa->downbeat >= 0 && sb->downbeat >= 0;
     m.drift = std::fabs(1 - m.in.periodMs / m.out.periodMs);
-    m.downOut = gridIndex(m.out, a.rhythm.beats[size_t(sa->downbeat)]);
-    const double downIn = gridIndex(m.in, b.rhythm.beats[size_t(sb->downbeat)]);
+    m.downOut = m.bars ? gridIndex(m.out, a.rhythm.beats[size_t(sa->downbeat)]) : 0;
+    const double downIn = m.bars ? gridIndex(m.in, b.rhythm.beats[size_t(sb->downbeat)]) : 0;
     const double fromIn = (double(inStart) - m.in.periodMs / 4 - m.in.phaseMs) / m.in.periodMs;
-    m.firstIn = m.in.at(downIn + 4 * std::ceil((fromIn - downIn) / 4));
+    m.firstIn = m.in.at(downIn + m.unit() * std::ceil((fromIn - downIn) / m.unit()));
+    m.firstBeatIn = m.in.at(std::ceil(fromIn));
     return m;
+}
+
+// A crossfade between two tracks whose beats meet: the next track's first line on one of
+// the current track's, the overlap between `shortest` and `longest` (as long as it can be).
+std::optional<Plan> crossfadeOnTheBeat(const Meeting& m, qint64 shortest, qint64 longest,
+                                       qint64 outEnd, qint64 inStart, Reason reason)
+{
+    for (const Meeting& lines : {m, m.byBeats()}) {
+        const double lead = lines.firstIn - double(inStart); // its sound before its first line
+        const auto outMs =
+            qint64(std::ceil(lines.firstLineFrom(double(outEnd - longest) + lead) - lead));
+        const qint64 overlap = outEnd - outMs;
+        if (overlap < shortest || overlap > longest || m.drift * double(overlap) > kDriftMs)
+            continue;
+        Plan plan = crossfade(overlap, outEnd, inStart, reason);
+        plan.onBeat = true;
+        return plan;
+    }
+    return std::nullopt;
 }
 
 // The current track fades out by itself: let it, and bring the next in from its first
@@ -175,15 +218,18 @@ Plan naturalEnd(const Analysis& a, const Analysis* b, qint64 outEnd, qint64 inSt
     qint64 from = std::max(a.fadedBy(kNaturalEndDb), earliest);
     bool onBeat = false;
     if (const auto m = b ? meeting(a, *b, outEnd, inStart) : std::nullopt) {
-        const double lead = m->firstIn - double(inStart); // its sound before its first bar line
-        double at = m->barLineNear(double(from) + lead);
-        while (at - lead < double(earliest))
-            at += 4 * m->out.periodMs;
-        const auto start = qint64(std::llround(at - lead));
-        const qint64 overlap = std::min(outEnd - start, kNaturalEndLongestMs);
-        if (overlap >= kNaturalEndShortestMs && m->drift * double(overlap) <= kDriftMs) {
-            from = start;
-            onBeat = true;
+        for (const Meeting& lines : {*m, m->byBeats()}) {
+            const double lead = lines.firstIn - double(inStart); // its sound before its first line
+            double at = lines.lineNear(double(from) + lead);
+            while (at - lead < double(earliest))
+                at += lines.unit() * lines.out.periodMs;
+            const auto start = qint64(std::llround(at - lead));
+            const qint64 overlap = std::min(outEnd - start, kNaturalEndLongestMs);
+            if (overlap >= kNaturalEndShortestMs && m->drift * double(overlap) <= kDriftMs) {
+                from = start;
+                onBeat = true;
+                break;
+            }
         }
     }
     const qint64 overlap = std::min(outEnd - from, kNaturalEndLongestMs);
@@ -210,12 +256,12 @@ std::optional<Plan> beatMix(const Track& out, const Analysis& a, const Track& in
                             qint64 outEnd, qint64 inStart, qint64 earliest)
 {
     const auto m = meeting(a, b, outEnd, inStart);
-    if (!m)
+    if (!m || !m->bars)
         return std::nullopt;
     const double pa = m->out.periodMs, pb = m->in.periodMs;
     // The current track's last bar line: at the end of its sound (half a beat late at most:
     // a last hit on it).
-    const double endA = m->lastBarLineBy(double(outEnd) + pa / 2);
+    const double endA = m->lastLineBy(double(outEnd) + pa / 2);
     const double lastA = a.rhythm.beats[size_t(m->out.first + m->out.count) - 1];
     if (double(outEnd) - endA > kTailMs || lastA < endA - 16 * pa)
         return std::nullopt; // a long tail after its last bar line, or beats long gone
@@ -310,9 +356,11 @@ std::optional<Plan> filterOut(const Analysis& a, const Analysis& b, qint64 outEn
 
 // A crossfade in the current track's outro: after its last sung line and before the
 // next track's first.
-Plan outro(const Track& out, const Track& in, const Analysis& b, qint64 outEnd, qint64 inStart,
-           qint64 earliest)
+// On the beat when their beats meet.
+Plan outro(const Track& out, const Analysis& a, const Track& in, const Analysis& b, qint64 outEnd,
+           qint64 inStart, qint64 earliest)
 {
+    const auto m = meeting(a, b, outEnd, inStart);
     qint64 from = std::max(outEnd - kOutroUsableMs, earliest);
     for (const Span& line : out.vocals)
         from = std::max(from, line.endMs + kVocalMarginMs);
@@ -322,13 +370,22 @@ Plan outro(const Track& out, const Track& in, const Analysis& b, qint64 outEnd, 
     qint64 overlap = std::min({outEnd - from, inRoom, kOutroLongestMs});
     if (b.loudnessOver(inStart, inStart + 2000) >= b.loudness - kLoudStartDb)
         overlap = std::min(overlap, kLoudStartLongestMs);
-    if (overlap >= kMinimumOverlapMs)
+    if (overlap >= kMinimumOverlapMs) {
+        if (const auto onTheBeat = m ? crossfadeOnTheBeat(*m, kMinimumOverlapMs, overlap, outEnd,
+                                                          inStart, Reason::Outro)
+                                     : std::nullopt)
+            return *onTheBeat;
         return crossfade(overlap, outEnd, inStart, Reason::Outro);
+    }
     // No room without singing over singing or cutting a line short: the shortest
     // crossfade, at the very end.
     overlap = std::min(kMinimumOverlapMs, outEnd - earliest);
     if (overlap < kMinimumOverlapMs / 2)
         return gapless(Reason::NoRoom);
+    if (const auto onTheBeat = m ? crossfadeOnTheBeat(*m, kMinimumOverlapMs / 2, overlap, outEnd,
+                                                      inStart, Reason::Tight)
+                                 : std::nullopt)
+        return *onTheBeat;
     return crossfade(overlap, outEnd, inStart, Reason::Tight);
 }
 } // namespace
@@ -361,7 +418,7 @@ Plan plan(const Settings& settings, const Track& out, qint64 positionMs, const T
             return *onTheBeat;
         if (auto filtered = filterOut(*a, *b, outEnd, inStart, earliest))
             return *filtered;
-        return outro(out, in, *b, outEnd, inStart, earliest);
+        return outro(out, *a, in, *b, outEnd, inStart, earliest);
     }
     const bool fixed = settings.mode == TransitionMode::Crossfade;
     qint64 overlap = fixed ? settings.crossfadeMs : kSmartFallbackMs;

@@ -28,6 +28,13 @@ constexpr double kQuietestOnsets = 0.05;  // dB a band and frame, on average: le
 constexpr double kOnGridMs = 20;
 constexpr double kSteadyShare = 0.8;
 constexpr double kSteadyRmsMs = 12;
+// The tracker can slip onto the offbeats for a while (syncopation pulls it there): then the
+// beats are still on the click, at a half or a quarter of the beat. Stricter, as a finer
+// grid catches more beats by chance (beats strewn over it: an rms of ~11.5 ms).
+constexpr int kSubdivisions[] = {2, 4};
+constexpr double kFinestGridMs = 100;
+constexpr double kSlippedShare = 0.85;
+constexpr double kSlippedRmsMs = 8;
 // Grid periods tried: ±3 % of the beats' median interval, in 0.02 % steps.
 constexpr int kPeriodSteps = 150;
 constexpr double kPeriodStep = 0.0002;
@@ -40,7 +47,8 @@ struct Fit {
     double rms = 0, inliers = 0;
     int count = 0; // 0: too few to fit
 };
-Fit fitBeats(const std::vector<float>& beats, qsizetype first, qsizetype end);
+// At a grid of their median interval over `divisions`.
+Fit fitBeats(const std::vector<float>& beats, qsizetype first, qsizetype end, int divisions = 1);
 
 float decibels(double power)
 {
@@ -395,30 +403,73 @@ Rhythm findRhythm(const RhythmFeatures& f, bool toGrid)
             offset = vertex(local[size_t(at - 1)], local[size_t(at)], local[size_t(at + 1)]);
         rhythm.beats.push_back(float(f.originMs + (double(at) + offset) * f.frameMs));
     }
-    // A song made to a click (most produced music): its beats are that grid, also through
-    // a breakdown where the onsets misled the tracker. Only between the first and last beat
-    // on it: a free intro or ending keeps its own.
-    if (const Fit whole = fitBeats(rhythm.beats, 0, qsizetype(rhythm.beats.size()));
-        toGrid && whole.count > 0 && whole.inliers >= kSteadyShare && whole.rms <= kSteadyRmsMs) {
-        qsizetype firstOn = -1, lastOn = -1;
-        for (qsizetype i = 0; i < qsizetype(whole.residuals.size()); ++i) {
-            if (std::fabs(whole.residuals[size_t(i)]) <= kOnGridMs) {
-                if (firstOn < 0)
-                    firstOn = i;
-                lastOn = i;
-            }
-        }
-        std::vector<float> grid;
-        for (qint64 k = whole.index[size_t(firstOn)]; k <= whole.index[size_t(lastOn)]; ++k)
-            grid.push_back(float(whole.phase + whole.period * double(k)));
-        rhythm.beats = std::move(grid);
-        rhythm.steady = true;
-    }
-    const auto beats = qsizetype(rhythm.beats.size());
     const auto frameOf = [&](double ms) {
         return std::clamp<qsizetype>(qsizetype(std::lround((ms - f.originMs) / f.frameMs)), 0,
                                      n - 1);
     };
+    // A song made to a click (most produced music): its beats are that grid, also through
+    // a breakdown where the onsets misled the tracker. Only between the first and last beat
+    // on it: a free intro or ending keeps its own.
+    if (toGrid) {
+        const auto count = qsizetype(rhythm.beats.size());
+        Fit whole = fitBeats(rhythm.beats, 0, count);
+        int divisions = 1;
+        if (whole.count == 0 || whole.inliers < kSteadyShare || whole.rms > kSteadyRmsMs) {
+            whole = {};
+            for (const int d : kSubdivisions) {
+                Fit fine = fitBeats(rhythm.beats, 0, count, d);
+                if (fine.count > 0 && fine.period >= kFinestGridMs &&
+                    fine.inliers >= kSlippedShare && fine.rms <= kSlippedRmsMs) {
+                    whole = std::move(fine);
+                    divisions = d;
+                    break;
+                }
+            }
+        }
+        if (whole.count > 0) {
+            qint64 firstOn = -1, lastOn = -1;
+            for (qsizetype i = 0; i < count; ++i) {
+                if (std::fabs(whole.residuals[size_t(i)]) <= kOnGridMs) {
+                    if (firstOn < 0)
+                        firstOn = whole.index[size_t(i)];
+                    lastOn = whole.index[size_t(i)];
+                }
+            }
+            // On a finer grid, the beat is its phase with the most kicks and onsets on it
+            // (each a share of all): kicks are on the beat in nearly all styles, onsets
+            // decide where kicks don't (a fast punk beat has as many onsets off the beat).
+            const auto offsetOf = [divisions](qint64 k) {
+                return int(((k % divisions) + divisions) % divisions);
+            };
+            std::vector<double> kicks(size_t(divisions), 0.0), onsets(size_t(divisions), 0.0);
+            for (qint64 k = firstOn; k <= lastOn; ++k) {
+                const qsizetype at = frameOf(whole.phase + whole.period * double(k));
+                float kick = 0;
+                for (qsizetype t = std::max<qsizetype>(0, at - 1); t <= std::min(n - 1, at + 1);
+                     ++t)
+                    kick = std::max(kick, f.kick[size_t(t)]);
+                kicks[size_t(offsetOf(k))] += kick;
+                onsets[size_t(offsetOf(k))] += local[size_t(at)];
+            }
+            const double allKicks = std::accumulate(kicks.begin(), kicks.end(), 0.0);
+            const double allOnsets = std::accumulate(onsets.begin(), onsets.end(), 0.0);
+            std::vector<double> votes(size_t(divisions), 0.0);
+            for (size_t o = 0; o < votes.size(); ++o)
+                votes[o] = (allKicks > 0 ? kicks[o] / allKicks : 0) +
+                           (allOnsets > 0 ? onsets[o] / allOnsets : 0);
+            const int beat = int(std::max_element(votes.begin(), votes.end()) - votes.begin());
+            while (offsetOf(firstOn) != beat)
+                ++firstOn;
+            std::vector<float> grid;
+            for (qint64 k = firstOn; k <= lastOn; k += divisions)
+                grid.push_back(float(whole.phase + whole.period * double(k)));
+            if (grid.size() >= 8) {
+                rhythm.beats = std::move(grid);
+                rhythm.steady = true;
+            }
+        }
+    }
+    const auto beats = qsizetype(rhythm.beats.size());
 
     // The bass in each beat.
     for (qsizetype i = 0; i < beats; ++i) {
@@ -543,7 +594,7 @@ BarPhase barPhase(const Rhythm& rhythm, qsizetype from, qsizetype to)
 
 namespace
 {
-Fit fitBeats(const std::vector<float>& beats, qsizetype first, qsizetype end)
+Fit fitBeats(const std::vector<float>& beats, qsizetype first, qsizetype end, int divisions)
 {
     Fit fit;
     const qsizetype count = end - first;
@@ -554,7 +605,7 @@ Fit fitBeats(const std::vector<float>& beats, qsizetype first, qsizetype end)
         intervals.push_back(double(beats[size_t(i)]) - beats[size_t(i) - 1]);
     std::nth_element(intervals.begin(), intervals.begin() + qsizetype(intervals.size() / 2),
                      intervals.end());
-    const double guess = intervals[intervals.size() / 2];
+    const double guess = intervals[intervals.size() / 2] / std::max(1, divisions);
     if (guess <= 0)
         return fit;
     // The period the beats line up best at: the longest mean of them as angles around a
