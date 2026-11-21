@@ -421,6 +421,9 @@ int analyse(const QStringList& files, qint64 untilMs)
                     a->loudnessOver(a->soundStartMs, a->soundStartMs + 2000),
                     a->loudnessOver(a->soundEndMs - 2000, a->soundEndMs),
                     static_cast<long long>(timer.elapsed()));
+        std::printf("  key: start %s, end %s\n",
+                    a->startKey.valid() ? qPrintable(automix::keyName(a->startKey)) : "none",
+                    a->endKey.valid() ? qPrintable(automix::keyName(a->endKey)) : "none");
         const automix::Rhythm& r = a->rhythm;
         if (r.beats.empty()) {
             std::printf("  no beats\n");
@@ -589,6 +592,8 @@ int report(const QStringList& files)
                     qPrintable(automix::logName(plan.reason)), seconds(plan.overlapMs));
         if (plan.bars)
             std::printf(", %d bars", plan.bars);
+        if (plan.harmony != automix::Harmony::Unknown)
+            std::printf(", keys %s", qPrintable(automix::logName(plan.harmony)));
         const auto& beatsA = a->rhythm.beats;
         const double beatA = beatsA.size() > 1 ? 60000 / double(a->rhythm.bpm) : 0;
         const double beatB = b->rhythm.bpm > 0 ? 60000 / double(b->rhythm.bpm) : 0;
@@ -689,6 +694,8 @@ int mix(const QCommandLineParser& parser, const QStringList& args)
         std::printf(", on the beat");
     if (plan.inDelayMs)
         std::printf(", B from %.1f s into it", seconds(plan.inDelayMs));
+    if (plan.harmony != automix::Harmony::Unknown)
+        std::printf(", keys %s", qPrintable(automix::logName(plan.harmony)));
     std::printf("\n");
 
     const QString path = parser.value(QStringLiteral("output"));
