@@ -24,9 +24,12 @@
 #include <QMap>
 #include <QtEndian>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <functional>
+#include <numbers>
+#include <numeric>
 
 using namespace cirrus;
 using namespace cirrus::media;
@@ -225,6 +228,130 @@ void renderOverlap(const automix::Plan& plan, automix::Deck& a, std::unique_ptr<
     playUntil(b, untilMs, out);
 }
 
+// The onsets of `lengthMs` of a track from its media time `fromMs`, after `silentMs` of
+// nothing (all at `rate`).
+automix::RhythmFeatures onsetsOf(const QString& path, qint64 fromMs, qint64 lengthMs,
+                                 qint64 silentMs, int rate)
+{
+    automix::RhythmFrontEnd frontEnd(rate);
+    std::vector<float> audio(size_t(std::max<qint64>(0, silentMs) * rate / 1000) * 2, 0.0f);
+    frontEnd.add(audio.data(), qsizetype(audio.size() / 2));
+    auto decoder = openTrack(path);
+    if (!decoder)
+        return frontEnd.features();
+    automix::Deck deck(std::move(decoder), rate, 1.0f, false);
+    if (!deck.seek(fromMs))
+        return frontEnd.features();
+    audio.assign(size_t(std::max<qint64>(0, lengthMs - silentMs) * rate / 1000) * 2, 0.0f);
+    frontEnd.add(audio.data(), pullAll(deck, audio.data(), qsizetype(audio.size() / 2)));
+    return frontEnd.features();
+}
+
+// A track's hits over `lengthMs` from its media time `fromMs`: how much its high end (over
+// 2 kHz: cymbals, snare cracks, the clicks of kicks) rises in each millisecond. Where the
+// ear hears the drums, found without finding beats.
+std::vector<float> hitsOf(const QString& path, qint64 fromMs, qint64 lengthMs, int rate)
+{
+    std::vector<float> rises;
+    auto decoder = openTrack(path);
+    if (!decoder)
+        return rises;
+    automix::Deck deck(std::move(decoder), rate, 1.0f, false);
+    if (!deck.seek(fromMs))
+        return rises;
+    std::vector<float> audio(size_t(std::max<qint64>(0, lengthMs) * rate / 1000) * 2, 0.0f);
+    const qsizetype frames = pullAll(deck, audio.data(), qsizetype(audio.size() / 2));
+    // The downmix through a 4th-order Butterworth high-pass (two sections).
+    struct Section {
+        double b0, b1, b2, a1, a2, z1 = 0, z2 = 0;
+    };
+    std::vector<Section> sections;
+    const double w0 = 2 * std::numbers::pi * 2000 / rate, cosine = std::cos(w0);
+    for (const double q : {0.54119610, 1.30656296}) {
+        const double alpha = std::sin(w0) / (2 * q), a0 = 1 + alpha;
+        sections.push_back({(1 + cosine) / 2 / a0, -(1 + cosine) / a0, (1 + cosine) / 2 / a0,
+                            -2 * cosine / a0, (1 - alpha) / a0});
+    }
+    // Its level each millisecond, over 3 ms, and how much that rose.
+    const int perMs = std::max(1, rate / 1000);
+    std::vector<double> levels;
+    double sum = 0;
+    for (qsizetype i = 0; i < frames; ++i) {
+        double x = 0.5 * (audio[size_t(i) * 2] + audio[size_t(i) * 2 + 1]);
+        for (Section& s : sections) {
+            const double y = s.b0 * x + s.z1;
+            s.z1 = s.b1 * x - s.a1 * y + s.z2;
+            s.z2 = s.b2 * x - s.a2 * y;
+            x = y;
+        }
+        sum += std::fabs(x);
+        if ((i + 1) % perMs == 0) {
+            levels.push_back(sum / perMs);
+            sum = 0;
+        }
+    }
+    for (size_t k = 3; k < levels.size(); ++k) {
+        const double now = levels[k] + levels[k - 1] + levels[k - 2];
+        const double before = levels[k - 1] + levels[k - 2] + levels[k - 3];
+        rises.push_back(float(std::max(0.0, now - before)));
+    }
+    return rises;
+}
+
+// Where in a beat of `periodMs` (from `originMs` on) values every `stepMs` from `firstMs`
+// fall: kBins bins.
+constexpr int kBins = 128;
+std::array<double, kBins> folded(const std::vector<float>& values, double firstMs, double stepMs,
+                                 double originMs, double periodMs)
+{
+    std::array<double, kBins> bins{};
+    for (size_t i = 0; i < values.size(); ++i) {
+        const double t = firstMs + double(i) * stepMs - originMs;
+        double x = std::fmod(t, periodMs) / periodMs * kBins;
+        if (x < 0)
+            x += kBins;
+        const auto below = int(x);
+        const double above = x - below;
+        bins[size_t(below % kBins)] += (1 - above) * values[i];
+        bins[size_t((below + 1) % kBins)] += above * values[i];
+    }
+    const double mean = std::accumulate(bins.begin(), bins.end(), 0.0) / kBins;
+    for (double& b : bins)
+        b -= mean;
+    return bins;
+}
+
+// How much later in the beat the second's onsets fall than the first's (in beats, within
+// half of one either way). Of the lags that line them up about as well as the best (a beat
+// of eighths lines up at every eighth), the nearest.
+double foldedLag(const std::array<double, kBins>& a, const std::array<double, kBins>& b)
+{
+    constexpr double kAboutAsWell = 0.8;
+    std::array<double, kBins> c{};
+    for (int lag = 0; lag < kBins; ++lag)
+        for (int i = 0; i < kBins; ++i)
+            c[size_t(lag)] += a[size_t(i)] * b[size_t((i + lag) % kBins)];
+    const double top = *std::max_element(c.begin(), c.end());
+    const auto distance = [](int lag) { return std::min(lag, kBins - lag); };
+    int best = int(std::max_element(c.begin(), c.end()) - c.begin());
+    for (int lag = 0; lag < kBins; ++lag) {
+        const double at = c[size_t(lag)];
+        const bool peak =
+            at >= c[size_t((lag + kBins - 1) % kBins)] && at >= c[size_t((lag + 1) % kBins)];
+        if (peak && at >= kAboutAsWell * top && distance(lag) < distance(best))
+            best = lag;
+    }
+    const double l = c[size_t((best + kBins - 1) % kBins)], m = c[size_t(best)],
+                 r = c[size_t((best + 1) % kBins)];
+    double offset = 0;
+    if (const double d = l - 2 * m + r; d < 0)
+        offset = 0.5 * (l - r) / d;
+    double lag = best + offset;
+    if (lag >= kBins / 2.0)
+        lag -= kBins;
+    return lag / kBins;
+}
+
 // The whole file through the analyser, at its own rate.
 std::optional<automix::Analysis> analyseFile(const QString& path, qint64 untilMs = 0)
 {
@@ -269,7 +396,7 @@ std::optional<automix::Analysis> analyseFile(const QString& path, qint64 untilMs
     return analysis;
 }
 
-int analyse(const QStringList& files)
+int analyse(const QStringList& files, qint64 untilMs)
 {
     if (files.isEmpty()) {
         complain(QStringLiteral("analyse needs a file"));
@@ -279,7 +406,7 @@ int analyse(const QStringList& files)
     for (const QString& path : files) {
         QElapsedTimer timer;
         timer.start();
-        const auto a = analyseFile(path);
+        const auto a = analyseFile(path, untilMs);
         if (!a) {
             status = 1;
             continue;
@@ -304,7 +431,7 @@ int analyse(const QStringList& files)
                     double(r.bpm), double(r.strength), r.beats.size(),
                     double(r.beats.front()) / 1000, double(r.beats.back()) / 1000,
                     r.steady ? " (steady)" : "", r.downbeat, double(r.barConfidence));
-        const auto grid = [&r](const char* name, const automix::Grid& g) {
+        const auto grid = [&r, &path](const char* name, const automix::Grid& g) {
             if (!g.valid()) {
                 std::printf("  %s: no grid\n", name);
                 return;
@@ -314,6 +441,30 @@ int analyse(const QStringList& files)
                         "%.2f\n",
                         name, 60000 / g.periodMs, g.count, g.rmsMs, g.inliers * 100,
                         double(bars.confidence));
+            // Where in the beat the onsets are (eighths of it from the grid's beat on): the
+            // beat itself should be the strongest.
+            constexpr int kRate = 44100, kPositions = 8;
+            const auto from = qint64(g.at(-1));
+            const auto f = onsetsOf(path, from, qint64(g.periodMs * (g.count + 1)), 0, kRate);
+            const auto print = [&](const char* what, const std::vector<float>& onsets) {
+                double profile[kPositions] = {};
+                for (int k = 0; k < g.count; ++k) {
+                    for (int j = 0; j < kPositions; ++j) {
+                        const double t = g.at(k) + j * g.periodMs / kPositions - double(from);
+                        const auto frame = qsizetype(std::lround((t - f.originMs) / f.frameMs));
+                        if (frame >= 0 && frame < qsizetype(onsets.size()))
+                            profile[j] += onsets[size_t(frame)];
+                    }
+                }
+                const double top = *std::max_element(profile, profile + kPositions);
+                std::printf("    %-6s in the beat:", what);
+                for (const double v : profile)
+                    std::printf(" %3.0f", top > 0 ? 100 * v / top : 0);
+                std::printf("\n");
+            };
+            print("onsets", f.onset);
+            print("kicks", f.kick);
+            print("snares", f.snare);
         };
         grid("first 40 s", automix::fitGrid(r.beats, r.beats.front(), r.beats.front() + 40000));
         grid("last 40 s ", automix::fitGrid(r.beats, r.beats.back() - 40000, r.beats.back() + 1));
@@ -323,13 +474,13 @@ int analyse(const QStringList& files)
 
 // The beats found in a file, one per line (ms, then 1 where a bar starts); with -o the
 // file itself with a click on each beat (a higher one on bar starts), to listen to.
-int beats(const QCommandLineParser& parser, const QStringList& args)
+int beats(const QCommandLineParser& parser, const QStringList& args, qint64 untilMs)
 {
     if (args.size() != 2) {
         complain(QStringLiteral("beats needs a track"));
         return 2;
     }
-    const auto a = analyseFile(args[1]);
+    const auto a = analyseFile(args[1], untilMs);
     if (!a)
         return 1;
     const automix::Rhythm& r = a->rhythm;
@@ -395,7 +546,7 @@ int report(const QStringList& files)
         return 2;
     }
     constexpr int rate = 44100;
-    constexpr qint64 aroundMs = 10000;
+    constexpr qint64 kMeasuredMs = 15000; // of either track, to see where their beats fall
     std::vector<std::optional<automix::Analysis>> whole(size_t(files.size())),
         start(size_t(files.size()));
     std::vector<qint64> durations(size_t(files.size()), 0);
@@ -440,50 +591,53 @@ int report(const QStringList& files)
             std::printf(", %d bars", plan.bars);
         const auto& beatsA = a->rhythm.beats;
         const double beatA = beatsA.size() > 1 ? 60000 / double(a->rhythm.bpm) : 0;
+        const double beatB = b->rhythm.bpm > 0 ? 60000 / double(b->rhythm.bpm) : 0;
+        if (plan.onBeat)
+            ++onBeat;
         if (plan.onBeat && !beatsA.empty() && double(beatsA.back()) < double(plan.outMs) - beatA) {
-            ++onBeat; // its beat had stopped: nothing to meet (the grid still holds)
             std::printf(", on the beat (A's beat stopped %.1f s before)",
                         seconds(plan.outMs - qint64(beatsA.back())));
-        } else if (plan.onBeat && plan.style != automix::Style::Gapless) {
-            ++onBeat;
-            auto deckDecoder = openTrack(files[i]);
-            auto next = openTrack(files[i + 1]);
-            if (!deckDecoder || !next)
-                return 1;
-            automix::Deck deck(std::move(deckDecoder), rate, 1.0f, false);
-            const qint64 from = std::max<qint64>(0, plan.outMs - aroundMs);
-            std::vector<float> audio;
-            if (deck.seek(from))
-                renderOverlap(plan, deck, std::move(next), rate,
-                              plan.inMs + (plan.overlapMs - plan.inDelayMs) + aroundMs,
-                              [&audio](const float* frames, qsizetype count) {
-                                  audio.insert(audio.end(), frames, frames + count * 2);
-                              });
-            // The beats as found (not snapped to a grid): over the overlap, or for a short
-            // one (a natural end) from 8 s before it to 8 s after, both tracks' beats.
-            automix::RhythmFrontEnd frontEnd(rate);
-            frontEnd.add(audio.data(), qsizetype(audio.size() / 2));
-            const auto found = automix::findRhythm(frontEnd.features(), false);
-            const double overlapAt = double(plan.outMs - from);
-            const double around = plan.overlapMs < 8000 ? 8000 : 0;
-            const auto g = automix::fitGrid(found.beats, overlapAt - around,
-                                            overlapAt + double(plan.overlapMs) + around);
-            if (g.valid()) {
+        } else if (plan.style != automix::Style::Gapless && beatA > 0) {
+            // The current track's last seconds and the next one's first, each on its own,
+            // each in its own beat from where the next comes in as planned: where in it their
+            // onsets (rises in dB) and hits (rises of the high end) fall. Onsets can't tell
+            // the beat from the offbeat in a fast punk beat, hits can't with open hi-hats on
+            // the offbeats: the drums are together when either says so.
+            const qint64 fromA = std::max<qint64>(0, a->soundEndMs - kMeasuredMs);
+            const auto ga = automix::fitGrid(beatsA, double(fromA), double(a->soundEndMs));
+            const auto gb = automix::fitGrid(b->rhythm.beats, double(plan.inMs),
+                                             double(plan.inMs + kMeasuredMs));
+            const double pa = ga.valid() ? ga.periodMs : beatA;
+            const double pb = gb.valid() ? gb.periodMs : (beatB > 0 ? beatB : beatA);
+            const auto meet = double(plan.outMs + plan.inDelayMs); // B's entrance in A's time
+            const auto x = onsetsOf(files[i], fromA, a->soundEndMs - fromA, 0, rate);
+            const auto y = onsetsOf(files[i + 1], plan.inMs, kMeasuredMs, 0, rate);
+            const double onsets =
+                pb * foldedLag(folded(x.onset, double(fromA) + x.originMs, x.frameMs, meet, pa),
+                               folded(y.onset, double(plan.inMs) + y.originMs, y.frameMs,
+                                      double(plan.inMs), pb));
+            const double hits =
+                pb * foldedLag(folded(hitsOf(files[i], fromA, a->soundEndMs - fromA, rate),
+                                      double(fromA), 1, meet, pa),
+                               folded(hitsOf(files[i + 1], plan.inMs, kMeasuredMs, rate),
+                                      double(plan.inMs), 1, double(plan.inMs), pb));
+            const double lag = std::fabs(onsets) < std::fabs(hits) ? onsets : hits;
+            std::printf(", onsets %+.0f ms, hits %+.0f ms apart", onsets, hits);
+            if (plan.onBeat) {
                 ++kept;
-                worst = std::max(worst, g.rmsMs);
-                std::printf(", on the beat: %.1f ms rms, %.0f%% on one grid", g.rmsMs,
-                            g.inliers * 100);
-            } else {
-                std::printf(", on the beat: no grid in the overlap");
+                worst = std::max(worst, std::fabs(lag));
             }
         }
+        if (plan.onBeat)
+            std::printf(", on the beat");
         std::printf("\n");
     }
     std::printf("\n%lld transitions (%d skipped):",
                 static_cast<long long>(files.size() - 1 - skipped), skipped);
     for (auto it = styles.cbegin(); it != styles.cend(); ++it)
         std::printf(" %s %d", qPrintable(it.key()), it.value());
-    std::printf("; %d on the beat, %d measured, worst %.1f ms rms\n", onBeat, kept, worst);
+    std::printf("; %d on the beat, %d measured, the drums at most %.0f ms apart\n", onBeat, kept,
+                worst);
     return 0;
 }
 
@@ -586,15 +740,19 @@ int main(int argc, char* argv[])
         {QStringLiteral("rate"), QStringLiteral("The output's sample rate."), QStringLiteral("hz"),
          QStringLiteral("48000")},
         {QStringLiteral("no-analysis"), QStringLiteral("Plan as without an analysis.")},
+        {QStringLiteral("until"),
+         QStringLiteral("analyse, beats: only the start, as the engine does for the next track."),
+         QStringLiteral("seconds")},
     });
     parser.process(app);
     const QStringList args = parser.positionalArguments();
+    const auto untilMs = qint64(parser.value(QStringLiteral("until")).toDouble() * 1000);
     if (args.value(0) == QLatin1String("analyse"))
-        return analyse(args.mid(1));
+        return analyse(args.mid(1), untilMs);
     if (args.value(0) == QLatin1String("mix"))
         return mix(parser, args);
     if (args.value(0) == QLatin1String("beats"))
-        return beats(parser, args);
+        return beats(parser, args, untilMs);
     if (args.value(0) == QLatin1String("report"))
         return report(args.mid(1));
     parser.showHelp(2);
