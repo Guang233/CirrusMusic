@@ -88,7 +88,8 @@ std::optional<QUrl> officialRequestUrl(Protocol protocol, QStringView logicalPat
                                       u"/api/listen/together/sync/playlist/get",
                                       u"/api/listen/together/sync/list/command/report",
                                       u"/api/listen/together/restore/reconnect/info",
-                                      u"/api/listen/together/device/reconnect/notice"};
+                                      u"/api/listen/together/device/reconnect/notice",
+                                      u"/api/listen/together/sync/notice"};
         bool permitted = false;
         for (const auto path : paths)
             if (logicalPath == path)

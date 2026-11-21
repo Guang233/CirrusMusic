@@ -1,4 +1,5 @@
 #include "together_gateway.h"
+#include "infrastructure/netease/api/together_operation.h"
 #include "metadata_mapping.h"
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -11,42 +12,31 @@ namespace cirrus::netease
 using namespace domain;
 namespace
 {
-QString statusName(TogetherPlayStatus s)
-{
-    return s == TogetherPlayStatus::Play ? QStringLiteral("PLAY") : QStringLiteral("PAUSE");
-}
-QString actionName(TogetherPlayAction a)
-{
-    const QStringList names{QStringLiteral("PLAY"), QStringLiteral("PAUSE"),
-                            QStringLiteral("NEXT"), QStringLiteral("PREVIOUS"),
-                            QStringLiteral("GOTO"), QStringLiteral("PROGRESS")};
-    return names[int(a)];
-}
-QString json(const QJsonObject& o)
-{
-    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
-}
-QJsonArray songArray(const QList<SongId>& ids)
-{
-    QJsonArray a;
-    for (const auto& id : ids)
-        a.append(id.value);
-    return a;
-}
-std::optional<qint64> number(const QJsonValue& v)
-{
-    if (!v.isDouble())
-        return std::nullopt;
-    const auto n = v.toInteger(-1);
-    return validTogetherCounter(n) && QJsonValue(n) == v ? std::optional<qint64>(n) : std::nullopt;
-}
+bool absent(const QJsonValue& v) { return v.isUndefined() || v.isNull(); }
 bool optionalBool(const QJsonValue& v, std::optional<bool>& out)
 {
-    if (v.isUndefined() || v.isNull())
+    if (absent(v))
         return true;
     if (!v.isBool())
         return false;
     out = v.toBool();
+    return true;
+}
+// A song ID as text (or, tolerated, a JSON number). Absent, "" and "0" mean none.
+bool optionalSong(const QJsonValue& v, SongId& out)
+{
+    if (absent(v) || v == QJsonValue(QString()) || v == QJsonValue(QStringLiteral("0")))
+        return true;
+    if (v.isDouble()) {
+        const auto user = togetherUser(v);
+        if (!user)
+            return false;
+        out = {*user};
+        return true;
+    }
+    if (!v.isString() || !validMusicId(v.toString()))
+        return false;
+    out = {v.toString()};
     return true;
 }
 std::optional<TogetherRoom> roomFrom(const QJsonValue& v)
@@ -59,7 +49,7 @@ std::optional<TogetherRoom> roomFrom(const QJsonValue& v)
         return std::nullopt;
     TogetherRoom r{{id.toString()}};
     const auto chat = o.value(QStringLiteral("chatRoomId"));
-    if (!chat.isNull() && !chat.isUndefined()) {
+    if (!absent(chat)) {
         if (!chat.isString() || !TogetherRoomId{chat.toString()}.isValid())
             return std::nullopt;
         r.chatRoom = TogetherChatRoomId{chat.toString()};
@@ -70,6 +60,25 @@ std::optional<TogetherRoom> roomFrom(const QJsonValue& v)
         !optionalBool(o.value(QStringLiteral("roomCanJoin")), r.canJoin) ||
         !optionalBool(o.value(QStringLiteral("roomEnd")), r.ended))
         return std::nullopt;
+    const auto creator = o.value(QStringLiteral("creatorId"));
+    if (!absent(creator)) {
+        const auto user = togetherUser(creator);
+        if (!user)
+            return std::nullopt;
+        if (!user->isEmpty())
+            r.creatorId = *user;
+    }
+    const auto users = o.value(QStringLiteral("roomUsers"));
+    if (!absent(users)) {
+        if (!users.isArray() || users.toArray().size() > 1000)
+            return std::nullopt;
+        for (const auto& u : users.toArray()) {
+            const auto user = togetherUser(u.toObject().value(QStringLiteral("userId")));
+            if (!u.isObject() || !user || user->isEmpty())
+                return std::nullopt;
+            r.members.append(*user);
+        }
+    }
     return r;
 }
 std::optional<TogetherReportedPlay> reportedPlay(const QJsonValue& v)
@@ -77,40 +86,106 @@ std::optional<TogetherReportedPlay> reportedPlay(const QJsonValue& v)
     if (!v.isObject())
         return std::nullopt;
     const auto o = v.toObject();
-    const auto progress = number(o.value(QStringLiteral("progress")));
-    const auto client = number(o.value(QStringLiteral("clientSeq")));
-    const auto server = number(o.value(QStringLiteral("serverSeq")));
-    const auto former = o.value(QStringLiteral("formerSongId"));
-    const auto target = o.value(QStringLiteral("targetSongId"));
-    int action = -1;
-    for (int i = 0; i < 6; ++i)
-        if (o.value(QStringLiteral("commandType")) == QJsonValue(actionName(TogetherPlayAction(i))))
-            action = i;
-    const auto status = o.value(QStringLiteral("playStatus"));
-    if (action < 0 ||
-        (status != QJsonValue(QStringLiteral("PLAY")) &&
-         status != QJsonValue(QStringLiteral("PAUSE"))) ||
-        !progress || !validTogetherProgress(*progress) || !client || !server ||
-        !former.isString() || !validMusicId(former.toString()) || !target.isString() ||
-        !validMusicId(target.toString()))
+    TogetherReportedPlay p;
+    const auto action = togetherPlayAction(o.value(QStringLiteral("commandType")));
+    const auto status = togetherPlayStatus(o.value(QStringLiteral("playStatus")));
+    const auto progress = togetherCounter(o.value(QStringLiteral("progress")));
+    const auto client = togetherCounter(o.value(QStringLiteral("clientSeq")));
+    const auto server = togetherCounter(o.value(QStringLiteral("serverSeq")));
+    const auto userValue = o.value(QStringLiteral("userId"));
+    const auto user =
+        absent(userValue) ? std::optional<QString>(QString()) : togetherUser(userValue);
+    const auto trigger = o.value(QStringLiteral("triggerType"));
+    if (!action || !status || !progress || !validTogetherProgress(*progress) || !client ||
+        !server || !user || !optionalSong(o.value(QStringLiteral("formerSongId")), p.former) ||
+        !optionalSong(o.value(QStringLiteral("targetSongId")), p.target))
         return std::nullopt;
-    return TogetherReportedPlay{TogetherPlayAction(action),
-                                status == QJsonValue(QStringLiteral("PLAY"))
-                                    ? TogetherPlayStatus::Play
-                                    : TogetherPlayStatus::Pause,
-                                {former.toString()},
-                                {target.toString()},
-                                *progress,
-                                *client,
-                                *server};
+    if (!absent(trigger)) {
+        p.trigger = togetherTrigger(trigger);
+        if (!p.trigger)
+            return std::nullopt;
+    }
+    p.action = *action;
+    p.status = *status;
+    p.progressMs = *progress;
+    p.clientSeq = *client;
+    p.serverSeq = *server;
+    p.userId = *user;
+    return p;
+}
+// displayList / randomList: {changed, result: [song IDs]}.
+bool songList(const QJsonValue& v, QList<SongId>& out, bool& changed)
+{
+    if (absent(v))
+        return true;
+    if (!v.isObject())
+        return false;
+    const auto o = v.toObject();
+    std::optional<bool> c;
+    if (!optionalBool(o.value(QStringLiteral("changed")), c))
+        return false;
+    changed = c.value_or(false);
+    const auto result = o.value(QStringLiteral("result"));
+    if (absent(result))
+        return true;
+    if (!result.isArray() || result.toArray().size() > 5000)
+        return false;
+    for (const auto& id : result.toArray()) {
+        SongId song;
+        if (!optionalSong(id, song) || song.value.isEmpty())
+            return false;
+        out.append(song);
+    }
+    return true;
+}
+std::optional<TogetherPlaylist> playlistFrom(const QJsonValue& v)
+{
+    if (!v.isObject())
+        return std::nullopt;
+    const auto o = v.toObject();
+    TogetherPlaylist p;
+    std::optional<bool> replace;
+    if (!songList(o.value(QStringLiteral("displayList")), p.display, p.displayChanged) ||
+        !songList(o.value(QStringLiteral("randomList")), p.random, p.randomChanged) ||
+        !optionalBool(o.value(QStringLiteral("replace")), replace))
+        return std::nullopt;
+    p.replace = replace.value_or(false);
+    const auto mode = o.value(QStringLiteral("playMode"));
+    if (!absent(mode)) {
+        if (!mode.isString())
+            return std::nullopt;
+        p.mode = togetherPlayMode(mode); // a mode this client does not know stays empty
+    }
+    const auto versions = o.value(QStringLiteral("version"));
+    if (!absent(versions)) {
+        const auto list = togetherVersions(versions);
+        if (!list)
+            return std::nullopt;
+        p.versions = *list;
+    }
+    return p;
+}
+// data.type and data.hintText (RoomInfoResult, HeartBeatResult); both optional.
+bool typeAndHint(const QJsonObject& o, TogetherResult& r)
+{
+    return mapping::metadataText(o.value(QStringLiteral("type")), r.resultType, 128) &&
+           mapping::metadataText(o.value(QStringLiteral("hintText")), r.hint);
 }
 bool details(const TogetherRequest& request, const QJsonObject& root, TogetherResult& r)
 {
     const auto raw = root.value(QStringLiteral("data"));
+    const auto kind = togetherKind(request.action);
+    // Exits and notices: the envelope is the answer (end/v2's share card is not used).
+    if (kind == TogetherKind::End || kind == TogetherKind::DeviceNotice ||
+        kind == TogetherKind::SyncNotice) {
+        if (absent(raw))
+            return true;
+        if (!raw.isObject())
+            return false;
+    }
     if (!raw.isObject())
         return false;
     const auto o = raw.toObject();
-    const auto kind = togetherKind(request.action);
     if (kind == TogetherKind::Create || kind == TogetherKind::Join ||
         kind == TogetherKind::Status) {
         if (kind == TogetherKind::Status) {
@@ -119,9 +194,9 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
                 return false;
             r.inRoom = in.toBool();
             if (!*r.inRoom)
-                return o.value(QStringLiteral("roomInfo")).isNull() ||
-                       o.value(QStringLiteral("roomInfo")).isUndefined();
-        }
+                return absent(o.value(QStringLiteral("roomInfo")));
+        } else if (!typeAndHint(o, r))
+            return false;
         r.room = roomFrom(o.value(QStringLiteral("roomInfo")));
         if (!r.room)
             return false;
@@ -140,8 +215,11 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
             r.joinable = b.toBool();
         else if (kind == TogetherKind::EndCheck)
             r.endAllowed = b.toBool();
-        else
+        else {
             r.heartbeatAccepted = b.toBool();
+            if (!typeAndHint(o, r))
+                return false;
+        }
         // A false decision is valid read metadata, not activation or transport failure.
         return true;
     }
@@ -150,14 +228,16 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
         if (!wrapper.isObject())
             return false;
         const auto p = wrapper.toObject();
-        if (!p.value(QStringLiteral("playlist")).isObject())
+        r.playlist = playlistFrom(p.value(QStringLiteral("playlist")));
+        if (!r.playlist)
             return false;
-        r.playlistContentUnmapped = true; // document does not define this object's song/list schema
         const auto play = p.value(QStringLiteral("playCommand"));
-        if (!play.isNull() && !play.isUndefined()) {
+        if (!absent(play)) {
             r.reportedPlay = reportedPlay(play);
-            if (!r.reportedPlay)
+            if (!r.reportedPlay) {
+                r.playlist.reset();
                 return false;
+            }
         }
         return true;
     }
@@ -168,7 +248,7 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
         TogetherReconnect c;
         c.canReconnect = can.toBool();
         const auto id = o.value(QStringLiteral("roomId"));
-        if (!id.isNull() && !id.isUndefined() && id != QJsonValue(QString())) {
+        if (!absent(id) && id != QJsonValue(QString())) {
             if (!id.isString() || !TogetherRoomId{id.toString()}.isValid())
                 return false;
             c.room = TogetherRoomId{id.toString()};
@@ -183,14 +263,10 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
         r.reconnect = c;
         return true;
     }
-    if (kind == TogetherKind::End) {
-        if (o.isEmpty())
-            return true;
-        const auto code = number(o.value(QStringLiteral("code")));
-        return code && *code == 200;
-    }
-    // Play/list GeneralResult needs its boolean result; device-notice has no
-    // established result schema and only acknowledges the HTTP envelope.
+    if (kind == TogetherKind::End)
+        return true;
+    // Play/list GeneralResult needs its boolean result; the notices have no established
+    // result schema and only acknowledge the HTTP envelope.
     const auto result = o.value(QStringLiteral("result"));
     if ((kind == TogetherKind::Play || kind == TogetherKind::ReplaceQueue) && !result.isBool())
         return false;
@@ -204,7 +280,7 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
     }
     const auto innerCode = o.value(QStringLiteral("code"));
     if (!innerCode.isUndefined()) {
-        const auto n = number(innerCode);
+        const auto n = togetherCounter(innerCode);
         if (!n)
             return false;
         if (*n != 200) {
@@ -220,44 +296,8 @@ std::optional<TogetherWireRequest> togetherRequest(const TogetherRequest& reques
 {
     if (!request.isValid() || !validMusicId(account))
         return std::nullopt;
-    TogetherWireRequest out{
-        ApiOperation(int(ApiOperation::TogetherCreate) + int(togetherKind(request.action))), {}};
-    std::visit(
-        [&](const auto& a) {
-            if constexpr (requires { a.room; })
-                out.parameters.insert(QStringLiteral("roomId"), a.room.value);
-            if constexpr (requires { a.inviterId; })
-                out.parameters.insert(QStringLiteral("inviterId"), a.inviterId);
-            if constexpr (requires { a.song; }) {
-                out.parameters.insert(QStringLiteral("songId"), a.song.value);
-                out.parameters.insert(QStringLiteral("playStatus"), statusName(a.status));
-                out.parameters.insert(QStringLiteral("progress"), a.progressMs);
-            }
-            if constexpr (requires { a.former; }) {
-                const QJsonObject c{{QStringLiteral("commandType"), actionName(a.action)},
-                                    {QStringLiteral("formerSongId"), a.former.value},
-                                    {QStringLiteral("targetSongId"), a.target.value},
-                                    {QStringLiteral("progress"), a.progressMs},
-                                    {QStringLiteral("playStatus"), statusName(a.status)},
-                                    {QStringLiteral("clientSeq"), a.clientSeq}};
-                out.parameters.insert(QStringLiteral("commandInfo"), json(c));
-            }
-            if constexpr (requires { a.version; }) {
-                const QJsonObject c{
-                    {QStringLiteral("commandType"), QStringLiteral("REPLACE")},
-                    {QStringLiteral("anchorSongId"), QString()},
-                    {QStringLiteral("anchorPosition"), -1},
-                    {QStringLiteral("clientSeq"), a.clientSeq},
-                    {QStringLiteral("displayList"), songArray(a.display)},
-                    {QStringLiteral("randomList"), songArray(a.random)},
-                    {QStringLiteral("version"),
-                     QJsonArray{QJsonObject{{QStringLiteral("userId"), account.toString()},
-                                            {QStringLiteral("version"), a.version}}}}};
-                out.parameters = {{QStringLiteral("command"), json(c)}};
-            }
-        },
-        request.action);
-    return out;
+    return TogetherWireRequest{togetherOperation(togetherKind(request.action)),
+                               togetherParameters(request.action)};
 }
 TogetherResult togetherResult(const TogetherRequest& request, const ApiResult& api)
 {
@@ -271,6 +311,10 @@ TogetherResult togetherResult(const TogetherRequest& request, const ApiResult& a
         r.outcome =
             *r.providerCode == 200 ? TogetherOutcome::Acknowledged : TogetherOutcome::Rejected;
         r.error = *r.providerCode == 200 ? TogetherError::None : TogetherError::ProviderRejected;
+        // A rejection may still say why (e.g. 488 with ERROR_ROOM_INVALID); ignore a bad one.
+        if (*r.providerCode != 200 &&
+            !typeAndHint(api.decoded.object.value(QStringLiteral("data")).toObject(), r))
+            r.resultType = r.hint = std::nullopt;
         if (*r.providerCode == 200 && !details(request, api.decoded.object, r)) {
             r = TogetherResult{request.eventId,
                                TogetherOutcome::Unknown,

@@ -3016,7 +3016,7 @@ void BackendRuntimeTest::togetherHttpThroughThread()
     const BackendConfig config{directory.filePath("state.sqlite"), "synthetic"};
     seed(config.databasePath, *state);
     auto plans = loginPlans();
-    for (int i = 0; i < 12; ++i)
+    for (int i = 0; i < kTogetherKinds; ++i)
         plans.append(Plan{togetherHttpFixture(TogetherKind(i))});
     plans.append(Plan{R"({"code":200,"data":{"playlist":{}}})"});
     plans.append(Plan{"", 200, -1});
@@ -3045,7 +3045,7 @@ void BackendRuntimeTest::togetherHttpThroughThread()
     QVERIFY(f.poll());
     QTRY_COMPARE(login.size(), 1);
     const auto token = f.snapshot().token;
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < kTogetherKinds; ++i) {
         request = {QUuid::createUuid(), 7, togetherHttpActions()[i]};
         QVERIFY(f.requestTogether(request));
         QTRY_COMPARE(done.size(), i + 1);
@@ -3059,31 +3059,31 @@ void BackendRuntimeTest::togetherHttpThroughThread()
         QCOMPARE(c.accountId, f.snapshot().accountId);
         QCOMPARE(c.context, token);
         if (i == 8) {
-            QVERIFY(r.playlistContentUnmapped);
+            QVERIFY(r.playlist);
             QVERIFY(r.reportedPlay);
         }
     }
     request = {QUuid::createUuid(), 7, TogetherQueue{{"synthetic-room"}}};
     QVERIFY(f.requestTogether(request));
-    QTRY_COMPARE(done.size(), 13);
+    QTRY_COMPARE(done.size(), kTogetherKinds + 1);
     QCOMPARE(qvariant_cast<TogetherResult>(done.last()[2]).error, TogetherError::InvalidResponse);
     const auto pending = f.requestTogether(request);
     QVERIFY(pending);
-    QTRY_COMPARE(state->requests.load(), 17);
+    QTRY_COMPARE(state->requests.load(), kTogetherKinds + 5);
     f.close();
     QTRY_COMPARE(stopped.size(), 1);
-    QTRY_COMPARE(done.size(), 14);
+    QTRY_COMPARE(done.size(), kTogetherKinds + 2);
     QCOMPARE(done.last()[0].toULongLong(), pending);
     QCOMPARE(qvariant_cast<SessionToken>(done.last()[1]), token);
     QCOMPARE(qvariant_cast<TogetherResult>(done.last()[2]).error, TogetherError::Canceled);
-    QCOMPARE(calls.size(), 14);
+    QCOMPARE(calls.size(), kTogetherKinds + 2);
     QVERIFY(play.isEmpty());
     QVERIFY(report.isEmpty());
     QVERIFY(writes.isEmpty());
     QVERIFY(comments.isEmpty());
     QVERIFY(music.isEmpty());
     QVERIFY(runtime.listening().queue().entries.isEmpty());
-    QCOMPARE(state->requests.load(), 17);
+    QCOMPARE(state->requests.load(), kTogetherKinds + 5);
     QCOMPARE(state->wrongThread.load(), 0);
     QCOMPARE(state->created.load(), state->destroyed.load());
 }

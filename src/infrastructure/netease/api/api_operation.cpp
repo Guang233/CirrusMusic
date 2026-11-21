@@ -136,6 +136,7 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::TogetherReplaceQueue:
     case ApiOperation::TogetherReconnectInfo:
     case ApiOperation::TogetherDeviceNotice:
+    case ApiOperation::TogetherSyncNotice:
         return std::nullopt; // closed HTTP-only adapter above
     case ApiOperation::SearchSuggestions:
         return ApiOperationContract{QStringLiteral("/api/search/suggest/web"), Protocol::Weapi,
@@ -967,6 +968,7 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
     case ApiOperation::TogetherReplaceQueue:
     case ApiOperation::TogetherReconnectInfo:
     case ApiOperation::TogetherDeviceNotice:
+    case ApiOperation::TogetherSyncNotice:
         break; // closed HTTP-only adapter above
     case ApiOperation::SearchSuggestions:
     case ApiOperation::HotKeywords:
@@ -1091,6 +1093,7 @@ bool acceptsResponseCookies(ApiOperation operation, const DecodedResponse& respo
     case ApiOperation::TogetherReplaceQueue:
     case ApiOperation::TogetherReconnectInfo:
     case ApiOperation::TogetherDeviceNotice:
+    case ApiOperation::TogetherSyncNotice:
         return false;
     case ApiOperation::QrKey:
         return *response.businessCode == 200 &&

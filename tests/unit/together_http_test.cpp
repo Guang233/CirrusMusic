@@ -77,7 +77,7 @@ class TogetherHttpTest : public QObject
     void contracts_data()
     {
         QTest::addColumn<int>("index");
-        for (int i = 0; i < 12; ++i)
+        for (int i = 0; i < kTogetherKinds; ++i)
             QTest::newRow(qPrintable(QString::number(i))) << i;
     }
     void contracts()
@@ -102,7 +102,8 @@ class TogetherHttpTest : public QObject
                                 "sync/playlist/get",
                                 "sync/list/command/report",
                                 "restore/reconnect/info",
-                                "device/reconnect/notice"};
+                                "device/reconnect/notice",
+                                "sync/notice"};
         QCOMPARE(c->logicalPath, QString("/api/listen/together/") + paths[index]);
         QCOMPARE(c->protocol, Protocol::Eapi);
         QCOMPARE(c->destination, OfficialDestination::TogetherHttp);
@@ -123,20 +124,61 @@ class TogetherHttpTest : public QObject
                                     c->destination));
         QCOMPARE(officialRequestUrl(Protocol::Eapi, u"/api/song/like/get")->host(),
                  "interfacepc.music.163.com");
+        // Every top-level value is text, as the official app sends it.
+        for (const auto& value : *payload)
+            QVERIFY(value.isString());
+        const auto object = [&](const char* key) {
+            return QJsonDocument::fromJson(payload->value(key).toString().toUtf8()).object();
+        };
+        if (index == 0)
+            QCOMPARE(*payload, (QJsonObject{{"inviteUid", ""}, {"refer", "songplay_more"}}));
+        if (index == 5) {
+            QCOMPARE(payload->value("exitType"), QJsonValue("NORMAL_END"));
+            QCOMPARE(payload->value("needRecord"), QJsonValue("false"));
+            QCOMPARE(payload->size(), 6);
+        }
+        if (index == 6) {
+            QCOMPARE(payload->value("progress"), QJsonValue("3000"));
+            QCOMPARE(payload->value("playlistVersion"),
+                     QJsonValue(R"([{"userId":101,"version":2},{"userId":102,"version":0}])"));
+        }
+        if (index == 7) {
+            const auto c = object("commandInfo");
+            QCOMPARE(c.size(), 9);
+            QCOMPARE(c.value("commandType"), QJsonValue("PROGRESS"));
+            QCOMPARE(c.value("triggerType"), QJsonValue("MANUAL"));
+            QCOMPARE(c.value("progress").toInteger(), 3000);
+            QCOMPARE(c.value("serverSeq").toInteger(-1), 0);
+            QCOMPARE(c.value("userId").toInteger(-1), 0);
+        }
+        if (index == 8) {
+            const auto p = object("playlistParam");
+            QCOMPARE(p.value("anchorSongId"), QJsonValue("3"));
+            QCOMPARE(p.value("anchorPosition").toInteger(), 1);
+            QCOMPARE(p.value("playMode"), QJsonValue("RANDOM"));
+            QCOMPARE(p.value("randomList"), QJsonValue(QJsonArray{"3", "2"}));
+            QVERIFY(!p.contains("commandType"));
+            QVERIFY(!p.contains("version"));
+        }
         if (index == 9) {
-            QVERIFY(payload->value("command").isString());
-            QVERIFY(!payload->contains("roomId"));
-            QVERIFY(!payload->contains("playlistParam"));
-            const auto p =
-                QJsonDocument::fromJson(payload->value("command").toString().toUtf8()).object();
-            QCOMPARE(p.value("clientSeq").toInt(), 6);
-            QCOMPARE(p.value("version").toArray().first().toObject().value("version").toInt(), 9);
+            QCOMPARE(payload->value("clientSeq"), QJsonValue("6"));
+            QVERIFY(!payload->contains("command"));
+            const auto p = object("playlistParam");
+            QCOMPARE(p.value("commandType"), QJsonValue("REPLACE"));
+            QCOMPARE(p.value("clientSeq").toInteger(), 6);
+            QCOMPARE(p.value("anchorSongId"), QJsonValue("2"));
+            QCOMPARE(p.value("playMode"), QJsonValue("ORDER_LOOP"));
+            QVERIFY(!p.contains("randomList"));
+            const auto v = p.value("version").toArray();
+            QCOMPARE(v.size(), 2);
+            QCOMPARE(v.first().toObject().value("userId").toInteger(), 101);
+            QCOMPARE(v.first().toObject().value("version").toInteger(), 9);
         }
     }
     void nativeEach()
     {
         QList<Plan> plans;
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < kTogetherKinds; ++i) {
             Plan p{togetherHttpFixture(TogetherKind(i))};
             p.headers.append(std::pair<QByteArray, QByteArray>{
                 "Set-Cookie", "MUSIC_U=synthetic-rotation; Domain=.music.163.com; Path=/"});
@@ -144,7 +186,7 @@ class TogetherHttpTest : public QObject
         }
         Harness h(plans);
         QSignalSpy done(h.gateway.get(), &ITogetherGateway::completed);
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < kTogetherKinds; ++i) {
             const auto r = request(i);
             QVERIFY(h.submit(r));
             QTRY_COMPARE(done.size(), i + 1);
@@ -173,13 +215,30 @@ class TogetherHttpTest : public QObject
                 QCOMPARE(got.room->id.value, "synthetic-room");
                 QVERIFY(got.room->chatRoom);
                 QCOMPARE(got.room->chatRoom->value, "synthetic-chat");
+                QCOMPARE(got.room->creatorId, std::optional<QString>("102"));
+                QCOMPARE(got.room->members, (QList<QString>{"102", "101"}));
+                QCOMPARE(got.resultType, std::optional<QString>("NEW_ROOM"));
+                QCOMPARE(got.hint, std::optional<QString>("synthetic hint"));
+            }
+            if (i == 6) {
+                QCOMPARE(got.heartbeatAccepted, std::optional<bool>(true));
+                QCOMPARE(got.resultType, std::optional<QString>("SUCCESS"));
             }
             if (i == 1)
                 QCOMPARE(got.joinable, std::optional<bool>(false));
             if (i == 8) {
-                QVERIFY(got.playlistContentUnmapped);
+                QVERIFY(got.playlist);
+                QCOMPARE(got.playlist->display, (QList<SongId>{{"2"}, {"3"}}));
+                QVERIFY(got.playlist->random.isEmpty());
+                QVERIFY(got.playlist->displayChanged);
+                QVERIFY(got.playlist->replace);
+                QCOMPARE(got.playlist->mode, std::optional(TogetherPlayMode::OrderLoop));
+                QCOMPARE(got.playlist->versions, (QList<TogetherVersion>{{"102", 4}}));
                 QVERIFY(got.reportedPlay);
                 QCOMPARE(got.reportedPlay->serverSeq, 88);
+                QCOMPARE(got.reportedPlay->userId, "102");
+                QCOMPARE(got.reportedPlay->trigger, std::optional(TogetherTrigger::Manual));
+                QCOMPARE(got.reportedPlay->former.value, "9007199254740993");
             }
             if (i == 10) {
                 QVERIFY(got.reconnect);
@@ -193,9 +252,14 @@ class TogetherHttpTest : public QObject
         QTest::addColumn<int>("index");
         QTest::addColumn<QJsonObject>("body");
         int row = 0;
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < kTogetherKinds; ++i) {
+            const auto kind = TogetherKind(i);
+            const bool envelope = kind == TogetherKind::End || kind == TogetherKind::DeviceNotice ||
+                                  kind == TogetherKind::SyncNotice;
             for (const auto& value :
                  QList<QJsonValue>{QJsonValue(), QJsonValue(1), QJsonValue(QJsonArray{})}) {
+                if (envelope && value.isNull())
+                    continue;
                 auto o = togetherHttpObject(TogetherKind(i));
                 o.insert("data", value);
                 QTest::newRow(qPrintable(QString::number(row++))) << i << o;
@@ -216,8 +280,6 @@ class TogetherHttpTest : public QObject
         add(9, {});
         add(3, {{"inRoom", 1}});
         add(3, {{"inRoom", false}, {"roomInfo", QJsonObject{}}});
-        add(5, {{"success", true}});
-        add(5, {{"code", "200"}});
         add(8, {{"playlist", QJsonObject{}}});
         add(8, {{"playList", QJsonObject{{"playlist", QJsonArray{}}}}});
         auto queue = togetherHttpObject(TogetherKind::Queue).value("data").toObject();
@@ -227,6 +289,34 @@ class TogetherHttpTest : public QObject
         wrapper.insert("playCommand", play);
         queue.insert("playList", wrapper);
         add(8, queue);
+        auto badQueue = [&](auto edit) {
+            auto data = togetherHttpObject(TogetherKind::Queue).value("data").toObject();
+            auto wrapper = data.value("playList").toObject();
+            auto list = wrapper.value("playlist").toObject();
+            auto command = wrapper.value("playCommand").toObject();
+            edit(list, command);
+            wrapper.insert("playlist", list);
+            wrapper.insert("playCommand", command);
+            data.insert("playList", wrapper);
+            add(8, data);
+        };
+        badQueue([](QJsonObject& l, QJsonObject&) {
+            l.insert("displayList", QJsonObject{{"result", QJsonArray{"x"}}});
+        });
+        badQueue([](QJsonObject& l, QJsonObject&) { l.insert("displayList", QJsonArray{}); });
+        badQueue([](QJsonObject& l, QJsonObject&) {
+            l.insert("version", QJsonArray{QJsonObject{{"userId", "102"}, {"version", 1}}});
+        });
+        badQueue([](QJsonObject& l, QJsonObject&) { l.insert("playMode", 1); });
+        badQueue([](QJsonObject&, QJsonObject& c) { c.insert("triggerType", "SOMETIMES"); });
+        badQueue([](QJsonObject&, QJsonObject& c) { c.insert("userId", "102"); });
+        badQueue([](QJsonObject&, QJsonObject& c) { c.insert("targetSongId", "x"); });
+        auto badRoom = togetherHttpObject(TogetherKind::Create).value("data").toObject();
+        auto info = badRoom.value("roomInfo").toObject();
+        info.insert("roomUsers", QJsonArray{QJsonObject{{"nickname", "synthetic"}}});
+        badRoom.insert("roomInfo", info);
+        add(0, badRoom);
+        add(6, {{"result", true}, {"type", 1}});
         add(10, {{"canReconnect", true}});
         add(10, {{"canReconnect", "true"}});
         add(11, {{"result", 1}});
@@ -241,7 +331,7 @@ class TogetherHttpTest : public QObject
         QVERIFY(!r.room);
         QVERIFY(!r.reconnect);
         QVERIFY(!r.reportedPlay);
-        QVERIFY(!r.playlistContentUnmapped);
+        QVERIFY(!r.playlist);
     }
     void negativeWireAndBounds()
     {
@@ -262,11 +352,29 @@ class TogetherHttpTest : public QObject
         p.clientSeq = 9007199254740992LL;
         QVERIFY(!validTogetherAction(p));
         auto q = std::get<TogetherReplaceQueue>(request(9).action);
-        q.random.removeLast();
+        q.list.random = {{"2"}, {"3"}};
+        QVERIFY(!validTogetherAction(q));
+        q.list.random = {{"5"}, {"2"}, {"2"}};
+        QVERIFY(!validTogetherAction(q));
+        q.list.random = {{"3"}, {"2"}, {"2"}};
+        QVERIFY(validTogetherAction(q));
+        q.list.anchorPosition = 3;
         QVERIFY(!validTogetherAction(q));
         q = std::get<TogetherReplaceQueue>(request(9).action);
-        q.random[0] = {"5"};
+        q.versions.append({"101", 1});
         QVERIFY(!validTogetherAction(q));
+        q.versions = {{"9007199254740992", 1}};
+        QVERIFY(!validTogetherAction(q));
+        q.versions.clear();
+        QVERIFY(!validTogetherAction(q)); // REPLACE carries at least the own counter
+        q = std::get<TogetherReplaceQueue>(request(9).action);
+        q.list.display.clear();
+        QVERIFY(!validTogetherAction(q));
+        auto own = std::get<TogetherQueue>(request(8).action);
+        own.list = {};
+        QVERIFY(validTogetherAction(own)); // nothing playing yet
+        own.list.anchorPosition = 1;
+        QVERIFY(!validTogetherAction(own));
         for (int i = 0; i < 6; ++i) {
             auto r = request(7);
             std::get<TogetherPlay>(r.action).action = TogetherPlayAction(i);
@@ -281,7 +389,26 @@ class TogetherHttpTest : public QObject
         w->parameters.insert("commandInfo", QString::fromUtf8(QJsonDocument(c).toJson()));
         QVERIFY(!operationPayload(w->operation, w->parameters));
         w = togetherRequest(request(9), u"101");
-        w->parameters.insert("playlistParam", w->parameters.take("command"));
+        w->parameters.insert("clientSeq", "7"); // must equal the command's own
+        QVERIFY(!operationPayload(w->operation, w->parameters));
+        w = togetherRequest(request(9), u"101");
+        w->parameters.insert("command", w->parameters.take("playlistParam"));
+        QVERIFY(!operationPayload(w->operation, w->parameters));
+        w = togetherRequest(request(6), u"101");
+        w->parameters.insert("progress", 3000); // the app sends text
+        QVERIFY(!operationPayload(w->operation, w->parameters));
+        w = togetherRequest(request(6), u"101");
+        w->parameters.insert("progress", "03000");
+        QVERIFY(!operationPayload(w->operation, w->parameters));
+        w = togetherRequest(request(7), u"101");
+        c = QJsonDocument::fromJson(w->parameters.value("commandInfo").toString().toUtf8())
+                .object();
+        c.remove("userId");
+        w->parameters.insert("commandInfo",
+                             QString::fromUtf8(QJsonDocument(c).toJson(QJsonDocument::Compact)));
+        QVERIFY(!operationPayload(w->operation, w->parameters));
+        w = togetherRequest(request(5), u"101");
+        w->parameters.insert("exitType", "KICKED");
         QVERIFY(!operationPayload(w->operation, w->parameters));
     }
     void rejection_data()
@@ -301,11 +428,28 @@ class TogetherHttpTest : public QObject
         QCOMPARE(result(done).providerCode, std::optional<qint64>(code));
         QCOMPARE(h.http->requests.size(), 2); // no retry or host/protocol fallback
     }
+    void rejectionReason()
+    {
+        // The app parses a 488 heartbeat: result false, type ERROR_ROOM_INVALID.
+        const QJsonObject body{
+            {"code", 488},
+            {"data", QJsonObject{{"result", false}, {"type", "ERROR_ROOM_INVALID"}}}};
+        auto r = togetherResult(request(6), decoded(body));
+        QCOMPARE(r.outcome, TogetherOutcome::Rejected);
+        QCOMPARE(r.providerCode, std::optional<qint64>(488));
+        QCOMPARE(r.resultType, std::optional<QString>("ERROR_ROOM_INVALID"));
+        r = togetherResult(request(6),
+                           decoded({{"code", 488}, {"data", QJsonObject{{"type", 1}}}}));
+        QCOMPARE(r.outcome, TogetherOutcome::Rejected);
+        QVERIFY(!r.resultType);
+        r = togetherResult(request(12), decoded({{"code", 200}}));
+        QCOMPARE(r.outcome, TogetherOutcome::Acknowledged);
+    }
     void cancellation_data()
     {
         QTest::addColumn<int>("index");
         QTest::addColumn<bool>("dispatched");
-        for (int i = 0; i < 12; ++i)
+        for (int i = 0; i < kTogetherKinds; ++i)
             for (bool sent : {false, true})
                 QTest::newRow(qPrintable(QString::number(i) + "-" + QString::number(sent)))
                     << i << sent;

@@ -108,6 +108,7 @@ enum class ApiOperation {
     TogetherReplaceQueue,
     TogetherReconnectInfo,
     TogetherDeviceNotice,
+    TogetherSyncNotice,
     LatestAlbums,
     NewAlbums,
     AlbumCharts,
