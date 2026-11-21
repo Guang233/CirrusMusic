@@ -38,9 +38,14 @@ constexpr double kSteadyShare = 0.9;
 constexpr double kSteadyRmsMs = 8;
 constexpr float kClearBars = 0.15f;
 constexpr double kDriftMs = 15;
+constexpr double kOctave = 0.05; // a beat this close to twice the other's: the same tempo
 constexpr qint64 kBeatMixUsableMs = 32000;
 constexpr qint64 kGridMs = 40000; // the stretch of each track the grids are fitted over
 constexpr int kBarChoices[] = {16, 8, 4};
+// Keys that clash (docs/tasks/automix.md §5.1): melodies over each other only briefly, a
+// beat mix of at most kClashBars, a crossfade of at most kClashLongestMs.
+constexpr int kClashBars = 4;
+constexpr qint64 kClashLongestMs = 3000;
 constexpr double kTailMs = 2000;
 constexpr double kBassSwapSeconds = 0.06; // the swap's ramp, ending on the middle downbeat
 // A joint is continuous only at about one tempo: beats over this either side, this close.
@@ -180,7 +185,17 @@ std::optional<Meeting> meeting(const Analysis& a, const Analysis& b, qint64 outE
     Meeting m;
     m.out = sa->grid;
     m.in = sb->grid;
-    m.bars = sa->downbeat >= 0 && sb->downbeat >= 0;
+    // One beat twice the other (a fast song tracked at half its tempo): the slower grid
+    // halved, a beat between each two. Their bars then aren't alike: lines are beats.
+    bool halved = false;
+    if (const double ratio = m.in.periodMs / m.out.periodMs; std::fabs(ratio / 2 - 1) < kOctave) {
+        m.in.periodMs /= 2;
+        halved = true;
+    } else if (std::fabs(ratio * 2 - 1) < kOctave) {
+        m.out.periodMs /= 2;
+        halved = true;
+    }
+    m.bars = !halved && sa->downbeat >= 0 && sb->downbeat >= 0;
     m.drift = std::fabs(1 - m.in.periodMs / m.out.periodMs);
     m.downOut = m.bars ? gridIndex(m.out, a.rhythm.beats[size_t(sa->downbeat)]) : 0;
     const double downIn = m.bars ? gridIndex(m.in, b.rhythm.beats[size_t(sb->downbeat)]) : 0;
@@ -265,7 +280,10 @@ std::optional<Plan> beatMix(const Track& out, const Analysis& a, const Track& in
     const double lastA = a.rhythm.beats[size_t(m->out.first + m->out.count) - 1];
     if (double(outEnd) - endA > kTailMs || lastA < endA - 16 * pa)
         return std::nullopt; // a long tail after its last bar line, or beats long gone
+    const bool clash = harmony(a.endKey, b.startKey) == Harmony::Clash;
     for (const int bars : kBarChoices) {
+        if (clash && bars > kClashBars)
+            continue;
         const double half = 2.0 * bars; // beats to the middle
         if (m->drift * half * pa > kDriftMs)
             continue;
@@ -370,6 +388,8 @@ Plan outro(const Track& out, const Analysis& a, const Track& in, const Analysis&
     qint64 overlap = std::min({outEnd - from, inRoom, kOutroLongestMs});
     if (b.loudnessOver(inStart, inStart + 2000) >= b.loudness - kLoudStartDb)
         overlap = std::min(overlap, kLoudStartLongestMs);
+    if (harmony(a.endKey, b.startKey) == Harmony::Clash)
+        overlap = std::min(overlap, kClashLongestMs);
     if (overlap >= kMinimumOverlapMs) {
         if (const auto onTheBeat = m ? crossfadeOnTheBeat(*m, kMinimumOverlapMs, overlap, outEnd,
                                                           inStart, Reason::Outro)
@@ -412,13 +432,17 @@ Plan plan(const Settings& settings, const Track& out, qint64 positionMs, const T
     const qint64 earliest = positionMs + kStartMarginMs; // it can't start sooner
 
     if (settings.mode == TransitionMode::Smart && a && b) {
-        if (a->fadeStartMs >= 0)
-            return naturalEnd(*a, b, outEnd, inStart, earliest);
-        if (auto onTheBeat = beatMix(out, *a, in, *b, outEnd, inStart, earliest))
-            return *onTheBeat;
-        if (auto filtered = filterOut(*a, *b, outEnd, inStart, earliest))
-            return *filtered;
-        return outro(out, *a, in, *b, outEnd, inStart, earliest);
+        Plan p = [&] {
+            if (a->fadeStartMs >= 0)
+                return naturalEnd(*a, b, outEnd, inStart, earliest);
+            if (auto onTheBeat = beatMix(out, *a, in, *b, outEnd, inStart, earliest))
+                return *onTheBeat;
+            if (auto filtered = filterOut(*a, *b, outEnd, inStart, earliest))
+                return *filtered;
+            return outro(out, *a, in, *b, outEnd, inStart, earliest);
+        }();
+        p.harmony = harmony(a->endKey, b->startKey);
+        return p;
     }
     const bool fixed = settings.mode == TransitionMode::Crossfade;
     qint64 overlap = fixed ? settings.crossfadeMs : kSmartFallbackMs;

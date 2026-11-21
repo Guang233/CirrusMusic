@@ -63,7 +63,7 @@ std::vector<float> fading(int rate, double seconds, double amplitude, double dbP
 // eighth and a triad held through each bar (C, G, Am, F). Beat i at leadIn + i · 60 / bpm,
 // times `drift` per beat (a band slowing down: above 1).
 std::vector<float> groove(int rate, double bpm, int bars, double leadIn = 0,
-                          bool fourOnTheFloor = false, double drift = 1)
+                          bool fourOnTheFloor = false, double drift = 1, int transpose = 0)
 {
     std::vector<double> beats;
     double at = leadIn, beat = 60 / bpm;
@@ -99,7 +99,7 @@ std::vector<float> groove(int rate, double bpm, int bars, double leadIn = 0,
     for (int bar = 0; bar < bars; ++bar) {
         const double start = beats[size_t(bar) * 4], end = beats[size_t(bar) * 4 + 4];
         for (const int note : chords[bar % 4]) {
-            const double hz = 440 * std::pow(2.0, (note - 69) / 12.0);
+            const double hz = 440 * std::pow(2.0, (note + transpose - 69) / 12.0);
             add(start, end - start, [&](double t) {
                 const double envelope = std::min({1.0, t / 0.02, (end - start - t) / 0.02});
                 return float(0.06 * envelope * std::sin(2 * M_PI * hz * t));
@@ -453,6 +453,93 @@ class AutomixTest : public QObject
         QCOMPARE(p.style, Style::BeatMix);
         QCOMPARE(p.bars, 8);
         QVERIFY(double(p.outMs) + double(p.switchMs) > double(lastLine));
+    }
+
+    void findsTheKey()
+    {
+        // The groove's chords, C G Am F: C major, at both ends; two semitones up, D major.
+        const int rate = 22050;
+        for (const int transpose : {0, 2}) {
+            const auto a = analyse(groove(rate, 125, 24, 0.5, false, 1, transpose), rate);
+            for (const Key& key : {a.startKey, a.endKey}) {
+                QCOMPARE(key.tonic, transpose);
+                QVERIFY(!key.minor);
+                QVERIFY2(key.confidence >= 0.1f, qPrintable(keyName(key)));
+            }
+        }
+        // A minor (Am Dm E Am, the E with its G sharp), from pitch classes alone.
+        RhythmFeatures f;
+        f.chromaFrameMs = 100;
+        const int chords[4][3] = {{9, 0, 4}, {2, 5, 9}, {4, 8, 11}, {9, 0, 4}};
+        for (int i = 0; i < 200; ++i) {
+            std::array<float, 12> classes{};
+            for (const int pitch : chords[(i / 25) % 4])
+                classes[size_t(pitch)] = pitch == chords[(i / 25) % 4][0] ? 1.0f : 0.6f;
+            f.chroma.push_back(classes);
+        }
+        const Key key = findKey(f, 0, 20000);
+        QCOMPARE(key.tonic, 9);
+        QVERIFY(key.minor);
+        QVERIFY(!findKey(f, 0, 3000).valid()); // too short to tell
+    }
+
+    void keysGoTogetherByFifths()
+    {
+        const Key c{0, false, 1}, am{9, true, 1}, g{7, false, 1}, d{2, false, 1}, cm{0, true, 1},
+            fSharp{6, false, 1}, unsure{2, false, 0.01f};
+        QCOMPARE(fifthsApart(c, am), 0);
+        QCOMPARE(fifthsApart(c, g), 1);
+        QCOMPARE(fifthsApart(c, d), 2);
+        QCOMPARE(fifthsApart(c, cm), 3);
+        QCOMPARE(fifthsApart(c, fSharp), 6);
+        QCOMPARE(harmony(c, am), Harmony::Close);
+        QCOMPARE(harmony(am, g), Harmony::Close); // A minor is C's relative, a fifth from G
+        QCOMPARE(harmony(c, d), Harmony::Clash);
+        QCOMPARE(harmony(c, unsure), Harmony::Unknown);
+        QCOMPARE(harmony(c, Key{}), Harmony::Unknown);
+    }
+
+    void clashingKeysMixForLess()
+    {
+        // As in beatsAreMixedOnTheBeat, but B two semitones up: C major into D major, its
+        // melody over A's for 4 bars, not 16.
+        const int rate = 22050;
+        const auto a = analyse(groove(rate, 125, 40, 0.5), rate);
+        const auto b = analyse(groove(rate, 125, 24, 0.5, false, 1, 2), rate, false);
+        const Plan p = plan({}, {a.durationMs, false, &a}, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.harmony, Harmony::Clash);
+        QCOMPARE(p.style, Style::BeatMix);
+        QCOMPARE(p.bars, 4);
+    }
+
+    void aBeatAtHalfTheTempoStillMeets()
+    {
+        // B tracked at half its tempo (every other beat): still the same beat as A's.
+        const int rate = 22050;
+        auto audio = groove(rate, 125, 40, 0.5);
+        const double beat = 60000 / 125.0;
+        const auto from = qsizetype((0.5 + 39 * 4 * beat / 1000) * rate);
+        for (qsizetype i = from; i < qsizetype(audio.size() / 2); ++i) {
+            audio[size_t(i) * 2] *= 0.4f;
+            audio[size_t(i) * 2 + 1] *= 0.4f;
+        }
+        const auto a = analyse(audio, rate);
+        auto b = analyse(groove(rate, 125, 24, 0.5), rate, false);
+        Rhythm& r = b.rhythm;
+        for (auto* values : {&r.beats, &r.bass, &r.change, &r.accent}) {
+            std::vector<float> kept;
+            for (size_t i = 0; i < values->size(); i += 2)
+                kept.push_back((*values)[i]);
+            *values = std::move(kept);
+        }
+        r.bpm /= 2;
+        r.downbeat = 0;
+        const Plan p = plan({}, {a.durationMs, false, &a}, 0, {b.durationMs, false, &b}, false);
+        QCOMPARE(p.style, Style::Crossfade);
+        QVERIFY(p.onBeat);
+        const double landing = double(p.outMs) + (500 - double(p.inMs)); // B's first beat
+        const double intoBeat = std::fmod(landing - 500, beat);
+        QVERIFY2(std::min(intoBeat, beat - intoBeat) < 5, qPrintable(QString::number(intoBeat)));
     }
 
     void anOutroCrossfadeIsOnTheBeat()

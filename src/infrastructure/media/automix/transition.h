@@ -1,6 +1,7 @@
 #pragma once
 #include "automation.h"
 #include "domain/playback/playback_types.h"
+#include "key.h"
 #include "logging/log.h"
 #include <QtGlobal>
 #include <vector>
@@ -57,8 +58,9 @@ struct Plan {
     double echoMs = 0;
     float echoFeedback = 0;
     Automation echoSend;
-    int bars = 0;        // a beat mix's overlap in bars
-    bool onBeat = false; // the next track's bars come on the current one's
+    int bars = 0;                       // a beat mix's overlap in bars
+    bool onBeat = false;                // the next track's bars come on the current one's
+    Harmony harmony = Harmony::Unknown; // of the current track's end and the next one's start
 };
 
 // A sung line, from the lyrics' timeline (ms of the track's media time).

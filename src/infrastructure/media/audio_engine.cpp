@@ -64,8 +64,9 @@ void logAnalysis(LoadToken token, const automix::Analysis& a, qint64 ms, bool ca
                     << log::field("bpm", QString::number(a.rhythm.bpm, 'f', 2))
                     << log::field("steady", a.rhythm.steady)
                     << log::field("beats", qint64(a.rhythm.beats.size()))
-                    << log::field("bar_confidence",
-                                  QString::number(a.rhythm.barConfidence, 'f', 2));
+                    << log::field("bar_confidence", QString::number(a.rhythm.barConfidence, 'f', 2))
+                    << log::fieldIf(a.startKey.valid(), "start_key", automix::keyName(a.startKey))
+                    << log::fieldIf(a.endKey.valid(), "end_key", automix::keyName(a.endKey));
 }
 } // namespace
 
@@ -1112,7 +1113,10 @@ void AudioEngine::planned(TransitionMode mode, const automix::Plan& plan, bool a
                     << log::field("in_ms", plan.inMs) << log::field("overlap_ms", plan.overlapMs)
                     << log::fieldIf(plan.bars > 0, "bars", plan.bars)
                     << log::fieldIf(plan.inDelayMs > 0, "delay_ms", plan.inDelayMs)
-                    << log::field("on_beat", plan.onBeat) << log::field("again", again);
+                    << log::field("on_beat", plan.onBeat)
+                    << log::fieldIf(plan.harmony != automix::Harmony::Unknown, "harmony",
+                                    plan.harmony)
+                    << log::field("again", again);
 }
 
 void AudioEngine::analyseCurrent()

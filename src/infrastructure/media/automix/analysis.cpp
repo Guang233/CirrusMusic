@@ -204,6 +204,11 @@ Analysis Analyser::finish(bool complete) const
     if (complete && a.soundEndMs > a.soundStartMs)
         a.fadeStartMs = findFade(energy, a);
     a.rhythm = findRhythm(m_rhythm.features());
+    const auto& features = m_rhythm.features();
+    a.startKey =
+        findKey(features, double(a.soundStartMs), double(a.soundStartMs + Analysis::kKeyMs));
+    if (complete)
+        a.endKey = findKey(features, double(a.soundEndMs - Analysis::kKeyMs), double(a.soundEndMs));
     return a;
 }
 
@@ -251,6 +256,8 @@ QByteArray Analysis::serialize() const
         << QList<float>(rhythm.bass.begin(), rhythm.bass.end())
         << QList<float>(rhythm.change.begin(), rhythm.change.end())
         << QList<float>(rhythm.accent.begin(), rhythm.accent.end());
+    for (const Key& key : {startKey, endKey})
+        out << qint32(key.tonic) << key.minor << key.confidence;
     return bytes;
 }
 
@@ -269,9 +276,17 @@ std::optional<Analysis> Analysis::deserialize(const QByteArray& bytes)
     in >> a.durationMs >> a.complete >> a.loudness >> a.soundStartMs >> a.soundEndMs >>
         a.fadeStartMs >> curve >> a.rhythm.bpm >> a.rhythm.strength >> downbeat >>
         a.rhythm.barConfidence >> a.rhythm.steady >> beats >> bass >> change >> accent;
-    if (in.status() != QDataStream::Ok || !in.atEnd() || downbeat < 0 || downbeat > 3 ||
-        !std::is_sorted(beats.begin(), beats.end()) || bass.size() != beats.size() ||
-        change.size() != beats.size() || accent.size() != beats.size())
+    bool keysValid = true;
+    for (Key* key : {&a.startKey, &a.endKey}) {
+        qint32 tonic = -1;
+        in >> tonic >> key->minor >> key->confidence;
+        key->tonic = tonic;
+        keysValid &= tonic >= -1 && tonic < 12;
+    }
+    if (in.status() != QDataStream::Ok || !in.atEnd() || !keysValid || downbeat < 0 ||
+        downbeat > 3 || !std::is_sorted(beats.begin(), beats.end()) ||
+        bass.size() != beats.size() || change.size() != beats.size() ||
+        accent.size() != beats.size())
         return std::nullopt;
     a.momentary.assign(curve.begin(), curve.end());
     a.rhythm.downbeat = downbeat;

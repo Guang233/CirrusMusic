@@ -1,4 +1,5 @@
 #pragma once
+#include "key.h"
 #include "rhythm.h"
 #include <QByteArray>
 #include <QtGlobal>
@@ -10,9 +11,10 @@ namespace cirrus::media::automix
 
 // What transitions know of one file from its audio (docs/tasks/automix.md §4.2): its
 // loudness (ITU-R BS.1770-4) over time, the silence at its start and end, a fade-out, its
-// beats and bars. Times are the file's media time in ms. Cached by md5, a few KB each.
+// beats and bars, its key at either end. Times are the file's media time in ms. Cached by md5, a
+// few KB each.
 struct Analysis {
-    static constexpr int kVersion = 3;      // bumped when the results change: analysed again
+    static constexpr int kVersion = 4;      // bumped when the results change: analysed again
     static constexpr int kStepMs = 100;     // between momentary loudness values
     static constexpr float kFloor = -70.0f; // LUFS, BS.1770's absolute gate: silence
 
@@ -25,6 +27,10 @@ struct Analysis {
     // Momentary loudness of the 400 ms from every kStepMs, from kFloor in half-dB steps.
     std::vector<quint8> momentary;
     Rhythm rhythm; // beats and bars (none: not rhythmic, or too short)
+    // The key of its first kKeyMs of sound, and of its last (complete; songs often go up a
+    // key for the last chorus).
+    static constexpr qint64 kKeyMs = 30000;
+    Key startKey, endKey;
 
     // The momentary loudness at `ms` (LUFS; kFloor past what was analysed).
     [[nodiscard]] float momentaryAt(qint64 ms) const;
