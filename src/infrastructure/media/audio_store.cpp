@@ -29,6 +29,7 @@ constexpr qint64 kReadBlock = 64 * 1024;
 constexpr qint64 kAheadBytes = 1024 * 1024; // a read this far past the download waits for it
 constexpr qint64 kMetaEvery = 4 * 1024 * 1024;
 constexpr int kMetaVersion = 1;
+constexpr qint64 kAnalysisMaximumBytes = 1024 * 1024; // a few KB each: larger is damaged
 
 bool validMd5(const QByteArray& md5)
 {
@@ -780,6 +781,7 @@ void AudioStore::verified(QString base, qint64 size, QByteArray md5, bool good)
         // next open() downloads afresh instead of reusing this one.
         QFile::remove(base + QStringLiteral(".meta"));
         QFile::remove(base + QStringLiteral(".audio"));
+        QFile::remove(base + QStringLiteral(".analysis")); // of the wrong audio
         if (d)
             d->base.clear();
         return;
@@ -818,6 +820,7 @@ void AudioStore::retire(quint64 id)
     if (d->discardOnClose) {
         QFile::remove(d->base + QStringLiteral(".audio"));
         QFile::remove(d->base + QStringLiteral(".meta"));
+        QFile::remove(d->base + QStringLiteral(".analysis"));
         return;
     }
     saveMeta(*d); // what was downloaded stays; an unverified whole file verifies next time
@@ -865,6 +868,7 @@ QList<AudioStore::Entry> AudioStore::entries(const QString& dir) const
         Entry e;
         e.data = it.next();
         e.meta = e.data.chopped(6) + QStringLiteral(".meta");
+        e.analysis = e.data.chopped(6) + QStringLiteral(".analysis");
         QFile meta(e.meta);
         const auto json = meta.open(QIODevice::ReadOnly)
                               ? QJsonDocument::fromJson(meta.read(1024 * 1024)).object()
@@ -904,6 +908,7 @@ void AudioStore::enforceCapacity()
             continue;
         QFile::remove(e.data);
         QFile::remove(e.meta);
+        QFile::remove(e.analysis);
         total -= e.bytes;
         freed += e.bytes;
         ++files;
@@ -936,7 +941,8 @@ void AudioStore::clear(bool allPartitions)
     if (!allPartitions && m_partitionDir.isEmpty())
         return;
     log::info(lcMedia, "audio_cache.clear", {"all", allPartitions});
-    for (const auto& e : entries(allPartitions ? QString() : m_partitionDir)) {
+    const QString dir = allPartitions ? QString() : m_partitionDir;
+    for (const auto& e : entries(dir)) {
         QFile::remove(e.meta);
         if (!isOpenPath(e.data)) {
             QFile::remove(e.data);
@@ -946,5 +952,38 @@ void AudioStore::clear(bool allPartitions)
             if (d->state->path == e.data)
                 d->discardOnClose = true;
     }
+    // Every analysis, also one whose file is gone already (or still open: kept in memory).
+    QDirIterator it(dir.isEmpty() ? m_options.root : dir, {QStringLiteral("*.analysis")},
+                    QDir::Files | QDir::NoSymLinks,
+                    dir.isEmpty() ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags);
+    while (it.hasNext())
+        QFile::remove(it.next());
+}
+
+QByteArray AudioStore::analysis(const MediaSource& source) const
+{
+    const auto base = baseFor(source);
+    if (base.isEmpty())
+        return {};
+    QFile file(base + QStringLiteral(".analysis"));
+    if (!file.open(QIODevice::ReadOnly) || file.size() > kAnalysisMaximumBytes)
+        return {};
+    return file.readAll();
+}
+
+void AudioStore::keepAnalysis(const MediaSource& source, const QByteArray& bytes)
+{
+    const auto base = baseFor(source);
+    // Only beside its file: not for one that is gone (evicted, cleared) meanwhile.
+    if (base.isEmpty() || bytes.isEmpty() || bytes.size() > kAnalysisMaximumBytes ||
+        !QFileInfo::exists(base + QStringLiteral(".audio")))
+        return;
+    const auto path = base + QStringLiteral(".analysis");
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+        return;
+    file.write(bytes);
+    if (file.commit())
+        QFile::setPermissions(path, QFile::ReadOwner | QFile::WriteOwner);
 }
 } // namespace cirrus::media

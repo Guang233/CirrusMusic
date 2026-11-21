@@ -24,8 +24,10 @@ ListeningSession::ListeningSession(BackendFacade& backend, PersonalFmSource& fm,
         if (m_mode == ListeningMode::PersonalFm) {
             if (!current())
                 reset();
-            else
+            else {
                 scheduleFm();
+                refreshPreload(); // its first may have come or changed
+            }
         }
     });
 }
@@ -243,20 +245,51 @@ void ListeningSession::consumeFm()
         }
         m_fmPending = std::move(song);
     }
-    // After the songs so far, which stay to go back to (at most kFmSongsKept).
-    auto candidate = m_queue;
-    if (!candidate.append({m_fmPending->id})) {
-        candidate.clear();
-        candidate.append({m_fmPending->id});
-    }
-    candidate.select(candidate.snapshot().entries.last().id);
-    while (candidate.snapshot().entries.size() > kFmSongsKept)
-        candidate.remove(candidate.snapshot().entries.first().id);
+    auto candidate = fmQueueWith(m_fmPending->id);
     const auto intent = m_intent == TransportIntent::Pause ? m_intent : TransportIntent::Play;
     // Keep the taken item until local Play acceptance. Busy must not silently lose a song.
     if (!begin(std::move(candidate), intent, m_quality, m_auto, true) && m_revision == revision &&
         current() && m_mode == ListeningMode::PersonalFm)
         blockFm();
+}
+PlaybackQueue ListeningSession::fmQueueWith(const SongId& song) const
+{
+    // After the songs so far, which stay to go back to (at most kFmSongsKept).
+    auto candidate = m_queue;
+    if (!candidate.append({song})) {
+        candidate.clear();
+        candidate.append({song});
+    }
+    candidate.select(candidate.snapshot().entries.last().id);
+    while (candidate.snapshot().entries.size() > kFmSongsKept)
+        candidate.remove(candidate.snapshot().entries.first().id);
+    return candidate;
+}
+void ListeningSession::refreshFmPreload()
+{
+    if (!m_fm || m_fmWaiting || m_fmBlocked)
+        return;
+    const auto state = m_playback.state;
+    if (state != PlaybackState::Playing && state != PlaybackState::Paused &&
+        state != PlaybackState::Ready)
+        return;
+    if (const QUuid after = fmNeighbour(1); !after.isNull()) {
+        auto candidate = m_queue;
+        if (candidate.select(after)) {
+            const auto entry = candidate.current();
+            requestPreload(entry->song, after, std::move(candidate), false);
+            return;
+        }
+    }
+    const auto supply = m_fm->snapshot();
+    if (supply.upcoming.isEmpty()) {
+        if (m_preload) {
+            m_preload.reset();
+            static_cast<void>(m_backend.preloadSong({}, m_quality));
+        }
+        return; // asked again when the supply refills
+    }
+    requestPreload(supply.upcoming.first().id, {}, PlaybackQueue{}, true); // queued once taken
 }
 bool ListeningSession::retryFm()
 {

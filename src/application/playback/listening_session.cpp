@@ -1,6 +1,7 @@
 #include "listening_session.h"
 #include "application/music/personal_fm_source.h"
 #include "logging/log.h"
+#include "vocal_spans.h"
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
@@ -28,6 +29,15 @@ ListeningSession::ListeningSession(BackendFacade& backend, QObject* parent)
     });
     connect(&backend, &BackendFacade::musicCompleted, this,
             [this](quint64 id, SessionToken context, MusicResult result) {
+                if (id && id == m_preloadLyricRequest) {
+                    m_preloadLyricRequest = 0;
+                    const auto* lyrics = std::get_if<SongLyrics>(&result);
+                    if (lyrics && m_preload && lyrics->song == m_preload->song &&
+                        context == m_token.session)
+                        static_cast<void>(m_backend.setPlaybackVocals(m_preload->generation,
+                                                                      vocalSpans(*lyrics)));
+                    return;
+                }
                 if (!id || id != m_lyricRequest)
                     return;
                 m_lyricRequest = 0;
@@ -47,6 +57,9 @@ ListeningSession::ListeningSession(BackendFacade& backend, QObject* parent)
                 m_lyrics = *lyrics;
                 m_timeline.reset(*lyrics);
                 m_lyricsState = LyricsState::Ready;
+                // Where it's sung, for the transition out of it (docs/tasks/automix.md §7).
+                static_cast<void>(m_backend.setPlaybackVocals(m_playback.token.generation,
+                                                              vocalSpans(*lyrics, m_userOffset)));
                 emit lyricsChanged(m_lyricsState);
                 if (revision == m_revision)
                     refreshCursors();
@@ -663,6 +676,10 @@ void ListeningSession::receive(PlaybackSnapshot snapshot)
 }
 void ListeningSession::refreshPreload()
 {
+    if (m_preloadChecked && current() && m_mode == ListeningMode::PersonalFm) {
+        refreshFmPreload();
+        return;
+    }
     if (!m_preloadChecked || m_mode != ListeningMode::Queue || !current() || !queueContextMatches())
         return;
     const auto state = m_playback.state;
@@ -681,25 +698,46 @@ void ListeningSession::refreshPreload()
         }
         return;
     }
-    if (m_preload && m_preload->entry == entry->id && m_preload->song == entry->song) {
-        m_preload->queue = std::move(candidate); // same song; the rest of the queue changed
+    requestPreload(entry->song, entry->id, std::move(candidate), false);
+}
+void ListeningSession::requestPreload(SongId song, QUuid entry, PlaybackQueue queue, bool fromFm)
+{
+    if (m_preload && m_preload->entry == entry && m_preload->song == song &&
+        m_preload->fromFm == fromFm) {
+        m_preload->queue = std::move(queue); // same song; the rest of the queue changed
         return;
     }
-    const auto id = m_backend.preloadSong(entry->song, m_quality);
+    const auto id = m_backend.preloadSong(song, m_quality);
     if (!id) {
         m_preload.reset();
         return;
     }
-    m_preload = Preload{id, entry->id, entry->song, std::move(candidate)};
+    m_preload = Preload{id, entry, song, std::move(queue), fromFm};
+    // Its lyrics too: where it's sung, for the transition into it.
+    if (const auto old = std::exchange(m_preloadLyricRequest, 0))
+        m_backend.cancelMusic(old);
+    m_preloadLyricRequest = m_backend.lyrics(song);
 }
 void ListeningSession::adoptAdvance()
 {
     auto preload = *std::exchange(m_preload, std::nullopt);
+    const bool fm = m_mode == ListeningMode::PersonalFm;
+    if (preload.fromFm)
+        preload.queue = fmQueueWith(preload.song); // after the songs so far
     const auto revision = ++m_revision;
     m_history.finish(ListeningEnd::Ended); // the last song played to its end
     m_autoVisited.clear();                 // as advance() after a natural end
-    commit(std::move(preload.queue), m_intent, m_quality, true, false, m_backend.snapshot(),
-           revision);
+    commit(std::move(preload.queue), m_intent, m_quality, true, fm, m_backend.snapshot(), revision);
+    // Playing now, so taken from the supply: only after the commit, as the supply's
+    // observers (this session too) see the new load. Unless its first changed meanwhile:
+    // that one hasn't played.
+    if (preload.fromFm && revision == m_revision && m_mode == ListeningMode::PersonalFm && m_fm) {
+        const auto supply = m_fm->snapshot();
+        if (!supply.upcoming.isEmpty() && supply.upcoming.first().id == preload.song)
+            static_cast<void>(m_fm->takeNext());
+        else
+            log::warn(lcPlayback, "fm.preload_mismatch");
+    }
 }
 void ListeningSession::advance(bool naturalEnd)
 {

@@ -27,6 +27,12 @@ Player::Player(PlaybackSource* source, AppSettings* settings, QObject* parent)
         m_source->setNormalization(m_settings->normalizeVolume());
         connect(m_settings, &AppSettings::normalizeVolumeChanged, this,
                 [this] { m_source->setNormalization(m_settings->normalizeVolume()); });
+        const auto transition = [this] {
+            m_source->setTransition(m_settings->trackTransition(), m_settings->crossfadeSeconds());
+        };
+        transition();
+        connect(m_settings, &AppSettings::trackTransitionChanged, this, transition);
+        connect(m_settings, &AppSettings::crossfadeSecondsChanged, this, transition);
     }
     update();
 }

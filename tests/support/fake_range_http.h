@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QHttpHeaders>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -16,6 +17,7 @@ namespace cirrus::test
 // A synthetic CDN for range downloads: serves `body` in blocks over time. No socket.
 struct RangeServer {
     QByteArray body;
+    QHash<QString, QByteArray> bodies; // by URL path, served instead of `body`
     bool honorRange = true;
     qsizetype blockBytes = 64 * 1024;
     int intervalMs = 0;
@@ -41,7 +43,8 @@ class RangeReply : public QNetworkReply
         server.urls.append(request.url());
         server.requests.append(request);
         int status = server.statuses.isEmpty() ? 0 : server.statuses.takeFirst();
-        qint64 start = 0, end = server.body.size() - 1;
+        const QByteArray body = server.bodies.value(request.url().path(), server.body);
+        qint64 start = 0, end = body.size() - 1;
         if (range.startsWith("bytes=")) {
             const auto dash = range.indexOf('-');
             start = range.mid(6, dash - 6).toLongLong();
@@ -52,15 +55,15 @@ class RangeReply : public QNetworkReply
         QHttpHeaders headers;
         if (status == 0 && server.honorRange && !range.isEmpty()) {
             status = 206;
-            m_data = server.body.mid(start, end - start + 1);
+            m_data = body.mid(start, end - start + 1);
             headers.append("Content-Range", server.contentRange.isEmpty()
                                                 ? "bytes " + QByteArray::number(start) + '-' +
                                                       QByteArray::number(end) + '/' +
-                                                      QByteArray::number(server.body.size())
+                                                      QByteArray::number(body.size())
                                                 : server.contentRange);
         } else if (status == 0) {
             status = 200;
-            m_data = server.body;
+            m_data = body;
         }
         if (status == 200 || status == 206)
             headers.append("Content-Length", QByteArray::number(m_data.size()));

@@ -1,6 +1,7 @@
 #include "../support/fake_range_http.h"
 #include "infrastructure/media/audio_engine.h"
 #include "infrastructure/media/audio_store.h"
+#include "infrastructure/media/automix/analysis.h"
 #include <QAudioDevice>
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -15,6 +16,7 @@ using application::PlaybackEvent;
 using Kind = PlaybackEvent::Kind;
 using media::AudioEngine;
 using media::AudioStore;
+namespace automix = media::automix;
 namespace
 {
 QByteArray fixture(const QString& name)
@@ -22,9 +24,10 @@ QByteArray fixture(const QString& name)
     QFile file(QStringLiteral(AUDIO_FIXTURES "/") + name);
     return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
 }
-MediaSource source(const QByteArray& body, const QString& format)
+MediaSource source(const QByteArray& body, const QString& format,
+                   const QString& path = QStringLiteral("/tone"))
 {
-    MediaSource s{QUrl(QStringLiteral("https://m801.music.126.net/tone")), "standard", format,
+    MediaSource s{QUrl(QStringLiteral("https://m801.music.126.net") + path), "standard", format,
                   body.size(), QDeadlineTimer(60000)};
     s.md5 = QCryptographicHash::hash(body, QCryptographicHash::Md5).toHex();
     return s;
@@ -58,6 +61,33 @@ class AudioEngineTest : public QObject
     {
         return std::any_of(m_events.begin(), m_events.end(),
                            [kind](const PlaybackEvent& e) { return e.kind == kind; });
+    }
+    const PlaybackEvent& first(Kind kind) const
+    {
+        return *std::find_if(m_events.begin(), m_events.end(),
+                             [kind](const PlaybackEvent& e) { return e.kind == kind; });
+    }
+    qint64 lastPosition(LoadToken t) const
+    {
+        qint64 last = -1;
+        for (const auto& e : m_events)
+            if (e.token == t && e.kind == Kind::Position)
+                last = e.value;
+        return last;
+    }
+    // long.mp3 with another file preloaded, playing until it is inside their transition
+    // (about 2.7 s to the end; the next becomes current at about 3.4 s).
+    bool playIntoTheTransition(LoadToken current, LoadToken next)
+    {
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), current);
+        auto other = source(m_server.body, QStringLiteral("mp3"));
+        other.md5.clear(); // another file to the engine (the fake CDN has one body)
+        m_engine->preload(other, next);
+        if (!QTest::qWaitFor([this] { return has(Kind::Ready); }, 5000))
+            return false;
+        m_engine->play();
+        return QTest::qWaitFor([&] { return lastPosition(current) >= 2850; }, 10000) &&
+               !has(Kind::Advanced);
     }
 
   private slots:
@@ -216,6 +246,182 @@ class AudioEngineTest : public QObject
         QVERIFY(!has(Kind::Advanced));
         for (const auto& e : std::as_const(m_events))
             QCOMPARE(e.token, first);
+    }
+
+    // Smart transitions (docs/tasks/automix.md): long enough tracks overlap, and the next
+    // becomes current at the switch point, already some way in.
+    void aTransitionMixesTheNextIn()
+    {
+        const auto first = token(13), second = token(14);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), first);
+        auto next = source(m_server.body, QStringLiteral("mp3"));
+        next.md5.clear(); // another file to the engine (the fake CDN has one body)
+        m_engine->preload(next, second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        const auto advanced = std::find_if(m_events.begin(), m_events.end(),
+                                           [](const auto& e) { return e.kind == Kind::Advanced; });
+        qint64 lastOfFirst = -1;
+        for (auto it = m_events.begin(); it != advanced; ++it)
+            if (it->kind == Kind::Position)
+                lastOfFirst = it->value;
+        // 4 s tracks: a third of one (about 1.36 s) overlaps; the switch is in its middle.
+        QVERIFY2(lastOfFirst > 2400 && lastOfFirst < 3700,
+                 qPrintable(QString::number(lastOfFirst)));
+        QTRY_VERIFY_WITH_TIMEOUT(
+            std::any_of(advanced, m_events.end(),
+                        [](const auto& e) { return e.kind == Kind::Position; }),
+            2000);
+        const auto firstOfSecond =
+            std::find_if(m_events.begin(), m_events.end(), [&](const auto& e) {
+                return e.token == second && e.kind == Kind::Position;
+            });
+        QVERIFY2(firstOfSecond->value >= 450 && firstOfSecond->value < 1200,
+                 qPrintable(QString::number(firstOfSecond->value)));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, second);
+    }
+
+    void aSeekInTheTransitionStaysOnTheTrack()
+    {
+        // Before the switch the current track is still the one shown: the seek is in it,
+        // and the transition comes again.
+        const auto one = token(17), two = token(18);
+        QVERIFY(playIntoTheTransition(one, two));
+        m_engine->seek(1000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::SeekConfirmed), 5000);
+        QCOMPARE(first(Kind::SeekConfirmed).token, one);
+        QCOMPARE(first(Kind::SeekConfirmed).value, 1000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aSeekAfterTheSwitchIsInTheNext()
+    {
+        // The next track is current while the last of the old one still fades out.
+        const auto one = token(19), two = token(20);
+        QVERIFY(playIntoTheTransition(one, two));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 5000);
+        m_engine->seek(500);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::SeekConfirmed), 5000);
+        QCOMPARE(first(Kind::SeekConfirmed).token, two);
+        QCOMPARE(first(Kind::SeekConfirmed).value, 500);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aPauseHoldsTheTransition()
+    {
+        const auto one = token(21), two = token(22);
+        QVERIFY(playIntoTheTransition(one, two));
+        m_engine->pause();
+        QTest::qWait(1000); // past the switch, had it played on
+        QVERIFY(!has(Kind::Advanced));
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+    }
+
+    void aSkipInTheTransitionRetiresBoth()
+    {
+        const auto one = token(23), two = token(24), three = token(25);
+        QVERIFY(playIntoTheTransition(one, two));
+        const auto mark = m_events.size();
+        load(QStringLiteral("tone.flac"), QStringLiteral("flac"), three);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            m_events.last().token == three && m_events.last().kind == Kind::Ready, 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(m_events.last().kind == Kind::Ended, 5000);
+        for (auto i = mark; i < m_events.size(); ++i)
+            QCOMPARE(m_events[i].token, three);
+    }
+
+    void aFadeOutEndsNaturally()
+    {
+        // Both analysed (their files come at once): the next track comes in from its first
+        // sound once the fade-out is 20 dB down (about 5.7 s), and is current from there.
+        const auto one = token(26), two = token(27);
+        m_server.bodies.insert(QStringLiteral("/a"), fixture(QStringLiteral("fade.mp3")));
+        m_server.bodies.insert(QStringLiteral("/b"), fixture(QStringLiteral("long.mp3")));
+        m_engine->load(source(m_server.bodies[QStringLiteral("/a")], QStringLiteral("mp3"),
+                              QStringLiteral("/a")),
+                       one);
+        m_engine->preload(source(m_server.bodies[QStringLiteral("/b")], QStringLiteral("mp3"),
+                                 QStringLiteral("/b")),
+                          two);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 15000);
+        const qint64 lastOfFirst = lastPosition(one);
+        // (A plain crossfade would switch at about 6.8 s.)
+        QVERIFY2(lastOfFirst > 5000 && lastOfFirst < 6300,
+                 qPrintable(QString::number(lastOfFirst)));
+        QTRY_VERIFY_WITH_TIMEOUT(lastPosition(two) >= 0, 2000);
+        const auto firstOfSecond =
+            std::find_if(m_events.begin(), m_events.end(),
+                         [&](const auto& e) { return e.token == two && e.kind == Kind::Position; });
+        QVERIFY2(firstOfSecond->value < 600, qPrintable(QString::number(firstOfSecond->value)));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ended), 10000);
+        QCOMPARE(m_events.last().token, two);
+        m_server.bodies.clear();
+    }
+
+    void analysesAreKeptForTheNextTime()
+    {
+        // Played once (the file comes at once): its analysis is kept beside the file...
+        const auto a = source(fixture(QStringLiteral("long.mp3")), QStringLiteral("mp3"));
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), token(28));
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(!m_store->analysis(a).isEmpty(), 5000);
+        const auto kept = automix::Analysis::deserialize(m_store->analysis(a));
+        QVERIFY(kept && kept->complete);
+        QVERIFY2(kept->soundEndMs > 3800, qPrintable(QString::number(kept->soundEndMs)));
+        m_engine->stop();
+        // ...and used the next time instead of analysing it again. In this one its sound
+        // ends at 3 s, so the transition does too (the next isn't analysed: a plain 1.3 s
+        // crossfade, current from about 2.3 s; at about 3.3 s by the file's own analysis).
+        auto made = *kept;
+        made.soundEndMs = 3000;
+        m_store->keepAnalysis(a, made.serialize());
+        m_events.clear();
+        const auto one = token(29), two = token(30);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), one);
+        auto other = source(m_server.body, QStringLiteral("mp3"));
+        other.md5.clear();
+        m_engine->preload(other, two);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        const qint64 lastOfFirst = lastPosition(one);
+        QVERIFY2(lastOfFirst > 1800 && lastOfFirst < 2700,
+                 qPrintable(QString::number(lastOfFirst)));
+        m_engine->stop();
+    }
+
+    void gaplessWaitsForTheEnd()
+    {
+        m_engine->setTransition(TransitionMode::Gapless, 6000);
+        const auto first = token(15), second = token(16);
+        load(QStringLiteral("long.mp3"), QStringLiteral("mp3"), first);
+        auto next = source(m_server.body, QStringLiteral("mp3"));
+        next.md5.clear();
+        m_engine->preload(next, second);
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Ready), 5000);
+        m_engine->play();
+        QTRY_VERIFY_WITH_TIMEOUT(has(Kind::Advanced), 10000);
+        qint64 lastOfFirst = -1;
+        for (const auto& e : std::as_const(m_events)) {
+            if (e.kind == Kind::Advanced)
+                break;
+            if (e.kind == Kind::Position)
+                lastOfFirst = e.value;
+        }
+        QVERIFY2(lastOfFirst > 3800, qPrintable(QString::number(lastOfFirst)));
+        m_engine->stop();
     }
 
     void aNewLoadReplacesTheOld()

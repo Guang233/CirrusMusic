@@ -103,6 +103,8 @@ add_library(cirrus_application STATIC
     application/playback/playback_queue.h
     application/playback/lyric_timeline.cpp
     application/playback/lyric_timeline.h
+    application/playback/vocal_spans.cpp
+    application/playback/vocal_spans.h
     application/playback/observed_playback.cpp
     application/playback/observed_playback.h
     application/playback/listening_history.cpp
@@ -440,6 +442,7 @@ target_link_libraries(cirrus_netease_music PUBLIC cirrus_application cirrus_nete
 add_library(cirrus_media STATIC
     infrastructure/media/media_source_policy.h
     infrastructure/media/loudness.h
+    infrastructure/media/byte_source.h
     infrastructure/media/audio_store.h
     infrastructure/media/audio_store.cpp
     infrastructure/media/audio_decoder.h
@@ -448,6 +451,25 @@ add_library(cirrus_media STATIC
     infrastructure/media/audio_output.cpp
     infrastructure/media/audio_engine.h
     infrastructure/media/audio_engine.cpp
+    # Transitions between tracks (docs/tasks/automix.md).
+    infrastructure/media/automix/automation.h
+    infrastructure/media/automix/automation.cpp
+    infrastructure/media/automix/transition.h
+    infrastructure/media/automix/transition.cpp
+    infrastructure/media/automix/deck.h
+    infrastructure/media/automix/deck.cpp
+    infrastructure/media/automix/mix.h
+    infrastructure/media/automix/mix.cpp
+    infrastructure/media/automix/analysis.h
+    infrastructure/media/automix/analysis.cpp
+    infrastructure/media/automix/key.h
+    infrastructure/media/automix/key.cpp
+    infrastructure/media/automix/rhythm.h
+    infrastructure/media/automix/rhythm.cpp
+    infrastructure/media/automix/spectrum.h
+    infrastructure/media/automix/spectrum.cpp
+    infrastructure/media/automix/analyst.h
+    infrastructure/media/automix/analyst.cpp
 )
 # The audio engine decodes with FFmpeg (ADR-0008): LGPL builds, linked dynamically.
 find_package(PkgConfig REQUIRED)

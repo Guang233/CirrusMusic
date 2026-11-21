@@ -22,7 +22,8 @@ struct Harness {
     {
         QObject::connect(&facade, &BackendFacade::playbackRequested, &facade,
                          [this](PlaybackCommand c) {
-                             commands.append(c);
+                             if (c.action != PlaybackAction::Vocals) // a side note for mixing
+                                 commands.append(c);
                              QTimer::singleShot(0, &facade, [this, c] {
                                  BackendEvent e;
                                  e.kind = BackendEvent::Kind::Acknowledged;

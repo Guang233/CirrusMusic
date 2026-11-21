@@ -99,7 +99,18 @@ struct CollectionDelivery {
     domain::CollectionResult result;
 };
 
-enum class PlaybackAction { Play, Pause, Resume, Stop, Seek, Volume, Preload, Normalize };
+enum class PlaybackAction {
+    Play,
+    Pause,
+    Resume,
+    Stop,
+    Seek,
+    Volume,
+    Preload,
+    Normalize,
+    Transition,
+    Vocals
+};
 struct PlaybackCommand {
     quint64 id = 0;
     quint64 generation = 0; // account intent barrier
@@ -109,6 +120,10 @@ struct PlaybackCommand {
     qint64 positionMs = 0;
     float volume = 0.5f;
     bool normalize = false; // Normalize: volume normalization on or off
+    // Transition: how one track goes into the next, and the Crossfade mode's length.
+    domain::TransitionMode transition = domain::TransitionMode::Smart;
+    qint64 crossfadeMs = 6000;
+    QList<domain::VocalSpan> vocals; // Vocals: the sung lines of the load `next` names
     domain::TransportIntent intent = domain::TransportIntent::Play;
     domain::LoadToken next; // Preload: the generation it plays under; empty song cancels
 };
@@ -257,6 +272,11 @@ class BackendFacade final : public QObject
     // Volume normalization (docs/tasks/audio-engine.md §6.5), a setting: like the volume
     // it needs no load and outlives one.
     [[nodiscard]] quint64 setPlaybackNormalization(bool on);
+    // How one track goes into the next (docs/tasks/automix.md §3), a setting the same way.
+    [[nodiscard]] quint64 setPlaybackTransition(domain::TransitionMode mode, qint64 crossfadeMs);
+    // The sung lines of the current load or the preloaded one (by its generation), for the
+    // transitions (docs/tasks/automix.md §7): times only, never the song.
+    [[nodiscard]] quint64 setPlaybackVocals(quint64 generation, QList<domain::VocalSpan> spans);
 
     // Runtime delivery endpoints; queued connections only, not public commands.
     void deliver(BackendEvent event);

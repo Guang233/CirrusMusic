@@ -301,6 +301,13 @@ class PlaybackSource
     virtual void setVolume(double volume) = 0;
     // Volume normalization (a setting; the fake plays nothing to normalize).
     virtual void setNormalization(bool on) { Q_UNUSED(on); }
+    // How one track goes into the next (AppSettings::trackTransition) and the crossfade's
+    // length; a setting the fake has no use for either.
+    virtual void setTransition(int mode, int crossfadeSeconds)
+    {
+        Q_UNUSED(mode);
+        Q_UNUSED(crossfadeSeconds);
+    }
     virtual void setOrder(playback::Order order) = 0;
     virtual void setRepeat(playback::Repeat repeat) = 0;
     // Endless recommendations for the signed-in account (mode PersonalFm).

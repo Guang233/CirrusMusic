@@ -72,6 +72,18 @@ struct LoadToken {
     quint64 generation = 0;
     friend bool operator==(const LoadToken&, const LoadToken&) = default;
 };
+// How one track goes into the next (docs/tasks/automix.md §3): the engine plans each
+// transition (Smart), crossfades for a fixed time (Crossfade), or joins them sample by
+// sample (Gapless).
+enum class TransitionMode { Smart, Crossfade, Gapless };
+CIRRUS_LOG_ENUM(TransitionMode, Smart, Crossfade, Gapless)
+// A sung line of a song, as a time span from its lyrics (media time, ms): transitions keep
+// clear of the singing (docs/tasks/automix.md §4.2). Only times reach the media layer.
+struct VocalSpan {
+    qint64 startMs = 0;
+    qint64 endMs = 0;
+    friend bool operator==(const VocalSpan&, const VocalSpan&) = default;
+};
 enum class PlaybackState { Empty, Resolving, Loading, Ready, Playing, Paused, Ended, Failed };
 enum class TransportIntent { Play, Pause, Stop };
 CIRRUS_LOG_ENUM(PlaybackState, Empty, Resolving, Loading, Ready, Playing, Paused, Ended, Failed)

@@ -56,6 +56,20 @@ class IPlaybackBackend : public QObject
     // Volume normalization from the source's loudness (MediaSource::gainDb), for what
     // plays from now on.
     virtual void setNormalization(bool on) { Q_UNUSED(on); }
+    // How one track goes into the next (docs/tasks/automix.md §3): a setting like the
+    // volume, for the transitions from now on. `crossfadeMs`: the Crossfade mode's length.
+    virtual void setTransition(domain::TransitionMode mode, qint64 crossfadeMs)
+    {
+        Q_UNUSED(mode);
+        Q_UNUSED(crossfadeMs);
+    }
+    // The sung lines of the current load or the preloaded next (by token), for planning
+    // the transitions around them; a backend without transitions ignores them.
+    virtual void setVocals(domain::LoadToken token, const QList<domain::VocalSpan>& spans)
+    {
+        Q_UNUSED(token);
+        Q_UNUSED(spans);
+    }
     // The load to play right after the current one, without a gap (docs/tasks/audio-engine.md
     // §4.5); an empty token cancels. It becomes current with Advanced{next}; a new load,
     // stop or preload drops it.

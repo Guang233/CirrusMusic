@@ -325,6 +325,51 @@ class AudioStoreTest : public QObject
         QVERIFY(open->complete());
     }
 
+    // An analysis is kept beside its file and goes with it, evicted or cleared; none
+    // without a kept file.
+    void analysesGoWithTheirFiles()
+    {
+        test::RangeServer server{noise(Chunk * 2, 40)};
+        auto s = store(server);
+        const auto a = source(server.body);
+        std::shared_ptr<AudioStream> stream;
+        const auto download = [&] {
+            stream = s->open(a);
+            QVERIFY(stream);
+            auto read = readAsync(stream);
+            QTRY_VERIFY_WITH_TIMEOUT(ready(read), 5000);
+            QTRY_VERIFY_WITH_TIMEOUT(stream->complete(), 5000);
+        };
+        s->keepAnalysis(a, "early");
+        QVERIFY(s->analysis(a).isEmpty()); // no file yet
+        download();
+        if (QTest::currentTestFailed())
+            return;
+        s->keepAnalysis(a, "analysis");
+        QCOMPARE(s->analysis(a), QByteArray("analysis"));
+        stream.reset();
+        settle(*s, server.body.size());
+        QCOMPARE(s->analysis(a), QByteArray("analysis"));
+        // (Its download is let go a moment after its stream closes.)
+        QTRY_COMPARE_WITH_TIMEOUT((s->setCapacity(0), s->usage()), 0, 5000);
+        QVERIFY(s->analysis(a).isEmpty());
+
+        s->setCapacity(64 << 20);
+        download();
+        if (QTest::currentTestFailed())
+            return;
+        s->keepAnalysis(a, "again");
+        stream.reset();
+        settle(*s, server.body.size());
+        s->clear();
+        QVERIFY(s->analysis(a).isEmpty());
+
+        auto plain = a;
+        plain.md5.clear(); // streams through a temporary file
+        s->keepAnalysis(plain, "plain");
+        QVERIFY(s->analysis(plain).isEmpty());
+    }
+
     void partitionsAreSeparate()
     {
         test::RangeServer server{noise(Chunk * 2, 11)};

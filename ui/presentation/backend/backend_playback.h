@@ -66,6 +66,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     void clearQueue() override;
     void setVolume(double volume) override;
     void setNormalization(bool on) override;
+    void setTransition(int mode, int crossfadeSeconds) override;
     void setOrder(playback::Order order) override;
     void setRepeat(playback::Repeat repeat) override;
     void startFm() override;
@@ -120,6 +121,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     };
     void applyVolume();
     void applyNormalization();
+    void applyTransition();
     void startQueue(const QStringList& keys, int index, const QList<PlayOrigin>& origins);
     void loadOrigins();
     void saveOrigins() const;
@@ -143,7 +145,12 @@ class BackendPlayback : public QObject, public PlaybackSource
     std::optional<double> m_volume;  // the user's, once set
     domain::LoadToken m_volumeFixed; // the load whose volume was set again
     std::optional<bool> m_normalize; // the setting, once known
-    bool m_clearing = false;         // clearQueue() is stopping playback
+    struct Transition {
+        domain::TransitionMode mode;
+        qint64 crossfadeMs;
+    };
+    std::optional<Transition> m_transition; // the setting, once known
+    bool m_clearing = false;                // clearQueue() is stopping playback
     bool m_notifyPending = false;
     bool m_live = false;       // something loaded (or Personal FM waiting)
     bool m_removing = false;   // in removeAt(): a stop now is the user's
