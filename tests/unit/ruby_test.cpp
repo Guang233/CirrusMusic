@@ -40,23 +40,24 @@ class RubyTest : public QObject
         QTest::addColumn<QString>("line");
         QTest::addColumn<QString>("romaji");
         QTest::addColumn<QString>("expected");
-        // A reading after a kanji run, half- and full-width brackets.
+        // A reading after a kanji run, half- and full-width brackets: its romaji over the
+        // kanji, the brackets and their kana shown as they are.
         QTest::newRow("kanji") << "涙が溢(こぼ)れた" << "na mi da ga ko bo re ta"
-                               << "涙:na mi da|が:ga|溢:ko bo|れ:re|た:ta";
+                               << "涙:na mi da|が:ga|溢:ko bo|(|こ|ぼ|)|れ:re|た:ta";
         QTest::newRow("full-width") << "夢を描（えが）く" << "yu me wo e ga ku"
-                                    << "夢:yu me|を:wo|描:e ga|く:ku";
+                                    << "夢:yu me|を:wo|描:e ga|（|え|が|）|く:ku";
         // The reading covers the kana after the kanji too.
         QTest::newRow("okurigana") << "強く抱き(だき)しめて" << "tsu yo ku da ki shi me te"
-                                   << "強:tsu yo|く:ku|抱き:da ki|し:shi|め:me|て:te";
+                                   << "強:tsu yo|く:ku|抱き:da ki|(|だ|き|)|し:shi|め:me|て:te";
         QTest::newRow("line start") << "抉り(えぐり)抜く" << "e gu ri nu ku"
-                                    << "抉り:e gu ri|抜:nu|く:ku";
+                                    << "抉り:e gu ri|(|え|ぐ|り|)|抜:nu|く:ku";
         // The romanization writes the words before the last kanji twice: as guessed, then
         // in the reading that the generator gives the last kanji run alone.
         QTest::newRow("generator")
             << "記憶の彼方(きおくのかなた)" << "ki o ku no ki o ku no ka na ta"
-            << "記憶:ki o ku|の:no|彼方:ki o ku no ka na ta";
+            << "記憶:ki o ku|の:no|彼方:ki o ku no ka na ta|(|き|お|く|の|か|な|た|)";
         QTest::newRow("gaps") << "六感・錠(ろっかん・じょう)" << "ro ku ka n . ro kka n . jo u"
-                              << "六感:ro ku ka n|・|錠:ro kka n . jo u";
+                              << "六感:ro ku ka n|・|錠:ro kka n . jo u|(|ろ|っか|ん|・|じょ|う|)";
         // Not in the romanization: an echo, English, katakana without kanji.
         QTest::newRow("echo") << "君を待つ（君を待つ）" << "ki mi wo ma tsu"
                               << "君:ki mi|を:wo|待:ma|つ:tsu|（|君|を|待|つ|）";
@@ -82,18 +83,23 @@ class RubyTest : public QObject
                                       << "唇:ku chi bi ru|か:ka|ら:ra";
         // A small kana spelled on its own: ぎゃ as gi ya.
         QTest::newRow("split small kana") << "逆転（ぎゃくてん）" << "gi ya ku te n"
-                                          << "逆転:gi ya ku te n";
+                                          << "逆転:gi ya ku te n|（|ぎゃ|く|て|ん|）";
         // Brackets do not excuse a word missing outside them.
         QTest::newRow("missing") << "君を待つ（ずっと）" << "ki mi ma tsu" << "<none>";
     }
     void keepsTheRange()
     {
+        // Each unit has the range of what it shows, the brackets included.
         const auto units = alignRuby(QStringLiteral("溢(こぼ)れ"), QStringLiteral("kobore"));
         QVERIFY(units);
-        QCOMPARE(units->size(), 2);
-        QCOMPARE(units->at(0).from, 0);
-        QCOMPARE(units->at(0).to, 5);
-        QCOMPARE(units->at(1).from, 5);
+        QCOMPARE(units->size(), 6);
+        int at = 0;
+        for (const RubyUnit& unit : *units) {
+            QCOMPARE(unit.from, at);
+            QCOMPARE(unit.to, at + int(unit.text.size()));
+            at = unit.to;
+        }
+        QCOMPARE(at, 6);
     }
     void timedBrackets()
     {

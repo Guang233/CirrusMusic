@@ -13,7 +13,8 @@ namespace cirrus::ui
 // One piece of a lyric line shown with romaji ruby (docs/ui/pages/player.md §6): the
 // base text, the romaji over it (empty: none, e.g. punctuation, English or brackets the
 // romanization leaves out) and the range [from, to) of the source line it stands for.
-// Text with a reading in brackets (溢(こぼ)) shows without them, its range covering them.
+// Text with a reading in brackets (溢(こぼ)) has the reading's romaji; the brackets and
+// their kana follow as they are, without ruby.
 struct RubyUnit {
     QString text;
     QString ruby;
@@ -26,7 +27,7 @@ struct RubyUnit {
 
 // Aligns a line with its romanization by text (§6.3): kana are anchors with known
 // readings, kanji runs take what is between them; brackets are sung, left out or (kana)
-// the reading of the text before them. Null when it doesn't fit exactly.
+// the reading of the text before them (shown, without ruby). Null when it doesn't fit exactly.
 [[nodiscard]] std::optional<QList<RubyUnit>> alignRuby(const QString& line,
                                                        const QString& romanization);
 

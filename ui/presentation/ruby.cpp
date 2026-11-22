@@ -596,12 +596,16 @@ std::optional<QList<RubyUnit>> alignRuby(const QString& line, const QString& rom
     for (int d = 0; d < tokens.display.size(); ++d) {
         const DisplayUnit& unit = tokens.display[d];
         if (const auto reading = readings.find(d); reading != readings.end()) {
-            // The text the reading stands for, without the brackets (their range kept).
+            // The reading's romaji over the text it stands for; the brackets and their kana
+            // stay as the lyrics have them, without ruby.
             const Group& group = tokens.groups[reading->group];
             const int base = tokens.display[group.open].from;
             result << RubyUnit{line.mid(unit.from, base - unit.from),
-                               rubyOf(reading->begin, reading->end), unit.from,
-                               tokens.display[group.close].to};
+                               rubyOf(reading->begin, reading->end), unit.from, base};
+            for (d = group.open; d <= group.close; ++d) {
+                const DisplayUnit& shown = tokens.display[d];
+                result << RubyUnit{shown.text, QString(), shown.from, shown.to};
+            }
             d = group.close;
             continue;
         }
