@@ -238,6 +238,11 @@ target_link_libraries(tst_listening_reporter PRIVATE cirrus_application Qt6::Tes
 add_test(NAME listening_reporter COMMAND tst_listening_reporter)
 set_tests_properties(listening_reporter PROPERTIES TIMEOUT 15)
 
+qt_add_executable(tst_together_session unit/together_session_test.cpp)
+target_link_libraries(tst_together_session PRIVATE cirrus_application Qt6::Test)
+add_test(NAME together_session COMMAND tst_together_session)
+set_tests_properties(together_session PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_client_log unit/client_log_test.cpp)
 target_link_libraries(tst_client_log PRIVATE cirrus_netease_protocol Qt6::Test)
 add_test(NAME client_log COMMAND tst_client_log)
