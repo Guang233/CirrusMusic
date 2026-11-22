@@ -160,6 +160,21 @@ class CatalogTest : public QObject
             json(R"({"code":200,"playlist":{"id":1,"trackCount":2,"trackIds":[{"id":3}]}})")));
         QVERIFY(!partial.trackIdsComplete);
     }
+    void indexAboveCountLoads() // GitHub #8
+    {
+        // A signed-in account's playlist: more IDs than trackCount. Still the whole index.
+        const auto p = std::get<PlaylistDetails>(mapMusicResponse(
+            PlaylistQuery{{"1"}},
+            json(
+                R"({"code":200,"playlist":{"id":1,"trackCount":2,"trackIds":[{"id":4},{"id":3},{"id":2}],"tracks":[]}})")));
+        QVERIFY(p.trackIdsComplete);
+        QCOMPARE(p.trackIds->size(), 3);
+        QCOMPARE(p.trackCount, std::optional<qint64>(2));
+        const auto none = std::get<PlaylistDetails>(mapMusicResponse(
+            PlaylistQuery{{"1"}},
+            json(R"({"code":200,"playlist":{"id":1,"trackCount":0,"trackIds":[{"id":1}]}})")));
+        QVERIFY(none.trackIdsComplete);
+    }
     void unreadableEmbeddedTrackLeavesPlaylist() // GitHub #4
     {
         // A liked-songs playlist whose embedded rows include one the song mapper will not
@@ -193,10 +208,6 @@ class CatalogTest : public QObject
                    R"({"code":200,"playlist":{"id":1,"trackIds":[{"id":9007199254740993}]}})");
         QTest::newRow("malformed-index")
             << 0 << QByteArray(R"({"code":200,"playlist":{"id":1,"trackIds":{}}})");
-        QTest::newRow("count-contradiction")
-            << 0
-            << QByteArray(
-                   R"({"code":200,"playlist":{"id":1,"trackCount":0,"trackIds":[{"id":1}]}})");
         QTest::newRow("unsolicited-embedded")
             << 0
             << QByteArray(R"({"code":200,"playlist":{"id":1,"trackIds":[],"tracks":[{"id":1}]}})");

@@ -309,9 +309,15 @@ MusicResult mapCatalogResponse(const MusicQuery& query, const QJsonObject& objec
                 p.trackIds->append({id});
                 known.insert(id);
             }
+            // The index may list more songs than trackCount (GitHub #8, a signed-in account's
+            // playlists). It still holds every song the count promises, so it is complete;
+            // only fewer IDs leave it partial.
             if (p.trackCount && *p.trackCount < p.trackIds->size())
-                return invalidBecause("track_count_below_index");
-            p.trackIdsComplete = p.trackCount == std::optional<qint64>(p.trackIds->size());
+                log::info(lcApi, "playlist.index_above_count",
+                          {{"playlist", p.id.value},
+                           {"count", *p.trackCount},
+                           {"ids", p.trackIds->size()}});
+            p.trackIdsComplete = p.trackCount && *p.trackCount <= p.trackIds->size();
         }
         // The embedded tracks are some songs' metadata sent along, not the index (trackIds):
         // a row we cannot read is left out, its song still listed and later asked for by ID.
