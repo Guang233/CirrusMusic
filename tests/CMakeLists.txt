@@ -384,3 +384,11 @@ qt_add_executable(tst_update_release unit/update_release_test.cpp
 target_include_directories(tst_update_release PRIVATE ${PROJECT_SOURCE_DIR}/ui/presentation)
 target_link_libraries(tst_update_release PRIVATE Qt6::Test Qt6::Core)
 add_test(NAME update_release COMMAND tst_update_release)
+
+# Romaji over Japanese lyrics (docs/ui/pages/player.md §6.3), on its own (no QML).
+qt_add_executable(tst_ruby unit/ruby_test.cpp ${PROJECT_SOURCE_DIR}/ui/presentation/ruby.cpp)
+target_include_directories(tst_ruby PRIVATE ${PROJECT_SOURCE_DIR}/ui/presentation)
+target_compile_definitions(tst_ruby PRIVATE
+    CIRRUS_SAMPLES_DIR="${PROJECT_SOURCE_DIR}/ui/samples")
+target_link_libraries(tst_ruby PRIVATE Qt6::Test Qt6::Core Qt6::Qml)
+add_test(NAME ruby COMMAND tst_ruby)
