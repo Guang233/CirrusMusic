@@ -72,7 +72,10 @@ inline QJsonObject togetherHttpObject(domain::TogetherKind kind)
         data = {{"joinable", false}, {"status", "synthetic-decision"}};
         break;
     case TogetherKind::Heartbeat:
-        data = {{"result", true}, {"type", "SUCCESS"}};
+        data = {{"result", true},
+                {"type", "SUCCESS"},
+                {"time", qint64(1795325693218)},
+                {"timeSpan", 30}};
         break;
     case TogetherKind::EndCheck:
     case TogetherKind::Play:

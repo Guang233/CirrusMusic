@@ -222,6 +222,7 @@ class TogetherHttpTest : public QObject
             }
             if (i == 6) {
                 QCOMPARE(got.heartbeatAccepted, std::optional<bool>(true));
+                QCOMPARE(got.serverTimeMs, std::optional<qint64>(1795325693218));
                 QCOMPARE(got.resultType, std::optional<QString>("SUCCESS"));
             }
             if (i == 1)
@@ -309,6 +310,7 @@ class TogetherHttpTest : public QObject
         badRoom.insert("roomInfo", info);
         add(0, badRoom);
         add(6, {{"result", true}, {"type", 1}});
+        add(6, {{"result", true}, {"time", "now"}});
         add(10, {{"canReconnect", true}});
         add(10, {{"canReconnect", "true"}});
         add(11, {{"result", 1}});

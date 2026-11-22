@@ -219,6 +219,13 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
             r.heartbeatAccepted = b.toBool();
             if (!typeAndHint(o, r))
                 return false;
+            const auto time = o.value(QStringLiteral("time"));
+            if (!absent(time)) {
+                const auto ms = togetherCounter(time);
+                if (!ms)
+                    return false;
+                r.serverTimeMs = *ms;
+            }
         }
         // A false decision is valid read metadata, not activation or transport failure.
         return true;

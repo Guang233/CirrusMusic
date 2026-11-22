@@ -1,5 +1,6 @@
 #pragma once
 #include "domain/music/music_types.h"
+#include "logging/log.h"
 #include <QList>
 #include <QMetaType>
 #include <QUuid>
@@ -127,6 +128,9 @@ enum class TogetherKind {
     SyncNotice
 };
 inline constexpr int kTogetherKinds = int(TogetherKind::SyncNotice) + 1;
+CIRRUS_LOG_ENUM(TogetherKind, Create, Check, Join, Status, EndCheck, End, Heartbeat, Play, Queue,
+                ReplaceQueue, ReconnectInfo, DeviceNotice, SyncNotice)
+CIRRUS_LOG_ENUM(TogetherPlayAction, Play, Pause, Next, Previous, Goto, Progress)
 inline TogetherKind togetherKind(const TogetherAction& a) { return TogetherKind(a.index()); }
 inline bool validTogetherSongs(const QList<SongId>& songs)
 {
@@ -215,6 +219,7 @@ struct TogetherRequest {
     }
 };
 enum class TogetherOutcome { NotSent, Acknowledged, Rejected, Unknown };
+CIRRUS_LOG_ENUM(TogetherOutcome, NotSent, Acknowledged, Rejected, Unknown)
 enum class TogetherError {
     None,
     InvalidRequest,
@@ -229,6 +234,9 @@ enum class TogetherError {
     ProtocolFailure,
     RateLimited
 };
+CIRRUS_LOG_ENUM(TogetherError, None, InvalidRequest, AuthenticationRequired, StaleContext, Canceled,
+                Busy, InvalidResponse, ProviderRejected, Timeout, Network, ProtocolFailure,
+                RateLimited)
 struct TogetherRoom {
     TogetherRoomId id;
     std::optional<TogetherChatRoomId> chatRoom;
@@ -269,6 +277,8 @@ struct TogetherResult {
     std::optional<QString> resultType, hint;
     std::optional<TogetherRoom> room;
     std::optional<bool> inRoom, joinable, endAllowed, heartbeatAccepted;
+    // Heartbeat: data.time, the service clock in ms since the epoch (2026-11-22 observed).
+    std::optional<qint64> serverTimeMs;
     std::optional<TogetherReportedPlay> reportedPlay;
     std::optional<TogetherPlaylist> playlist;
     std::optional<TogetherReconnect> reconnect;
