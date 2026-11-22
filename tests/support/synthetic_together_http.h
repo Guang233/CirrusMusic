@@ -80,30 +80,34 @@ inline QJsonObject togetherHttpObject(domain::TogetherKind kind)
         data = {{"result", true}};
         break;
     case TogetherKind::Queue:
-        data = {
-            {"playList",
-             QJsonObject{
-                 {"playCommand", QJsonObject{{"commandType", "PROGRESS"},
-                                             {"formerSongId", "9007199254740993"},
-                                             {"targetSongId", "2"},
-                                             {"progress", 3000},
-                                             {"playStatus", "PAUSE"},
-                                             {"clientSeq", 6},
-                                             {"serverSeq", 88},
-                                             {"triggerType", "MANUAL"},
-                                             {"userId", 102},
-                                             {"ignoreUserId", QJsonArray{}}}},
-                 {"playlist",
-                  QJsonObject{
-                      {"displayList", QJsonObject{{"changed", true},
-                                                  {"result", QJsonArray{"2", "3"}},
-                                                  {"rcmdSongIds", QJsonArray{}}}},
-                      {"randomList", QJsonObject{{"changed", false}, {"result", QJsonArray{}}}},
-                      {"playMode", "ORDER_LOOP"},
-                      {"listMode", QJsonValue()},
-                      {"replace", true},
-                      {"songIdWithAlgList", QJsonArray{}},
-                      {"version", QJsonArray{QJsonObject{{"userId", 102}, {"version", 4}}}}}}}}};
+        // The observed shape (2026-11-22): data is {playCommand, playlist, resourceType}.
+        data = {{"playCommand", QJsonObject{{"anotherOuterId", QJsonValue()},
+                                            {"anotherUid", 103},
+                                            {"commandType", "PROGRESS"},
+                                            {"formerSongId", "9007199254740993"},
+                                            {"outerId", QJsonValue()},
+                                            {"targetSongId", "2"},
+                                            {"progress", 3000},
+                                            {"playStatus", "PAUSE"},
+                                            {"clientSeq", 6},
+                                            {"serverSeq", 88},
+                                            {"resourceType", QJsonValue()},
+                                            {"triggerType", "MANUAL"},
+                                            {"userId", 102}}},
+                {"playlist",
+                 QJsonObject{{"displayList", QJsonObject{{"changed", true},
+                                                         {"result", QJsonArray{"2", "3"}},
+                                                         {"rcmdSongIds", QJsonArray{0}}}},
+                             {"randomList", QJsonValue()},
+                             {"playMode", "ORDER_LOOP"},
+                             {"listMode", ""},
+                             {"listModeParam", QJsonValue()},
+                             {"replace", true},
+                             {"songIdWithAlgList", QJsonValue()},
+                             {"version",
+                              QJsonArray{QJsonObject{
+                                  {"outerId", QJsonValue()}, {"userId", 102}, {"version", 4}}}}}},
+                {"resourceType", QJsonValue()}};
         break;
     case TogetherKind::ReconnectInfo:
         data = {{"canReconnect", true},

@@ -280,26 +280,18 @@ class TogetherHttpTest : public QObject
         add(9, {});
         add(3, {{"inRoom", 1}});
         add(3, {{"inRoom", false}, {"roomInfo", QJsonObject{}}});
-        add(8, {{"playlist", QJsonObject{}}});
-        add(8, {{"playList", QJsonObject{{"playlist", QJsonArray{}}}}});
-        auto queue = togetherHttpObject(TogetherKind::Queue).value("data").toObject();
-        auto wrapper = queue.value("playList").toObject();
-        auto play = wrapper.value("playCommand").toObject();
-        play.insert("progress", 0.5);
-        wrapper.insert("playCommand", play);
-        queue.insert("playList", wrapper);
-        add(8, queue);
+        add(8, {{"resourceType", QJsonValue()}}); // no playlist
+        add(8, {{"playlist", QJsonArray{}}});
         auto badQueue = [&](auto edit) {
             auto data = togetherHttpObject(TogetherKind::Queue).value("data").toObject();
-            auto wrapper = data.value("playList").toObject();
-            auto list = wrapper.value("playlist").toObject();
-            auto command = wrapper.value("playCommand").toObject();
+            auto list = data.value("playlist").toObject();
+            auto command = data.value("playCommand").toObject();
             edit(list, command);
-            wrapper.insert("playlist", list);
-            wrapper.insert("playCommand", command);
-            data.insert("playList", wrapper);
+            data.insert("playlist", list);
+            data.insert("playCommand", command);
             add(8, data);
         };
+        badQueue([](QJsonObject&, QJsonObject& c) { c.insert("progress", 0.5); });
         badQueue([](QJsonObject& l, QJsonObject&) {
             l.insert("displayList", QJsonObject{{"result", QJsonArray{"x"}}});
         });
@@ -320,6 +312,23 @@ class TogetherHttpTest : public QObject
         add(10, {{"canReconnect", true}});
         add(10, {{"canReconnect", "true"}});
         add(11, {{"result", 1}});
+    }
+    void queueBeforeAnyCommand()
+    {
+        // The first read after create: a placeholder command with serverSeq 0 and no trigger.
+        auto root = togetherHttpObject(TogetherKind::Queue);
+        auto data = root.value("data").toObject();
+        auto c = data.value("playCommand").toObject();
+        c.insert("clientSeq", 0);
+        c.insert("serverSeq", 0);
+        c.insert("triggerType", QJsonValue());
+        data.insert("playCommand", c);
+        root.insert("data", data);
+        const auto r = togetherResult(request(8), decoded(root));
+        QCOMPARE(r.outcome, TogetherOutcome::Acknowledged);
+        QVERIFY(r.reportedPlay);
+        QCOMPARE(r.reportedPlay->serverSeq, 0);
+        QVERIFY(!r.reportedPlay->trigger);
     }
     void malformed()
     {

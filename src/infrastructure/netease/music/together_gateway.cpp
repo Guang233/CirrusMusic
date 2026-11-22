@@ -224,14 +224,11 @@ bool details(const TogetherRequest& request, const QJsonObject& root, TogetherRe
         return true;
     }
     if (kind == TogetherKind::Queue) {
-        const auto wrapper = o.value(QStringLiteral("playList"));
-        if (!wrapper.isObject())
-            return false;
-        const auto p = wrapper.toObject();
-        r.playlist = playlistFrom(p.value(QStringLiteral("playlist")));
+        // data is the app's LTPlayListWrapper: {playCommand, playlist}.
+        r.playlist = playlistFrom(o.value(QStringLiteral("playlist")));
         if (!r.playlist)
             return false;
-        const auto play = p.value(QStringLiteral("playCommand"));
+        const auto play = o.value(QStringLiteral("playCommand"));
         if (!absent(play)) {
             r.reportedPlay = reportedPlay(play);
             if (!r.reportedPlay) {
