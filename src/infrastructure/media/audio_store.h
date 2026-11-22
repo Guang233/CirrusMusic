@@ -87,8 +87,9 @@ class AudioStore : public QObject
         qint64 capacityBytes = 2LL * 1024 * 1024 * 1024;
         qint64 maximumFileBytes = 512LL * 1024 * 1024;
         qint64 chunkBytes = 256 * 1024;
-        int retryDelayMs = 500;       // doubled per retry; tests shorten it
-        int refreshTimeoutMs = 30000; // waiting for a new address
+        qint64 aheadBytes = 1024 * 1024; // a read this far past the download waits for it
+        int retryDelayMs = 500;          // doubled per retry; tests shorten it
+        int refreshTimeoutMs = 30000;    // waiting for a new address
     };
     explicit AudioStore(Options options, std::unique_ptr<QNetworkAccessManager> manager = {},
                         QObject* parent = nullptr);
