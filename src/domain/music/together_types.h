@@ -3,6 +3,7 @@
 #include "logging/log.h"
 #include <QList>
 #include <QMetaType>
+#include <QUrl>
 #include <QUuid>
 #include <algorithm>
 #include <optional>
@@ -237,11 +238,18 @@ enum class TogetherError {
 CIRRUS_LOG_ENUM(TogetherError, None, InvalidRequest, AuthenticationRequired, StaleContext, Canceled,
                 Busy, InvalidResponse, ProviderRejected, Timeout, Network, ProtocolFailure,
                 RateLimited)
+// A member as roomUsers lists them; nickname and avatar for display only.
+struct TogetherMember {
+    QString userId;
+    QString nickname;
+    QUrl avatar;
+    friend bool operator==(const TogetherMember&, const TogetherMember&) = default;
+};
 struct TogetherRoom {
     TogetherRoomId id;
     std::optional<TogetherChatRoomId> chatRoom;
     std::optional<QString> imType, roomType, creatorId;
-    QList<QString> members; // roomUsers' user IDs, in the service's order
+    QList<TogetherMember> members; // roomUsers, in the service's order
     std::optional<bool> mainDevice, canJoin, ended;
 };
 // The service's last play command in the room (sync/playlist/get).

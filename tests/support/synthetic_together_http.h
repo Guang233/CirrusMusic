@@ -59,7 +59,10 @@ inline QJsonObject togetherHttpObject(domain::TogetherKind kind)
         {"roomCanJoin", true},
         {"roomEnd", false},
         {"creatorId", 102},
-        {"roomUsers", QJsonArray{QJsonObject{{"userId", 102}}, QJsonObject{{"userId", 101}}}}};
+        {"roomUsers", QJsonArray{QJsonObject{{"userId", 102},
+                                             {"nickname", "synthetic"},
+                                             {"avatarUrl", "https://p1.music.126.net/a.jpg"}},
+                                 QJsonObject{{"userId", 101}, {"nickname", 7}}}}};
     switch (kind) {
     case TogetherKind::Create:
     case TogetherKind::Join:

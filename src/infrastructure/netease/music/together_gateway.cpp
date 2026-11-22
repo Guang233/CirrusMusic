@@ -1,6 +1,7 @@
 #include "together_gateway.h"
 #include "infrastructure/netease/api/together_operation.h"
 #include "metadata_mapping.h"
+#include "music_mapping.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QThread>
@@ -73,10 +74,16 @@ std::optional<TogetherRoom> roomFrom(const QJsonValue& v)
         if (!users.isArray() || users.toArray().size() > 1000)
             return std::nullopt;
         for (const auto& u : users.toArray()) {
-            const auto user = togetherUser(u.toObject().value(QStringLiteral("userId")));
+            const auto m = u.toObject();
+            const auto user = togetherUser(m.value(QStringLiteral("userId")));
             if (!u.isObject() || !user || user->isEmpty())
                 return std::nullopt;
-            r.members.append(*user);
+            // Display only: a nickname this client cannot show stays empty.
+            std::optional<QString> nickname;
+            if (!mapping::metadataText(m.value(QStringLiteral("nickname")), nickname, 256))
+                nickname.reset();
+            r.members.append({*user, nickname.value_or(QString()),
+                              mapping::imageFrom(m.value(QStringLiteral("avatarUrl")))});
         }
     }
     return r;

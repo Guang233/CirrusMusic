@@ -216,7 +216,12 @@ class TogetherHttpTest : public QObject
                 QVERIFY(got.room->chatRoom);
                 QCOMPARE(got.room->chatRoom->value, "synthetic-chat");
                 QCOMPARE(got.room->creatorId, std::optional<QString>("102"));
-                QCOMPARE(got.room->members, (QList<QString>{"102", "101"}));
+                QCOMPARE(got.room->members.size(), 2);
+                QCOMPARE(got.room->members[0].userId, "102");
+                QCOMPARE(got.room->members[0].nickname, "synthetic");
+                QVERIFY(got.room->members[0].avatar.isValid());
+                QCOMPARE(got.room->members[1].userId, "101");
+                QVERIFY(got.room->members[1].nickname.isEmpty()); // not text: dropped
                 QCOMPARE(got.resultType, std::optional<QString>("NEW_ROOM"));
                 QCOMPARE(got.hint, std::optional<QString>("synthetic hint"));
             }

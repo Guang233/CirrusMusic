@@ -125,7 +125,8 @@ struct Harness {
     {
         TogetherRoom r{kRoom};
         r.creatorId = kMe;
-        r.members = std::move(members);
+        for (const auto& m : members)
+            r.members.append({m, QStringLiteral("synthetic"), {}});
         return r;
     }
     static TogetherResult list(QList<SongId> songs, QList<TogetherVersion> versions,

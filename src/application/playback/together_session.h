@@ -85,7 +85,7 @@ class TogetherSession : public QObject
     [[nodiscard]] domain::TogetherRoomId room() const { return m_room; }
     [[nodiscard]] bool isCreator() const { return !m_me.isEmpty() && m_creator == m_me; }
     [[nodiscard]] QString accountId() const { return m_me; }
-    [[nodiscard]] QList<QString> members() const { return m_members; }
+    [[nodiscard]] QList<domain::TogetherMember> members() const { return m_members; }
     // The link another member opens to join; empty unless active.
     [[nodiscard]] QString shareLink() const;
     // False while reads fail (Active only); the session ends after Timing::lostMs.
@@ -161,7 +161,7 @@ class TogetherSession : public QObject
     domain::SessionToken m_context;
     QString m_me, m_creator, m_inviter, m_hint;
     domain::TogetherRoomId m_room;
-    QList<QString> m_members;
+    QList<domain::TogetherMember> m_members;
     bool m_connected = true;
     qint64 m_lastOk = 0;
 
