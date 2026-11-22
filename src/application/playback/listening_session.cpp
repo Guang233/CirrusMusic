@@ -207,7 +207,7 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     m_positionObservedAt.reset();
     m_history.begin(m_token, m_backend.snapshot().accountId, entry->song,
                     fm ? ListeningMode::PersonalFm : ListeningMode::Queue, fm ? QUuid{} : entry->id,
-                    fm ? PlayOrigin{} : entry->origin);
+                    fm ? PlayOrigin{} : entry->origin, fm ? ProgramId{} : entry->program);
     m_quality = quality;
     m_intent = intent;
     m_auto = automatic;
@@ -223,14 +223,17 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
         m_backend.cancelMusic(oldLyricRequest);
     if (revision != m_revision)
         return;
-    const auto lyricRequest = m_backend.lyrics(entry->song);
+    // A program has no lyrics (its track is no song with words).
+    const auto lyricRequest = entry->program.value.isEmpty() ? m_backend.lyrics(entry->song) : 0;
     if (revision != m_revision) {
         if (lyricRequest)
             m_backend.cancelMusic(lyricRequest);
         return;
     }
     m_lyricRequest = lyricRequest;
-    m_lyricsState = m_lyricRequest ? LyricsState::Loading : LyricsState::Failed;
+    m_lyricsState = m_lyricRequest                   ? LyricsState::Loading
+                    : entry->program.value.isEmpty() ? LyricsState::Failed
+                                                     : LyricsState::None;
     if (!notifyHistory())
         return;
     if (revision != m_revision)
@@ -250,14 +253,15 @@ void ListeningSession::commit(PlaybackQueue candidate, TransportIntent intent, A
     return;
 }
 bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startIndex,
-                                    AudioQuality quality, const QList<PlayOrigin>& origins)
+                                    AudioQuality quality, const QList<PlayOrigin>& origins,
+                                    const QList<ProgramId>& programs)
 {
     log::info(lcPlayback, "queue.replace",
               {{"count", songs.size()}, {"index", startIndex}, {"quality", quality}});
     if (startIndex < 0 || startIndex >= songs.size())
         return false;
     auto candidate = m_queue;
-    if (!candidate.replace(songs, origins) ||
+    if (!candidate.replace(songs, origins, programs) ||
         !candidate.select(candidate.snapshot().entries[startIndex].id))
         return false;
     return begin(std::move(candidate), TransportIntent::Play, quality, false);
@@ -287,7 +291,8 @@ bool ListeningSession::restoreQueue(const QueueSnapshot& saved, SessionSnapshot 
     emit queueChanged(m_queue.snapshot());
     return guard && m_revision == revision && m_backend.snapshot() == expected;
 }
-bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const PlayOrigin& origin)
+bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const PlayOrigin& origin,
+                              const QList<ProgramId>& programs)
 {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_mode == ListeningMode::PersonalFm || m_backend.state() != BackendState::Ready ||
@@ -295,7 +300,7 @@ bool ListeningSession::append(const QList<SongId>& songs, bool playNext, const P
         return false;
     if (m_queueContext.isValid() && !queueContextMatches())
         return false;
-    if (!m_queue.append(songs, playNext, origin))
+    if (!m_queue.append(songs, playNext, origin, programs))
         return false;
     m_queueContext = m_backend.snapshot().token;
     m_sourceSession = m_backend.snapshot();

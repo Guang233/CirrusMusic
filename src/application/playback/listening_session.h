@@ -35,10 +35,12 @@ class ListeningSession final : public QObject
     }
     [[nodiscard]] bool fmBlocked() const { return waitingForFm() && m_fmBlocked; }
     // `origins`: where each song was picked from (one per song, or none), kept for local
-    // statistics.
+    // statistics. `programs` (one per song, or none): the podcast program a song is the
+    // track of; such an entry plays the track, has no lyrics and is recorded as the program.
     bool replaceQueue(const QList<domain::SongId>& songs, qsizetype startIndex = 0,
                       domain::AudioQuality quality = domain::AudioQuality::Standard,
-                      const QList<domain::PlayOrigin>& origins = {});
+                      const QList<domain::PlayOrigin>& origins = {},
+                      const QList<domain::ProgramId>& programs = {});
     // Storage composition only. Never load/play/query during restoration. A Personal FM
     // (`mode`) comes back as its songs so far, shown as queue() until resumeFm() plays it.
     bool restoreQueue(const domain::QueueSnapshot& saved, domain::SessionSnapshot expected,
@@ -52,7 +54,8 @@ class ListeningSession final : public QObject
     }
     [[nodiscard]] domain::SessionToken queueContext() const { return m_queueContext; }
     bool append(const QList<domain::SongId>& songs, bool playNext = false,
-                const domain::PlayOrigin& origin = {});
+                const domain::PlayOrigin& origin = {},
+                const QList<domain::ProgramId>& programs = {});
     bool select(QUuid entry);
     bool remove(QUuid entry);
     // Moves an entry to place `to` of playOrder(); playback goes on.
