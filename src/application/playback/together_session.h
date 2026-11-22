@@ -85,6 +85,8 @@ class TogetherSession : public QObject
     [[nodiscard]] domain::TogetherRoomId room() const { return m_room; }
     [[nodiscard]] bool isCreator() const { return !m_me.isEmpty() && m_creator == m_me; }
     [[nodiscard]] QString accountId() const { return m_me; }
+    [[nodiscard]] QString creatorId() const { return m_creator; }
+    [[nodiscard]] bool joining() const { return m_joining; }
     [[nodiscard]] QList<domain::TogetherMember> members() const { return m_members; }
     // The link another member opens to join; empty unless active.
     [[nodiscard]] QString shareLink() const;
@@ -95,6 +97,7 @@ class TogetherSession : public QObject
   signals:
     void changed(); // state, members, connection or hint: read the getters
     void ended(cirrus::application::TogetherSession::Reason reason);
+    void listSent(); // the service took this client's changed queue as the room's list
 
   private:
     using Handler = std::function<void(const domain::TogetherResult&)>;

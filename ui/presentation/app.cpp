@@ -13,6 +13,7 @@
 #include "qr_provider.h"
 #include "session.h"
 #include "stats_model.h"
+#include "together.h"
 #include "update_check.h"
 
 #include <QClipboard>
@@ -42,7 +43,8 @@ App::App(Sources sources)
       m_session(new Session(m_sources.session.get(), this)),
       m_library(new Library(m_sources.library.get(), m_session, this)),
       m_lyrics(new CurrentLyrics(m_sources.lyrics.get(), m_player, this)),
-      m_stats(new LocalStats(m_sources.stats.get(), this))
+      m_stats(new LocalStats(m_sources.stats.get(), this)),
+      m_together(new Together(m_sources.together.get(), this))
 {
     if (m_sources.fakeControls)
         m_sources.fakeControls->attach(m_network);

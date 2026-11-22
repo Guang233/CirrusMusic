@@ -29,6 +29,8 @@ qt_add_qml_module(cirrus_presentation
         network_status.cpp
         update_check.h
         update_check.cpp
+        together.h
+        together.cpp
         update_release.h
         update_release.cpp
         cover_provider.h

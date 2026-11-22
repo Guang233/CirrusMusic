@@ -18,6 +18,7 @@ namespace cirrus::ui
 {
 
 class FakeControls;
+class TogetherSource;
 
 // Read-only catalog: home, search, playlist/album/artist details, daily songs.
 class CatalogSource
@@ -333,6 +334,7 @@ struct Sources {
     std::unique_ptr<CacheSource> cache;
     std::unique_ptr<LyricsSource> lyrics;
     std::unique_ptr<StatsSource> stats;
+    std::unique_ptr<TogetherSource> together; // none in the gallery
 };
 
 } // namespace cirrus::ui

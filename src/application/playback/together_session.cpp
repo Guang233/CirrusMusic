@@ -775,6 +775,8 @@ void TogetherSession::sendReplace()
                            if (r.outcome != TogetherOutcome::Acknowledged)
                                log::warn(lcTogether, "together.replace_failed",
                                          {{"outcome", r.outcome}, {"error", r.error}});
+                           else
+                               emit listSent();
                            if (m_afterReplace)
                                sendPlay(*std::exchange(m_afterReplace, std::nullopt));
                        });
