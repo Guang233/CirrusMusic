@@ -160,7 +160,7 @@ class LibrarySource
     virtual Request updatePlaylist(const QString& playlistKey, const QString& title,
                                    const QString& description, Reply<bool> reply) = 0;
     virtual Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) = 0;
-    // Whether setPlaylistSubscribed() is offered (the backend holds it back for now).
+    // Whether setPlaylistSubscribed() is offered.
     [[nodiscard]] virtual bool canSavePlaylists() const = 0;
 };
 

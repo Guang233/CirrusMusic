@@ -160,6 +160,8 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::ArtistUnsubscribe:
     case ApiOperation::PodcastSubscribe:
     case ApiOperation::PodcastUnsubscribe:
+    case ApiOperation::PlaylistSubscribe:
+    case ApiOperation::PlaylistUnsubscribe:
     case ApiOperation::PlaylistCreate:
     case ApiOperation::PlaylistRename:
     case ApiOperation::PlaylistDescription:
