@@ -107,6 +107,7 @@ FocusScope {
     signal albumRequested(string key)
     signal addToPlaylistRequested(string key, string title)
     signal loginRequested
+    signal togetherRequested // listen together's dialog (pages/together.md §1)
 
     function open(): void {
         if (App.player.current.key === "" || opened)
@@ -723,6 +724,7 @@ FocusScope {
                         onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key,
                                                                                               title)
                         onCopyRequested: songInfo.open()
+                        onTogetherRequested: page.togetherRequested()
                     }
                 }
 
@@ -917,6 +919,7 @@ FocusScope {
                     onAddToPlaylistRequested: (key, title) => page.addToPlaylistRequested(key, title)
                     onCopyRequested: songInfo.open()
                     onLoginRequested: page.loginRequested()
+                    onTogetherRequested: page.togetherRequested()
                 }
             }
 

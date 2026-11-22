@@ -178,6 +178,11 @@ Item {
                 coverKey: App.player.current.coverKey
                 opacity: root.flying ? 0 : 1
             }
+            TogetherBadge {
+                x: cover.x + cover.width - width + 4
+                y: cover.y + cover.height - height + 4
+                opacity: cover.opacity
+            }
 
             // Implicit heights, not a Column: the player page measures this while the
             // shell is hidden, when a Column of "invisible" lines would collapse.

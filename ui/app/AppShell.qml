@@ -339,6 +339,21 @@ Item {
         });
     }
 
+    // Listen together (pages/together.md): sign-in first.
+    function openTogether() {
+        if (App.session.signedIn)
+            togetherDialog.open();
+        else
+            loginDialog.open();
+    }
+    // Personal FM leaves a listen-together room (LT5): asked first.
+    function startFm() {
+        if (App.together.state === TogetherState.Idle)
+            App.player.startFm();
+        else
+            fmTogetherDialog.open();
+    }
+
     // QR sign-in in a dialog, over the current page.
     function openLogin() {
         if (!App.session.signedIn)
@@ -777,5 +792,29 @@ Item {
 
     LoginDialog {
         id: loginDialog
+    }
+
+    // What App.together has to say (who joined or left, the room ended…).
+    Connections {
+        target: App.together
+        function onNotice(message: string) {
+            shell.notify(message);
+        }
+    }
+
+    TogetherDialog {
+        id: togetherDialog
+    }
+
+    Dialog {
+        id: fmTogetherDialog
+        title: qsTr("开始私人 FM？")
+        supportingText: qsTr("开始私人 FM 会退出一起听。")
+        acceptText: qsTr("开始")
+        rejectText: qsTr("取消")
+        onAccepted: {
+            App.together.leave();
+            App.player.startFm();
+        }
     }
 }

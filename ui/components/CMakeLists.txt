@@ -19,6 +19,7 @@ qt_add_qml_module(cirrus_ui_components
         PlaybackClock.qml
         MiniPlayer.qml
         SidePlayer.qml
+        TogetherBadge.qml
         ShapedCover.qml
         PlayerTones.qml
         CoverColors.qml

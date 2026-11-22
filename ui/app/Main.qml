@@ -161,6 +161,7 @@ AppWindow {
         }
         onAddToPlaylistRequested: key => shell.addToPlaylist([key])
         onLoginRequested: shell.openLogin()
+        onTogetherRequested: shell.openTogether()
         // The focus goes back to the mini player (motion-choreography §2.2).
         onOpenedChanged: {
             App.diagnostics.playerShown(opened);

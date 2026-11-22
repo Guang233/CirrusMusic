@@ -84,6 +84,7 @@ qt_add_qml_module(appCirrusMusic
         TopBar.qml
         PanelCorner.qml
         CloseDialog.qml
+        TogetherDialog.qml
         DateTile.qml
     SOURCES
         desktop.h
