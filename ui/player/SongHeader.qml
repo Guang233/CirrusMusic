@@ -24,6 +24,7 @@ Item {
     signal songRequested
     signal artistRequested(string key)
     signal albumRequested(string key)
+    signal podcastRequested(string key) // a voice's podcast
     signal addToPlaylistRequested(string key, string title)
     signal copyRequested
     // Listen together's dialog (pages/together.md §1).
@@ -165,10 +166,11 @@ Item {
             onObjectRemoved: (index, object) => menu.removeItem(object as MenuItem)
         }
         MenuItem {
-            text: qsTr("查看专辑")
-            glyph: Symbols.album
+            text: root.song.voice ? qsTr("查看播客") : qsTr("查看专辑")
+            glyph: root.song.voice ? Symbols.podcasts : Symbols.album
             enabled: root.song.albumKey !== ""
-            onTriggered: root.albumRequested(root.song.albumKey)
+            onTriggered: root.song.voice ? root.podcastRequested(root.song.albumKey)
+                                         : root.albumRequested(root.song.albumKey)
         }
         MenuItem {
             text: qsTr("加入歌单")

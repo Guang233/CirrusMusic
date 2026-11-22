@@ -268,7 +268,7 @@ void CurrentLyrics::load()
     m_hasTranslation = m_hasRomanization = m_japanese = m_hasRuby = false;
     m_trackOffsetMs = 0;
     m_timing = lyrics::Lines;
-    if (m_key.isEmpty() || !m_source) {
+    if (m_key.isEmpty() || !m_source || m_player->current().voice) { // a voice has none
         setStatus(lyrics::None);
     } else {
         setStatus(lyrics::Loading);

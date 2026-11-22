@@ -159,6 +159,10 @@ AppWindow {
             close();
             shell.openAlbum(key);
         }
+        onPodcastRequested: key => {
+            close();
+            shell.openPodcast(key);
+        }
         onAddToPlaylistRequested: key => shell.addToPlaylist([key])
         onLoginRequested: shell.openLogin()
         onTogetherRequested: shell.openTogether()

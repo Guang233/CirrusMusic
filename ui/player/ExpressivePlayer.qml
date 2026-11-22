@@ -63,6 +63,7 @@ Item {
     signal sheetRequested(int sheet)
     signal artistRequested(string key)
     signal albumRequested(string key)
+    signal podcastRequested(string key) // a voice's podcast
     signal songRequested
     signal commentsRequested
     signal addToPlaylistRequested(string key, string title)
@@ -328,10 +329,12 @@ Item {
     Menu {
         id: songMenu
         MenuItem {
-            text: qsTr("查看专辑")
-            glyph: Symbols.album
+            text: App.player.current.voice ? qsTr("查看播客") : qsTr("查看专辑")
+            glyph: App.player.current.voice ? Symbols.podcasts : Symbols.album
             enabled: App.player.current.albumKey !== ""
-            onTriggered: root.albumRequested(App.player.current.albumKey)
+            onTriggered: App.player.current.voice
+                         ? root.podcastRequested(App.player.current.albumKey)
+                         : root.albumRequested(App.player.current.albumKey)
         }
         MenuItem {
             text: qsTr("歌曲详情")
