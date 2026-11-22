@@ -158,6 +158,7 @@ Dialog {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: dialog.state === TogetherState.Leaving ? qsTr("正在离开…")
+                  : dialog.together.resuming ? qsTr("正在恢复一起听…")
                   : dialog.together.joining ? qsTr("正在加入…") : qsTr("正在创建房间…")
             color: Theme.color.onSurfaceVariant
             font: Theme.type.bodyLarge.font

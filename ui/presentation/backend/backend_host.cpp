@@ -108,19 +108,15 @@ void BackendHost::shutdown(std::function<void()> done)
         finish();
         return;
     }
-    // The room is left and the song playing now reported first (each at most 2 s, side by
-    // side), then the backend closes.
-    auto waiting = std::make_shared<int>(2);
-    auto close = [this, waiting] {
-        if (--*waiting)
-            return;
+    // Listen together keeps its room for the next start (BackendTogether saves it); the song
+    // playing now is reported first (at most 2 s), then the backend closes.
+    m_together->close();
+    m_reporter->flush([this] {
         if (m_runtime->facade().state() != application::BackendState::Stopped)
             m_runtime->facade().close();
         else
             finish();
-    };
-    m_together->finish(close);
-    m_reporter->flush(close);
+    });
 }
 
 void BackendHost::finish()

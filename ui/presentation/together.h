@@ -31,6 +31,7 @@ struct TogetherMemberInfo {
 struct TogetherSnapshot {
     together::State state = together::Idle;
     bool joining = false;   // Starting: joining a room (else creating one)
+    bool resuming = false;  // Starting: back into the room of the last run
     bool canCreate = false; // signed in, idle and a queue to start from
     int queueCount = 0;     // songs the room would start with
     QList<TogetherMemberInfo> members;
@@ -66,6 +67,7 @@ class Together : public QObject
     Q_PROPERTY(int state READ state NOTIFY changed) // TogetherState.State
     Q_PROPERTY(bool active READ active NOTIFY changed)
     Q_PROPERTY(bool joining READ joining NOTIFY changed)
+    Q_PROPERTY(bool resuming READ resuming NOTIFY changed)
     Q_PROPERTY(bool canCreate READ canCreate NOTIFY changed)
     Q_PROPERTY(int queueCount READ queueCount NOTIFY changed)
     // [{key, name, avatarKey, host, self}], the service's order.
@@ -81,6 +83,7 @@ class Together : public QObject
     [[nodiscard]] int state() const { return m_snapshot.state; }
     [[nodiscard]] bool active() const { return m_snapshot.state == together::Active; }
     [[nodiscard]] bool joining() const { return m_snapshot.joining; }
+    [[nodiscard]] bool resuming() const { return m_snapshot.resuming; }
     [[nodiscard]] bool canCreate() const { return m_snapshot.canCreate; }
     [[nodiscard]] int queueCount() const { return m_snapshot.queueCount; }
     [[nodiscard]] QVariantList members() const;

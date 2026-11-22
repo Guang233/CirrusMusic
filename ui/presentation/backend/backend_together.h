@@ -24,9 +24,12 @@ class BackendTogether : public QObject, public TogetherSource
 
   private:
     void refresh();
+    void restore();
+    void persist();
 
     BackendHost& m_host;
     TogetherSnapshot m_snapshot;
+    bool m_restored = false; // the room of the last run resumed, or nothing to resume
     std::function<void()> m_changed, m_listSent;
     std::function<void(together::End)> m_ended;
 };

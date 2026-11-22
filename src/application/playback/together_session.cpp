@@ -4,10 +4,10 @@
 #include <QDateTime>
 #include <QHash>
 #include <QPointer>
+#include <QRegularExpression>
 #include <QUrl>
 #include <QUrlQuery>
 #include <algorithm>
-#include <memory>
 
 namespace cirrus::application
 {
@@ -26,17 +26,28 @@ QList<SongId> effective(const QList<SongId>& display, const QList<SongId>& rando
 }
 } // namespace
 
-std::optional<TogetherSession::Invite> TogetherSession::parseInvite(const QString& link)
+std::optional<TogetherSession::Invite> TogetherSession::parseInvite(const QString& text)
 {
-    const QUrl url(link.trimmed());
-    if (!url.isValid() || (url.scheme() != u"https" && url.scheme() != u"http"))
+    // The app copies the link inside a sentence ("…一起听歌吧～ https://…&songId=… (@网易云音乐)"):
+    // each http(s) URL in the text, up to the first character a share link does not use.
+    static const QRegularExpression kLink(
+        QStringLiteral(R"(https?://[A-Za-z0-9\-._~:/?#@!$&*+,;=%]+)"));
+    if (text.size() > 4096)
         return std::nullopt;
-    const QUrlQuery q(url);
-    Invite i{{q.queryItemValue(QStringLiteral("roomId"))},
-             q.queryItemValue(QStringLiteral("inviterId"))};
-    if (!i.room.isValid() || !validTogetherUser(i.inviterId))
-        return std::nullopt;
-    return i;
+    for (auto it = kLink.globalMatch(text); it.hasNext();) {
+        auto link = it.next().captured();
+        while (!link.isEmpty() && QStringView(u".,;:!?").contains(link.back()))
+            link.chop(1);
+        const QUrl url(link, QUrl::StrictMode);
+        if (!url.isValid())
+            continue;
+        const QUrlQuery q(url);
+        Invite i{{q.queryItemValue(QStringLiteral("roomId"))},
+                 q.queryItemValue(QStringLiteral("inviterId"))};
+        if (i.room.isValid() && validTogetherUser(i.inviterId))
+            return i;
+    }
+    return std::nullopt;
 }
 
 TogetherSession::TogetherSession(BackendFacade& facade, ListeningSession& player, QObject* parent)
@@ -126,6 +137,7 @@ void TogetherSession::begin()
     m_context = s.token;
     m_me = s.accountId;
     m_state = State::Starting;
+    m_resuming = false;
     m_room = {};
     m_creator.clear();
     m_hint.clear();
@@ -255,6 +267,43 @@ void TogetherSession::joined(const TogetherResult& r)
     }
     m_creator = r.room->creatorId.value_or(m_inviter);
     m_members = r.room->members;
+    readRoom();
+}
+
+bool TogetherSession::resume(const Saved& saved)
+{
+    const auto s = m_facade.snapshot();
+    if (m_state != State::Idle || m_facade.state() != BackendState::Ready ||
+        s.phase != SessionPhase::Authenticated || !validTogetherUser(s.accountId) ||
+        saved.accountId != s.accountId || !saved.room.isValid())
+        return false;
+    begin();
+    m_joining = saved.joining;
+    m_resuming = true;
+    m_room = saved.room;
+    log::info(lcTogether, "together.start", {{"join", m_joining}, {"resume", true}});
+    emit changed();
+    // As the app does after a restart: still in this room, then carry on in it.
+    const auto sent = send(TogetherStatus{}, [this](const TogetherResult& r) {
+        if (r.outcome != TogetherOutcome::Acknowledged) {
+            end(r.outcome == TogetherOutcome::Rejected ? Reason::Rejected : Reason::Failed, false);
+            return;
+        }
+        if (r.inRoom != true || !r.room || r.room->id != m_room) {
+            end(Reason::RoomEnded, false);
+            return;
+        }
+        m_creator = r.room->creatorId.value_or(m_joining ? QString() : m_me);
+        m_members = r.room->members;
+        readRoom();
+    });
+    if (!sent)
+        end(Reason::Failed, false);
+    return m_state == State::Starting;
+}
+
+void TogetherSession::readRoom()
+{
     const auto sent = send(TogetherQueue{m_room, localList()}, [this](const TogetherResult& r) {
         if (r.outcome != TogetherOutcome::Acknowledged || !r.playlist) {
             end(roomOver(r) ? Reason::RoomEnded : Reason::Failed, !roomOver(r));
@@ -269,8 +318,9 @@ void TogetherSession::joined(const TogetherResult& r)
         applyList(p, r.reportedPlay ? &*r.reportedPlay : nullptr);
         if (r.reportedPlay)
             applyPlay(*r.reportedPlay, true);
-        // Tells the service this client has the room's list.
-        send(TogetherSyncNotice{m_room}, [](const TogetherResult&) {});
+        // Tells the service a member who accepted has the room's list.
+        if (!m_resuming)
+            send(TogetherSyncNotice{m_room}, [](const TogetherResult&) {});
         activate();
     });
     if (!sent)
@@ -284,7 +334,10 @@ void TogetherSession::activate()
     m_state = State::Active;
     m_lastOk = now();
     log::info(lcTogether, "together.active",
-              {{"join", m_joining}, {"members", m_members.size()}, {"songs", roomOrder().size()}});
+              {{"join", m_joining},
+               {"resume", m_resuming},
+               {"members", m_members.size()},
+               {"songs", roomOrder().size()}});
     m_pollTimer.start(m_timing.pollMs);
     m_statusTimer.start(m_timing.statusMs);
     m_beatTimer.start(m_timing.heartbeatMs);
@@ -454,8 +507,6 @@ void TogetherSession::end(Reason reason, bool sendEnd)
     m_connected = true;
     emit changed();
     emit ended(reason);
-    if (m_finishDone)
-        std::exchange(m_finishDone, {})();
 }
 
 void TogetherSession::leave()
@@ -464,25 +515,23 @@ void TogetherSession::leave()
         end(Reason::Left, true);
 }
 
-void TogetherSession::finish(std::function<void()> done, int timeoutMs)
+void TogetherSession::close()
 {
-    auto once = [done = std::move(done), fired = std::make_shared<bool>(false)] {
-        if (*fired)
-            return;
-        *fired = true;
-        QTimer::singleShot(0, [done] { done(); });
-    };
-    if (m_state == State::Idle) {
-        once();
-        return;
-    }
-    m_finishDone = once;
-    QTimer::singleShot(timeoutMs, this, [this, once] {
-        log::info(lcTogether, "together.finish_timeout");
-        m_finishDone = {};
-        once();
-    });
-    leave();
+    // The official app keeps the room when it goes away; resume() picks it up again.
+    if (m_state != State::Idle)
+        log::info(lcTogether, "together.close", {"state", m_state});
+    stopAll();
+    m_leaveTimer.stop();
+    ++m_generation;
+    disconnect(&m_facade, nullptr, this, nullptr);
+    disconnect(&m_player, nullptr, this, nullptr);
+}
+
+std::optional<TogetherSession::Saved> TogetherSession::saved() const
+{
+    if (m_state != State::Active || !m_room.isValid() || m_me.isEmpty())
+        return std::nullopt;
+    return Saved{m_room, m_me, m_joining};
 }
 
 QString TogetherSession::shareLink() const
@@ -501,12 +550,16 @@ QString TogetherSession::shareLink() const
 
 // ---- the room's state applied locally ----
 
-qint64 TogetherSession::sinceServer(qint64 serverSeq) const
+qint64 TogetherSession::sinceServer(qint64 serverSeq, bool first) const
 {
-    if (!m_offset || serverSeq <= 0)
+    // serverSeq is the service's clock when it took the command (2026-11-22 observed). The
+    // command a room is joined or resumed at may be old, and comes before the first heartbeat
+    // tells the offset: the local clock stands in then (a position past the song's end is
+    // not sought).
+    if (serverSeq <= 0 || (!m_offset && !first))
         return 0;
-    // serverSeq is the service's clock when it took the command (2026-11-22 observed).
-    return std::clamp<qint64>(now() + *m_offset - serverSeq, 0, 10000);
+    return std::clamp<qint64>(now() + m_offset.value_or(0) - serverSeq, 0,
+                              first ? kProgressMax : 10000);
 }
 
 QList<SongId> TogetherSession::roomOrder() const { return effective(m_display, m_random, m_mode); }
@@ -577,15 +630,16 @@ void TogetherSession::applyPlay(const TogetherReportedPlay& c, bool force)
     if (!force && c.serverSeq <= m_serverSeq)
         return;
     m_serverSeq = std::max(m_serverSeq, c.serverSeq);
-    if (c.userId == m_me || (!force && c.serverSeq <= 0))
+    // Forced (joining or resuming) the last command is the room's state, whoever sent it.
+    if (!force && (c.userId == m_me || c.serverSeq <= 0))
         return;
     const auto order = localOrder();
     const auto target = order.contains(c.target) ? c.target : m_local.song;
     if (!validMusicId(target.value))
         return;
     const bool on = c.status == TogetherPlayStatus::Play;
-    const auto position =
-        std::clamp<qint64>(c.progressMs + (on ? sinceServer(c.serverSeq) : 0), 0, kProgressMax);
+    const auto position = std::clamp<qint64>(
+        c.progressMs + (on ? sinceServer(c.serverSeq, force) : 0), 0, kProgressMax);
     log::debug(lcTogether, "together.apply",
                {{"action", c.action}, {"play", on}, {"song_changes", target != m_local.song}});
     m_expect = Expect{.song = target, .playing = on, .until = now() + m_timing.settleMs};

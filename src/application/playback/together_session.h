@@ -25,6 +25,9 @@ class ListeningSession;
 //    as REPLACE. What the session itself did to apply a command is not reported back.
 //  - It ends on leave(), when the service says the room is over (code 488, room invalid,
 //    or no longer in a room), on a sign-out, or after a minute without a successful read.
+//  - Closing the app does not leave the room (close()); saved() is what resume() needs to
+//    pick it up on the next start: status, and while still in that room, its list and last
+//    command, like the official app (no accept again).
 // Caller-thread object; facade and player must outlive it.
 class TogetherSession : public QObject
 {
@@ -58,8 +61,15 @@ class TogetherSession : public QObject
         domain::TogetherRoomId room;
         QString inviterId;
     };
-    // A share link (…/listen-together/share/index.html?roomId=…&inviterId=…).
-    static std::optional<Invite> parseInvite(const QString& link);
+    // A share link (…/listen-together/share/index.html?roomId=…&inviterId=…), alone or in
+    // the text the official app copies around it.
+    static std::optional<Invite> parseInvite(const QString& text);
+    // An active room, as resume() takes it after a restart.
+    struct Saved {
+        domain::TogetherRoomId room;
+        QString accountId;
+        bool joining = false; // joined another member's room (else this account's own)
+    };
 
     TogetherSession(BackendFacade& facade, ListeningSession& player, QObject* parent = nullptr);
     ~TogetherSession() override;
@@ -76,10 +86,12 @@ class TogetherSession : public QObject
     [[nodiscard]] bool canCreate() const;
     bool create();
     bool join(const Invite& invite);
+    // Back into a saved room, when the account is the same and the service still has it in
+    // that room; ends RoomEnded otherwise.
+    bool resume(const Saved& saved);
     void leave();
-    // Closing: leaves the room, then runs `done` once end/v2 answered or after `timeoutMs`.
-    // `done` runs once, later, never inside.
-    void finish(std::function<void()> done, int timeoutMs = 2000);
+    // Closing the app: stops without leaving the room and without signals; nothing after.
+    void close();
 
     [[nodiscard]] State state() const { return m_state; }
     [[nodiscard]] domain::TogetherRoomId room() const { return m_room; }
@@ -87,6 +99,9 @@ class TogetherSession : public QObject
     [[nodiscard]] QString accountId() const { return m_me; }
     [[nodiscard]] QString creatorId() const { return m_creator; }
     [[nodiscard]] bool joining() const { return m_joining; }
+    [[nodiscard]] bool resuming() const { return m_resuming; } // the last start was resume()
+    // Active: the room to resume after a restart.
+    [[nodiscard]] std::optional<Saved> saved() const;
     [[nodiscard]] QList<domain::TogetherMember> members() const { return m_members; }
     // The link another member opens to join; empty unless active.
     [[nodiscard]] QString shareLink() const;
@@ -120,6 +135,7 @@ class TogetherSession : public QObject
     void createRoom();
     void replaceInitial();
     void joined(const domain::TogetherResult& r);
+    void readRoom();
     void activate();
     void poll();
     void status();
@@ -149,7 +165,7 @@ class TogetherSession : public QObject
     [[nodiscard]] bool expecting() const;
     void settle(const domain::PlaybackSnapshot& s);
     [[nodiscard]] qint64 now() const { return m_clock(); }
-    [[nodiscard]] qint64 sinceServer(qint64 serverSeq) const;
+    [[nodiscard]] qint64 sinceServer(qint64 serverSeq, bool first) const;
     void setConnected(bool connected);
 
     BackendFacade& m_facade;
@@ -159,7 +175,7 @@ class TogetherSession : public QObject
     std::function<qint64()> m_clock;
 
     State m_state = State::Idle;
-    bool m_joining = false;
+    bool m_joining = false, m_resuming = false;
     quint64 m_generation = 0;
     domain::SessionToken m_context;
     QString m_me, m_creator, m_inviter, m_hint;
@@ -185,7 +201,6 @@ class TogetherSession : public QObject
     domain::PlaybackSnapshot m_local;
     std::optional<domain::TogetherPlay> m_out, m_afterReplace;
     QTimer m_pollTimer, m_statusTimer, m_beatTimer, m_reportTimer, m_replaceTimer, m_leaveTimer;
-    std::function<void()> m_finishDone;
 };
 CIRRUS_LOG_ENUM(TogetherSession::State, Idle, Starting, Active, Leaving)
 CIRRUS_LOG_ENUM(TogetherSession::Reason, Left, RoomEnded, SignedOut, ConnectionLost, NotJoinable,

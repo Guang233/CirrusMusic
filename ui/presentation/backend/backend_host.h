@@ -47,7 +47,7 @@ class BackendHost : public QObject
     [[nodiscard]] runtime::BackendRuntime& runtime() const { return *m_runtime; }
     // Reports what was listened to (integration.md §6.1); settled before closing.
     [[nodiscard]] application::ListeningReporter& reporter() const { return *m_reporter; }
-    // Listen together (docs/api/together-polling.md); leaves its room before closing.
+    // Listen together (docs/api/together-polling.md); closing keeps its room (resume()).
     [[nodiscard]] application::TogetherSession& together() const { return *m_together; }
 
     void start();

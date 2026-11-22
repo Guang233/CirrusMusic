@@ -7,11 +7,30 @@
 #include "backend_mapping.h"
 #include "infrastructure/runtime/backend_runtime.h"
 
+#include <QSettings>
+#include <QVariantMap>
+
 #include <algorithm>
 
 namespace cirrus::ui
 {
 using application::TogetherSession;
+namespace
+{
+// The active room, so the next start resumes it (TogetherSession::Saved).
+const auto kSavedKey = QStringLiteral("together/room");
+
+std::optional<TogetherSession::Saved> load()
+{
+    const auto map = QSettings().value(kSavedKey).toMap();
+    TogetherSession::Saved saved{{map.value(QStringLiteral("room")).toString()},
+                                 map.value(QStringLiteral("account")).toString(),
+                                 map.value(QStringLiteral("joining")).toBool()};
+    if (!saved.room.isValid() || !domain::validTogetherUser(saved.accountId))
+        return std::nullopt;
+    return saved;
+}
+} // namespace
 
 BackendTogether::BackendTogether(BackendHost& host, QObject* parent) : QObject(parent), m_host(host)
 {
@@ -53,13 +72,54 @@ void BackendTogether::setHandlers(std::function<void()> changed,
     m_listSent = std::move(listSent);
 }
 
+void BackendTogether::restore()
+{
+    if (m_restored)
+        return;
+    const auto saved = load();
+    if (!saved) {
+        m_restored = true;
+        return;
+    }
+    // Once signed in: the same account resumes the room, another forgets it.
+    const auto& facade = m_host.runtime().facade();
+    const auto s = facade.snapshot();
+    if (facade.state() != application::BackendState::Ready ||
+        s.phase != domain::SessionPhase::Authenticated)
+        return;
+    m_restored = true;
+    if (s.accountId != saved->accountId || !m_host.together().resume(*saved))
+        QSettings().remove(kSavedKey);
+}
+
+void BackendTogether::persist()
+{
+    if (!m_restored)
+        return;
+    const auto& session = m_host.together();
+    QSettings settings;
+    if (const auto saved = session.saved()) {
+        const QVariantMap map{{QStringLiteral("room"), saved->room.value},
+                              {QStringLiteral("account"), saved->accountId},
+                              {QStringLiteral("joining"), saved->joining}};
+        if (settings.value(kSavedKey).toMap() != map)
+            settings.setValue(kSavedKey, map);
+    } else if (session.state() != TogetherSession::State::Starting &&
+               settings.contains(kSavedKey)) {
+        settings.remove(kSavedKey);
+    }
+}
+
 void BackendTogether::refresh()
 {
+    restore();
+    persist();
     const auto& session = m_host.together();
     const auto& listening = m_host.runtime().listening();
     TogetherSnapshot s;
     s.state = together::State(session.state());
     s.joining = session.joining();
+    s.resuming = session.resuming();
     s.canCreate = session.canCreate();
     const auto queue = listening.queue().entries.size();
     s.queueCount = int(std::min<qsizetype>(queue, domain::kTogetherSongsMax));

@@ -70,6 +70,9 @@ void Together::update()
                 emit notice(noticed("together.member_left",
                                     tr("%1 离开了").arg(m.name.isEmpty() ? tr("好友") : m.name)));
     }
+    if (before.state == together::Starting && m_snapshot.state == together::Active &&
+        m_snapshot.resuming)
+        emit notice(noticed("together.resumed", tr("已恢复一起听")));
     if (m_copyOnActive && m_snapshot.state == together::Active) {
         m_copyOnActive = false;
         if (!m_snapshot.shareLink.isEmpty()) {
@@ -87,6 +90,7 @@ void Together::update()
 void Together::ended(together::End reason)
 {
     const bool joining = m_snapshot.joining;
+    const bool resuming = m_snapshot.resuming;
     const auto hint = m_snapshot.hint;
     QString text;
     switch (reason) {
@@ -113,6 +117,8 @@ void Together::ended(together::End reason)
     case together::Failed:
         if (!hint.isEmpty())
             text = noticed("together.refused_hint", hint);
+        else if (resuming)
+            text = noticed("together.resume_failed", tr("没能恢复一起听"));
         else
             text = joining ? noticed("together.join_failed", tr("没能加入一起听"))
                            : noticed("together.create_failed", tr("没能创建房间"));

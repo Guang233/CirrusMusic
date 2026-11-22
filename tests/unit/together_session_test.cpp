@@ -214,6 +214,22 @@ class TogetherSessionTest : public QObject
         QVERIFY(!TogetherSession::parseInvite(QStringLiteral("file:///?roomId=ab&inviterId=42")));
         QVERIFY(
             !TogetherSession::parseInvite(QStringLiteral("https://x/?roomId=a%20b&inviterId=4")));
+        // As the app copies it: words around the link, with or without a space.
+        for (const auto& text : {
+                 QStringLiteral("我的耳机分你一半，和我一起听歌吧～快点开看看 "
+                                "https://st.music.163.com/listen-together/share/"
+                                "index.html?roomId=7e39_17&inviterId=42&songId=7 (@网易云音乐)\n"),
+                 QStringLiteral("快点开看看https://st.music.163.com/listen-together/share/"
+                                "index.html?roomId=7e39_17&inviterId=42（@网易云音乐）"),
+                 QStringLiteral("https://x/a 和 https://st.music.163.com/listen-together/share/"
+                                "index.html?roomId=7e39_17&inviterId=42."),
+             }) {
+            const auto copied = TogetherSession::parseInvite(text);
+            QVERIFY2(copied, qPrintable(text));
+            QCOMPARE(copied->room.value, "7e39_17");
+            QCOMPARE(copied->inviterId, "42");
+        }
+        QVERIFY(!TogetherSession::parseInvite(QStringLiteral("roomId=ab&inviterId=42")));
     }
     void createsFromTheQueue()
     {
@@ -416,15 +432,71 @@ class TogetherSessionTest : public QObject
         QCOMPARE(h.together.state(), TogetherSession::State::Idle);
         QVERIFY(h.together.shareLink().isEmpty());
     }
-    void finishLeavesBeforeClosing()
+    void closeKeepsTheRoom()
     {
         Harness h;
         h.createActive();
-        bool done = false;
-        h.together.finish([&] { done = true; });
-        h.reply(h.take(TogetherKind::End), Harness::ok());
-        QVERIFY(!done); // later, never inside
-        QTRY_VERIFY(done);
+        const auto saved = h.together.saved();
+        QVERIFY(saved);
+        QCOMPARE(saved->room, kRoom);
+        QCOMPARE(saved->accountId, kMe);
+        QVERIFY(!saved->joining);
+        QSignalSpy changed(&h.together, &TogetherSession::changed);
+        const int reads = h.count(TogetherKind::Queue);
+        h.together.close();
+        QVERIFY(h.player.pause()); // what the player does while closing is not reported
+        QTest::qWait(50);
+        QCOMPARE(h.count(TogetherKind::End), 0);
+        QCOMPARE(h.count(TogetherKind::Play), 1);
+        QVERIFY(h.count(TogetherKind::Queue) <= reads + 1);
+        QCOMPARE(changed.size(), 0);
+    }
+    void resumesTheRoom()
+    {
+        Harness h;
+        QVERIFY(h.player.replaceQueue({{"1"}, {"2"}, {"3"}}, 0));
+        QVERIFY(!h.together.resume({kRoom, kFriend, false})); // another account's
+        QVERIFY(h.together.resume({kRoom, kMe, false}));
+        QVERIFY(h.together.resuming());
+        auto r = Harness::ok();
+        r.inRoom = true;
+        r.room = Harness::room({kMe, kFriend});
+        h.reply(h.take(TogetherKind::Status), r);
+        // This client's own last command, 30 s ago, playing: the room plays on from there.
+        h.reply(
+            h.take(TogetherKind::Queue),
+            Harness::list({{"1"}, {"2"}, {"3"}}, {{kMe, 0}},
+                          Harness::command(TogetherPlayAction::Goto, {"2"},
+                                           TogetherPlayStatus::Play, 60000, h.clock - 30000, kMe)));
+        QCOMPARE(h.together.state(), TogetherSession::State::Active);
+        QVERIFY(h.together.isCreator());
+        QCOMPARE(h.together.members().size(), 2);
+        QCOMPARE(h.latestPlay().query.song.value, "2");
+        QCOMPARE(h.player.playback().intent, TransportIntent::Play);
+        h.publish(PlaybackState::Playing, 0);
+        QTRY_VERIFY(std::any_of(h.commands.cbegin(), h.commands.cend(), [](auto& c) {
+            return c.action == PlaybackAction::Seek && c.positionMs == 90000;
+        }));
+        QCOMPARE(h.count(TogetherKind::Check) + h.count(TogetherKind::Join) +
+                     h.count(TogetherKind::SyncNotice),
+                 0);
+        h.publish(PlaybackState::Playing, 90000, 1);
+        QTest::qWait(50);
+        QCOMPARE(h.count(TogetherKind::Play), 0);
+        QCOMPARE(h.count(TogetherKind::ReplaceQueue), 0);
+    }
+    void resumeEndsWithoutTheRoom()
+    {
+        Harness h;
+        QSignalSpy ended(&h.together, &TogetherSession::ended);
+        QVERIFY(h.together.resume({kRoom, kMe, true}));
+        auto r = Harness::ok();
+        r.inRoom = false;
+        h.reply(h.take(TogetherKind::Status), r);
+        QCOMPARE(ended.size(), 1);
+        QCOMPARE(ended[0][0].value<TogetherSession::Reason>(), TogetherSession::Reason::RoomEnded);
+        QCOMPARE(h.count(TogetherKind::End), 0);
+        QVERIFY(!h.together.saved());
     }
     void losesTheConnection()
     {
