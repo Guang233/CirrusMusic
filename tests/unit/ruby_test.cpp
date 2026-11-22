@@ -68,6 +68,21 @@ class RubyTest : public QObject
         QTest::newRow("sung") << "ずっと（ずっと）" << "zu tto zu tto"
                               << "ず:zu|っと:tto|（|ず:zu|っと:tto|）";
         QTest::newRow("sung reading-like") << "ラ(ラ)" << "ra ra" << "ラ:ra|(|ラ:ra|)";
+        // Where a kanji's letters end: at the syllables the romanization writes apart (を
+        // keeps its w), never across its marks (・ as .), never from ん or っ.
+        QTest::newRow("syllables") << "花火を見た" << "ha na bi wo mi ta"
+                                   << "花火:ha na bi|を:wo|見:mi|た:ta";
+        QTest::newRow("marks") << "六感・吶喊・竜胆" << "ro ku ka n . to kka n . ri n do u"
+                               << "六感:ro ku ka n|・|吶喊:to kka n|・|竜胆:ri n do u";
+        QTest::newRow("no n or kk first")
+            << "謁見 席巻 妄信症" << "e kke n se kke n mo u shi n sho u"
+            << "謁見:e kke n| |席巻:se kke n| |妄信症:mo u shi n sho u";
+        QTest::newRow("small tsu") << "真っ白に" << "ma sshi ro ni" << "真:ma|っ:s|白:shi ro|に:ni";
+        QTest::newRow("long reading") << "唇から" << "ku chi bi ru ka ra"
+                                      << "唇:ku chi bi ru|か:ka|ら:ra";
+        // A small kana spelled on its own: ぎゃ as gi ya.
+        QTest::newRow("split small kana") << "逆転（ぎゃくてん）" << "gi ya ku te n"
+                                          << "逆転:gi ya ku te n";
         // Brackets do not excuse a word missing outside them.
         QTest::newRow("missing") << "君を待つ（ずっと）" << "ki mi ma tsu" << "<none>";
     }

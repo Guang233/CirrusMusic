@@ -116,6 +116,9 @@ QStringList syllableReadings(char32_t base, char32_t small)
             for (const QString& reading : baseReadings)
                 addUnique(readings, stripVowel(reading) + "y" + vowel);
         }
+        // Romanizations that spell the small kana on its own: ぎゃく gi ya ku.
+        for (const QString& reading : baseReadings)
+            addUnique(readings, reading + "y" + vowel);
         return readings;
     }
     // Small vowels make foreign sounds: ティ ti/thi, ファ fa, ウィ wi.
@@ -152,9 +155,10 @@ enum class Kind { Kana, Kanji, Latin };
 // A unit the romanization is matched against.
 struct MatchUnit {
     Kind kind;
-    QStringList readings; // Kana: possible readings; Latin: the exact text
-    int kanji = 0;        // Kanji: number of characters
-    int display = 0;      // index of the display unit it belongs to
+    QStringList readings;  // Kana: possible readings; Latin: the exact text
+    int kanji = 0;         // Kanji: number of characters
+    int display = 0;       // index of the display unit it belongs to
+    bool geminate = false; // a っ before a kanji: may double its first consonant
 };
 
 struct DisplayUnit {
@@ -222,6 +226,7 @@ size_t addKana(const std::vector<CodePoint>& points, size_t p, const QString& li
     const size_t start = p;
     const char32_t c = at(p);
     QStringList readings;
+    bool geminate = false;
     const QChar previous = lastVowel(tokens.match);
 
     if (c == U'っ') {
@@ -233,6 +238,7 @@ size_t addKana(const std::vector<CodePoint>& points, size_t p, const QString& li
         } else {
             readings = {QString(), QStringLiteral("t"), QStringLiteral("tsu")};
             p += 1;
+            geminate = p < points.size() && isKanji(points[p].c);
         }
     } else if (c == U'ー') {
         if (!previous.isNull()) {
@@ -268,7 +274,7 @@ size_t addKana(const std::vector<CodePoint>& points, size_t p, const QString& li
 
     tokens.display.push_back(
         {line.mid(points[start].at, end(p) - points[start].at), points[start].at, end(p), true});
-    tokens.match.push_back({Kind::Kana, readings, 0, int(tokens.display.size()) - 1});
+    tokens.match.push_back({Kind::Kana, readings, 0, int(tokens.display.size()) - 1, geminate});
     return p;
 }
 
@@ -440,17 +446,57 @@ std::optional<QList<RubyUnit>> alignRuby(const QString& line, const QString& rom
     if (n == 0 || m == 0)
         return std::nullopt;
 
+    // Between two letters of the romanization: a space or a mark (apart; NetEase writes
+    // syllables apart, ro ku ka n, others words), a mark that is no space, apostrophe or
+    // hyphen (marked: the romanization's ・ or 、).
+    const QString& text = romaji.text;
+    std::vector<bool> apart(m + 1, true), marked(m + 1, false);
+    for (int k = 1; k < m; ++k) {
+        apart[k] = romaji.map[k] - romaji.map[k - 1] > 1;
+        for (int c = romaji.map[k - 1] + 1; c < romaji.map[k] && !marked[k]; ++c) {
+            const QChar x = romanization.at(c);
+            marked[k] = !x.isSpace() && !QStringView(u"'’-").contains(x);
+        }
+    }
+    std::vector<int> vowels(m + 1, 0);
+    for (int k = 0; k < m; ++k)
+        vowels[k + 1] = vowels[k] + (isVowel(text.at(k)) ? 1 : 0);
+    // No reading begins with ん or っ: not at a syllabic n (n before a consonant or a gap)
+    // or the first of a doubled consonant.
+    const auto canBegin = [&](int j) {
+        if (j + 1 >= m)
+            return text.at(j) != u'n';
+        const QChar c = text.at(j), next = text.at(j + 1);
+        if (c == u'n')
+            return !apart[j + 1] && (isVowel(next) || next == u'y');
+        return !(c == next && !isVowel(c) && !apart[j + 1]);
+    };
+    constexpr double kInside = 0.15;
+
     // The ways unit `i` may take letters from `j` on, with their cost. A kanji run of k
-    // characters may take 1..8k letters and costs its distance from about 3.5k (two morae
-    // each); a kana's later readings cost a little more than its first, and reading nothing
-    // (a long vowel left out) much more.
+    // characters takes from where a reading may begin a vowel or more, up to 12k letters
+    // (唇 kuchibiru) and not across a mark; it costs its distance from about 3.5k letters
+    // (two morae each) and ends inside a word or syllable. A kana's later readings cost a
+    // little more than its first, reading nothing (a long vowel left out) much more; a っ
+    // before a kanji may take the consonant the kanji's reading doubles (真っ白 ma s shiro).
     const auto steps = [&](int i, int j, const auto& take) {
         const MatchUnit& unit = tokens.match[i];
         if (unit.kind == Kind::Kanji) {
-            for (int length = 1; length <= 8 * unit.kanji && j + length <= m; ++length)
-                take(length, std::abs(length - 3.5 * unit.kanji) * 0.1);
+            if (j < m && !canBegin(j))
+                return;
+            for (int length = 1; length <= 12 * unit.kanji && j + length <= m; ++length) {
+                if (length > 1 && marked[j + length - 1])
+                    break;
+                if (vowels[j + length] == vowels[j])
+                    continue;
+                take(length, std::abs(length - 3.5 * unit.kanji) * 0.1 + (apart[j] ? 0 : kInside) +
+                                 (apart[j + length] ? 0 : kInside));
+            }
             return;
         }
+        if (unit.geminate && j + 1 < m && text.at(j) == text.at(j + 1) && !isVowel(text.at(j)) &&
+            text.at(j) != u'n')
+            take(1, 0.01);
         for (int r = 0; r < unit.readings.size(); ++r) {
             const QString& reading = unit.readings[r];
             // A dropped long vowel only when nothing else fits.
