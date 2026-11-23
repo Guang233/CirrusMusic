@@ -578,7 +578,7 @@ class AudioStoreTest : public QObject
         QVERIFY(!s->open(unsafe, &error));
         QCOMPARE(error, PlaybackError::UnsafeSource);
         auto huge = source(server.body);
-        huge.size = 600LL * 1024 * 1024;
+        huge.size = 1025LL * 1024 * 1024; // past 1 GiB
         QVERIFY(!s->open(huge, &error));
         QCOMPARE(error, PlaybackError::TooLarge);
     }
