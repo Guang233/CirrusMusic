@@ -114,6 +114,10 @@ class AppSettings : public QObject
 
     // The mini player's progress bar waves while playing (docs/ui/README.md §6.2).
     CIRRUS_SETTING(bool, miniWave, setMiniWave, "miniPlayer/wave", true)
+    // The floating bar's buttons the user turned off (MiniPlayerButtonsMenu ids: like,
+    // mode, volume, queue, comments); new buttons show until turned off.
+    CIRRUS_SETTING(QStringList, miniPlayerHidden, setMiniPlayerHidden, "miniPlayer/hidden",
+                   QStringList())
     // The mini player docked as a pane on the right of the window instead of floating
     // over the bottom of the content (docs/ui/redesign-md3e.md §11).
     CIRRUS_SETTING(bool, miniDocked, setMiniDocked, "miniPlayer/docked", false)
