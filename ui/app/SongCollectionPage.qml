@@ -472,6 +472,8 @@ Item {
         visible: opacity > 0
         songs: sortedModel
         pinnedTop: compactBar.y + compactBar.height + (page.tabsContent ? page.tabsHeight : 0)
+        // The pinned titles start beside the pane, like the compact bar.
+        pinnedLeft: page.twoPane ? pane.x + pane.width - x : 0
         // No titles over an empty list.
         showColumnTitles: page.showSongs && page.hasSongs
         footerContent: page.footerContent
