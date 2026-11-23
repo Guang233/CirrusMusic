@@ -265,6 +265,11 @@ Item {
                     visible: page.showActions
                     spacing: 8
                     Button {
+                        // Actions as tall as it (PageActions) stay on its row: its side
+                        // padding gives way for them (#9). Others (button groups) go under it.
+                        readonly property real beside: paneOthers.height === height
+                                                        ? paneOthers.width + paneActions.spacing : 0
+                        readonly property real widest: pane.compact ? sidePadding : 40
                         visible: page.showPlay
                         enabled: page.canPlay
                         variant: Md.Filled
@@ -274,8 +279,10 @@ Item {
                         // Short: the pane says what it plays.
                         text: qsTr("播放")
                         font: pane.compact ? labelStyle.font : Fonts.font(700, 24)
-                        // 172 wide at Large: two square actions fit beside it.
-                        leftPadding: pane.compact ? sidePadding : 40
+                        // 172 wide at Large; narrower panes take it down to 8 a side, where
+                        // two square actions still fit beside it.
+                        leftPadding: Math.max(8, Math.min(widest, Math.floor(
+                            (paneActions.width - beside - implicitContentWidth) / 2)))
                         rightPadding: leftPadding
                         width: implicitContentWidth + leftPadding + rightPadding
                         Accessible.name: page.playText
@@ -283,6 +290,7 @@ Item {
                     }
                     // At its own size: the actions' Flow keeps one row.
                     Loader {
+                        id: paneOthers
                         active: page.twoPane
                         sourceComponent: page.actionsContent
                     }
