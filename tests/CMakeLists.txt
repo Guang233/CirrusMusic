@@ -392,3 +392,9 @@ target_compile_definitions(tst_ruby PRIVATE
     CIRRUS_SAMPLES_DIR="${PROJECT_SOURCE_DIR}/ui/samples")
 target_link_libraries(tst_ruby PRIVATE Qt6::Test Qt6::Core Qt6::Qml)
 add_test(NAME ruby COMMAND tst_ruby)
+
+# The share text and links (docs/ui/pages/share.md), on its own.
+qt_add_executable(tst_share unit/share_test.cpp ${PROJECT_SOURCE_DIR}/ui/presentation/share_text.cpp)
+target_include_directories(tst_share PRIVATE ${PROJECT_SOURCE_DIR}/ui/presentation)
+target_link_libraries(tst_share PRIVATE Qt6::Test Qt6::Core)
+add_test(NAME share COMMAND tst_share)

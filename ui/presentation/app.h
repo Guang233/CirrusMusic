@@ -24,6 +24,7 @@ class NetworkStatus;
 class UpdateCheck;
 class Player;
 class Session;
+class Share;
 class Together;
 
 // Root of the presentation layer for QML (`import Cirrus.Presentation`, then `App.…`).
@@ -47,6 +48,7 @@ class App : public QObject
     Q_MOC_INCLUDE("update_check.h")
     Q_MOC_INCLUDE("session.h")
     Q_MOC_INCLUDE("together.h")
+    Q_MOC_INCLUDE("share.h")
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
@@ -61,6 +63,7 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::LocalStats* stats READ stats CONSTANT)
     Q_PROPERTY(cirrus::ui::UpdateCheck* updates READ updates CONSTANT)
     Q_PROPERTY(cirrus::ui::Together* together READ together CONSTANT)
+    Q_PROPERTY(cirrus::ui::Share* share READ share CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -85,6 +88,7 @@ class App : public QObject
     [[nodiscard]] NetworkStatus* network() const { return m_network; }
     [[nodiscard]] UpdateCheck* updates() const { return m_updates; }
     [[nodiscard]] Together* together() const { return m_together; }
+    [[nodiscard]] Share* share() const { return m_share; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
     [[nodiscard]] LocalStats* stats() const { return m_stats; }
@@ -117,6 +121,7 @@ class App : public QObject
     CurrentLyrics* m_lyrics;
     LocalStats* m_stats;
     Together* m_together;
+    Share* m_share;
 };
 
 } // namespace cirrus::ui
