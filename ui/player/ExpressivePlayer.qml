@@ -355,6 +355,14 @@ Item {
             onTriggered: root.addToPlaylistRequested(App.player.current.key, App.player.current.title)
         }
         MenuItem {
+            text: qsTr("复制链接")
+            glyph: Symbols.link
+            enabled: App.player.current.key !== ""
+            onTriggered: App.share.copy(App.player.current.voice ? Share.Voice : Share.Song,
+                                        App.player.current.key, App.player.current.title,
+                                        App.player.current.artistText)
+        }
+        MenuItem {
             text: qsTr("复制歌曲信息")
             glyph: Symbols.content_copy
             onTriggered: root.copyRequested()

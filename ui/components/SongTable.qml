@@ -989,6 +989,21 @@ Item {
             }
         }
         MenuItem {
+            visible: songMenu.songCount === 1
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.link
+            text: qsTr("复制链接")
+            onTriggered: {
+                // A voice's author is its podcast.
+                const index = table.songs.index(songMenu.row, 0);
+                App.share.copy(table.voices ? Share.Voice : Share.Song, songMenu.key,
+                               table.songs.data(index, SongListModel.TitleRole) ?? "",
+                               table.songs.data(index, table.voices ? SongListModel.AlbumTitleRole
+                                                                    : SongListModel.ArtistTextRole)
+                               ?? "");
+            }
+        }
+        MenuItem {
             visible: table.removable
             height: visible ? implicitHeight : 0
             glyph: Symbols.playlist_remove

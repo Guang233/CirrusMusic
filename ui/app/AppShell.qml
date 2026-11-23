@@ -86,6 +86,27 @@ Item {
     signal coveredNotice(string text)
     // The playlist the current page shows, for the rail's playlist rows.
     readonly property string openPlaylistKey: (stack.currentItem as PlaylistPage)?.playlistKey ?? ""
+    // The page's own item for 复制链接 (pages/share.md §3): {kind, key, title, author}, or
+    // null on pages without one.
+    readonly property var pageShare: {
+        const collection = stack.currentItem as SongCollectionPage;
+        if (collection && collection.shareKind >= 0 && collection.shareKey !== "")
+            return {
+                kind: collection.shareKind,
+                key: collection.shareKey,
+                title: collection.title,
+                author: collection.shareAuthor
+            };
+        const songPage = stack.currentItem as SongPage;
+        if (songPage && songPage.song.key !== "")
+            return {
+                kind: Share.Song,
+                key: songPage.song.key,
+                title: songPage.song.title,
+                author: songPage.song.artistText
+            };
+        return null;
+    }
     readonly property var destinations: [{
             glyph: Symbols.home,
             text: qsTr("首页"),
@@ -769,6 +790,20 @@ Item {
     AddToPlaylistDialog {
         id: addToPlaylistDialog
         library: myLibrary
+    }
+
+    function copyPageLink(): void {
+        const item = pageShare;
+        if (item)
+            App.share.copy(item.kind, item.key, item.title, item.author);
+    }
+
+    // 已复制链接.
+    Connections {
+        target: App.share
+        function onNotice(message: string) {
+            shell.notify(message);
+        }
     }
 
     // What App.player has to say (a song only plays as a preview).

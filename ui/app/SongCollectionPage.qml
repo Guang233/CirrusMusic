@@ -31,6 +31,11 @@ Item {
     property int origin: Playback.NoOrigin
     property string originId
     property string originName: title
+    // What 复制链接 in the top bar copies (pages/share.md §3): a Share.Kind and its key; -1
+    // for pages without a link of their own.
+    property int shareKind: -1
+    property string shareKey
+    property string shareAuthor // artists, creator; empty for the rest
     property string coverKey
     property string coverGlyph: Symbols.queue_music
     // Drawn instead of the cover art (fills the size it gets: 200, 140 or 32).

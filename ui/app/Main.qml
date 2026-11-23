@@ -189,6 +189,19 @@ AppWindow {
                 shell.notify(text);
         }
     }
+    // 复制链接 (pages/share.md §3): what plays while the player page is open, else the
+    // page's own item.
+    Shortcut {
+        sequence: "Ctrl+Shift+C"
+        onActivated: {
+            const current = App.player.current;
+            if (player.opened && current.key !== "")
+                App.share.copy(current.voice ? Share.Voice : Share.Song, current.key, current.title,
+                               current.artistText);
+            else
+                shell.copyPageLink();
+        }
+    }
     Shortcut {
         sequence: "Ctrl+Shift+F"
         enabled: App.player.current.key !== ""
