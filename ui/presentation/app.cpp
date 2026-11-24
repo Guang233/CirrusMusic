@@ -1,4 +1,6 @@
 #include "app.h"
+#include "app_link.h"
+#include "logging/log.h"
 
 #include "app_settings.h"
 #include "cache_status.h"
@@ -72,6 +74,17 @@ App* App::create(QQmlEngine*, QJSEngine*)
     Q_ASSERT_X(g_instance, "App::create", "call App::install() before loading QML");
     QJSEngine::setObjectOwnership(g_instance, QJSEngine::CppOwnership);
     return g_instance;
+}
+
+void App::openLink(const QString& url)
+{
+    const auto request = applink::parse(url);
+    log::info(lcUi, "link.open",
+              {{"read", request.has_value()},
+               log::fieldIf(request.has_value(), "target", request ? int(request->target) : -1),
+               log::fieldIf(request.has_value(), "play", request && request->play)});
+    if (request)
+        emit linkRequested(int(request->target), request->id, request->play);
 }
 
 void App::copyText(const QString& text)

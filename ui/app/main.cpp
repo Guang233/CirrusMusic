@@ -19,6 +19,7 @@
 #ifdef CIRRUS_UI_SMTC
 #include "smtc.h"
 #endif
+#include "app_link.h"
 #include "single_instance.h"
 #include "title_bar_mode.h"
 #include "update_check.h"
@@ -160,13 +161,21 @@ int main(int argc, char* argv[])
                                       QStringLiteral("info (default) or debug, for this run."),
                                       QStringLiteral("level"));
     parser.addOption(logLevel);
+    // An orpheus:// link: the browser opens the client with it (docs/ui/pages/open-links.md).
+    parser.addPositionalArgument(QStringLiteral("link"),
+                                 QStringLiteral("A NetEase web page's open-in-client link."),
+                                 QStringLiteral("[link]"));
     parser.process(app);
+    QString link;
+    for (const QString& argument : parser.positionalArguments())
+        if (cirrus::ui::applink::plausible(argument))
+            link = argument;
     if (parser.value(logLevel) == u"debug")
         cirrus::log::setVerbose(true);
 
     // A second launch shows the running app's window instead.
     cirrus::ui::SingleInstance instance;
-    if (!instance.claim())
+    if (!instance.claim(link))
         return 0;
     startLog();
     cirrus::log::info(lcApp, "app.platform",
@@ -215,6 +224,12 @@ int main(int argc, char* argv[])
     engine.addImageProvider(QStringLiteral("qr"), presentation->makeQrProvider());
     engine.setInitialProperties({{QStringLiteral("titleBar"), int(titleBar)}});
     engine.loadFromModule("CirrusMusic", "Main");
+    // Links: the one this launch came with, once the window is up, and those later launches
+    // pass on.
+    QObject::connect(&instance, &cirrus::ui::SingleInstance::linkRequested, presentation,
+                     &cirrus::ui::App::openLink);
+    if (!link.isEmpty())
+        QTimer::singleShot(0, presentation, [presentation, link] { presentation->openLink(link); });
 #ifdef CIRRUS_UI_SMTC
     // Bound to the main window; gone before it is (declared after the engine).
     std::unique_ptr<cirrus::ui::Smtc> smtc;

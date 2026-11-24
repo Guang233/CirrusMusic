@@ -68,6 +68,19 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
   public:
+    // What an opened link is (applink::Target, docs/ui/pages/open-links.md).
+    enum LinkTarget {
+        LinkSong,
+        LinkVoice,
+        LinkPlaylist,
+        LinkAlbum,
+        LinkArtist,
+        LinkPodcast,
+        LinkUser,
+        LinkUnsupported
+    };
+    Q_ENUM(LinkTarget)
+
     ~App() override;
 
     static void install(Sources sources);
@@ -78,6 +91,9 @@ class App : public QObject
 
     // Puts plain text on the system clipboard (copying a comment).
     Q_INVOKABLE static void copyText(const QString& text);
+    // An orpheus:// link the web asked the client to open (a launch argument): passed on
+    // as linkRequested when it can be read, else dropped (logged without the link).
+    void openLink(const QString& url);
 
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
     [[nodiscard]] CacheStatus* cache() const { return m_cache; }
@@ -104,6 +120,10 @@ class App : public QObject
     [[nodiscard]] QQuickAsyncImageProvider* makeCoverProvider();
     // `image://qr/<serial>` provider for the sign-in code; the engine takes ownership.
     [[nodiscard]] QQuickImageProvider* makeQrProvider();
+
+  signals:
+    // Shell.openLink: `key` digits, empty for LinkUnsupported; `play` for 去客户端播放.
+    void linkRequested(int target, const QString& key, bool play);
 
   private:
     explicit App(Sources sources);
