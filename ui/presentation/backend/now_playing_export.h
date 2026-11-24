@@ -49,6 +49,7 @@ class NowPlayingExport : public QObject
     struct Song {
         QString key, title, album;
         QStringList artists;
+        friend bool operator==(const Song&, const Song&) = default;
     };
     void attach();
     void stop();

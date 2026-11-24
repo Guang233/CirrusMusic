@@ -36,7 +36,8 @@ struct NowPlayingExport::Service {
     // Declared first, so the service goes before the publisher it reads.
     std::unique_ptr<application::PlaybackObservationPublisher> publisher;
     std::unique_ptr<infrastructure::ipc::LinuxObservationService> service;
-    std::optional<domain::ObservationBinding> attached;
+    // What was given for which load: details that come later replace it.
+    std::optional<std::pair<domain::ObservationBinding, Song>> attached;
 };
 namespace
 {
@@ -154,11 +155,12 @@ void NowPlayingExport::setEnabled(bool enabled)
 void NowPlayingExport::attach()
 {
 #ifdef CIRRUS_NOW_PLAYING_EXPORT
-    if (!m_service || !m_song)
+    // The song's details may come after it starts playing: nothing until they have.
+    if (!m_service || !m_song || m_song->title.isEmpty())
         return;
     const auto now = m_service->publisher->snapshot();
-    if (!now.song || now.song->value != m_song->key || now.metadata ||
-        m_service->attached == now.binding)
+    if (!now.song || now.song->value != m_song->key ||
+        m_service->attached == std::pair{now.binding, *m_song})
         return;
     domain::Song song;
     song.id = *now.song;
@@ -167,8 +169,8 @@ void NowPlayingExport::attach()
         song.artists.append({std::nullopt, name});
     if (!m_song->album.isEmpty())
         song.album = domain::AlbumReference{std::nullopt, m_song->album, {}};
-    // Once per load: a rejected one (too long, say) stays unknown.
-    m_service->attached = now.binding;
+    // Once per load and details: a rejected one (too long, say) stays unknown.
+    m_service->attached = std::pair{now.binding, *m_song};
     m_service->publisher->attachMetadata(now.binding, song);
 #endif
 }
