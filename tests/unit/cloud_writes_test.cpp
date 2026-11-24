@@ -300,6 +300,18 @@ class CloudWritesTest : public QObject
         QVERIFY(h.nos->requests.isEmpty());
     }
 
+    void alreadyInCloud()
+    {
+        Harness h({Plan{R"({"code":200,"needUpload":false,"songId":"77"})"}, Plan{allocation},
+                   Plan{info}, Plan{R"({"code":201})"}});
+        QSignalSpy done(&h.gateway, &CloudUploadGateway::completed);
+        QVERIFY(h.submit());
+        QTRY_COMPARE(done.size(), 1);
+        QCOMPARE(result(done).outcome, CloudUploadOutcome::Uploaded);
+        QVERIFY(result(done).alreadyThere);
+        QCOMPARE(result(done).song->value, "88");
+    }
+
     void failures()
     {
         {

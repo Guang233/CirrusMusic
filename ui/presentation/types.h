@@ -246,7 +246,8 @@ struct CloudUploadDone {
     enum Error { None, Unreadable, TooLarge, SignedOut, Network, Rejected, Unknown };
     Error error = None;
     QString cloudKey;
-    bool transferred = false; // the file was sent (else the service had it: instant upload)
+    bool transferred = false;  // the file was sent (else the service had it: instant upload)
+    bool alreadyThere = false; // the account's cloud had this file already
 };
 
 template <class T> struct ResultPage {

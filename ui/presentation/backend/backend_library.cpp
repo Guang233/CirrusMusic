@@ -2,6 +2,7 @@
 
 #include "backend_mapping.h"
 #include "collection_writes.h"
+#include "formatter.h"
 #include "music_requests.h"
 
 #include "application/backend/backend_facade.h"
@@ -166,6 +167,7 @@ BackendLibrary::BackendLibrary(runtime::BackendRuntime& runtime, QObject* parent
                 using domain::CloudUploadError;
                 CloudUploadDone done;
                 done.transferred = result.transferred;
+                done.alreadyThere = result.alreadyThere;
                 if (result.outcome == domain::CloudUploadOutcome::Uploaded && result.song) {
                     done.cloudKey = result.song->value;
                 } else if (result.outcome == domain::CloudUploadOutcome::Unknown) {
@@ -626,15 +628,21 @@ Request BackendLibrary::cloudSongs(PageRequest page, Reply<CloudPage> reply)
                 }
                 if (!matched || song.title.isEmpty())
                     song.title = cloud.title;
+                if (song.durationMs <= 0)
+                    song.durationMs = -1; // a file's track says 0: unknown
                 if (!matched) {
-                    // The file's own details (cloud.md §3).
+                    // The file's own details (cloud.md §3); its track's when the row has none.
+                    QString artist = cloud.artist.value_or(QString());
+                    if (artist.isEmpty())
+                        artist = Formatter::artists(song.artists);
                     song.artists = {ArtistRef{
                         {},
-                        cloud.artist && !cloud.artist->isEmpty()
-                            ? *cloud.artist
+                        !artist.isEmpty()
+                            ? artist
                             : QCoreApplication::translate("cirrus::ui::Cloud", "未知歌手")}};
                     song.albumKey.clear();
-                    song.albumTitle = cloud.album.value_or(QString());
+                    if (cloud.album && !cloud.album->isEmpty())
+                        song.albumTitle = *cloud.album;
                     song.tag = QCoreApplication::translate("cirrus::ui::Cloud", "未匹配");
                     KnownCloudSongs::remember(song);
                 }

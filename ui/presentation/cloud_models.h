@@ -156,6 +156,7 @@ class CloudUploads : public QAbstractListModel
         State state = Waiting;
         qint64 done = 0, total = 0;
         bool instant = false;
+        bool alreadyThere = false;
         CloudUploadDone::Error error = CloudUploadDone::None;
     };
     void next();

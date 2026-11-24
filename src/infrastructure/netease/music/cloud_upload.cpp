@@ -396,6 +396,18 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
         return;
     }
     const int code = *api.decoded.businessCode;
+    // Publishing a file the account's cloud has already: 201 (seen 2026-11-24; the app takes
+    // 201 among publish's expected codes). Nothing new, nothing wrong.
+    if (code == 201 && p->step == CloudUploadStep::Publishing) {
+        CloudUploadResult result;
+        result.outcome = CloudUploadOutcome::Uploaded;
+        result.step = CloudUploadStep::Publishing;
+        result.song = CloudSongId{p->song};
+        result.transferred = p->transferred;
+        result.alreadyThere = true;
+        finish(id, result);
+        return;
+    }
     if (code != 200) {
         fail(id, CloudUploadError::ProviderRejected, code);
         return;

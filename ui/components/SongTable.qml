@@ -857,7 +857,8 @@ Item {
                     IconButton {
                         x: table.likedX + (table.likedWidth - width) / 2
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: table.showLiked && row.loaded
+                        // A cloud song that is the file's own has no catalog song to like.
+                        visible: table.showLiked && row.loaded && !(table.cloud && row.tag !== "")
                         size: Md.XSmall
                         focusPolicy: Qt.NoFocus
                         checkable: true

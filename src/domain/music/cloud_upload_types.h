@@ -64,6 +64,7 @@ struct CloudUploadResult {
     std::optional<int> providerCode;
     std::optional<CloudSongId> song; // the new cloud song (Uploaded)
     bool transferred = false;        // the file's bytes went to NOS (else it was already there)
+    bool alreadyThere = false;       // the account's cloud had the file (publish said 201)
 };
 } // namespace cirrus::domain
 Q_DECLARE_METATYPE(cirrus::domain::CloudUploadProgress)

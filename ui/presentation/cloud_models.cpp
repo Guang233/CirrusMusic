@@ -250,7 +250,7 @@ QString CloudUploads::status(const Item& item) const
     case Finishing:
         return tr("处理中");
     case Done:
-        return item.instant ? tr("已秒传") : tr("已上传");
+        return item.alreadyThere ? tr("已在云盘里") : item.instant ? tr("已秒传") : tr("已上传");
     case Canceled:
         return tr("已取消");
     case Failed:
@@ -374,6 +374,7 @@ void CloudUploads::finished(const CloudUploadDone& done)
         Item& item = m_items[row];
         item.error = done.error;
         item.instant = done.error == CloudUploadDone::None && !done.transferred;
+        item.alreadyThere = done.alreadyThere;
         item.state = done.error == CloudUploadDone::None ? Done : Failed;
         if (item.state == Done) {
             ++m_doneInRun;
