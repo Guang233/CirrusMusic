@@ -66,6 +66,8 @@ qt_add_qml_module(cirrus_presentation
         podcast_page_model.cpp
         library_models.h
         library_models.cpp
+        cloud_models.h
+        cloud_models.cpp
         discover_models.h
         discover_models.cpp
         cache_status.h

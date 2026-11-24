@@ -43,6 +43,7 @@ class SongListModel : public QAbstractListModel
         PositionRole, // 1-based place in the list (an album's track number)
         SerialRole,   // a podcast voice's episode number, -1 when unknown or a song
         VoiceRole,    // a podcast voice (its album is the podcast), not a song
+        TagRole,      // a short label after the title, may be empty
     };
     Q_ENUM(Role)
 

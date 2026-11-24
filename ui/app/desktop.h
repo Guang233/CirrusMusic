@@ -44,7 +44,12 @@ class Desktop : public QObject
     // Checks the tray again (a panel can start after the app) and returns
     // trayAvailable. Call before hiding the window.
     Q_INVOKABLE bool checkTray();
+    // Quits, unless the app has something to ask first (cloud uploads left, docs/ui/pages/
+    // cloud.md §5): then quitConfirmationRequested, and quitNow() once the user agrees.
     Q_INVOKABLE void quit();
+    Q_INVOKABLE void quitNow();
+    // Whether quit() asks first; checked each time.
+    void setQuitConfirmation(std::function<bool()> needed);
     // Runs before the app quits, however that is asked (the tray, Ctrl+Q, closing the
     // window, the session ending): the windows hide, `shutdown` gets a callback to run
     // when it is done (the backend has stopped), and only then the app quits.
@@ -55,6 +60,7 @@ class Desktop : public QObject
     void quittingChanged();
     // The tray or another launch wants the window shown and raised.
     void showRequested();
+    void quitConfirmationRequested();
 
   protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -64,6 +70,7 @@ class Desktop : public QObject
     bool m_trayAvailable = false;
     bool m_quitting = false;
     std::function<void(std::function<void()>)> m_shutdown;
+    std::function<bool()> m_confirmQuit;
     // 0 running, 1 shutting down, 2 done (the next Quit goes through).
     int m_shutdownStage = 0;
 };

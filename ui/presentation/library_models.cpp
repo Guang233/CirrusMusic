@@ -121,6 +121,17 @@ Request LibraryOverviewModel::load()
         m_weekTop = outcome.value->constFirst().title;
         emit summaryChanged();
     });
+    m_cloudRead = source->cloudSongs({0, 1}, [this](Outcome<CloudPage> outcome) {
+        m_cloudRead.release();
+        if (!outcome.value)
+            return;
+        const CloudPage& page = *outcome.value;
+        const qint64 count = page.total >= 0 ? page.total : page.songs.size();
+        m_cloud = page.usedBytes > 0
+                      ? tr("%1 首 · 已用 %2").arg(count).arg(Formatter::bytes(page.usedBytes))
+                      : tr("%1 首").arg(count);
+        emit summaryChanged();
+    });
     auto settle = handle<QList<SongInfo>>([this](QList<SongInfo> songs) {
         m_lastPlayed = songs.isEmpty() ? QString() : songs.first().title;
         emit summaryChanged();
@@ -136,8 +147,10 @@ Request LibraryOverviewModel::load()
 void LibraryOverviewModel::clear()
 {
     m_ranking.cancel();
+    m_cloudRead.cancel();
     m_lastPlayed.clear();
     m_weekTop.clear();
+    m_cloud.clear();
     emit summaryChanged();
 }
 

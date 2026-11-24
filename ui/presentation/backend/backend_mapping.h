@@ -144,6 +144,36 @@ inline CollectionItem podcastOf(const domain::Podcast& podcast)
 
 // Podcast voices the backend sources have read, by key, with their tracks:
 // playVoices() is given keys only. Caller (UI) thread; bounded.
+// The cloud drive's unmatched songs the library read (docs/ui/pages/cloud.md §6): their keys
+// are the account's own, which the catalog may not know, so the queue and the player get
+// their details from here.
+class KnownCloudSongs
+{
+  public:
+    static void remember(const SongInfo& song)
+    {
+        auto& known = songs();
+        if (song.key.isEmpty())
+            return;
+        if (known.size() >= 8192 && !known.contains(song.key))
+            known.clear();
+        known.insert(song.key, song);
+    }
+    [[nodiscard]] static std::optional<SongInfo> find(const QString& key)
+    {
+        const auto& known = songs();
+        const auto it = known.constFind(key);
+        return it == known.cend() ? std::nullopt : std::optional(*it);
+    }
+
+  private:
+    static QHash<QString, SongInfo>& songs()
+    {
+        static QHash<QString, SongInfo> known;
+        return known;
+    }
+};
+
 class KnownVoices
 {
   public:

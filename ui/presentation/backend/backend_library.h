@@ -3,11 +3,16 @@
 #include "collection_writes.h"
 #include "sources.h"
 
+#include <QHash>
 #include <QObject>
 
 namespace cirrus::runtime
 {
 class BackendRuntime;
+}
+namespace cirrus::application
+{
+class BackendFacade;
 }
 
 namespace cirrus::ui
@@ -58,13 +63,26 @@ class BackendLibrary : public QObject, public LibrarySource
                            const QString& description, Reply<bool> reply) override;
     Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) override;
     [[nodiscard]] bool canSavePlaylists() const override { return true; }
+    Request cloudSongs(PageRequest page, Reply<CloudPage> reply) override;
+    Request deleteCloudSongs(const QStringList& cloudKeys, Reply<bool> reply) override;
+    Request matchCloudSong(const QString& cloudKey, const QString& songKey,
+                           Reply<bool> reply) override;
+    Request uploadToCloud(const QString& path,
+                          std::function<void(int step, qint64 done, qint64 total)> progress,
+                          Reply<CloudUploadDone> reply) override;
 
   private:
+    struct Upload {
+        std::function<void(int, qint64, qint64)> progress;
+        Reply<CloudUploadDone> reply;
+    };
     // Replies `value` once every step was acknowledged.
     Request write(QList<CollectionWrites::Step> steps, Reply<bool> reply, bool value = true);
 
     MusicRequests* m_requests;
     CollectionWrites* m_writes;
+    application::BackendFacade* m_facade;
+    QHash<quint64, Upload> m_uploads; // facade upload id
 };
 
 } // namespace cirrus::ui

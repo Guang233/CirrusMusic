@@ -1765,6 +1765,57 @@ class FakeLibrary : public QObject, public LibrarySource
                      [=, this]() { m_account->created.removeAll(playlistKey); });
     }
 
+    // A small cloud drive: a few sample songs, one not matched. Writes and uploads succeed.
+    Request cloudSongs(PageRequest page, Reply<CloudPage> reply) override
+    {
+        return read<CloudPage>(std::move(reply), [this, page]() {
+            CloudPage cloud;
+            const QStringList keys = recentKeys();
+            for (int i = page.offset; i < keys.size() && i < page.offset + page.limit; ++i) {
+                if (m_cloudDeleted.contains(keys[i]))
+                    continue;
+                SongInfo song = m_samples->songs[keys[i]];
+                const bool matched = i != 2;
+                if (!matched) {
+                    song.tag = QStringLiteral("未匹配");
+                    song.albumKey.clear();
+                }
+                cloud.songs << song;
+                cloud.entries << CloudEntry{QStringLiteral("cloud-") + keys[i], matched,
+                                            1763000000000LL - i * 86400000LL, 8 << 20};
+            }
+            cloud.total = cloud.songs.size();
+            cloud.usedBytes = cloud.total * (8 << 20);
+            cloud.maxBytes = 60LL << 30;
+            return cloud;
+        });
+    }
+    Request deleteCloudSongs(const QStringList& cloudKeys, Reply<bool> reply) override
+    {
+        return write(std::move(reply), {}, [=, this]() {
+            for (const auto& key : cloudKeys)
+                m_cloudDeleted.insert(QString(key).remove(QStringLiteral("cloud-")));
+        });
+    }
+    Request matchCloudSong(const QString&, const QString&, Reply<bool> reply) override
+    {
+        return write(std::move(reply), {}, []() {});
+    }
+    Request uploadToCloud(const QString&, std::function<void(int, qint64, qint64)> progress,
+                          Reply<CloudUploadDone> reply) override
+    {
+        if (progress)
+            progress(0, 0, 0);
+        return replyLater<CloudUploadDone>(this, m_controls, std::move(reply), [this]() {
+            CloudUploadDone done;
+            if (!m_controls->signedIn())
+                done.error = CloudUploadDone::SignedOut;
+            else
+                done.cloudKey = QStringLiteral("cloud-new");
+            return Outcome<CloudUploadDone>{done};
+        });
+    }
+
   private:
     // A read of the signed-in account's library.
     template <class T> Request read(Reply<T> reply, std::function<T()> produce)
@@ -1806,6 +1857,7 @@ class FakeLibrary : public QObject, public LibrarySource
     FakeControls* m_controls;
     std::shared_ptr<const Samples> m_samples;
     std::shared_ptr<FakeAccount> m_account;
+    QSet<QString> m_cloudDeleted;
 };
 
 // The account follows App.debug.account. QR sign-in plays itself out: scanned after

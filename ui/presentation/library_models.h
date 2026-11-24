@@ -66,6 +66,9 @@ class LibraryOverviewModel : public LoadableModel
     // The last song played, and this week's most played; empty when unknown.
     Q_PROPERTY(QString lastPlayedTitle READ lastPlayedTitle NOTIFY summaryChanged)
     Q_PROPERTY(QString weekTopTitle READ weekTopTitle NOTIFY summaryChanged)
+    // The cloud drive card (docs/ui/pages/cloud.md §2): "37 首 · 已用 1.2 GB"; empty when
+    // unknown.
+    Q_PROPERTY(QString cloudText READ cloudText NOTIFY summaryChanged)
     Q_PROPERTY(cirrus::ui::LibraryCollectionsModel* playlists READ playlists CONSTANT)
     Q_PROPERTY(cirrus::ui::LibraryCollectionsModel* albums READ albums CONSTANT)
     Q_PROPERTY(cirrus::ui::LibraryCollectionsModel* artists READ artists CONSTANT)
@@ -77,6 +80,7 @@ class LibraryOverviewModel : public LoadableModel
 
     [[nodiscard]] QString lastPlayedTitle() const { return m_lastPlayed; }
     [[nodiscard]] QString weekTopTitle() const { return m_weekTop; }
+    [[nodiscard]] QString cloudText() const { return m_cloud; }
     [[nodiscard]] LibraryCollectionsModel* playlists() const { return m_playlists; }
     [[nodiscard]] LibraryCollectionsModel* albums() const { return m_albums; }
     [[nodiscard]] LibraryCollectionsModel* artists() const { return m_artists; }
@@ -102,11 +106,13 @@ class LibraryOverviewModel : public LoadableModel
   private:
     QString m_lastPlayed;
     QString m_weekTop;
+    QString m_cloud;
     LibraryCollectionsModel* m_playlists;
     LibraryCollectionsModel* m_albums;
     LibraryCollectionsModel* m_artists;
     LibraryCollectionsModel* m_podcasts;
     Request m_ranking;
+    Request m_cloudRead;
     Request m_create;
 };
 

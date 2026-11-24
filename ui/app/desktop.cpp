@@ -67,7 +67,21 @@ bool Desktop::checkTray()
     return available;
 }
 
-void Desktop::quit() { QCoreApplication::quit(); }
+void Desktop::quit()
+{
+    if (m_confirmQuit && m_confirmQuit()) {
+        emit quitConfirmationRequested();
+        return;
+    }
+    QCoreApplication::quit();
+}
+
+void Desktop::quitNow() { QCoreApplication::quit(); }
+
+void Desktop::setQuitConfirmation(std::function<bool()> needed)
+{
+    m_confirmQuit = std::move(needed);
+}
 
 void Desktop::setShutdown(std::function<void(std::function<void()>)> shutdown)
 {

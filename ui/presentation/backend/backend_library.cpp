@@ -7,10 +7,13 @@
 #include "application/backend/backend_facade.h"
 #include "domain/music/account_library_types.h"
 #include "domain/music/cloud_history_types.h"
+#include "domain/music/cloud_upload_types.h"
 #include "domain/music/library_types.h"
 #include "domain/music/recent_entity_types.h"
 #include "infrastructure/runtime/backend_runtime.h"
 
+#include <QCoreApplication>
+#include <QPointer>
 #include <QSet>
 
 namespace cirrus::ui
@@ -147,8 +150,54 @@ void readPlaylists(QPointer<MusicRequests> requests, std::shared_ptr<PlaylistsRe
 
 BackendLibrary::BackendLibrary(runtime::BackendRuntime& runtime, QObject* parent)
     : QObject(parent), m_requests(new MusicRequests(runtime.facade(), this)),
-      m_writes(new CollectionWrites(runtime.facade(), this))
+      m_writes(new CollectionWrites(runtime.facade(), this)), m_facade(&runtime.facade())
 {
+    connect(m_facade, &BackendFacade::cloudUploadProgressed, this,
+            [this](quint64 id, domain::CloudUploadProgress progress) {
+                const auto it = m_uploads.constFind(id);
+                if (it != m_uploads.cend() && it->progress)
+                    it->progress(int(progress.step), progress.done, progress.total);
+            });
+    connect(m_facade, &BackendFacade::cloudUploadCompleted, this,
+            [this](quint64 id, domain::SessionToken, domain::CloudUploadResult result) {
+                if (!m_uploads.contains(id))
+                    return; // canceled
+                const auto upload = m_uploads.take(id);
+                using domain::CloudUploadError;
+                CloudUploadDone done;
+                done.transferred = result.transferred;
+                if (result.outcome == domain::CloudUploadOutcome::Uploaded && result.song) {
+                    done.cloudKey = result.song->value;
+                } else if (result.outcome == domain::CloudUploadOutcome::Unknown) {
+                    done.error = CloudUploadDone::Unknown;
+                } else {
+                    switch (result.error) {
+                    case CloudUploadError::InvalidFile:
+                        done.error = CloudUploadDone::Unreadable;
+                        break;
+                    case CloudUploadError::TooLarge:
+                        done.error = CloudUploadDone::TooLarge;
+                        break;
+                    case CloudUploadError::AuthenticationRequired:
+                    case CloudUploadError::StaleContext:
+                        done.error = CloudUploadDone::SignedOut;
+                        break;
+                    case CloudUploadError::Network:
+                    case CloudUploadError::Timeout:
+                    case CloudUploadError::RateLimited:
+                    case CloudUploadError::Busy:
+                        done.error = CloudUploadDone::Network;
+                        break;
+                    case CloudUploadError::ProviderRejected:
+                    case CloudUploadError::InvalidResponse:
+                        done.error = CloudUploadDone::Rejected;
+                        break;
+                    default:
+                        done.error = CloudUploadDone::Unknown;
+                    }
+                }
+                upload.reply({done, false, std::nullopt});
+            });
 }
 
 BackendLibrary::~BackendLibrary() = default;
@@ -550,6 +599,91 @@ Request BackendLibrary::deletePlaylist(const QString& playlistKey, Reply<bool> r
     const domain::PlaylistDelete change{domain::PlaylistId{playlistKey}};
     return write({[change](BackendFacade&) { return domain::CollectionChange(change); }},
                  std::move(reply));
+}
+
+Request BackendLibrary::cloudSongs(PageRequest page, Reply<CloudPage> reply)
+{
+    const domain::CatalogPage range{std::clamp(page.limit, 1, 100),
+                                    std::clamp(page.offset, 0, 100000)};
+    return readWithCovers<domain::CloudSongsPage>(
+        m_requests,
+        [range](BackendFacade& facade) {
+            return signedIn(facade) ? facade.cloudSongs(range) : MusicRequests::NeedsSignIn;
+        },
+        std::move(reply),
+        [](const domain::CloudSongsPage& found) {
+            CloudPage page;
+            page.total = found.total.value_or(-1);
+            page.usedBytes = found.providerUsedSpace.value_or(-1);
+            page.maxBytes = found.providerMaximumSpace.value_or(-1);
+            page.hasMore = found.hasMore.value_or(false);
+            for (const auto& cloud : found.songs) {
+                SongInfo song = cloud.track ? songOf(*cloud.track) : SongInfo{};
+                const bool matched = cloud.matched.value_or(true);
+                if (song.key.isEmpty()) {
+                    song.key = cloud.id.value; // nothing to play it by
+                    song.unavailable = true;
+                }
+                if (!matched || song.title.isEmpty())
+                    song.title = cloud.title;
+                if (!matched) {
+                    // The file's own details (cloud.md §3).
+                    song.artists = {ArtistRef{
+                        {},
+                        cloud.artist && !cloud.artist->isEmpty()
+                            ? *cloud.artist
+                            : QCoreApplication::translate("cirrus::ui::Cloud", "未知歌手")}};
+                    song.albumKey.clear();
+                    song.albumTitle = cloud.album.value_or(QString());
+                    song.tag = QCoreApplication::translate("cirrus::ui::Cloud", "未匹配");
+                    KnownCloudSongs::remember(song);
+                }
+                page.songs.append(song);
+                page.entries.append({cloud.id.value, matched, cloud.providerAddedTime.value_or(0),
+                                     cloud.providerFileSize.value_or(-1)});
+            }
+            return page;
+        },
+        [](CloudPage& page) { return &page.songs; });
+}
+
+Request BackendLibrary::deleteCloudSongs(const QStringList& cloudKeys, Reply<bool> reply)
+{
+    domain::CloudSongDelete change;
+    for (const auto& key : cloudKeys)
+        change.songs.append({key});
+    return write({[change](BackendFacade&) { return domain::CollectionChange(change); }},
+                 std::move(reply));
+}
+
+Request BackendLibrary::matchCloudSong(const QString& cloudKey, const QString& songKey,
+                                       Reply<bool> reply)
+{
+    return write(
+        {[cloudKey, songKey](BackendFacade& facade) {
+            return domain::CollectionChange(domain::CloudSongMatch{
+                facade.snapshot().accountId,
+                {cloudKey},
+                songKey.isEmpty() ? std::nullopt : std::optional(domain::SongId{songKey})});
+        }},
+        std::move(reply));
+}
+
+Request BackendLibrary::uploadToCloud(const QString& path,
+                                      std::function<void(int, qint64, qint64)> progress,
+                                      Reply<CloudUploadDone> reply)
+{
+    const quint64 id = m_facade->uploadToCloud({path});
+    if (!id) {
+        CloudUploadDone done;
+        done.error = signedIn(*m_facade) ? CloudUploadDone::Network : CloudUploadDone::SignedOut;
+        return replyLater(this, std::move(reply), Outcome<CloudUploadDone>{done});
+    }
+    m_uploads.insert(id, {std::move(progress), std::move(reply)});
+    return Request([guard = QPointer<BackendLibrary>(this), id] {
+        if (guard && guard->m_uploads.remove(id))
+            guard->m_facade->cancelCloudUpload(id);
+    });
 }
 
 } // namespace cirrus::ui

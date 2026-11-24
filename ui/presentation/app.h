@@ -25,6 +25,7 @@ class UpdateCheck;
 class Player;
 class Session;
 class Share;
+class CloudUploads;
 class Together;
 
 // Root of the presentation layer for QML (`import Cirrus.Presentation`, then `App.…`).
@@ -37,6 +38,7 @@ class App : public QObject
     Q_OBJECT
     Q_MOC_INCLUDE("app_settings.h")
     Q_MOC_INCLUDE("cache_status.h")
+    Q_MOC_INCLUDE("cloud_models.h")
     Q_MOC_INCLUDE("diagnostics.h")
     Q_MOC_INCLUDE("fake_controls.h")
     Q_MOC_INCLUDE("formatter.h")
@@ -64,6 +66,8 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::UpdateCheck* updates READ updates CONSTANT)
     Q_PROPERTY(cirrus::ui::Together* together READ together CONSTANT)
     Q_PROPERTY(cirrus::ui::Share* share READ share CONSTANT)
+    // Uploads to the cloud drive; they go on when the page closes (docs/ui/pages/cloud.md §5).
+    Q_PROPERTY(cirrus::ui::CloudUploads* cloudUploads READ cloudUploads CONSTANT)
     // Fake source knobs; null with real sources.
     Q_PROPERTY(cirrus::ui::FakeControls* debug READ debug CONSTANT)
 
@@ -106,6 +110,7 @@ class App : public QObject
     [[nodiscard]] UpdateCheck* updates() const { return m_updates; }
     [[nodiscard]] Together* together() const { return m_together; }
     [[nodiscard]] Share* share() const { return m_share; }
+    [[nodiscard]] CloudUploads* cloudUploads() const { return m_cloudUploads; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
     [[nodiscard]] LocalStats* stats() const { return m_stats; }
@@ -146,6 +151,7 @@ class App : public QObject
     LocalStats* m_stats;
     Together* m_together;
     Share* m_share;
+    CloudUploads* m_cloudUploads;
 };
 
 } // namespace cirrus::ui

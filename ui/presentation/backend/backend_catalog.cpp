@@ -14,6 +14,7 @@
 #include <QDateTime>
 #include <QHash>
 #include <QPointer>
+#include <QSet>
 #include <QTimeZone>
 #include <QTimer>
 
@@ -349,11 +350,19 @@ Request BackendCatalog::songDetails(const QStringList& keys, Reply<QList<SongInf
     return read<domain::SongDetails>(
         m_requests, [ids](BackendFacade& facade) { return facade.songDetails(ids); },
         std::move(reply),
-        [](const domain::SongDetails& details) {
+        [ids](const domain::SongDetails& details) {
             QList<SongInfo> songs;
             songs.reserve(details.songs.size());
-            for (const auto& song : details.songs)
+            QSet<QString> found;
+            for (const auto& song : details.songs) {
                 songs.append(songOf(song)); // missing ones are left out (the interface)
+                found.insert(song.id.value);
+            }
+            // A cloud song's own key the catalog doesn't know (cloud.md §6).
+            for (const auto& id : ids)
+                if (!found.contains(id.value))
+                    if (const auto known = KnownCloudSongs::find(id.value))
+                        songs.append(*known);
             return songs;
         });
 }

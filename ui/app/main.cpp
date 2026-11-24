@@ -4,6 +4,7 @@
 #include "backend_host.h"
 #include "backend_sources.h"
 #include "cirrus_commit.h"
+#include "cloud_models.h"
 #include "desktop.h"
 #include "diagnostics.h"
 #include "gpu_preference.h"
@@ -200,6 +201,7 @@ int main(int argc, char* argv[])
     cirrus::ui::Desktop desktop(&instance);
     desktop.setShutdown(
         [&backend](std::function<void()> done) { backend.shutdown(std::move(done)); });
+    desktop.setQuitConfirmation([presentation] { return presentation->cloudUploads()->active(); });
     backend.start();
 #ifdef CIRRUS_UI_MPRIS
     // Media keys and the desktop's media controls (docs/ui/pages/shell.md §7).

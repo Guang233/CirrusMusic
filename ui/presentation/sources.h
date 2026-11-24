@@ -162,6 +162,21 @@ class LibrarySource
     virtual Request updatePlaylist(const QString& playlistKey, const QString& title,
                                    const QString& description, Reply<bool> reply) = 0;
     virtual Request deletePlaylist(const QString& playlistKey, Reply<bool> reply) = 0;
+
+    // The cloud drive (docs/ui/pages/cloud.md): its songs a page at a time, newest first.
+    virtual Request cloudSongs(PageRequest page, Reply<CloudPage> reply) = 0;
+    // Deletes songs (their files) from the cloud; replies true once done.
+    virtual Request deleteCloudSongs(const QStringList& cloudKeys, Reply<bool> reply) = 0;
+    // Links a cloud song to the catalog song `songKey`, or with an empty key back to the
+    // file's own details; replies true once done.
+    virtual Request matchCloudSong(const QString& cloudKey, const QString& songKey,
+                                   Reply<bool> reply) = 0;
+    // Uploads a local audio file; `progress` gets the step (Playback-independent ints:
+    // CloudUploads.Step) and the bytes sent. The reply always has a value. Canceling the
+    // request stops it.
+    virtual Request uploadToCloud(const QString& path,
+                                  std::function<void(int step, qint64 done, qint64 total)> progress,
+                                  Reply<CloudUploadDone> reply) = 0;
     // Whether setPlaylistSubscribed() is offered.
     [[nodiscard]] virtual bool canSavePlaylists() const = 0;
 };

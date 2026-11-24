@@ -42,6 +42,8 @@ struct SongInfo {
     // A voice's audio: the song the service plays for it (its key); empty when unknown,
     // and for songs.
     QString trackKey;
+    // A short label after the title (a cloud song that isn't matched: 未匹配); may be empty.
+    QString tag;
 };
 
 struct PlaylistInfo {
@@ -221,6 +223,30 @@ struct ChartInfo {
 struct PageRequest {
     int offset = 0;
     int limit = 30;
+};
+
+// A song in the account's cloud drive (docs/ui/pages/cloud.md): `songs[i]` plays it (its
+// key is the song the service plays, the file's own when not matched), `entries[i]` is the
+// cloud's own record of it.
+struct CloudEntry {
+    QString cloudKey;      // what deleting and matching take
+    bool matched = true;   // linked to a catalog song
+    qint64 addedAtMs = 0;  // 0 when unknown
+    qint64 fileBytes = -1; // -1 when unknown
+};
+struct CloudPage {
+    QList<SongInfo> songs;
+    QList<CloudEntry> entries;
+    qint64 total = -1; // songs in the cloud, -1 when unknown
+    qint64 usedBytes = -1, maxBytes = -1;
+    bool hasMore = false;
+};
+// How an upload ended: `cloudKey` on success; `error` (cloud.md §5) otherwise.
+struct CloudUploadDone {
+    enum Error { None, Unreadable, TooLarge, SignedOut, Network, Rejected, Unknown };
+    Error error = None;
+    QString cloudKey;
+    bool transferred = false; // the file was sent (else the service had it: instant upload)
 };
 
 template <class T> struct ResultPage {
