@@ -1069,7 +1069,7 @@ Item {
         MenuItem {
             visible: table.cloud
             height: visible ? implicitHeight : 0
-            glyph: Symbols.delete
+            glyph: Symbols.delete_
             text: songMenu.songCount > 1 ? qsTr("从云盘删除选中的 %1 首").arg(songMenu.songCount)
                                          : qsTr("从云盘删除")
             trailingText: "Delete"
