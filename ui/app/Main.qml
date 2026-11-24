@@ -63,6 +63,11 @@ AppWindow {
         property: "variant"
         value: App.settings.variant
     }
+    Binding {
+        target: Wheel
+        property: "speed"
+        value: App.settings.wheelSpeed
+    }
     // The playing song's cover: the "follow the cover" seed and the player's colors.
     Binding {
         target: Theme

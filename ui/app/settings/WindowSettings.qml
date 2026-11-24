@@ -46,6 +46,16 @@ SettingsGroup {
         value: App.settings.closeAction
         onChosen: value => App.settings.closeAction = value
     }
+    SliderSetting {
+        text: qsTr("滚轮滚动速度")
+        supportingText: qsTr("鼠标滚轮每一格滚动的距离")
+        from: 0.5
+        to: 3
+        stepSize: 0.1
+        format: value => Math.round(value * 100) + "%"
+        value: App.settings.wheelSpeed
+        onMoved: value => App.settings.wheelSpeed = value
+    }
     SwitchSetting {
         visible: Desktop.switchableGraphics
         text: qsTr("使用独立显卡")
