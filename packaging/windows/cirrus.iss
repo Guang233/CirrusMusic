@@ -45,8 +45,24 @@ Name: "zh"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 #endif
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+#if FileExists(CompilerPath + "Languages\ChineseSimplified.isl")
+zh.OpenLinks=打开网易云音乐网页里的“在客户端打开”链接（代替官方客户端）
+#endif
+en.OpenLinks=Open the NetEase Cloud Music web's "open in client" links (instead of the official client)
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; orpheus:// links (docs/ui/pages/open-links.md): optional, the official client takes them too.
+Name: "orpheuslinks"; Description: "{cm:OpenLinks}"; Flags: unchecked
+
+[Registry]
+; HKA: the user's classes for a per-user install, the machine's for all users. Removed with
+; Cirrus, which brings back a registration the official client made in the other root.
+Root: HKA; Subkey: "Software\Classes\orpheus"; ValueType: string; ValueName: ""; ValueData: "URL:orpheus"; Flags: uninsdeletekey; Tasks: orpheuslinks
+Root: HKA; Subkey: "Software\Classes\orpheus"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Tasks: orpheuslinks
+Root: HKA; Subkey: "Software\Classes\orpheus\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\Cirrus.exe"",0"; Tasks: orpheuslinks
+Root: HKA; Subkey: "Software\Classes\orpheus\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Cirrus.exe"" ""%1"""; Tasks: orpheuslinks
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
