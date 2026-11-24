@@ -226,6 +226,35 @@ class AccountLibraryTest : public QObject
         QVERIFY(std::holds_alternative<SubscribedPodcastsPage>(pod));
         QCOMPARE(std::get<SubscribedPodcastsPage>(pod).podcasts.size(), 2);
     }
+    void cloudTracks()
+    {
+        // simpleSong reads as the song that plays; matched from the album (or matchType).
+        const auto rows =
+            QJsonDocument::fromJson(
+                R"json([)json"
+                R"json({"songId":7,"songName":"晴天","simpleSong":{"id":186016,"name":"晴天",)json"
+                R"json("ar":[{"id":6452,"name":"周杰伦"}],"al":{"id":18915,"name":"叶惠美","picUrl":"https://p1.music.126.net/x.jpg"},"dt":269000}},)json"
+                R"json({"songId":8,"songName":"demo","simpleSong":{"id":8,"name":"demo",)json"
+                R"json("ar":[{"id":0,"name":"未知"}],"al":{"id":0,"name":""},"dt":182000}},)json"
+                R"json({"songId":9,"songName":"other","matchType":"unmatched","simpleSong":{"id":9,"name":"other",)json"
+                R"json("ar":[],"al":{"id":5,"name":"x"}}},)json"
+                R"json({"songId":10,"songName":"odd","simpleSong":{"id":10}}])json")
+                .array();
+        const auto r = mapMusicResponse(query(1, "1", {30, 0}), {{"code", 200}, {"data", rows}});
+        QVERIFY(std::holds_alternative<CloudSongsPage>(r));
+        const auto songs = std::get<CloudSongsPage>(r).songs;
+        QCOMPARE(songs.size(), 4);
+        QVERIFY(songs[0].track);
+        QCOMPARE(songs[0].track->id.value, "186016");
+        QCOMPARE(songs[0].track->durationMs, std::optional<qint64>(269000));
+        QCOMPARE(songs[0].matched, std::optional<bool>(true));
+        QVERIFY(songs[1].track);
+        QCOMPARE(songs[1].track->id.value, "8");
+        QCOMPARE(songs[1].matched, std::optional<bool>(false));
+        QCOMPARE(songs[2].matched, std::optional<bool>(false)); // matchType wins
+        QVERIFY(songs[3].track); // id only: still plays; the cloud row names it
+        QCOMPARE(songs[3].matched, std::optional<bool>(false));
+    }
     void malformed_data()
     {
         QTest::addColumn<int>("kind");

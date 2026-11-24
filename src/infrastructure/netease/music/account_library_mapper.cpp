@@ -72,7 +72,15 @@ std::optional<CloudSong> cloudSong(const QJsonObject& o)
                 return std::nullopt;
             song.catalogReference = SongId{id};
         }
+        // Lenient: a row whose simpleSong does not read as a song still lists.
+        song.track = songFrom(nested.toObject());
     }
+    // The app's list says so (matchType); otherwise a file-only song has no catalog album.
+    const auto matchType = o.value(QStringLiteral("matchType"));
+    if (matchType.isString())
+        song.matched = matchType.toString() == QStringLiteral("matched");
+    else if (song.track)
+        song.matched = song.track->album && song.track->album->id.has_value();
     // Ignore private file identifiers, URLs, profiles and rights. No inferred ID
     // binding/entitlement.
     return song;

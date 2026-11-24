@@ -47,6 +47,13 @@ struct CloudSong {
     std::optional<QString> artist, album, fileName; // display text; fileName is never a local path
     std::optional<qint64> providerFileSize, providerBitrate, providerAddedTime;
     std::optional<SongId> catalogReference; // explicit positive simpleSong.id; 0/missing = unknown
+    // simpleSong as a song: what plays it (the official app plays cloud songs by simpleSong.id
+    // through the ordinary stream, docs/api/cloud-drive.md) and shows it. Missing when the row
+    // has none or it does not read as one.
+    std::optional<Song> track;
+    // Linked to a catalog song (matched) or shown with the file's own details; unknown when
+    // the row does not say.
+    std::optional<bool> matched;
 };
 struct CloudSongsPage {
     CloudSongsQuery query;
