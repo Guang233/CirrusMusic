@@ -52,6 +52,8 @@ history
 download
 download_done
 cloud
+cloud_upload
+link_off
 folder
 
 # Actions

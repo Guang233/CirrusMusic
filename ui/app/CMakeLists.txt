@@ -40,6 +40,9 @@ qt_add_qml_module(appCirrusMusic
         GlyphTile.qml
         RecentPage.qml
         RankingPage.qml
+        CloudPage.qml
+        CloudUploadPanel.qml
+        CloudMatchDialog.qml
         StatsPage.qml
         StatsSongsPage.qml
         SongPage.qml

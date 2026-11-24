@@ -97,6 +97,8 @@ Item {
     // Passed to the table.
     property bool sortable: true
     property bool removable: false
+    // The cloud drive's songs (SongTable.cloud): delete, match, unmatch.
+    property bool cloud: false
     property bool showCover: true
     property bool albumColumn: true
     property bool reasonColumn: false
@@ -160,6 +162,9 @@ Item {
                                                           < compactBar.y + compactBar.height))
 
     signal removeRequested(list<string> keys)
+    signal cloudDeleteRequested(list<string> keys)
+    signal matchRequested(string key)
+    signal unmatchRequested(string key)
 
     function find(): void {
         const field = compactProgress > 0.5 ? compactFind : headerFind;
@@ -492,6 +497,7 @@ Item {
         footerContent: page.footerContent
         sortable: page.sortable
         removable: page.removable
+        cloud: page.cloud
         showCover: page.showCover
         albumColumn: page.albumColumn
         reasonColumn: page.reasonColumn
@@ -503,6 +509,9 @@ Item {
         ranked: page.ranked
         onPodcastRequested: key => page.shell.openPodcast(key)
         onRemoveRequested: keys => page.removeRequested(keys)
+        onCloudDeleteRequested: keys => page.cloudDeleteRequested(keys)
+        onMatchRequested: key => page.matchRequested(key)
+        onUnmatchRequested: key => page.unmatchRequested(key)
         onAddToPlaylistRequested: keys => page.shell.addToPlaylist(keys)
         onSignInRequested: page.shell.openLogin()
         onAlbumRequested: key => page.shell.openAlbum(key)

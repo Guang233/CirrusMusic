@@ -295,7 +295,7 @@ Item {
 
                 ListCard {
                     id: likedCard
-                    width: page.wide ? (parent.width - 48) * 0.34 : parent.width
+                    width: page.wide ? (parent.width - 64) * 0.28 : parent.width
                     hero: true
                     enabled: App.library.likedPlaylistKey !== ""
                     glyph: Symbols.favorite
@@ -313,7 +313,7 @@ Item {
                     }
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
+                    width: page.wide ? (parent.width - 64) * 0.18 : parent.width
                     glyph: Symbols.history
                     text: qsTr("最近播放")
                     subtitle: overview.lastPlayedTitle !== ""
@@ -321,7 +321,7 @@ Item {
                     onClicked: page.shell.openRecent()
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
+                    width: page.wide ? (parent.width - 64) * 0.18 : parent.width
                     glyph: Symbols.leaderboard
                     tone: Md.Tertiary
                     text: qsTr("听歌排行")
@@ -331,7 +331,7 @@ Item {
                     onClicked: page.shell.openRanking()
                 }
                 ListCard {
-                    width: page.wide ? (parent.width - 48) * 0.22 : parent.width
+                    width: page.wide ? (parent.width - 64) * 0.18 : parent.width
                     glyph: Symbols.bar_chart
                     tone: Md.Primary
                     text: qsTr("听歌统计")
@@ -343,6 +343,15 @@ Item {
                         id: weekStats
                         songLimit: 5
                     }
+                }
+                // The cloud drive (docs/ui/pages/cloud.md §2).
+                ListCard {
+                    width: page.wide ? (parent.width - 64) * 0.18 : parent.width
+                    glyph: Symbols.cloud
+                    tone: Md.Secondary
+                    text: qsTr("云盘")
+                    subtitle: overview.cloudText
+                    onClicked: page.shell.openCloud()
                 }
             }
 

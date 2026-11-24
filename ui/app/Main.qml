@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Cirrus.Theme
+import Cirrus.Controls
 import Cirrus.Window
 import Cirrus.Presentation
 import Cirrus.Player
@@ -249,6 +250,19 @@ AppWindow {
         function onShowRequested() {
             window.showFromTray();
         }
+        // Cloud uploads left (docs/ui/pages/cloud.md §5).
+        function onQuitConfirmationRequested() {
+            window.showFromTray();
+            quitDialog.open();
+        }
+    }
+    Dialog {
+        id: quitDialog
+        title: qsTr("退出 Cirrus？")
+        supportingText: qsTr("还有 %1 首没上传完，退出会中断。").arg(App.cloudUploads.remaining)
+        acceptText: qsTr("退出")
+        rejectText: qsTr("取消")
+        onAccepted: Desktop.quitNow()
     }
 
     // A newer release found on its own (docs/tasks/update-check.md §4).

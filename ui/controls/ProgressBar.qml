@@ -22,9 +22,12 @@ T.ProgressBar {
     property real wavelength: 32
     property real waveSpeed: wavelength
     readonly property bool waveDrawn: wavy && !indeterminate
-    readonly property color activeColor: enabled ? ColorScope.scheme.primary
-                                                 : Qt.alpha(ColorScope.scheme.onSurface,
-                                                            Theme.state.disabledContent)
+    // A value to worry about (a nearly full disk): the indicator in the error color.
+    property bool alert: false
+    readonly property color activeColor: !enabled ? Qt.alpha(ColorScope.scheme.onSurface,
+                                                             Theme.state.disabledContent)
+                                         : alert ? ColorScope.scheme.error
+                                                 : ColorScope.scheme.primary
     readonly property color trackColor: enabled ? ColorScope.scheme.secondaryContainer
                                                 : Qt.alpha(ColorScope.scheme.onSurface,
                                                            Theme.state.disabledContainer)

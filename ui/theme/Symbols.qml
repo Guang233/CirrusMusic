@@ -51,6 +51,8 @@ QtObject {
     readonly property string download: "\uf090"
     readonly property string download_done: "\uf091"
     readonly property string cloud: "\uf15c"
+    readonly property string cloud_upload: "\ue2c3"
+    readonly property string link_off: "\ue16f"
     readonly property string folder: "\ue2c7"
     readonly property string group: "\uea21"
     readonly property string group_add: "\ue7f0"
@@ -185,6 +187,8 @@ QtObject {
         "download",
         "download_done",
         "cloud",
+        "cloud_upload",
+        "link_off",
         "folder",
         "group",
         "group_add",

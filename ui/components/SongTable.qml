@@ -51,6 +51,9 @@ Item {
     property bool numberByPosition: false
     // The page's own playlist: songs can be removed.
     property bool removable: false
+    // The cloud drive (docs/ui/pages/cloud.md §4): songs can be deleted, matched (纠错) and
+    // unmatched. A song with a tag (未匹配) is the file's own: no catalog actions.
+    property bool cloud: false
     // Podcast voices instead of songs; pages also turn off the liked and album columns.
     property bool voices: false
     // Numbers are ranks: the first three in primary (the listening ranking).
@@ -121,6 +124,9 @@ Item {
     signal signInRequested
     signal addToPlaylistRequested(list<string> keys)
     signal removeRequested(list<string> keys)
+    signal cloudDeleteRequested(list<string> keys)
+    signal matchRequested(string key)
+    signal unmatchRequested(string key)
 
 
 
@@ -454,6 +460,8 @@ Item {
             case Qt.Key_Delete:
                 if (table.removable && table.currentRow >= 0)
                     table.removeRequested(table.actionKeys(table.currentRow));
+                else if (table.cloud && table.currentRow >= 0)
+                    table.cloudDeleteRequested(table.actionKeys(table.currentRow));
                 else
                     event.accepted = false;
                 break;
@@ -537,6 +545,7 @@ Item {
             required property int position
             required property int serial
             required property string reason
+            required property string tag
 
             readonly property bool selected: table.selectedKeys[key] === true
             readonly property bool hovered: hover.hovered
@@ -714,8 +723,14 @@ Item {
                         visible: row.loaded
                         spacing: 2
 
-                        Text {
+                        Item {
                             width: parent.width
+                            height: titleText.implicitHeight
+
+                        Text {
+                            id: titleText
+                            width: Math.min(implicitWidth,
+                                            parent.width - (tagChip.visible ? tagChip.width + 8 : 0))
                             elide: Text.ElideRight
                             textFormat: Text.StyledText
                             text: {
@@ -729,6 +744,25 @@ Item {
                             }
                             color: row.strongColor
                             font: Theme.type.bodyLarge.font
+                        }
+                        // A short label after the title (未匹配).
+                        Rectangle {
+                            id: tagChip
+                            x: titleText.width + 8
+                            anchors.verticalCenter: titleText.verticalCenter
+                            visible: row.tag !== ""
+                            width: tagText.implicitWidth + 12
+                            height: 20
+                            radius: height / 2
+                            color: ColorScope.scheme.secondaryContainer
+                            Text {
+                                id: tagText
+                                anchors.centerIn: parent
+                                text: row.tag
+                                color: ColorScope.scheme.onSecondaryContainer
+                                font: Theme.type.labelSmall.font
+                            }
+                        }
                         }
                         // A voice's podcast opens its page.
                         LinkText {
@@ -901,6 +935,8 @@ Item {
         property string albumKey
         property var artists: []
         property bool liked: false
+        // A cloud song that is the file's own (not matched): no catalog actions.
+        property bool own: false
         // The songs the actions are for (the selection when the row is in it).
         property list<string> keys
         readonly property int songCount: keys.length
@@ -913,6 +949,7 @@ Item {
             albumKey = table.songs.data(index, SongListModel.AlbumKeyRole) ?? "";
             artists = table.songs.data(index, SongListModel.ArtistsRole) ?? [];
             liked = table.songs.data(index, SongListModel.LikedRole) ?? false;
+            own = table.cloud && (table.songs.data(index, SongListModel.TagRole) ?? "") !== "";
             popup(anchor, x, y);
         }
 
@@ -954,14 +991,14 @@ Item {
             visible: !table.voices
         }
         MenuItem {
-            visible: songMenu.songCount === 1 && !table.voices
+            visible: songMenu.songCount === 1 && !table.voices && !songMenu.own
             height: visible ? implicitHeight : 0
             glyph: Symbols.favorite
             text: songMenu.liked ? qsTr("取消喜欢") : qsTr("喜欢")
             onTriggered: table.setLiked(songMenu.key, !songMenu.liked)
         }
         MenuItem {
-            visible: !table.voices
+            visible: !table.voices && !songMenu.own
             height: visible ? implicitHeight : 0
             glyph: Symbols.playlist_add
             text: songMenu.songCount > 1 ? qsTr("收藏选中的 %1 首到歌单…").arg(songMenu.songCount)
@@ -969,14 +1006,14 @@ Item {
             onTriggered: table.addToPlaylistRequested(songMenu.keys)
         }
         MenuItem {
-            visible: songMenu.songCount === 1 && !table.voices
+            visible: songMenu.songCount === 1 && !table.voices && !songMenu.own
             height: visible ? implicitHeight : 0
             glyph: Symbols.info
             text: qsTr("歌曲详情")
             onTriggered: table.songRequested(songMenu.key)
         }
         MenuItem {
-            visible: songMenu.songCount === 1 && !table.voices
+            visible: songMenu.songCount === 1 && !table.voices && !songMenu.own
             height: visible ? implicitHeight : 0
             glyph: Symbols.comment
             text: qsTr("查看评论")
@@ -989,7 +1026,7 @@ Item {
             }
         }
         MenuItem {
-            visible: songMenu.songCount === 1
+            visible: songMenu.songCount === 1 && !songMenu.own
             height: visible ? implicitHeight : 0
             glyph: Symbols.link
             text: qsTr("复制链接")
@@ -1011,6 +1048,32 @@ Item {
                                          : qsTr("从歌单移除")
             trailingText: "Delete"
             onTriggered: table.removeRequested(songMenu.keys)
+        }
+        MenuSeparator {
+            visible: table.cloud
+        }
+        MenuItem {
+            visible: table.cloud && songMenu.songCount === 1
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.edit
+            text: qsTr("纠错…")
+            onTriggered: table.matchRequested(songMenu.key)
+        }
+        MenuItem {
+            visible: table.cloud && songMenu.songCount === 1 && !songMenu.own
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.link_off
+            text: qsTr("取消关联")
+            onTriggered: table.unmatchRequested(songMenu.key)
+        }
+        MenuItem {
+            visible: table.cloud
+            height: visible ? implicitHeight : 0
+            glyph: Symbols.delete
+            text: songMenu.songCount > 1 ? qsTr("从云盘删除选中的 %1 首").arg(songMenu.songCount)
+                                         : qsTr("从云盘删除")
+            trailingText: "Delete"
+            onTriggered: table.cloudDeleteRequested(songMenu.keys)
         }
         MenuSeparator {}
         MenuItem {

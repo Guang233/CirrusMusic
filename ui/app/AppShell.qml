@@ -377,6 +377,13 @@ Item {
         });
     }
 
+    // The cloud drive (docs/ui/pages/cloud.md).
+    function openCloud() {
+        shell.go(cloudPage, {
+            shell: shell
+        });
+    }
+
     // The local listening statistics (pages/stats.md), and its full song ranking for a
     // range and period (StatsPageModel.range, offset).
     function openStats() {
@@ -534,6 +541,10 @@ Item {
     Component {
         id: rankingPage
         RankingPage {}
+    }
+    Component {
+        id: cloudPage
+        CloudPage {}
     }
     Component {
         id: songPage
@@ -868,6 +879,14 @@ Item {
 
     LoginDialog {
         id: loginDialog
+    }
+
+    // How the cloud uploads went (one notice per run, cloud.md §5).
+    Connections {
+        target: App.cloudUploads
+        function onNotice(message: string) {
+            shell.notify(message);
+        }
     }
 
     // What App.together has to say (who joined or left, the room ended…).
