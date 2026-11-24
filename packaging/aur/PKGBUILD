@@ -18,7 +18,7 @@ optdepends=('gnome-keyring: keep the sign-in in a keyring'
 # Qt's two-pass rcc for large resources (the bundled font) finds no data in an LTO object.
 options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('d27252c527554a36597f4ae36e2cf5bc27900887021670d51210e967f40daf64')
+sha256sums=('47d91247f40f6c9839e4bf100d33eef30e4f47c273c702691a32faf3ef764f7a')
 
 build() {
   cmake -S "CirrusMusic-$pkgver" -B build -G Ninja \
