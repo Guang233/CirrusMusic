@@ -54,6 +54,36 @@ struct CloudSongsPage {
     std::optional<qint64> total, providerUsedSpace, providerMaximumSpace;
     std::optional<bool> hasMore;
 };
+// Removes songs (their files) from the account's cloud drive (docs/api/cloud-drive.md).
+struct CloudSongDelete {
+    static constexpr qsizetype MaximumSongs = 100; // local budget
+    QList<CloudSongId> songs;
+    [[nodiscard]] bool isValid() const
+    {
+        if (songs.isEmpty() || songs.size() > MaximumSongs)
+            return false;
+        QSet<QString> seen;
+        for (const auto& id : songs) {
+            if (!validMusicId(id.value) || seen.contains(id.value))
+                return false;
+            seen.insert(id.value);
+        }
+        return true;
+    }
+};
+// Links a cloud song to a catalog song (the official app's 纠错), or, with no target, back to
+// the file's own details. Bound to the account it was made for.
+struct CloudSongMatch {
+    QString accountId;
+    CloudSongId song;
+    std::optional<SongId> target;
+    [[nodiscard]] QString sourceAccount() const { return accountId; }
+    [[nodiscard]] bool isValid() const
+    {
+        return validMusicId(accountId) && validMusicId(song.value) &&
+               (!target || validMusicId(target->value));
+    }
+};
 struct CloudSongDetails {
     CloudSongDetailsQuery query;
     QList<CloudSong> songs;     // request order, no unsolicited/duplicate provider rows

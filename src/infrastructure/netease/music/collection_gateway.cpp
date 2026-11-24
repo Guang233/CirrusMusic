@@ -75,6 +75,17 @@ std::optional<CollectionRequest> collectionRequest(const CollectionMutation& mut
                         {{QStringLiteral("id"), c.playlist.value}}};
             else if constexpr (std::is_same_v<T, PlaylistDelete>)
                 return {ApiOperation::PlaylistDelete, {{QStringLiteral("id"), c.playlist.value}}};
+            else if constexpr (std::is_same_v<T, CloudSongDelete>) {
+                QJsonArray ids;
+                for (const auto& id : c.songs)
+                    ids.append(id.value);
+                return {ApiOperation::CloudDelete, {{QStringLiteral("songIds"), ids}}};
+            } else if constexpr (std::is_same_v<T, CloudSongMatch>)
+                return {ApiOperation::CloudMatch,
+                        {{QStringLiteral("userId"), c.accountId},
+                         {QStringLiteral("songId"), c.song.value},
+                         {QStringLiteral("adjustSongId"),
+                          c.target ? c.target->value : QStringLiteral("0")}}};
             else {
                 QJsonArray ids;
                 for (const auto& id : c.ids())

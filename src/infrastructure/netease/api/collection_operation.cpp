@@ -1,10 +1,12 @@
 // Fixed api-enhanced collection/playlist write wrappers (MIT); see NOTICE. Playlist
-// subscription follows the official Android app 9.6.22 (docs/api/playlist-subscription.md).
+// subscription follows the official Android app 9.6.22 (docs/api/playlist-subscription.md);
+// cloud drive writes follow the app and the fixed reference (docs/api/cloud-drive.md).
 #include "collection_operation.h"
 #include "domain/music/collection_types.h"
 #include "domain/music/playlist_tag_edit_types.h"
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
 #include <QSet>
 namespace cirrus::netease
 {
@@ -31,6 +33,12 @@ bool isCollectionOperation(ApiOperation op)
     case ApiOperation::PlaylistMakePublic:
     case ApiOperation::CoverAllocate:
     case ApiOperation::PlaylistCoverCommit:
+    case ApiOperation::CloudDelete:
+    case ApiOperation::CloudMatch:
+    case ApiOperation::CloudUploadCheck:
+    case ApiOperation::CloudUploadAllocate:
+    case ApiOperation::CloudUploadInfo:
+    case ApiOperation::CloudPublish:
         return true;
     default:
         return false;
@@ -109,15 +117,141 @@ std::optional<ApiOperationContract> collectionOperationContract(ApiOperation op)
     case ApiOperation::PlaylistCoverCommit:
         path = QStringLiteral("/api/playlist/cover/update");
         break;
+    case ApiOperation::CloudDelete:
+        path = QStringLiteral("/api/cloud/del");
+        break;
+    case ApiOperation::CloudMatch:
+        path = QStringLiteral("/api/cloud/user/song/match");
+        break;
+    case ApiOperation::CloudUploadCheck:
+        path = QStringLiteral("/api/cloud/upload/check");
+        protocol = Protocol::Eapi;
+        break;
+    case ApiOperation::CloudUploadAllocate:
+        path = QStringLiteral("/api/nos/token/alloc");
+        break;
+    case ApiOperation::CloudUploadInfo:
+        path = QStringLiteral("/api/upload/cloud/info/v2");
+        protocol = Protocol::Eapi;
+        break;
+    case ApiOperation::CloudPublish:
+        path = QStringLiteral("/api/cloud/pub/v2");
+        protocol = Protocol::Eapi;
+        break;
     default:
         return std::nullopt;
     }
     return ApiOperationContract{path, protocol, ResponseEncoding::Json, 64 * 1024};
 }
+namespace
+{
+bool hexMd5(const QJsonValue& v)
+{
+    static const QRegularExpression md5(QStringLiteral("\\A[0-9a-f]{32}\\z"));
+    return v.isString() && md5.match(v.toString()).hasMatch();
+}
+bool digits(const QJsonValue& v) { return v.isString() && domain::validMusicId(v.toString()); }
+// Display text the user's file gave (title, artist, album, file name): bounded, no controls.
+bool fileText(const QJsonValue& v, qsizetype maximum)
+{
+    return v.isString() && !v.toString().trimmed().isEmpty() &&
+           domain::validPlaylistText(v.toString(), maximum, false);
+}
+std::optional<QJsonObject> cloudPayload(ApiOperation op, const QJsonObject& p)
+{
+    const auto has = [&p](std::initializer_list<const char*> names) {
+        if (p.size() != qsizetype(names.size()))
+            return false;
+        for (const char* name : names)
+            if (!p.contains(QLatin1StringView(name)))
+                return false;
+        return true;
+    };
+    switch (op) {
+    case ApiOperation::CloudDelete: {
+        // As the app sends it: a JSON array of numbers as text (k41/d.java).
+        const auto raw = p.value(QStringLiteral("songIds"));
+        if (!has({"songIds"}) || !raw.isArray() || raw.toArray().isEmpty() ||
+            raw.toArray().size() > domain::CloudSongDelete::MaximumSongs)
+            return std::nullopt;
+        QSet<QString> seen;
+        QStringList ids;
+        for (const auto id : raw.toArray()) {
+            if (!digits(id) || seen.contains(id.toString()))
+                return std::nullopt;
+            seen.insert(id.toString());
+            ids.append(id.toString());
+        }
+        return QJsonObject{{QStringLiteral("songIds"),
+                            QStringLiteral("[") + ids.join(u',') + QStringLiteral("]")}};
+    }
+    case ApiOperation::CloudMatch: {
+        const auto target = p.value(QStringLiteral("adjustSongId"));
+        if (!has({"userId", "songId", "adjustSongId"}) ||
+            !digits(p.value(QStringLiteral("userId"))) ||
+            !digits(p.value(QStringLiteral("songId"))) || !target.isString() ||
+            (target.toString() != QStringLiteral("0") && !digits(target)))
+            return std::nullopt;
+        return p;
+    }
+    case ApiOperation::CloudUploadCheck: {
+        const auto length = p.value(QStringLiteral("length"));
+        if (!has({"md5", "length", "bitrate"}) || !hexMd5(p.value(QStringLiteral("md5"))) ||
+            !digits(length) || length.toString().size() > 12 ||
+            !digits(p.value(QStringLiteral("bitrate"))))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("bitrate"), p.value(QStringLiteral("bitrate"))},
+                           {QStringLiteral("ext"), QString()},
+                           {QStringLiteral("length"), length.toString().toLongLong()},
+                           {QStringLiteral("md5"), p.value(QStringLiteral("md5"))},
+                           {QStringLiteral("songId"), QStringLiteral("0")},
+                           {QStringLiteral("version"), 1}};
+    }
+    case ApiOperation::CloudUploadAllocate: {
+        static const QRegularExpression ext(QStringLiteral("\\A[a-z0-9]{1,8}\\z"));
+        const auto e = p.value(QStringLiteral("ext"));
+        if (!has({"md5", "ext", "filename"}) || !hexMd5(p.value(QStringLiteral("md5"))) ||
+            !e.isString() || !ext.match(e.toString()).hasMatch() ||
+            !fileText(p.value(QStringLiteral("filename")), 255))
+            return std::nullopt;
+        return QJsonObject{
+            {QStringLiteral("bucket"), QStringLiteral("jd-musicrep-privatecloud-audio-public")},
+            {QStringLiteral("ext"), e},
+            {QStringLiteral("filename"), p.value(QStringLiteral("filename"))},
+            {QStringLiteral("local"), false},
+            {QStringLiteral("nos_product"), 3},
+            {QStringLiteral("type"), QStringLiteral("audio")},
+            {QStringLiteral("md5"), p.value(QStringLiteral("md5"))}};
+    }
+    case ApiOperation::CloudUploadInfo:
+        if (!has({"md5", "songid", "filename", "song", "album", "artist", "bitrate",
+                  "resourceId"}) ||
+            !hexMd5(p.value(QStringLiteral("md5"))) || !digits(p.value(QStringLiteral("songid"))) ||
+            !fileText(p.value(QStringLiteral("filename")), 255) ||
+            !fileText(p.value(QStringLiteral("song")), 256) ||
+            !fileText(p.value(QStringLiteral("album")), 256) ||
+            !fileText(p.value(QStringLiteral("artist")), 256) ||
+            !digits(p.value(QStringLiteral("bitrate"))) ||
+            !digits(p.value(QStringLiteral("resourceId"))))
+            return std::nullopt;
+        return p;
+    case ApiOperation::CloudPublish:
+        if (!has({"songid"}) || !digits(p.value(QStringLiteral("songid"))))
+            return std::nullopt;
+        return p;
+    default:
+        return std::nullopt;
+    }
+}
+} // namespace
 std::optional<QJsonObject> collectionOperationPayload(ApiOperation op, const QJsonObject& p)
 {
     if (!isCollectionOperation(op))
         return std::nullopt;
+    if (op == ApiOperation::CloudDelete || op == ApiOperation::CloudMatch ||
+        op == ApiOperation::CloudUploadCheck || op == ApiOperation::CloudUploadAllocate ||
+        op == ApiOperation::CloudUploadInfo || op == ApiOperation::CloudPublish)
+        return cloudPayload(op, p);
     if (op == ApiOperation::CoverAllocate) {
         if (!p.isEmpty())
             return std::nullopt;

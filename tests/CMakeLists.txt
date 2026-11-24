@@ -268,6 +268,11 @@ target_link_libraries(tst_playlist_cover_writes PRIVATE cirrus_netease_music Qt6
 add_test(NAME playlist_cover_writes COMMAND tst_playlist_cover_writes)
 set_tests_properties(playlist_cover_writes PROPERTIES TIMEOUT 40)
 
+qt_add_executable(tst_cloud_writes unit/cloud_writes_test.cpp)
+target_link_libraries(tst_cloud_writes PRIVATE cirrus_netease_music Qt6::Test)
+add_test(NAME cloud_writes COMMAND tst_cloud_writes)
+set_tests_properties(cloud_writes PROPERTIES TIMEOUT 30)
+
 qt_add_executable(tst_playlist_tag_writes unit/playlist_tag_writes_test.cpp)
 target_link_libraries(tst_playlist_tag_writes PRIVATE cirrus_netease_music Qt6::Test)
 add_test(NAME playlist_tag_writes COMMAND tst_playlist_tag_writes)

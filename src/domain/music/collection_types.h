@@ -1,4 +1,5 @@
 #pragma once
+#include "account_library_types.h"
 #include "catalog_types.h"
 #include "entity_search_types.h"
 #include "logging/log.h"
@@ -123,12 +124,13 @@ struct PlaylistDescription {
         return validMusicId(playlist.value) && validPlaylistText(description, 4096, true);
     }
 };
-// No CloudSong/Program/Voice casts or JSON.
+// No CloudSong/Program/Voice casts or JSON: cloud songs only through their own changes.
 using CollectionChange =
     std::variant<SongHeart, PlaylistCollection, AlbumCollection, ArtistCollection,
                  PodcastSubscription, PlaylistCreate, PlaylistRename, PlaylistDescription,
                  PlaylistDelete, PlaylistSongOrder, AccountPlaylistOrder, PlaylistTagEdit,
-                 PlaylistMakePublic, PlaylistCoverReplace, UserFollow, PlaylistSubscription>;
+                 PlaylistMakePublic, PlaylistCoverReplace, UserFollow, PlaylistSubscription,
+                 CloudSongDelete, CloudSongMatch>;
 struct CollectionMutation {
     QUuid eventId; // local correlation only, NOT server idempotency; caller explicitly supplies it
     CollectionChange change;
@@ -150,6 +152,8 @@ inline std::optional<SessionToken> collectionSourceContext(const CollectionMutat
 inline std::optional<QString> collectionSourceAccount(const CollectionMutation& mutation)
 {
     if (const auto* c = std::get_if<AccountPlaylistOrder>(&mutation.change))
+        return c->sourceAccount();
+    if (const auto* c = std::get_if<CloudSongMatch>(&mutation.change))
         return c->sourceAccount();
     return std::nullopt;
 }

@@ -130,7 +130,14 @@ enum class ApiOperation {
     UserFans,
     UserRanking,
     UserFollow,
-    UserUnfollow
+    UserUnfollow,
+    // Cloud drive writes (docs/api/cloud-drive.md): collection adapter.
+    CloudDelete,
+    CloudMatch,
+    CloudUploadCheck,
+    CloudUploadAllocate,
+    CloudUploadInfo,
+    CloudPublish
 };
 
 struct ApiOperationContract {
