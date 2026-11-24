@@ -16,6 +16,7 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <utility>
 
 namespace cirrus::ui
 {
@@ -281,11 +282,17 @@ BackendPlayback::BackendPlayback(runtime::BackendRuntime& runtime, CatalogSource
         m_kept->resume = false;
         replay(m_kept->index);
     });
+    if (!runtime.listeningState())
+        m_started = true; // no queue to wait for
     // The last queue comes back at startup; played on when the user wants that.
     if (auto* state = runtime.listeningState())
         connect(state, &storage::ListeningStateService::queueRestored, this, [this](bool applied) {
             const bool first = !m_started;
             m_started = true;
+            if (m_pendingNow) {
+                schedulePending(); // instead of resuming
+                return;
+            }
             if (applied && first && AppSettings().resumeOnStart())
                 QMetaObject::invokeMethod(
                     this,
@@ -423,6 +430,7 @@ void BackendPlayback::update()
         savePosition(next, now, false);
     } else if (canResume() && !m_resume.isActive())
         m_resume.start();
+    schedulePending();
 
     const bool changed = m_detailsArrived || !sameState(m_state, next) ||
                          std::abs(positionAt(m_state, now) - positionAt(next, now)) > kDriftMs;
@@ -1096,10 +1104,32 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
     return true;
 }
 
+void BackendPlayback::schedulePending()
+{
+    if (!m_pendingNow || !m_started || !settled())
+        return;
+    QMetaObject::invokeMethod(
+        this,
+        [this] {
+            if (!m_pendingNow || !m_started || !settled())
+                return;
+            const PendingNow pending = *std::exchange(m_pendingNow, std::nullopt);
+            playNow(pending.key, pending.voice, pending.origin);
+        },
+        Qt::QueuedConnection);
+}
+
 void BackendPlayback::playNow(const QString& key, bool voice, const PlayOrigin& origin)
 {
     if (!m_session || !domain::validMusicId(key))
         return;
+    if (!m_started || !settled()) {
+        // At startup: after the last queue is back, to play on from it.
+        log::info(lcUi, "player.play_now_waiting");
+        m_pendingNow = PendingNow{key, voice, origin};
+        schedulePending();
+        return;
+    }
     log::info(lcUi, "player.play_now",
               {{"voice", voice}, {"origin", playback::Origin(origin.kind)}});
     if (m_state.queue.isEmpty() || m_state.mode != playback::Queue) {
