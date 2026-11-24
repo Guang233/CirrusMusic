@@ -17,7 +17,9 @@ using namespace cirrus::test;
 namespace
 {
 const QString md5 = QStringLiteral("0123456789abcdef0123456789abcdef");
-const QByteArray check = R"({"code":200,"needUpload":true,"songId":"77"})";
+// The check's songId is an opaque token (128 characters in the real reply).
+const QByteArray check =
+    R"({"code":200,"needUpload":true,"songId":")" + QByteArray(128, 'a') + "\"}";
 const QByteArray allocation =
     R"({"code":200,"result":{"objectKey":"synthetic/key.flac","token":"synthetic-nos","resourceId":42}})";
 const QByteArray info = R"({"code":200,"songId":"88"})";
@@ -209,6 +211,11 @@ class CloudWritesTest : public QObject
         auto wrong = info;
         wrong.remove("album");
         QVERIFY(!operationPayload(ApiOperation::CloudUploadInfo, wrong));
+        auto token = info;
+        token["songid"] = QString(128, u'a');
+        QVERIFY(operationPayload(ApiOperation::CloudUploadInfo, token));
+        token["songid"] = "a b";
+        QVERIFY(!operationPayload(ApiOperation::CloudUploadInfo, token));
         wrong = info;
         wrong["song"] = QString(257, u'a');
         QVERIFY(!operationPayload(ApiOperation::CloudUploadInfo, wrong));

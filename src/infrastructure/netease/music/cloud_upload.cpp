@@ -168,7 +168,7 @@ struct CloudUploadGateway::Pending {
     QString path;
     CloudUploadStep step = CloudUploadStep::Reading;
     CloudFileFacts facts;
-    QString checkedSong; // the check's songId, what the details are submitted for
+    QString checkedSong; // the check's songId token, what the details are submitted for
     bool needUpload = true;
     Allocation allocation;
     QString song; // the submitted song's id
@@ -384,8 +384,14 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
     const auto& root = api.decoded.object;
     switch (p->step) {
     case CloudUploadStep::Checking: {
+        // songId here is an opaque token (128 characters), not a song id: it goes on to the
+        // details as it came, never logged.
+        static const QRegularExpression token(QStringLiteral("\\A[A-Za-z0-9_.:+/=-]{1,512}\\z"));
         const auto need = root.value(QStringLiteral("needUpload"));
-        p->checkedSong = mapping::providerId(root.value(QStringLiteral("songId")));
+        const auto song = root.value(QStringLiteral("songId"));
+        p->checkedSong = song.isString() && token.match(song.toString()).hasMatch()
+                             ? song.toString()
+                             : mapping::providerId(song);
         if (!need.isBool() || p->checkedSong.isEmpty()) {
             invalid(id, need.isBool() ? "songId" : "needUpload", root);
             return;

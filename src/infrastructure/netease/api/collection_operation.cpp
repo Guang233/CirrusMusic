@@ -151,6 +151,12 @@ bool hexMd5(const QJsonValue& v)
     return v.isString() && md5.match(v.toString()).hasMatch();
 }
 bool digits(const QJsonValue& v) { return v.isString() && domain::validMusicId(v.toString()); }
+// The upload check's songId: an opaque token (128 characters seen), passed on as it came.
+bool uploadToken(const QJsonValue& v)
+{
+    static const QRegularExpression token(QStringLiteral("\\A[A-Za-z0-9_.:+/=-]{1,512}\\z"));
+    return v.isString() && token.match(v.toString()).hasMatch();
+}
 // Display text the user's file gave (title, artist, album, file name): bounded, no controls.
 bool fileText(const QJsonValue& v, qsizetype maximum)
 {
@@ -226,7 +232,8 @@ std::optional<QJsonObject> cloudPayload(ApiOperation op, const QJsonObject& p)
     case ApiOperation::CloudUploadInfo:
         if (!has({"md5", "songid", "filename", "song", "album", "artist", "bitrate",
                   "resourceId"}) ||
-            !hexMd5(p.value(QStringLiteral("md5"))) || !digits(p.value(QStringLiteral("songid"))) ||
+            !hexMd5(p.value(QStringLiteral("md5"))) ||
+            !uploadToken(p.value(QStringLiteral("songid"))) ||
             !fileText(p.value(QStringLiteral("filename")), 255) ||
             !fileText(p.value(QStringLiteral("song")), 256) ||
             !fileText(p.value(QStringLiteral("album")), 256) ||
