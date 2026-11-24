@@ -11,6 +11,8 @@
 #include "logging/log.h"
 #include "logging/logger.h"
 #include "memory.h"
+#include "notice.h"
+#include "now_playing_export.h"
 #ifdef CIRRUS_UI_MPRIS
 #include "mpris.h"
 #endif
@@ -202,6 +204,15 @@ int main(int argc, char* argv[])
     desktop.setShutdown(
         [&backend](std::function<void()> done) { backend.shutdown(std::move(done)); });
     desktop.setQuitConfirmation([presentation] { return presentation->cloudUploads()->active(); });
+    // What is playing, for desktop lyrics and status bars, while the user lets it (Linux).
+    backend.nowPlaying().follow(presentation->settings(), presentation->player(),
+                                presentation->lyrics());
+    QObject::connect(
+        &backend.nowPlaying(), &cirrus::ui::NowPlayingExport::failed, presentation, [presentation] {
+            emit presentation->notice(cirrus::ui::noticed(
+                "now_playing.unavailable",
+                QCoreApplication::translate("NowPlaying", "无法向其他程序提供播放状态")));
+        });
     backend.start();
 #ifdef CIRRUS_UI_MPRIS
     // Media keys and the desktop's media controls (docs/ui/pages/shell.md §7).

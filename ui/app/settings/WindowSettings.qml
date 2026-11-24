@@ -54,6 +54,14 @@ SettingsGroup {
         onSwitched: value => App.settings.preferDiscreteGpu = value
     }
     SwitchSetting {
+        // The local now-playing interface (tools/now-playing/README.md) is Linux only.
+        visible: Qt.platform.os === "linux"
+        text: qsTr("向其他程序提供播放状态")
+        supportingText: qsTr("歌名、进度和歌词，供桌面歌词、状态栏等读取")
+        value: App.settings.shareNowPlaying
+        onSwitched: value => App.settings.shareNowPlaying = value
+    }
+    SwitchSetting {
         visible: App.updates.canCheckAutomatically
         text: qsTr("自动检查更新")
         supportingText: qsTr("每天向 GitHub 查询一次新版本")

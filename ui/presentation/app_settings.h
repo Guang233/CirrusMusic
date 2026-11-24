@@ -74,6 +74,9 @@ class AppSettings : public QObject
     // startup, before the window exists (ui/app/gpu_preference.h).
     CIRRUS_SETTING(bool, preferDiscreteGpu, setPreferDiscreteGpu, "graphics/preferDiscreteGpu",
                    true)
+    // Other programs of this user may read what is playing and its lyrics (Linux,
+    // ui/presentation/backend/now_playing_export.h).
+    CIRRUS_SETTING(bool, shareNowPlaying, setShareNowPlaying, "system/shareNowPlaying", false)
     // The window as it was left: its size when not maximized, and whether it was. The
     // position is not kept (Wayland doesn't let apps place windows).
     CIRRUS_SETTING(int, windowWidth, setWindowWidth, "window/width", 1200)
