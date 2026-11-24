@@ -56,7 +56,8 @@ class CloudUploadGateway final : public QObject
                  QJsonObject parameters);
     void enter(quint64 id, domain::CloudUploadStep step);
     void fail(quint64 id, domain::CloudUploadError error, std::optional<int> code = {});
-    void invalid(quint64 id, const char* field, const QJsonObject& root);
+    void invalid(quint64 id, const char* field, const QJsonObject& root,
+                 const QString& punctuation = {});
     void finish(quint64 id, domain::CloudUploadResult result);
     [[nodiscard]] bool current(const Pending& p) const;
 

@@ -36,32 +36,49 @@ struct Allocation {
     QString resourceId;
 };
 
-std::optional<Allocation> allocationFrom(const QJsonObject& root)
+// `why` names the part that did not read (for cloud.invalid).
+std::optional<Allocation> allocationFrom(const QJsonObject& root, const char*& why)
 {
     static const QRegularExpression key(
         QStringLiteral("\\A[A-Za-z0-9_.=-]+(/[A-Za-z0-9_.=-]+)*\\z"));
+    why = "result";
     const auto value = root.value(QStringLiteral("result"));
     if (!value.isObject())
         return std::nullopt;
     const auto o = value.toObject();
     const auto objectKey = o.value(QStringLiteral("objectKey"));
     const auto token = o.value(QStringLiteral("token"));
+    why = "objectKey";
     if (!objectKey.isString() || objectKey.toString().size() > 512 ||
-        !key.match(objectKey.toString()).hasMatch() || !token.isString())
+        !key.match(objectKey.toString()).hasMatch())
         return std::nullopt;
     for (const auto& part : objectKey.toString().split(u'/'))
         if (part == u"." || part == u"..")
             return std::nullopt;
+    why = "token";
+    if (!token.isString())
+        return std::nullopt;
     const auto bytes = token.toString().toLatin1();
     if (bytes.isEmpty() || bytes.size() > 4096 || QString::fromLatin1(bytes) != token.toString())
         return std::nullopt;
     for (unsigned char c : bytes)
         if (c <= 0x20 || c >= 0x7f)
             return std::nullopt;
+    why = "resourceId";
     const auto resource = mapping::providerId(o.value(QStringLiteral("resourceId")));
     if (resource.isEmpty())
         return std::nullopt;
     return Allocation{objectKey.toString(), bytes, resource};
+}
+
+// The punctuation a text has (which characters an unexpected value uses), not the text.
+QString punctuationOf(const QJsonValue& v)
+{
+    QString seen;
+    for (const QChar c : v.toString())
+        if (!c.isLetterOrNumber() && !seen.contains(c))
+            seen += c;
+    return seen;
 }
 
 // What a reply's field is, without its value: for cloud.invalid.
@@ -404,9 +421,14 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
         return;
     }
     case CloudUploadStep::Allocating: {
-        const auto allocation = allocationFrom(root);
+        const char* why = nullptr;
+        const auto allocation = allocationFrom(root, why);
         if (!allocation) {
-            invalid(id, "result", root);
+            const auto result = root.value(QStringLiteral("result")).toObject();
+            if (qstrcmp(why, "result") == 0)
+                invalid(id, why, root);
+            else
+                invalid(id, why, result, punctuationOf(result.value(QLatin1StringView(why))));
             return;
         }
         p->allocation = *allocation;
@@ -587,7 +609,8 @@ void CloudUploadGateway::cancel(quint64 id)
         QTimer::singleShot(0, this, [this, id] { fail(id, CloudUploadError::Canceled); });
 }
 
-void CloudUploadGateway::invalid(quint64 id, const char* field, const QJsonObject& root)
+void CloudUploadGateway::invalid(quint64 id, const char* field, const QJsonObject& root,
+                                 const QString& punctuation)
 {
     // The reply's shape, never its values (docs/api/cloud-drive.md §3).
     if (const auto p = m_pending.value(id))
@@ -595,6 +618,7 @@ void CloudUploadGateway::invalid(quint64 id, const char* field, const QJsonObjec
                   {{"step", p->step},
                    {"field", field},
                    {"kind", fieldKind(root.value(QLatin1StringView(field)))},
+                   log::fieldIf(!punctuation.isEmpty(), "punctuation", punctuation),
                    {"keys", root.keys().join(u',')}});
     fail(id, CloudUploadError::InvalidResponse);
 }
