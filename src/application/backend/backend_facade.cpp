@@ -42,6 +42,7 @@ void BackendFacade::close()
     invalidateMusic(MusicError::Canceled);
     invalidateListeningReports(domain::ReportError::Canceled);
     invalidateCollections(domain::CollectionError::Canceled);
+    invalidateCloudUploads(domain::CloudUploadError::Canceled);
     invalidateCommentWrites(domain::CommentWriteError::Canceled);
     invalidateTogether(domain::TogetherError::Canceled);
     invalidatePlayback();
@@ -71,6 +72,7 @@ quint64 BackendFacade::submit(AccountAction action, QrLoginOptions options,
         invalidateMusic(MusicError::StaleContext);
         invalidateListeningReports(domain::ReportError::StaleContext);
         invalidateCollections(domain::CollectionError::StaleContext);
+        invalidateCloudUploads(domain::CloudUploadError::StaleContext);
         invalidateCommentWrites(domain::CommentWriteError::StaleContext);
         invalidateTogether(domain::TogetherError::StaleContext);
         invalidatePlayback();
@@ -148,6 +150,7 @@ void BackendFacade::deliver(BackendEvent event)
             event.session.phase != domain::SessionPhase::Authenticated) {
             invalidateListeningReports(domain::ReportError::StaleContext);
             invalidateCollections(domain::CollectionError::StaleContext);
+            invalidateCloudUploads(domain::CloudUploadError::StaleContext);
             invalidateCommentWrites(domain::CommentWriteError::StaleContext);
             invalidateTogether(domain::TogetherError::StaleContext);
         }
@@ -552,6 +555,71 @@ void BackendFacade::deliverListeningReport(ListeningReportDelivery delivery)
     delivery.result.eventId = expected.report.eventId;
     delivery.result.action = expected.report.action;
     emit listeningReportCompleted(expected.id, expected.context, delivery.result);
+}
+
+quint64 BackendFacade::uploadToCloud(domain::CloudUploadFile file)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_state != BackendState::Ready || !m_snapshot.token.isValid() ||
+        m_snapshot.phase != domain::SessionPhase::Authenticated ||
+        !domain::validMusicId(m_snapshot.accountId) || !file.isValid() ||
+        m_cloudUploads.size() >= MaximumCloudUploads)
+        return 0;
+    const auto id = ++m_nextId;
+    const CloudUploadCommand command{id, m_generation, m_snapshot.token, m_snapshot.accountId,
+                                     std::move(file)};
+    m_cloudUploads.insert(id, command);
+    emit cloudUploadRequested(command);
+    return id;
+}
+void BackendFacade::cancelCloudUploadWith(quint64 id, domain::CloudUploadError error)
+{
+    if (!m_cloudUploads.contains(id))
+        return;
+    const auto command = m_cloudUploads.take(id);
+    emit cloudUploadCancelRequested(id);
+    // The worker may have got further: do not claim nothing reached the cloud.
+    domain::CloudUploadResult result;
+    result.outcome = domain::CloudUploadOutcome::Unknown;
+    result.error = error;
+    QTimer::singleShot(0, this, [this, id, context = command.context, result] {
+        emit cloudUploadCompleted(id, context, result);
+    });
+}
+void BackendFacade::cancelCloudUpload(quint64 id)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    cancelCloudUploadWith(id, domain::CloudUploadError::Canceled);
+}
+void BackendFacade::invalidateCloudUploads(domain::CloudUploadError error)
+{
+    for (const auto id : m_cloudUploads.keys())
+        cancelCloudUploadWith(id, error);
+}
+void BackendFacade::deliverCloudUploadProgress(quint64 id, quint64 generation,
+                                               domain::CloudUploadProgress progress)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    const auto it = m_cloudUploads.constFind(id);
+    if (it != m_cloudUploads.cend() && it->generation == generation && generation == m_generation)
+        emit cloudUploadProgressed(id, progress);
+}
+void BackendFacade::deliverCloudUpload(CloudUploadDelivery delivery)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (!m_cloudUploads.contains(delivery.id))
+        return;
+    const auto expected = m_cloudUploads.take(delivery.id);
+    if (delivery.generation != expected.generation || delivery.context != expected.context ||
+        expected.generation != m_generation || expected.context != m_snapshot.token ||
+        expected.accountId != m_snapshot.accountId) {
+        const bool uploaded = delivery.result.outcome == domain::CloudUploadOutcome::Uploaded;
+        delivery.result.outcome =
+            uploaded ? domain::CloudUploadOutcome::Unknown : delivery.result.outcome;
+        delivery.result.error = domain::CloudUploadError::StaleContext;
+        delivery.result.song.reset();
+    }
+    emit cloudUploadCompleted(expected.id, expected.context, delivery.result);
 }
 
 quint64 BackendFacade::mutateCollection(domain::CollectionMutation mutation)

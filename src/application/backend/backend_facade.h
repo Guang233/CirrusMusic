@@ -5,6 +5,7 @@
 #include "application/backend/comment_write_messages.h"
 #include "application/ports/music_gateway.h"
 #include "domain/music/account_library_types.h"
+#include "domain/music/cloud_upload_types.h"
 #include "domain/music/collection_types.h"
 #include "domain/music/comment_write_types.h"
 #include "domain/music/entity_search_types.h"
@@ -97,6 +98,18 @@ struct CollectionDelivery {
     quint64 id = 0, generation = 0;
     domain::SessionToken context;
     domain::CollectionResult result;
+};
+// A file to upload to the cloud drive (docs/api/cloud-drive.md), and how it went.
+struct CloudUploadCommand {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    QString accountId;
+    domain::CloudUploadFile file;
+};
+struct CloudUploadDelivery {
+    quint64 id = 0, generation = 0;
+    domain::SessionToken context;
+    domain::CloudUploadResult result;
 };
 
 enum class PlaybackAction {
@@ -251,6 +264,11 @@ class BackendFacade final : public QObject
     void cancelListeningReport(quint64 id);
     [[nodiscard]] quint64 mutateCollection(domain::CollectionMutation mutation);
     void cancelCollection(quint64 id);
+    // Uploads a local audio file to the signed-in account's cloud drive; 0 when it can't start
+    // (not signed in, MaximumCloudUploads running). Progress, then exactly one completion.
+    [[nodiscard]] quint64 uploadToCloud(domain::CloudUploadFile file);
+    void cancelCloudUpload(quint64 id);
+    static constexpr int MaximumCloudUploads = 4;
     [[nodiscard]] quint64 mutateComment(domain::CommentMutation mutation);
     void cancelComment(quint64 id);
     [[nodiscard]] quint64 requestTogether(domain::TogetherRequest request);
@@ -285,6 +303,9 @@ class BackendFacade final : public QObject
     void deliverPlayback(PlaybackDelivery delivery);
     void deliverListeningReport(ListeningReportDelivery delivery);
     void deliverCollection(CollectionDelivery delivery);
+    void deliverCloudUpload(CloudUploadDelivery delivery);
+    void deliverCloudUploadProgress(quint64 id, quint64 generation,
+                                    cirrus::domain::CloudUploadProgress progress);
     void deliverCommentWrite(CommentWriteDelivery delivery);
     void deliverTogether(TogetherDelivery delivery);
 
@@ -318,6 +339,9 @@ class BackendFacade final : public QObject
                                   cirrus::domain::ListeningReportResult result);
     void collectionCompleted(quint64 id, cirrus::domain::SessionToken context,
                              cirrus::domain::CollectionResult result);
+    void cloudUploadProgressed(quint64 id, cirrus::domain::CloudUploadProgress progress);
+    void cloudUploadCompleted(quint64 id, cirrus::domain::SessionToken context,
+                              cirrus::domain::CloudUploadResult result);
     void commentWriteCompleted(quint64 id, cirrus::domain::SessionToken context,
                                cirrus::domain::CommentWriteResult result);
     void togetherCompleted(quint64 id, cirrus::domain::SessionToken context,
@@ -335,6 +359,8 @@ class BackendFacade final : public QObject
     void listeningReportCancelRequested(quint64 id);
     void collectionRequested(cirrus::application::CollectionCommand command);
     void collectionCancelRequested(quint64 id);
+    void cloudUploadRequested(cirrus::application::CloudUploadCommand command);
+    void cloudUploadCancelRequested(quint64 id);
     void commentWriteRequested(cirrus::application::CommentWriteCommand command);
     void commentWriteCancelRequested(quint64 id);
     void togetherRequested(cirrus::application::TogetherCommand command);
@@ -345,6 +371,7 @@ class BackendFacade final : public QObject
     void cancelListeningReportWith(quint64 id, domain::ReportError error);
     QHash<quint64, ListeningReportCommand> m_reports;
     QHash<quint64, CollectionCommand> m_collections;
+    QHash<quint64, CloudUploadCommand> m_cloudUploads;
     std::unique_ptr<detail::CommentWriteRequests> m_commentWrites;
     QHash<quint64, TogetherCommand> m_together;
     void invalidateTogether(domain::TogetherError error);
@@ -352,6 +379,8 @@ class BackendFacade final : public QObject
     void invalidateCommentWrites(domain::CommentWriteError error);
     void cancelCommentWith(quint64 id, domain::CommentWriteError error);
     void invalidateCollections(domain::CollectionError error);
+    void invalidateCloudUploads(domain::CloudUploadError error);
+    void cancelCloudUploadWith(quint64 id, domain::CloudUploadError error);
     void cancelCollectionWith(quint64 id, domain::CollectionError error);
     quint64 submit(AccountAction action, QrLoginOptions options = {},
                    domain::CredentialLogin credential = {}, domain::SmsCodeRequest sms = {});
@@ -389,5 +418,7 @@ Q_DECLARE_METATYPE(cirrus::application::ListeningReportCommand)
 Q_DECLARE_METATYPE(cirrus::application::ListeningReportDelivery)
 Q_DECLARE_METATYPE(cirrus::application::CollectionCommand)
 Q_DECLARE_METATYPE(cirrus::application::CollectionDelivery)
+Q_DECLARE_METATYPE(cirrus::application::CloudUploadCommand)
+Q_DECLARE_METATYPE(cirrus::application::CloudUploadDelivery)
 Q_DECLARE_METATYPE(cirrus::application::TogetherCommand)
 Q_DECLARE_METATYPE(cirrus::application::TogetherDelivery)

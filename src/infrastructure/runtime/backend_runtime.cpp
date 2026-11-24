@@ -11,9 +11,11 @@
 #include "infrastructure/cache/resource_cache_service.h"
 #include "infrastructure/cache/resource_cache_worker.h"
 #include "infrastructure/media/audio_engine.h"
+#include "infrastructure/media/audio_file_tags.h"
 #include "infrastructure/media/audio_store.h"
 #include "infrastructure/netease/auth/account_credential_vault.h"
 #include "infrastructure/netease/auth/qr_login_gateway.h"
+#include "infrastructure/netease/music/cloud_upload.h"
 #include "infrastructure/netease/music/collection_gateway.h"
 #include "infrastructure/netease/music/comment_write_gateway.h"
 #include "infrastructure/netease/music/listening_report_gateway.h"
@@ -298,6 +300,29 @@ class BackendWorker final : public QObject
                 return;
             }
     }
+    void uploadToCloud(CloudUploadCommand command)
+    {
+        const auto id =
+            m_ready && !m_closing && m_cloudUploads && command.generation == m_generation
+                ? m_cloudUploads->submit(command.context, command.accountId, command.file)
+                : 0;
+        if (!id) {
+            domain::CloudUploadResult result;
+            result.error = domain::CloudUploadError::Busy;
+            emit cloudUploadDelivered({command.id, command.generation, command.context, result});
+        } else
+            m_cloudUploadRequests.insert(id, command);
+    }
+    void cancelCloudUpload(quint64 id)
+    {
+        if (!m_cloudUploads)
+            return;
+        for (auto it = m_cloudUploadRequests.cbegin(); it != m_cloudUploadRequests.cend(); ++it)
+            if (it->id == id) {
+                m_cloudUploads->cancel(it.key());
+                return;
+            }
+    }
 
     void playback(PlaybackCommand command)
     {
@@ -384,6 +409,8 @@ class BackendWorker final : public QObject
         m_reportRequests.clear();
         m_collections.reset();
         m_collectionRequests.clear();
+        m_cloudUploads.reset();
+        m_cloudUploadRequests.clear();
         m_commentWrites.reset();
         m_commentWriteRequests.clear();
         m_together.reset();
@@ -403,6 +430,9 @@ class BackendWorker final : public QObject
     void playbackDelivered(cirrus::application::PlaybackDelivery delivery);
     void reportDelivered(cirrus::application::ListeningReportDelivery delivery);
     void collectionDelivered(cirrus::application::CollectionDelivery delivery);
+    void cloudUploadDelivered(cirrus::application::CloudUploadDelivery delivery);
+    void cloudUploadProgressed(quint64 id, quint64 generation,
+                               cirrus::domain::CloudUploadProgress progress);
     void commentWriteDelivered(cirrus::application::CommentWriteDelivery delivery);
     void togetherDelivered(cirrus::application::TogetherDelivery delivery);
     void audioCacheDelivered(quint64 id, qint64 bytes);
@@ -524,6 +554,21 @@ class BackendWorker final : public QObject
                         return;
                     const auto c = m_collectionRequests.take(id);
                     emit collectionDelivered({c.id, c.generation, context, result});
+                });
+        m_cloudUploads = std::make_unique<netease::CloudUploadGateway>(*m_session, *m_client,
+                                                                       &media::readAudioFileTags);
+        connect(m_cloudUploads.get(), &netease::CloudUploadGateway::progressed, this,
+                [this](quint64 id, domain::CloudUploadProgress progress) {
+                    const auto it = m_cloudUploadRequests.constFind(id);
+                    if (it != m_cloudUploadRequests.cend())
+                        emit cloudUploadProgressed(it->id, it->generation, progress);
+                });
+        connect(m_cloudUploads.get(), &netease::CloudUploadGateway::completed, this,
+                [this](quint64 id, domain::SessionToken context, domain::CloudUploadResult result) {
+                    if (!m_cloudUploadRequests.contains(id))
+                        return;
+                    const auto c = m_cloudUploadRequests.take(id);
+                    emit cloudUploadDelivered({c.id, c.generation, context, result});
                 });
         auto issuer = m_factories.commentV3Issuer ? m_factories.commentV3Issuer()
                                                   : std::make_unique<netease::CommentV3Issuer>();
@@ -714,6 +759,8 @@ class BackendWorker final : public QObject
     QHash<quint64, ListeningReportCommand> m_reportRequests;
     std::unique_ptr<netease::CollectionGateway> m_collections;
     QHash<quint64, CollectionCommand> m_collectionRequests;
+    std::unique_ptr<netease::CloudUploadGateway> m_cloudUploads;
+    QHash<quint64, CloudUploadCommand> m_cloudUploadRequests;
     std::unique_ptr<netease::CommentWriteGateway> m_commentWrites;
     QHash<quint64, CommentWriteCommand> m_commentWriteRequests;
     std::unique_ptr<netease::TogetherGateway> m_together;
@@ -836,6 +883,14 @@ BackendRuntime::BackendRuntime(BackendConfig config, BackendFactories factories,
             &BackendWorker::cancelCollection, Qt::QueuedConnection);
     connect(worker, &BackendWorker::collectionDelivered, m_facade,
             &BackendFacade::deliverCollection, Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::cloudUploadRequested, worker, &BackendWorker::uploadToCloud,
+            Qt::QueuedConnection);
+    connect(m_facade, &BackendFacade::cloudUploadCancelRequested, worker,
+            &BackendWorker::cancelCloudUpload, Qt::QueuedConnection);
+    connect(worker, &BackendWorker::cloudUploadDelivered, m_facade,
+            &BackendFacade::deliverCloudUpload, Qt::QueuedConnection);
+    connect(worker, &BackendWorker::cloudUploadProgressed, m_facade,
+            &BackendFacade::deliverCloudUploadProgress, Qt::QueuedConnection);
     connect(m_facade, &BackendFacade::playbackRequested, worker, &BackendWorker::playback,
             Qt::QueuedConnection);
     connect(this, &BackendRuntime::audioCacheRequested, worker, &BackendWorker::audioCache,

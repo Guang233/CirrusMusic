@@ -386,6 +386,8 @@ add_library(cirrus_netease_music STATIC
     infrastructure/netease/music/comment_write_gateway.h
     infrastructure/netease/music/comment_v3_issuer.cpp
     infrastructure/netease/music/comment_v3_issuer.h
+    infrastructure/netease/music/cloud_upload.cpp
+    infrastructure/netease/music/cloud_upload.h
     infrastructure/netease/music/cover_upload.cpp
     infrastructure/netease/music/cover_upload.h
     infrastructure/netease/music/collection_gateway.cpp
@@ -449,6 +451,9 @@ add_library(cirrus_media STATIC
     infrastructure/media/audio_store.cpp
     infrastructure/media/audio_decoder.h
     infrastructure/media/audio_decoder.cpp
+    # Tags of a file the user uploads to the cloud drive (docs/api/cloud-drive.md).
+    infrastructure/media/audio_file_tags.h
+    infrastructure/media/audio_file_tags.cpp
     infrastructure/media/audio_output.h
     infrastructure/media/audio_output.cpp
     infrastructure/media/audio_engine.h
