@@ -1073,6 +1073,8 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
         for (qsizetype i = 0; i < valid.size(); ++i) {
             kept.keys.insert(at + i, valid.at(i));
             kept.origins.insert(std::min(at + i, kept.origins.size()), origin);
+            if (at + i <= kept.voices.size())
+                kept.voices.insert(at + i, false);
         }
         update();
         return true;
@@ -1092,6 +1094,66 @@ bool BackendPlayback::addSongs(const QStringList& keys, bool next, const PlayOri
         saveOrigins();
     }
     return true;
+}
+
+void BackendPlayback::playNow(const QString& key, bool voice, const PlayOrigin& origin)
+{
+    if (!m_session || !domain::validMusicId(key))
+        return;
+    log::info(lcUi, "player.play_now",
+              {{"voice", voice}, {"origin", playback::Origin(origin.kind)}});
+    if (m_state.queue.isEmpty() || m_state.mode != playback::Queue) {
+        startQueue({key}, 0, {origin}, {voice});
+        return;
+    }
+    if (showingKept()) {
+        // Held over a session change: what plays on starts with it.
+        Kept& kept = *m_kept;
+        const qsizetype at = std::clamp<qsizetype>(kept.index + 1, 0, kept.keys.size());
+        kept.keys.insert(at, key);
+        kept.origins.insert(std::min(at, kept.origins.size()), origin);
+        while (kept.voices.size() < at)
+            kept.voices.append(false);
+        kept.voices.insert(at, voice);
+        replay(int(at));
+        return;
+    }
+    loadOrigins();
+    loadVoices();
+    domain::SongId track{key};
+    QList<domain::ProgramId> programs;
+    domain::PlayOrigin stored = storedOrigin(origin);
+    if (voice) {
+        const auto info = m_voices.contains(key) ? std::optional(m_voices.value(key))
+                                                 : mapping::KnownVoices::find(key);
+        if (!info || !domain::validMusicId(info->trackKey)) {
+            log::warn(lcUi, "player.play_now_no_track");
+            return;
+        }
+        track = domain::SongId{info->trackKey};
+        programs = {domain::ProgramId{key}};
+        stored = podcastOrigin(*info);
+        m_voices.insert(key, *info); // before the queue shows it
+        saveVoices();
+    }
+    QSet<QUuid> before;
+    for (const auto& entry : m_session->queue().entries)
+        before.insert(entry.id);
+    if (!m_session->append({track}, true, stored, programs)) {
+        log::warn(lcUi, "player.add_refused");
+        return;
+    }
+    QUuid added;
+    for (const auto& entry : m_session->queue().entries)
+        if (!before.contains(entry.id))
+            added = entry.id;
+    if (added.isNull())
+        return;
+    if (origin.kind != playback::NoOrigin) {
+        m_origins.insert(added, origin);
+        saveOrigins();
+    }
+    m_session->select(added);
 }
 
 void BackendPlayback::clearQueue()

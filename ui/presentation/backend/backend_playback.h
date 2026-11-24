@@ -65,6 +65,7 @@ class BackendPlayback : public QObject, public PlaybackSource
     void removeAt(int index) override;
     void move(int from, int to) override;
     bool addSongs(const QStringList& keys, bool next, const PlayOrigin& origin = {}) override;
+    void playNow(const QString& key, bool voice, const PlayOrigin& origin = {}) override;
     void clearQueue() override;
     void setVolume(double volume) override;
     void setNormalization(bool on) override;

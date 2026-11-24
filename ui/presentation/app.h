@@ -91,8 +91,9 @@ class App : public QObject
 
     // Puts plain text on the system clipboard (copying a comment).
     Q_INVOKABLE static void copyText(const QString& text);
-    // An orpheus:// link the web asked the client to open (a launch argument): passed on
-    // as linkRequested when it can be read, else dropped (logged without the link).
+    // An orpheus:// link the web asked the client to open (a launch argument, open-links.md):
+    // a song to play or a voice plays next at once; anything else goes to the shell as
+    // linkRequested (LinkUnsupported when it can't be read). Logged without the link.
     void openLink(const QString& url);
 
     [[nodiscard]] AppSettings* settings() const { return m_settings; }
@@ -122,13 +123,16 @@ class App : public QObject
     [[nodiscard]] QQuickImageProvider* makeQrProvider();
 
   signals:
-    // Shell.openLink: `key` digits, empty for LinkUnsupported; `play` for 去客户端播放.
-    void linkRequested(int target, const QString& key, bool play);
+    // Shell.openLink: the page of `key` (digits), or a notice for LinkUnsupported (no key).
+    void linkRequested(int target, const QString& key);
+    // A link that couldn't play.
+    void notice(const QString& message);
 
   private:
     explicit App(Sources sources);
 
     Sources m_sources;
+    Request m_linkVoice; // the voice a link plays, while it is read
     AppSettings* m_settings;
     CacheStatus* m_cache;
     Diagnostics* m_diagnostics;
