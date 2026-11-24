@@ -354,7 +354,7 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
         const auto need = root.value(QStringLiteral("needUpload"));
         p->checkedSong = mapping::providerId(root.value(QStringLiteral("songId")));
         if (!need.isBool() || p->checkedSong.isEmpty()) {
-            fail(id, CloudUploadError::InvalidResponse);
+            invalid(id, need.isBool() ? "songId" : "needUpload", root);
             return;
         }
         p->needUpload = need.toBool();
@@ -367,7 +367,7 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
     case CloudUploadStep::Allocating: {
         const auto allocation = allocationFrom(root);
         if (!allocation) {
-            fail(id, CloudUploadError::InvalidResponse);
+            invalid(id, "result", root);
             return;
         }
         p->allocation = *allocation;
@@ -380,7 +380,7 @@ void CloudUploadGateway::apiDone(quint64 id, const ApiResult& api)
     case CloudUploadStep::Submitting: {
         p->song = mapping::providerId(root.value(QStringLiteral("songId")));
         if (p->song.isEmpty()) {
-            fail(id, CloudUploadError::InvalidResponse);
+            invalid(id, "songId", root);
             return;
         }
         request(id, CloudUploadStep::Publishing, ApiOperation::CloudPublish,
@@ -546,6 +546,15 @@ void CloudUploadGateway::cancel(quint64 id)
     }
     if (p->step != CloudUploadStep::Reading) // reading notices the flag itself
         QTimer::singleShot(0, this, [this, id] { fail(id, CloudUploadError::Canceled); });
+}
+
+void CloudUploadGateway::invalid(quint64 id, const char* field, const QJsonObject& root)
+{
+    // The reply's shape, never its values (docs/api/cloud-drive.md §3).
+    if (const auto p = m_pending.value(id))
+        log::warn(lcApi, "cloud.invalid",
+                  {{"step", p->step}, {"field", field}, {"keys", root.keys().join(u',')}});
+    fail(id, CloudUploadError::InvalidResponse);
 }
 
 void CloudUploadGateway::fail(quint64 id, CloudUploadError error, std::optional<int> code)
