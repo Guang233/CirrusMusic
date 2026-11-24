@@ -22,6 +22,9 @@
 #ifdef CIRRUS_UI_SMTC
 #include "smtc.h"
 #endif
+#ifdef CIRRUS_UI_TASKBAR
+#include "taskbar_buttons.h"
+#endif
 #include "app_link.h"
 #include "single_instance.h"
 #include "title_bar_mode.h"
@@ -259,6 +262,9 @@ int main(int argc, char* argv[])
     // Bound to the main window; gone before it is (declared after the engine).
     std::unique_ptr<cirrus::ui::Smtc> smtc;
 #endif
+#ifdef CIRRUS_UI_TASKBAR
+    std::unique_ptr<cirrus::ui::TaskbarButtons> taskbar; // the same
+#endif
 
     // Hidden in the tray, the window gives back its GPU device and scene graph, so a
     // discrete GPU can power down during hours of background playback.
@@ -282,6 +288,9 @@ int main(int argc, char* argv[])
         });
 #ifdef CIRRUS_UI_SMTC
         smtc = std::make_unique<cirrus::ui::Smtc>(presentation->player(), window);
+#endif
+#ifdef CIRRUS_UI_TASKBAR
+        taskbar = std::make_unique<cirrus::ui::TaskbarButtons>(presentation->player(), window);
 #endif
     }
 
