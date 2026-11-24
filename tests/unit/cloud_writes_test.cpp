@@ -21,7 +21,7 @@ const QString md5 = QStringLiteral("0123456789abcdef0123456789abcdef");
 const QByteArray check =
     R"({"code":200,"needUpload":true,"songId":")" + QByteArray(128, 'a') + "\"}";
 const QByteArray allocation =
-    R"({"code":200,"result":{"objectKey":"synthetic/key.flac","token":"synthetic-nos","resourceId":42}})";
+    R"({"code":200,"result":{"objectKey":"synthetic/key.flac","token":"UPLOAD synthetic:nos=","resourceId":42}})";
 const QByteArray info = R"({"code":200,"songId":"88"})";
 const QByteArray publish = R"({"code":200,"privateCloud":{}})";
 
@@ -271,7 +271,7 @@ class CloudWritesTest : public QObject
         QCOMPARE(nos.url().host(), "nosup-jd1.127.net");
         QVERIFY(nos.url().toEncoded().contains(
             "/jd-musicrep-privatecloud-audio-public/synthetic%2Fkey.flac?offset=0&complete=true"));
-        QCOMPARE(nos.rawHeader("x-nos-token"), "synthetic-nos");
+        QCOMPARE(nos.rawHeader("x-nos-token"), "UPLOAD synthetic:nos=");
         QCOMPARE(nos.rawHeader("Content-MD5"),
                  QCryptographicHash::hash(h.content, QCryptographicHash::Md5).toHex());
         QCOMPARE(nos.header(QNetworkRequest::ContentTypeHeader).toString(), "audio/flac");

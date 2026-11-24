@@ -58,11 +58,13 @@ std::optional<Allocation> allocationFrom(const QJsonObject& root, const char*& w
     why = "token";
     if (!token.isString())
         return std::nullopt;
+    // A header value with inner spaces ("UPLOAD key:signature…"): printable ASCII only.
     const auto bytes = token.toString().toLatin1();
-    if (bytes.isEmpty() || bytes.size() > 4096 || QString::fromLatin1(bytes) != token.toString())
+    if (bytes.isEmpty() || bytes.size() > 4096 || QString::fromLatin1(bytes) != token.toString() ||
+        bytes.front() == ' ' || bytes.back() == ' ')
         return std::nullopt;
     for (unsigned char c : bytes)
-        if (c <= 0x20 || c >= 0x7f)
+        if (c < 0x20 || c >= 0x7f)
             return std::nullopt;
     why = "resourceId";
     const auto resource = mapping::providerId(o.value(QStringLiteral("resourceId")));
