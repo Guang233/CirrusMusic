@@ -14,6 +14,8 @@
 #include <QThread>
 #include <QThreadPool>
 #include <QTimer>
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace cirrus::netease
@@ -60,6 +62,37 @@ std::optional<Allocation> allocationFrom(const QJsonObject& root)
     if (resource.isEmpty())
         return std::nullopt;
     return Allocation{objectKey.toString(), bytes, resource};
+}
+
+// What a reply's field is, without its value: for cloud.invalid.
+QString fieldKind(const QJsonValue& v)
+{
+    switch (v.type()) {
+    case QJsonValue::String: {
+        const QString s = v.toString();
+        const bool digits =
+            !s.isEmpty() && std::all_of(s.cbegin(), s.cend(), [](QChar c) { return c.isDigit(); });
+        return QStringLiteral("string:%1%2").arg(s.size()).arg(digits ? ":digits" : "");
+    }
+    case QJsonValue::Double: {
+        const double d = v.toDouble();
+        return d == 0                             ? QStringLiteral("number:zero")
+               : std::abs(d) > 9007199254740991.0 ? QStringLiteral("number:unsafe")
+               : d != std::floor(d)               ? QStringLiteral("number:fraction")
+               : d < 0                            ? QStringLiteral("number:negative")
+                                                  : QStringLiteral("number");
+    }
+    case QJsonValue::Bool:
+        return QStringLiteral("bool");
+    case QJsonValue::Null:
+        return QStringLiteral("null");
+    case QJsonValue::Object:
+        return QStringLiteral("object");
+    case QJsonValue::Array:
+        return QStringLiteral("array");
+    default:
+        return QStringLiteral("missing");
+    }
 }
 
 QByteArray contentType(const QString& extension)
@@ -553,7 +586,10 @@ void CloudUploadGateway::invalid(quint64 id, const char* field, const QJsonObjec
     // The reply's shape, never its values (docs/api/cloud-drive.md §3).
     if (const auto p = m_pending.value(id))
         log::warn(lcApi, "cloud.invalid",
-                  {{"step", p->step}, {"field", field}, {"keys", root.keys().join(u',')}});
+                  {{"step", p->step},
+                   {"field", field},
+                   {"kind", fieldKind(root.value(QLatin1StringView(field)))},
+                   {"keys", root.keys().join(u',')}});
     fail(id, CloudUploadError::InvalidResponse);
 }
 
