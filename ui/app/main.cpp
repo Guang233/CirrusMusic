@@ -213,6 +213,18 @@ int main(int argc, char* argv[])
                 "now_playing.unavailable",
                 QCoreApplication::translate("NowPlaying", "无法向其他程序提供播放状态")));
         });
+    // 安装并重启 (Windows, docs/tasks/update-check.md §9): quits as Ctrl+Q does, unless
+    // uploads would be cut off; the installer starts once everything has closed (below).
+    QObject::connect(presentation->updates(), &cirrus::ui::UpdateCheck::installRequested, &desktop,
+                     [presentation, &desktop] {
+                         if (presentation->cloudUploads()->active()) {
+                             emit presentation->notice(cirrus::ui::noticed(
+                                 "update.install_after_uploads",
+                                 QCoreApplication::translate("Update", "上传完成后再安装")));
+                             return;
+                         }
+                         desktop.quitNow();
+                     });
     backend.start();
 #ifdef CIRRUS_UI_MPRIS
     // Media keys and the desktop's media controls (docs/ui/pages/shell.md §7).
@@ -275,5 +287,6 @@ int main(int argc, char* argv[])
 
     const int code = QGuiApplication::exec();
     cirrus::log::info(lcApp, "app.quit", {"code", code});
+    presentation->updates()->runInstaller();
     return code;
 }

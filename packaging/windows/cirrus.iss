@@ -78,3 +78,12 @@ Name: "{autodesktop}\Cirrus"; Filename: "{app}\Cirrus.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\Cirrus.exe"; Description: "{cm:LaunchProgram,Cirrus}"; Flags: nowait postinstall skipifsilent
+; The app's own update (docs/tasks/update-check.md §9) runs this silent with /RELAUNCH=1:
+; Cirrus opens again once it is installed.
+Filename: "{app}\Cirrus.exe"; Flags: nowait runasoriginaluser; Check: RelaunchAfterUpdate
+
+[Code]
+function RelaunchAfterUpdate: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:relaunch|0}') = '1');
+end;

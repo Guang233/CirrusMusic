@@ -280,6 +280,14 @@ AppWindow {
             else
                 shell.notifyAction(message, qsTr("查看"), open);
         }
+        // The Windows installer is downloaded and checked (update-check.md §9).
+        function onDownloaded(message: string) {
+            const install = () => App.updates.installUpdate();
+            if (player.opened)
+                player.notifyAction(message, qsTr("安装并重启"), install);
+            else
+                shell.notifyAction(message, qsTr("安装并重启"), install);
+        }
     }
     UpdateDialog {
         id: updateDialog
