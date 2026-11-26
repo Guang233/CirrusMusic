@@ -32,6 +32,8 @@ class ShortcutMap : public QObject
     Q_PROPERTY(QVariantMap keys READ keys NOTIFY changed)
     // The actions in their order: [{ id, text, group, defaults }] (group: ShortcutMap.Group).
     Q_PROPERTY(QVariantList actions READ actions CONSTANT)
+    // Action id -> its first key as printed ("Ctrl+K"), empty without keys: for hints.
+    Q_PROPERTY(QVariantMap hints READ hints NOTIFY changed)
     // Whether any action differs from its defaults.
     Q_PROPERTY(bool customized READ customized NOTIFY changed)
 
@@ -45,6 +47,7 @@ class ShortcutMap : public QObject
 
     [[nodiscard]] QVariantMap keys() const;
     [[nodiscard]] QVariantList actions() const;
+    [[nodiscard]] QVariantMap hints() const;
     [[nodiscard]] bool customized() const;
 
     Q_INVOKABLE QString title(const QString& id) const;

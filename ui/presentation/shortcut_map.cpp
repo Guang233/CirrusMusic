@@ -172,6 +172,15 @@ QVariantList ShortcutMap::actions() const
     return out;
 }
 
+QVariantMap ShortcutMap::hints() const
+{
+    QVariantMap out;
+    for (auto it = m_keys.cbegin(); it != m_keys.cend(); ++it)
+        out.insert(it.key(),
+                   it.value().isEmpty() ? QString() : displayText(it.value().constFirst()));
+    return out;
+}
+
 bool ShortcutMap::customized() const
 {
     for (const Action& action : m_actions)
