@@ -198,6 +198,35 @@ class ListeningReportTest : public QObject
         QCOMPARE(pld.value("format").toString(), "flac");
         QCOMPARE(pld.value("audioLevel").toString(), "hires");
         QCOMPARE(pld.value("alg").toString(), "null");
+        // Without the song's state: as before (not liked, list repeat, first).
+        QCOMPARE(pld.value("is_heart").toString(), "0");
+        QCOMPARE(pld.value("mode").toString(), "circulation");
+        QCOMPARE(pld.value("songInd"), QJsonValue(0));
+        // With it, as the official app fills them (vn0/h1.java).
+        auto state = play;
+        state.insert("heart", true);
+        state.insert("mode", "ai");
+        state.insert("index", 5);
+        const auto stated = recordOf(ApiOperation::ListeningPlay, state).value("data").toObject();
+        QCOMPARE(stated.value("is_heart").toString(), "1");
+        QCOMPARE(stated.value("mode").toString(), "ai");
+        QCOMPARE(stated.value("songInd"), QJsonValue(5));
+        for (const auto& [key, value] :
+             std::initializer_list<std::pair<const char*, QJsonValue>>{{"heart", 1},
+                                                                       {"mode", "loop"},
+                                                                       {"index", -1},
+                                                                       {"index", 1.5},
+                                                                       {"index", 100000}}) {
+            auto bad = state;
+            bad.insert(key, value);
+            QVERIFY2(!operationPayload(ApiOperation::ListeningPlay, bad), key);
+        }
+        auto partial = state;
+        partial.remove("index"); // all three or none
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, partial));
+        partial = state;
+        partial.remove("heart");
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, partial));
         QCOMPARE(recordOf(ApiOperation::ListeningPlay, with("alg", "Alg_AI_One_1:2_RH"))
                      .value("data")
                      .toObject()

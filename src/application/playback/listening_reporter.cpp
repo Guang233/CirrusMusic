@@ -140,6 +140,15 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
         // A 心动模式 song's mark, as the official app sends it (heartbeat-mode.md §7.6).
         if (validQueueAlg(row.alg))
             report.alg = row.alg;
+        // The song's state now, as the official app logs it (vn0/h1.java): liked, the play
+        // mode, its place in the play order.
+        report.liked = m_liked && m_liked(row.song);
+        const auto queue = m_session.queue();
+        report.mode = queue.heartbeat                      ? ListeningReportMode::Heartbeat
+                      : queue.repeat == QueueRepeat::One   ? ListeningReportMode::Single
+                      : queue.order == QueueOrder::Shuffle ? ListeningReportMode::Random
+                                                           : ListeningReportMode::Circulation;
+        report.index = std::max<qsizetype>(0, m_session.playOrder().indexOf(row.queueEntry));
     }
     return Prepared{report, origin};
 }
