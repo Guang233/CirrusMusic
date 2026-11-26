@@ -64,6 +64,7 @@ SettingsGroup {
                 if (App.shortcuts.owner(sequence, actionId) !== "") {
                     pending = sequence;
                     pendingIndex = index;
+                    Qt.callLater(() => actionRow.focusRequested(-1));
                     return false;
                 }
                 App.shortcuts.assign(actionId, index, sequence);
@@ -75,17 +76,14 @@ SettingsGroup {
                     App.shortcuts.assign(actionId, index, pending);
                 pending = "";
                 pendingIndex = -1;
-                // The focus goes back to the key (or the "+" after it, when it was cleared).
-                Qt.callLater(() => {
-                    const caps = [];
-                    for (const item of (actionRow.trailingItem as Row)?.children ?? []) {
-                        const cap = item as ShortcutKey;
-                        if (cap && cap.visible)
-                            caps.push(cap);
-                    }
-                    caps[Math.min(index, caps.length - 1)]?.forceActiveFocus(Qt.TabFocusReason);
-                });
+                focusSlot(index);
             }
+            // The focus to the cap at `index` (or the "+" before it), once it shows.
+            function focusSlot(index: int): void {
+                Qt.callLater(() => actionRow.focusRequested(Math.min(index, actionRow.keys.length)));
+            }
+            // A cap (its index) or 替换 (-1) takes the focus.
+            signal focusRequested(int slot)
 
             text: modelData.text
             supportingText: pendingOwner !== ""
@@ -105,14 +103,19 @@ SettingsGroup {
                 Row {
                     spacing: 8
 
+                    // A cap per key the action may have (ShortcutMap::MaximumKeys), kept
+                    // while keys change so the focus stays: the keys, then "+" for the next.
                     Repeater {
-                        model: actionRow.pendingOwner !== "" ? [] : actionRow.keys
+                        model: 2
                         delegate: ShortcutKey {
                             id: cap
                             required property int index
-                            required property string modelData
+                            readonly property string sequence: actionRow.keys[index] ?? ""
                             anchors.verticalCenter: parent?.verticalCenter
-                            text: App.shortcuts.displayText(modelData)
+                            visible: actionRow.pendingOwner === "" && index <= actionRow.keys.length
+                            text: sequence !== "" ? App.shortcuts.displayText(sequence) : ""
+                            glyph: Symbols.add
+                            hint: index > 0 ? qsTr("添加备用按键") : qsTr("添加按键")
                             Accessible.description: actionRow.text
                             onRecordingChanged: {
                                 if (recording) {
@@ -125,28 +128,18 @@ SettingsGroup {
                             }
                             onRecorded: (key, modifiers) => cap.recording =
                                 actionRow.take(cap.index, key, modifiers)
-                            onCleared: App.shortcuts.clear(actionRow.actionId, cap.index)
-                        }
-                    }
-                    ShortcutKey {
-                        id: add
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: actionRow.pendingOwner === ""
-                                 && actionRow.keys.length < 2
-                        glyph: Symbols.add
-                        hint: actionRow.keys.length > 0 ? qsTr("添加备用按键") : qsTr("添加按键")
-                        Accessible.description: actionRow.text
-                        onRecordingChanged: {
-                            if (recording) {
-                                actionRow.refused = false;
-                                actionRow.recordingIndex = actionRow.keys.length;
-                            } else if (actionRow.recordingIndex === actionRow.keys.length) {
-                                actionRow.recordingIndex = -1;
-                                actionRow.refused = false;
+                            onCleared: {
+                                if (cap.sequence !== "")
+                                    App.shortcuts.clear(actionRow.actionId, cap.index);
+                            }
+                            Connections {
+                                target: actionRow
+                                function onFocusRequested(slot: int) {
+                                    if (slot === cap.index)
+                                        cap.forceActiveFocus(Qt.TabFocusReason);
+                                }
                             }
                         }
-                        onRecorded: (key, modifiers) => add.recording =
-                            actionRow.take(actionRow.keys.length, key, modifiers)
                     }
                     Button {
                         anchors.verticalCenter: parent.verticalCenter
@@ -156,11 +149,19 @@ SettingsGroup {
                         onClicked: actionRow.resolve(false)
                     }
                     Button {
+                        id: replaceButton
                         anchors.verticalCenter: parent.verticalCenter
                         visible: actionRow.pendingOwner !== ""
                         variant: Md.Tonal
                         text: qsTr("替换")
                         onClicked: actionRow.resolve(true)
+                        Connections {
+                            target: actionRow
+                            function onFocusRequested(slot: int) {
+                                if (slot === -1)
+                                    replaceButton.forceActiveFocus(Qt.TabFocusReason);
+                            }
+                        }
                     }
                     // Kept in place when hidden, so the caps of all rows end in one line.
                     IconButton {
@@ -169,7 +170,10 @@ SettingsGroup {
                         enabled: actionRow.customized && actionRow.pendingOwner === ""
                         glyph: Symbols.restart_alt
                         text: qsTr("恢复默认")
-                        onClicked: App.shortcuts.reset(actionRow.actionId)
+                        onClicked: {
+                            App.shortcuts.reset(actionRow.actionId);
+                            actionRow.focusSlot(0);
+                        }
                     }
                 }
             }
