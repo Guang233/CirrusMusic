@@ -520,6 +520,7 @@ Item {
         onCommentsRequested: (key, title, artistText, coverKey) =>
                              page.shell.openSongComments(key, title, artistText, coverKey)
         // Typing on the table goes on in the find field.
+        typingFinds: page.findable && page.hasSongs
         onTyped: text => {
             const field = page.compactProgress > 0.5 ? compactFind : page.headerFind;
             if (!field)

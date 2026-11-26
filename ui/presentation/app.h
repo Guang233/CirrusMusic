@@ -25,6 +25,7 @@ class UpdateCheck;
 class Player;
 class Session;
 class Share;
+class ShortcutMap;
 class CloudUploads;
 class Together;
 
@@ -51,6 +52,7 @@ class App : public QObject
     Q_MOC_INCLUDE("session.h")
     Q_MOC_INCLUDE("together.h")
     Q_MOC_INCLUDE("sharing.h")
+    Q_MOC_INCLUDE("shortcut_map.h")
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(cirrus::ui::AppSettings* settings READ settings CONSTANT)
@@ -66,6 +68,8 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::UpdateCheck* updates READ updates CONSTANT)
     Q_PROPERTY(cirrus::ui::Together* together READ together CONSTANT)
     Q_PROPERTY(cirrus::ui::Share* share READ share CONSTANT)
+    // The keyboard shortcuts the user can change (docs/ui/pages/shortcuts.md).
+    Q_PROPERTY(cirrus::ui::ShortcutMap* shortcuts READ shortcuts CONSTANT)
     // Uploads to the cloud drive; they go on when the page closes (docs/ui/pages/cloud.md §5).
     Q_PROPERTY(cirrus::ui::CloudUploads* cloudUploads READ cloudUploads CONSTANT)
     // Fake source knobs; null with real sources.
@@ -110,6 +114,7 @@ class App : public QObject
     [[nodiscard]] UpdateCheck* updates() const { return m_updates; }
     [[nodiscard]] Together* together() const { return m_together; }
     [[nodiscard]] Share* share() const { return m_share; }
+    [[nodiscard]] ShortcutMap* shortcuts() const { return m_shortcuts; }
     [[nodiscard]] CloudUploads* cloudUploads() const { return m_cloudUploads; }
     [[nodiscard]] Player* player() const { return m_player; }
     [[nodiscard]] Session* session() const { return m_session; }
@@ -152,6 +157,7 @@ class App : public QObject
     Together* m_together;
     Share* m_share;
     CloudUploads* m_cloudUploads;
+    ShortcutMap* m_shortcuts;
 };
 
 } // namespace cirrus::ui

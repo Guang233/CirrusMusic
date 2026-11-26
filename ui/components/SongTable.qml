@@ -112,6 +112,9 @@ Item {
     property int currentRow: -1
     // The current row shows its focus ring only after keyboard use.
     property bool keyboardUsed: false
+    // Typed text goes on in a find (typed()): single-key shortcuts wait while the table
+    // has the focus.
+    property bool typingFinds: false
 
     signal albumRequested(string key)
     signal podcastRequested(string key)
@@ -437,10 +440,18 @@ Item {
             sourceComponent: table.footerContent
         }
 
-        // Ctrl+↑/↓ move without selecting here, before the window's volume shortcuts.
-        Keys.onShortcutOverride: event => event.accepted = list.Window.activeFocusItem === list
-            && (event.modifiers & Qt.ControlModifier)
-            && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)
+        // Ctrl+↑/↓ move without selecting here, before the window's volume shortcuts
+        // (Ctrl+A and Ctrl+Space are the table's too); typed text goes to the find before
+        // single-key shortcuts.
+        Keys.onShortcutOverride: event => {
+            const command = event.modifiers & (Qt.ControlModifier | Qt.AltModifier
+                                               | Qt.MetaModifier);
+            const own = (event.modifiers & Qt.ControlModifier)
+                && (event.key === Qt.Key_Up || event.key === Qt.Key_Down
+                    || event.key === Qt.Key_A || event.key === Qt.Key_Space);
+            event.accepted = list.Window.activeFocusItem === list
+                && (own || table.typingFinds && !command && event.text.trim().length > 0);
+        }
         Keys.onPressed: event => {
             // Keys from the header's controls (find field, sort titles) bubble up here.
             if (list.Window.activeFocusItem !== list) {
