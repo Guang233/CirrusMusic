@@ -10,6 +10,7 @@ skip_previous
 fast_forward
 fast_rewind
 shuffle
+ecg_heart
 repeat
 repeat_one
 queue_music

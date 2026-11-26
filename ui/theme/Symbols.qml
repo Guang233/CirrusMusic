@@ -11,6 +11,7 @@ QtObject {
     readonly property string fast_forward: "\ue01f"
     readonly property string fast_rewind: "\ue020"
     readonly property string shuffle: "\ue043"
+    readonly property string ecg_heart: "\uf6e9"
     readonly property string repeat: "\ue040"
     readonly property string repeat_one: "\ue041"
     readonly property string queue_music: "\ue03d"
@@ -148,6 +149,7 @@ QtObject {
         "fast_forward",
         "fast_rewind",
         "shuffle",
+        "ecg_heart",
         "repeat",
         "repeat_one",
         "queue_music",
