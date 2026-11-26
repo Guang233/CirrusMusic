@@ -174,8 +174,13 @@ Item {
         field.selectAll();
     }
 
+    // The songs as the page shows them (sorted, found), what playAll() plays.
+    function shownKeys(): list<string> {
+        return playSource ? playSource.keys() : sortedModel.keys();
+    }
+
     function playAll(): void {
-        const keys = playSource ? playSource.keys() : sortedModel.keys();
+        const keys = shownKeys();
         if (keys.length === 0)
             return;
         if (playsVoices)

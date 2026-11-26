@@ -29,6 +29,7 @@ Item {
     function openOrigin(row: var): void {
         switch (row.kind) {
         case StatsPageModel.Playlist:
+        case StatsPageModel.Heartbeat:
             shell.openPlaylist(row.key);
             break;
         case StatsPageModel.Album:

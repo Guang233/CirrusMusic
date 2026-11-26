@@ -56,6 +56,10 @@ App::App(Sources sources)
 {
     if (m_sources.fakeControls)
         m_sources.fakeControls->attach(m_network);
+    // 心动模式 is the liked songs' (Player::heartbeatAvailable).
+    m_player->setLikedPlaylist(m_library->likedPlaylistKey());
+    connect(m_library, &Library::likedPlaylistChanged, m_player,
+            [this] { m_player->setLikedPlaylist(m_library->likedPlaylistKey()); });
 }
 
 App::~App()
