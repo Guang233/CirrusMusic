@@ -49,6 +49,7 @@ trending_up
 podcasts
 mic
 history
+restart_alt
 download
 download_done
 cloud

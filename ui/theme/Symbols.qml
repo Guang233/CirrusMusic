@@ -48,6 +48,7 @@ QtObject {
     readonly property string podcasts: "\uf048"
     readonly property string mic: "\ue31d"
     readonly property string history: "\ue8b3"
+    readonly property string restart_alt: "\uf053"
     readonly property string download: "\uf090"
     readonly property string download_done: "\uf091"
     readonly property string cloud: "\uf15c"
@@ -184,6 +185,7 @@ QtObject {
         "podcasts",
         "mic",
         "history",
+        "restart_alt",
         "download",
         "download_done",
         "cloud",
