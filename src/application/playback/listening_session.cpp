@@ -268,15 +268,18 @@ bool ListeningSession::replaceQueue(const QList<SongId>& songs, qsizetype startI
     return begin(std::move(candidate), TransportIntent::Play, quality, false);
 }
 bool ListeningSession::enterHeartbeat(const PlaylistId& playlist, const QList<QueueEntry>& mix,
-                                      bool keepPlaying, AudioQuality quality)
+                                      bool keepPlaying, AudioQuality quality,
+                                      const QString& activeAlg)
 {
     log::info(lcPlayback, "queue.heartbeat",
               {{"count", mix.size()}, {"keep", keepPlaying}, {"quality", quality}});
     if (m_mode == ListeningMode::PersonalFm || (m_queueContext.isValid() && !queueContextMatches()))
         return false;
     if (keepPlaying) {
-        if (!m_queue.enterHeartbeat(playlist, mix, true))
+        if (!m_queue.enterHeartbeat(playlist, mix, true, activeAlg))
             return false;
+        if (current())
+            m_history.setAlg(m_queue.snapshot().active, activeAlg);
         recordControlIntent();
         refreshPreload();
         emit queueChanged(m_queue.snapshot());

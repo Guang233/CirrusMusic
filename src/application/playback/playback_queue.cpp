@@ -123,9 +123,9 @@ bool PlaybackQueue::append(const QList<SongId>& songs, bool playNext, const Play
     return true;
 }
 bool PlaybackQueue::enterHeartbeat(const PlaylistId& playlist, const QList<QueueEntry>& mix,
-                                   bool keepActive)
+                                   bool keepActive, const QString& activeAlg)
 {
-    if (mix.isEmpty() || !validMusicId(playlist.value))
+    if (mix.isEmpty() || !validMusicId(playlist.value) || !validQueueAlg(activeAlg))
         return false;
     for (const auto& entry : mix)
         if (!validMusicId(entry.song.value) || !validPlayOrigin(entry.origin) ||
@@ -138,6 +138,8 @@ bool PlaybackQueue::enterHeartbeat(const PlaylistId& playlist, const QList<Queue
         if (!active)
             return false;
         entries.append(*active);
+        if (!activeAlg.isEmpty())
+            entries.first().alg = activeAlg; // in the mix only: the queue before keeps its own
         // The songs put next since it became active: up to m_insertTail in play order.
         if (const auto tail = m_order.indexOf(m_insertTail); tail >= 0) {
             keptNext = true;

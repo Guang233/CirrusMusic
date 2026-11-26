@@ -12,6 +12,8 @@ class ListeningHistory
                domain::ListeningMode source, QUuid queueEntry, domain::PlayOrigin origin = {},
                domain::ProgramId program = {}, QString alg = {});
     bool observe(const domain::PlaybackSnapshot& snapshot);
+    // The playing load's queue entry got a 心动模式 mark (reported with it).
+    void setAlg(QUuid queueEntry, const QString& alg);
     bool finish(domain::ListeningEnd end);
     void clear(); // forget rows and suppress this load; queued old totals cannot resurrect it
     void reset(); // account/lifetime change: forget everything

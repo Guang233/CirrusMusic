@@ -6,6 +6,12 @@
 namespace cirrus::application
 {
 using namespace domain;
+void ListeningHistory::setAlg(QUuid queueEntry, const QString& alg)
+{
+    if (m_active && !queueEntry.isNull() && m_active->queueEntry == queueEntry &&
+        m_active->source == ListeningMode::Queue && validQueueAlg(alg))
+        m_active->alg = alg;
+}
 void ListeningHistory::begin(LoadToken token, QString accountId, SongId song, ListeningMode source,
                              QUuid queueEntry, PlayOrigin origin, ProgramId program, QString alg)
 {

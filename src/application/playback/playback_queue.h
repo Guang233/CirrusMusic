@@ -25,9 +25,10 @@ class PlaybackQueue
     // queue before is kept for leaving the mode (already in it: the one kept then).
     // `keepActive`: the active entry stays first, then the songs put after it with playNext
     // since it became active, then the mix without the active song; else the mix alone,
-    // nothing active. Past MaximumEntries the mix is cut.
+    // nothing active. Past MaximumEntries the mix is cut. `activeAlg`: the mark the active
+    // entry gets in the mix, as the official app gives the song playing (heartbeat-mode.md §8).
     bool enterHeartbeat(const domain::PlaylistId& playlist, const QList<domain::QueueEntry>& mix,
-                        bool keepActive);
+                        bool keepActive, const QString& activeAlg = {});
     [[nodiscard]] bool inHeartbeat() const { return m_state.heartbeat.has_value(); }
     bool select(QUuid id);
     bool next(bool naturalEnd = false, bool ignoreSingleRepeat = false);

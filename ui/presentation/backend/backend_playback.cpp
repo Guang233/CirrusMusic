@@ -1337,25 +1337,19 @@ void BackendPlayback::startHeartbeat(const QString& playlistKey, const QString& 
     query.playlist = {playlistKey};
     QString name = title;
     if (keys.isEmpty()) {
-        // From the playing song, over the queue's songs from that playlist (queue order).
+        // From the playing song, over the whole queue (its order before shuffling), as the
+        // official app sends its play list (el0/a.java): its first song and its length.
         const auto queue = m_session->queue();
-        std::optional<domain::QueueEntry> active;
-        QList<domain::SongId> songs;
-        for (const auto& entry : queue.entries) {
-            if (entry.id == queue.active)
-                active = entry;
-            if (entry.program.value.isEmpty() &&
-                entry.origin.kind == domain::PlayOriginKind::Playlist &&
-                entry.origin.id == playlistKey)
-                songs.append(entry.song);
-        }
-        if (!active || !active->program.value.isEmpty() || songs.isEmpty())
+        const auto active = std::find_if(queue.entries.cbegin(), queue.entries.cend(),
+                                         [&](const auto& e) { return e.id == queue.active; });
+        if (active == queue.entries.cend() || !active->program.value.isEmpty())
             return;
         if (name.isEmpty())
             name = active->origin.name;
         query.anchor = active->song;
-        query.start = songs.first();
-        query.count = int(std::min<qsizetype>(songs.size(), domain::HeartbeatQuery::MaximumCount));
+        query.start = queue.entries.first().song;
+        query.count =
+            int(std::min<qsizetype>(queue.entries.size(), domain::HeartbeatQuery::MaximumCount));
     } else {
         QStringList valid;
         for (const QString& key : keys)
@@ -1370,7 +1364,8 @@ void BackendPlayback::startHeartbeat(const QString& playlistKey, const QString& 
     if (!query.isValid())
         return;
     log::info(lcUi, "player.heartbeat", {{"from_all", query.fromAll}, {"count", query.count}});
-    const HeartbeatAsk ask{playlistKey, name, !query.fromAll};
+    const HeartbeatAsk ask{playlistKey, name, !query.fromAll,
+                           query.fromAll ? query.start.value : QString()};
     m_heartbeatAsk = ask;
     m_heartbeatRequest = m_requests->submit(
         [query](application::BackendFacade& facade) {
@@ -1394,14 +1389,26 @@ void BackendPlayback::heartbeatArrived(const HeartbeatAsk& ask, const domain::He
     const domain::PlayOrigin own = storedOrigin({playback::FromPlaylist, ask.playlist, ask.title});
     domain::PlayOrigin mixed = own;
     mixed.kind = domain::PlayOriginKind::Heartbeat;
+    // As the official app (el0/a.java): from the page the playlist's first song plays first,
+    // marked "Alg_AI_all_0_redheart"; from a song, that song plays on, marked
+    // "Alg_AI_One_<song>_clicksong-RH" (for the liked songs; the app's other kinds differ).
     QList<domain::QueueEntry> mix;
+    if (!ask.first.isEmpty())
+        mix.append({{}, {ask.first}, own, {}, QStringLiteral("Alg_AI_all_0_redheart")});
     for (const auto& entry : list->entries)
-        mix.append({{},
-                    entry.song,
-                    entry.recommended ? mixed : own,
-                    {},
-                    domain::validQueueAlg(entry.alg) ? entry.alg : QString()});
-    if (!m_session->enterHeartbeat({ask.playlist}, mix, ask.keepPlaying, quality()) || !m_session)
+        if (entry.song.value != ask.first)
+            mix.append({{},
+                        entry.song,
+                        entry.recommended ? mixed : own,
+                        {},
+                        domain::validQueueAlg(entry.alg) ? entry.alg : QString()});
+    const auto playing = m_session->queue().active;
+    QString activeAlg;
+    for (const auto& entry : m_session->queue().entries)
+        if (ask.keepPlaying && entry.id == playing)
+            activeAlg = QStringLiteral("Alg_AI_One_%1_clicksong-RH").arg(entry.song.value);
+    if (!m_session->enterHeartbeat({ask.playlist}, mix, ask.keepPlaying, quality(), activeAlg) ||
+        !m_session)
         return heartbeatDone(false);
     // The new entries are reported from the playlist, like its own songs (§7.6); what is in
     // neither queue is no more.

@@ -150,6 +150,7 @@ class BackendPlayback : public QObject, public PlaybackSource
         QString playlist;
         QString title;
         bool keepPlaying = false;
+        QString first; // from the page: the song played first (the playlist's first shown)
     };
     void heartbeatArrived(const HeartbeatAsk& ask, const domain::HeartbeatList* list);
     void heartbeatDone(bool ok);

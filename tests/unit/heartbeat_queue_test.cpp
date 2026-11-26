@@ -90,7 +90,9 @@ class HeartbeatQueueTest : public QObject
         QVERIFY(q.select(before.entries[1].id)); // "2"
         QVERIFY(q.append({{"8"}}, true, {PlayOriginKind::Search, {}, {}}));
         QVERIFY(q.append({{"7"}}, true, {PlayOriginKind::Search, {}, {}}));
-        QVERIFY(q.enterHeartbeat(liked, mix({"3", "91", "2", "92", "1", "93"}), true));
+        QVERIFY(!q.enterHeartbeat(liked, mix({"3"}), true, "bad mark")); // not printable ASCII
+        QVERIFY(q.enterHeartbeat(liked, mix({"3", "91", "2", "92", "1", "93"}), true,
+                                 "Alg_AI_One_2_clicksong-RH"));
         QVERIFY(q.inHeartbeat());
         // The playing one first, its next ones, then the mix without it.
         QCOMPARE(songs(q), (QStringList{"2", "8", "7", "3", "91", "92", "1", "93"}));
@@ -104,6 +106,8 @@ class HeartbeatQueueTest : public QObject
         QCOMPARE(s.heartbeat->playlist.value, liked.value);
         QCOMPARE(songs(s.heartbeat->entries), (QStringList{"1", "2", "8", "7", "3", "4"}));
         QCOMPARE(s.heartbeat->active, before.entries[1].id);
+        QCOMPARE(s.entries[0].alg, "Alg_AI_One_2_clicksong-RH"); // in the mix only
+        QVERIFY(s.heartbeat->entries[1].alg.isEmpty());
         QCOMPARE(s.heartbeat->order, QueueOrder::Shuffle);
         QCOMPARE(s.heartbeat->repeat, QueueRepeat::Off);
         QVERIFY(validSavedQueue(s));
