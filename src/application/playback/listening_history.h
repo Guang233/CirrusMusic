@@ -10,7 +10,7 @@ class ListeningHistory
     static constexpr qsizetype MaximumRecords = 256;
     void begin(domain::LoadToken token, QString accountId, domain::SongId song,
                domain::ListeningMode source, QUuid queueEntry, domain::PlayOrigin origin = {},
-               domain::ProgramId program = {});
+               domain::ProgramId program = {}, QString alg = {});
     bool observe(const domain::PlaybackSnapshot& snapshot);
     bool finish(domain::ListeningEnd end);
     void clear(); // forget rows and suppress this load; queued old totals cannot resurrect it

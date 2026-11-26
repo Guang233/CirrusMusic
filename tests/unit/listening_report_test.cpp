@@ -169,6 +169,11 @@ class ListeningReportTest : public QObject
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("sourceId", "keywords")));
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("quality", "a b")));
         QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("duration", -1)));
+        // A 心动模式 song's mark (heartbeat-mode.md §7.6): as given, else "null".
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("alg", "")));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("alg", "a b")));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("alg", 1)));
+        QVERIFY(!operationPayload(ApiOperation::ListeningPlay, with("alg", QString(257, 'a'))));
         const auto recordOf = [](ApiOperation op, const QJsonObject& p) {
             const auto records = operationPayload(op, p)->value("records").toArray();
             [&] { QCOMPARE(records.size(), 1); }();
@@ -192,6 +197,13 @@ class ListeningReportTest : public QObject
         QCOMPARE(pld.value("startlogtime"), QJsonValue(qint64(1794655361))); // seconds
         QCOMPARE(pld.value("format").toString(), "flac");
         QCOMPARE(pld.value("audioLevel").toString(), "hires");
+        QCOMPARE(pld.value("alg").toString(), "null");
+        QCOMPARE(recordOf(ApiOperation::ListeningPlay, with("alg", "Alg_AI_One_1:2_RH"))
+                     .value("data")
+                     .toObject()
+                     .value("alg")
+                     .toString(),
+                 "Alg_AI_One_1:2_RH");
         const auto start =
             recordOf(ApiOperation::ListeningStart, {{"id", "1"},
                                                     {"source", "list"},

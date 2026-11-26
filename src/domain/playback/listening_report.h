@@ -1,6 +1,7 @@
 #pragma once
 #include "domain/music/catalog_types.h"
 #include "domain/music/podcast_types.h"
+#include "domain/playback/listening_types.h"
 #include "logging/log.h"
 #include <QUuid>
 
@@ -99,11 +100,14 @@ struct ListeningReport {
     // A podcast program played through `song` (its track), reported as the program; its
     // source is DjRadio. Empty for songs.
     ProgramId program;
+    // The song's 心动模式 mark (QueueEntry::alg), sent as the official app does; empty: none.
+    QString alg;
     [[nodiscard]] bool isValid() const
     {
         if (action == ListeningReportAction::ActiveClient)
-            return !eventId.isNull() && playedSeconds == 0;
-        if (durationSeconds < 0 || durationSeconds > 86400 || quality.size() > 16)
+            return !eventId.isNull() && playedSeconds == 0 && alg.isEmpty();
+        if (durationSeconds < 0 || durationSeconds > 86400 || quality.size() > 16 ||
+            !validQueueAlg(alg) || (!alg.isEmpty() && !program.value.isEmpty()))
             return false;
         for (const QChar c : quality)
             if (!c.isLetterOrNumber())

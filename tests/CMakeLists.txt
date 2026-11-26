@@ -153,6 +153,10 @@ qt_add_executable(tst_listening unit/listening_test.cpp)
 target_link_libraries(tst_listening PRIVATE cirrus_application Qt6::Test)
 add_test(NAME listening COMMAND tst_listening)
 set_tests_properties(listening PROPERTIES TIMEOUT 15)
+qt_add_executable(tst_heartbeat_queue unit/heartbeat_queue_test.cpp)
+target_link_libraries(tst_heartbeat_queue PRIVATE cirrus_application Qt6::Test)
+add_test(NAME heartbeat_queue COMMAND tst_heartbeat_queue)
+set_tests_properties(heartbeat_queue PROPERTIES TIMEOUT 15)
 
 # Core/Test only: no platform, JSON/Network or audio dependencies.
 qt_add_executable(tst_playback_observation unit/playback_observation_test.cpp)

@@ -647,6 +647,8 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         const auto startedMs = parameters.value(QStringLiteral("started")).toInteger(0);
         const bool isProgram = parameters.contains(QStringLiteral("program"));
         const auto program = parameters.value(QStringLiteral("program")).toString();
+        const bool hasAlg = parameters.contains(QStringLiteral("alg"));
+        const auto alg = parameters.value(QStringLiteral("alg"));
         std::optional<ListeningReportSource> kind;
         for (auto k : {ListeningReportSource::List, ListeningReportSource::Album,
                        ListeningReportSource::Artist, ListeningReportSource::Toplist,
@@ -661,9 +663,11 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         bool qualityKnown = quality.size() <= 16;
         for (const QChar c : quality)
             qualityKnown = qualityKnown && c.isLetterOrNumber();
-        if (parameters.size() != (play ? 8 : 6) + (isProgram ? 1 : 0) ||
+        if (parameters.size() != (play ? 8 : 6) + (isProgram ? 1 : 0) + (hasAlg ? 1 : 0) ||
             (isProgram &&
              (!domain::validMusicId(program) || kind != ListeningReportSource::DjRadio)) ||
+            (hasAlg && (isProgram || !alg.isString() || alg.toString().isEmpty() ||
+                        !domain::validQueueAlg(alg.toString()))) ||
             !domain::validMusicId(id) || !kind || startedMs < 0 ||
             !domain::validSourceId(*kind, source) || !endKnown || duration < 0 ||
             duration > 86400 || !qualityKnown ||
@@ -743,7 +747,7 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
                  {"_addrefer", QString()},
                  {"_multirefers", QString()},
                  {"aidj_open_type", QStringLiteral("default")},
-                 {"alg", QStringLiteral("null")},
+                 {"alg", hasAlg ? alg.toString() : QStringLiteral("null")},
                  {"audioLevel", quality.isEmpty() ? QStringLiteral("exhigh") : quality},
                  {"bitrate", bitrate},
                  {"config_ver", 123791360},

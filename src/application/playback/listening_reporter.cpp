@@ -128,13 +128,18 @@ ListeningReporter::prepare(const StoredListeningRecord& row, ListeningReportActi
         const bool podcast = row.origin.kind == PlayOriginKind::Podcast;
         report.sourceId = podcast ? row.origin.id : QString();
         origin = podcast ? "known" : "none";
-    } else if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
-        auto known = report;
-        known.source = found->source;
-        known.sourceId = found->id;
-        origin = known.isValid() ? "known" : "invalid";
-        if (known.isValid())
-            report = known;
+    } else {
+        if (const auto found = m_lookup ? m_lookup(row.queueEntry) : std::nullopt) {
+            auto known = report;
+            known.source = found->source;
+            known.sourceId = found->id;
+            origin = known.isValid() ? "known" : "invalid";
+            if (known.isValid())
+                report = known;
+        }
+        // A 心动模式 song's mark, as the official app sends it (heartbeat-mode.md §7.6).
+        if (validQueueAlg(row.alg))
+            report.alg = row.alg;
     }
     return Prepared{report, origin};
 }

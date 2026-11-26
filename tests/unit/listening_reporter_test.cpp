@@ -313,6 +313,29 @@ class ListeningReporterTest : public QObject
         QCOMPARE(h.plays().last().sourceId, ""); // no podcast known: none made up
         QVERIFY(h.plays().last().isValid());
     }
+    void aHeartbeatSongSendsItsAlg()
+    {
+        Harness h;
+        h.reporter.setOriginLookup([](QUuid) {
+            return std::optional(ListeningReporter::Origin{ListeningReportSource::List, "70"});
+        });
+        const PlayOrigin own{PlayOriginKind::Playlist, "70", "synthetic liked"};
+        const PlayOrigin mixed{PlayOriginKind::Heartbeat, "70", "synthetic liked"};
+        QVERIFY(h.session.replaceQueue({{"1"}}, 0, AudioQuality::Standard, {own}));
+        QVERIFY(h.session.enterHeartbeat(
+            {"70"}, {{{}, {"91"}, mixed, {}, "Alg_AI_all_1_synthetic"}, {{}, {"2"}, own}}, false));
+        h.state(PlaybackState::Playing, 4000);
+        QCOMPARE(h.starts().last().alg, "Alg_AI_all_1_synthetic");
+        QVERIFY(h.session.next());
+        const auto r = h.plays().last();
+        QCOMPARE(r.song.value, "91");
+        QCOMPARE(r.alg, "Alg_AI_all_1_synthetic");
+        QCOMPARE(r.sourceId, "70");
+        QVERIFY(r.isValid());
+        h.state(PlaybackState::Playing, 4000);
+        QVERIFY(h.session.next());
+        QVERIFY(h.plays().last().alg.isEmpty()); // none given: none sent
+    }
 };
 QTEST_GUILESS_MAIN(ListeningReporterTest)
 #include "listening_reporter_test.moc"

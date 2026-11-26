@@ -137,6 +137,8 @@ quint64 ListeningReportGateway::submit(SessionToken context, QString accountId,
                       {QStringLiteral("started"), report.startedAtMs}};
     if (!active && !report.program.value.isEmpty())
         parameters.insert(QStringLiteral("program"), report.program.value);
+    if (!active && !report.alg.isEmpty())
+        parameters.insert(QStringLiteral("alg"), report.alg);
     const bool play = report.action == ListeningReportAction::Play;
     if (play) {
         parameters.insert(QStringLiteral("time"), report.playedSeconds);
