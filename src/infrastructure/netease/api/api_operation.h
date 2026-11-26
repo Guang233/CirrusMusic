@@ -137,7 +137,9 @@ enum class ApiOperation {
     CloudUploadCheck,
     CloudUploadAllocate,
     CloudUploadInfo,
-    CloudPublish
+    CloudPublish,
+    // 心动模式 (docs/api/heartbeat-mode.md).
+    HeartbeatList
 };
 
 struct ApiOperationContract {

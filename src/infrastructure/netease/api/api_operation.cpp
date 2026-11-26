@@ -6,6 +6,7 @@
 #include "domain/account/credential_login_types.h"
 #include "domain/music/catalog_types.h"
 #include "domain/music/entity_search_types.h"
+#include "domain/music/heartbeat_types.h"
 #include "domain/music/playlist_discovery_types.h"
 #include "domain/music/recommendation_history_types.h"
 #include "domain/music/search_assist_types.h"
@@ -279,6 +280,10 @@ std::optional<ApiOperationContract> operationContract(ApiOperation operation,
     case ApiOperation::PersonalFm:
         return ApiOperationContract{QStringLiteral("/api/v1/radio/get"), Protocol::Weapi,
                                     ResponseEncoding::Json, 1024 * 1024};
+    case ApiOperation::HeartbeatList:
+        // The whole list comes back (up to HeartbeatQuery::MaximumCount songs and the mix).
+        return ApiOperationContract{QStringLiteral("/api/playmode/intelligence/list"),
+                                    Protocol::Eapi, ResponseEncoding::Json, 32 * 1024 * 1024};
     case ApiOperation::ArtistIntroduction:
         return ApiOperationContract{QStringLiteral("/api/artist/introduction"), Protocol::Weapi,
                                     ResponseEncoding::Json, 2 * 1024 * 1024};
@@ -436,11 +441,11 @@ bool requiresAccountCookie(ApiOperation operation)
            operation == ApiOperation::DailyRecommendedPlaylists ||
            operation == ApiOperation::DailyHistoryDates ||
            operation == ApiOperation::DailyHistorySongs || operation == ApiOperation::PersonalFm ||
-           operation == ApiOperation::MyPlaylists || operation == ApiOperation::LikedSongIds ||
-           operation == ApiOperation::SavedAlbums || operation == ApiOperation::SavedArtists ||
-           operation == ApiOperation::ListeningStart || operation == ApiOperation::ListeningPlay ||
-           operation == ApiOperation::ListeningActive || operation == ApiOperation::RecentSongs ||
-           operation == ApiOperation::ListeningRanking ||
+           operation == ApiOperation::HeartbeatList || operation == ApiOperation::MyPlaylists ||
+           operation == ApiOperation::LikedSongIds || operation == ApiOperation::SavedAlbums ||
+           operation == ApiOperation::SavedArtists || operation == ApiOperation::ListeningStart ||
+           operation == ApiOperation::ListeningPlay || operation == ApiOperation::ListeningActive ||
+           operation == ApiOperation::RecentSongs || operation == ApiOperation::ListeningRanking ||
            operation == ApiOperation::RecentPlaylists || operation == ApiOperation::RecentAlbums ||
            operation == ApiOperation::RecentPodcasts || operation == ApiOperation::RecentVoices ||
            operation == ApiOperation::SubscribedPodcasts || operation == ApiOperation::CloudSongs ||
@@ -841,6 +846,27 @@ std::optional<QJsonObject> operationPayload(ApiOperation operation, const QJsonO
         if (!parameters.isEmpty())
             return std::nullopt;
         return QJsonObject{{QStringLiteral("afresh"), false}};
+    }
+    if (operation == ApiOperation::HeartbeatList) {
+        // As the official app sends it (NeteaseMusicApiImpl.B2): every value as text, and
+        // an empty extJson (the app's only key in it is an A/B test of its own).
+        const auto playlist = parameters.value(QStringLiteral("playlistId")).toString();
+        const auto anchor = parameters.value(QStringLiteral("songId")).toString();
+        const auto start = parameters.value(QStringLiteral("startMusicId")).toString();
+        const auto type = parameters.value(QStringLiteral("type")).toString();
+        bool counted = false;
+        const int count = parameters.value(QStringLiteral("count")).toString().toInt(&counted);
+        if (parameters.size() != 5 || !domain::validMusicId(playlist) ||
+            !domain::validMusicId(anchor) || !domain::validMusicId(start) || !counted ||
+            count < 1 || count > domain::HeartbeatQuery::MaximumCount ||
+            (type != QLatin1String("fromPlayOne") && type != QLatin1String("fromPlayAll")))
+            return std::nullopt;
+        return QJsonObject{{QStringLiteral("songId"), anchor},
+                           {QStringLiteral("type"), type},
+                           {QStringLiteral("playlistId"), playlist},
+                           {QStringLiteral("startMusicId"), start},
+                           {QStringLiteral("count"), QString::number(count)},
+                           {QStringLiteral("extJson"), QStringLiteral("{}")}};
     }
     if (operation == ApiOperation::LikedSongIds) {
         const auto uid = parameters.value(QStringLiteral("uid")).toString();
