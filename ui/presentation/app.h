@@ -70,6 +70,9 @@ class App : public QObject
     Q_PROPERTY(cirrus::ui::Share* share READ share CONSTANT)
     // The keyboard shortcuts the user can change (docs/ui/pages/shortcuts.md).
     Q_PROPERTY(cirrus::ui::ShortcutMap* shortcuts READ shortcuts CONSTANT)
+    // Why the backend did not start, translated; empty while it is fine. Pages and the
+    // startup dialog say this rather than blaming the network.
+    Q_PROPERTY(QString startupProblem READ startupProblem NOTIFY startupProblemChanged)
     // Uploads to the cloud drive; they go on when the page closes (docs/ui/pages/cloud.md §5).
     Q_PROPERTY(cirrus::ui::CloudUploads* cloudUploads READ cloudUploads CONSTANT)
     // Fake source knobs; null with real sources.
@@ -132,7 +135,14 @@ class App : public QObject
     // `image://qr/<serial>` provider for the sign-in code; the engine takes ownership.
     [[nodiscard]] QQuickImageProvider* makeQrProvider();
 
+    // Why the backend did not start (main.cpp): its data is a newer version's, the disk is
+    // full, another process holds the data, the data can't be read, or something else.
+    enum class Startup { NewerData, DiskFull, DataInUse, DataBroken, Failed };
+    void setStartupProblem(Startup problem);
+    [[nodiscard]] QString startupProblem() const { return m_startupProblem; }
+
   signals:
+    void startupProblemChanged();
     // Shell.openLink: the page of `key` (digits), or a notice for LinkUnsupported (no key).
     void linkRequested(int target, const QString& key);
     // A link that couldn't play.
@@ -142,6 +152,7 @@ class App : public QObject
     explicit App(Sources sources);
 
     Sources m_sources;
+    QString m_startupProblem;
     Request m_linkVoice; // the voice a link plays, while it is read
     AppSettings* m_settings;
     CacheStatus* m_cache;

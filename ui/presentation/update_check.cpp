@@ -154,7 +154,7 @@ void UpdateCheck::finish(QNetworkReply* reply, bool manual)
     } else if (httpStatus == 403 || httpStatus == 429) { // GitHub's rate limit
         failure = Limited;
     } else {
-        failure = Network;
+        failure = httpStatus > 0 ? Server : Network; // an answer is not the network failing
     }
 
     log::info(lcUi, "update.result",
@@ -230,6 +230,12 @@ void UpdateCheck::setDownload(Download download)
     emit downloadChanged();
 }
 
+void UpdateCheck::downloadFailed(DownloadFailure why)
+{
+    m_downloadFailure = why;
+    setDownload(DownloadFailed);
+}
+
 void UpdateCheck::downloadInstaller()
 {
     if (!canInstall() || m_downloadReply)
@@ -244,7 +250,7 @@ void UpdateCheck::downloadInstaller()
         !QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner) ||
         !m_downloadFile->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         log::warn(lcUi, "update.download_failed", {"reason", QStringLiteral("file")});
-        setDownload(DownloadFailed);
+        downloadFailed(DownloadUnsaved);
         return;
     }
     m_downloadHash.reset();
@@ -308,7 +314,7 @@ void UpdateCheck::downloadFinished(QNetworkReply* reply)
                    {"received_kb", m_received / 1024},
                    log::fieldIf(reply->error() != QNetworkReply::NoError, "err",
                                 log::message(reply->errorString()))});
-        setDownload(DownloadFailed);
+        downloadFailed(reason == u"network" ? DownloadInterrupted : DownloadDamaged);
         return;
     }
     const QString path = QFileInfo(part).absolutePath() + u'/' + asset.name;
@@ -316,7 +322,7 @@ void UpdateCheck::downloadFinished(QNetworkReply* reply)
     if (!QFile::rename(part, path)) {
         QFile::remove(part);
         log::warn(lcUi, "update.download_failed", {"reason", QStringLiteral("file")});
-        setDownload(DownloadFailed);
+        downloadFailed(DownloadUnsaved);
         return;
     }
     m_installer = path;
